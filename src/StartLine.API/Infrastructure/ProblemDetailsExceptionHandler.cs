@@ -10,8 +10,17 @@ internal sealed partial class ProblemDetailsExceptionHandler(
     IProblemDetailsService problemDetails,
     ILogger<ProblemDetailsExceptionHandler> logger) : IExceptionHandler
 {
+    // Not a standard status code, but the common convention for "the client went away".
+    private const int ClientClosedRequest = 499;
+
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        if (exception is OperationCanceledException && httpContext.RequestAborted.IsCancellationRequested)
+        {
+            httpContext.Response.StatusCode = ClientClosedRequest;
+            return true;
+        }
+
         var (status, code, title, detail) = exception switch
         {
             ValidationException => (StatusCodes.Status400BadRequest, "validation_failed", "One or more fields are invalid.", (string?)null),

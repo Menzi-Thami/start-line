@@ -137,6 +137,40 @@ public sealed class GeneratePlanTests
     }
 
     [Fact]
+    public void A_race_more_than_two_years_away_is_rejected() =>
+        Validator().Validate(CustomRace(raceDate: new DateOnly(2028, 10, 9))).Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("RaceDate");
+
+    [Fact]
+    public async Task Plan_from_lets_a_shared_link_rebuild_the_same_plan_later()
+    {
+        var builtToday = await Handler().Handle(CustomRace(), CancellationToken.None);
+
+        _time.Advance(TimeSpan.FromDays(9));
+        var openedLater = await Handler().Handle(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 8) }, CancellationToken.None);
+
+        openedLater.StartDate.ShouldBe(builtToday.StartDate);
+        openedLater.Weeks.Count.ShouldBe(builtToday.Weeks.Count);
+    }
+
+    [Fact]
+    public async Task Plan_from_uses_the_runners_local_date_ahead_of_utc()
+    {
+        // 23:30 UTC on Sunday is already Monday morning in South Africa.
+        _time.SetUtcNow(new DateTimeOffset(2026, 10, 11, 23, 30, 0, TimeSpan.Zero));
+
+        var plan = await Handler().Handle(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 12) }, CancellationToken.None);
+
+        plan.StartDate.ShouldBe(new DateOnly(2026, 10, 12));
+    }
+
+    [Theory]
+    [InlineData(-401)]
+    [InlineData(2)]
+    public void Plan_from_must_be_recent_and_not_in_the_future(int daysFromToday) =>
+        Validator().Validate(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 8).AddDays(daysFromToday) })
+            .Errors.Select(e => e.PropertyName).ShouldContain("PlanFrom");
+
+    [Fact]
     public async Task An_unknown_race_is_not_found() =>
         await Should.ThrowAsync<NotFoundException>(() => Handler().Handle(CatalogueRace("no-such-race"), CancellationToken.None));
 }

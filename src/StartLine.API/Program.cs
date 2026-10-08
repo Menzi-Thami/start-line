@@ -2,9 +2,13 @@ using Scalar.AspNetCore;
 using StartLine.API;
 using StartLine.API.Infrastructure;
 using StartLine.Application;
+using StartLine.Application.Features.Races;
 using StartLine.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Plan requests are a few hundred bytes; anything near this size is a mistake or an attack.
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 16 * 1024);
 
 builder.Host.UseDefaultServiceProvider(o =>
 {
@@ -19,6 +23,11 @@ builder.Services
 
 var app = builder.Build();
 
+// Build the catalogue now, so a bad race entry stops the app at boot instead of failing every request.
+_ = app.Services.GetRequiredService<IRaceCatalogue>();
+
+app.UseForwardedHeaders();
+app.UseMiddleware<TraceIdMiddleware>();
 app.UseExceptionHandler();
 if (!app.Environment.IsDevelopment())
 {

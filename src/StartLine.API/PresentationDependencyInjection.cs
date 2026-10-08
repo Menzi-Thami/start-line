@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
@@ -21,6 +23,24 @@ internal static class PresentationDependencyInjection
     public static IServiceCollection AddPresentation(
         this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
+        // Rate limits are partitioned by client IP, so behind a proxy the real IP must come from
+        // X-Forwarded-For, but only when the request arrived through a proxy we trust. Otherwise
+        // any client could pick its own partition by sending the header.
+        services.Configure<ForwardedHeadersOptions>(o =>
+        {
+            o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+            o.ForwardLimit = 1;
+            foreach (var proxy in configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>() ?? [])
+            {
+                o.KnownProxies.Add(IPAddress.Parse(proxy));
+            }
+
+            foreach (var network in configuration.GetSection("ForwardedHeaders:KnownNetworks").Get<string[]>() ?? [])
+            {
+                o.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
+            }
+        });
+
         services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
             ctx.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? ctx.HttpContext.TraceIdentifier);
         services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
@@ -95,7 +115,8 @@ internal static class PresentationDependencyInjection
                 }));
         });
 
-        services.AddHealthChecks();
+        services.AddHealthChecks()
+            .AddCheck<RaceCatalogueHealthCheck>("race-catalogue", tags: ["ready"]);
 
         var otel = services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(environment.ApplicationName))

@@ -14,4 +14,7 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="StartLine.Integration.Tests" />
+  </ItemGroup>
 </Project>

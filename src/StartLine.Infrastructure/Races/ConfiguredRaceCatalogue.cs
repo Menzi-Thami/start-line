@@ -35,7 +35,7 @@ internal sealed class RaceCatalogueOptionsValidator : IValidateOptions<RaceCatal
                 failures.Add($"Race {index} needs a slug and a name.");
             }
 
-            if (race.DistanceKm is <= 0 or > Distance.MaxKilometres)
+            if (!double.IsFinite(race.DistanceKm) || race.DistanceKm is <= 0 or > Distance.MaxKilometres)
             {
                 failures.Add($"Race '{race.Slug}' has an invalid distance.");
             }
@@ -47,7 +47,7 @@ internal sealed class RaceCatalogueOptionsValidator : IValidateOptions<RaceCatal
         }
 
         failures.AddRange(options.Races
-            .GroupBy(r => r.Slug, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(r => r.Slug.Trim(), StringComparer.OrdinalIgnoreCase)
             .Where(g => g.Count() > 1)
             .Select(g => $"Race slug '{g.Key}' is used more than once."));
 

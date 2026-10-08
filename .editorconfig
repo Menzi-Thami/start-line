@@ -1,0 +1,38 @@
+root = true
+
+[*]
+indent_style = space
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
+[*.{cs,csx}]
+indent_size = 4
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+dotnet_style_prefer_collection_expression = when_types_loosely_match:suggestion
+csharp_prefer_primary_constructors = true:suggestion
+dotnet_sort_system_directives_first = true
+
+dotnet_diagnostic.CA2007.severity = none          # ConfigureAwait: app code under ASP.NET Core has no SyncContext
+dotnet_diagnostic.CA1852.severity = warning       # seal internal types that aren't inherited
+dotnet_diagnostic.CA1310.severity = warning       # specify StringComparison
+dotnet_diagnostic.CA1309.severity = warning       # use ordinal comparison
+dotnet_diagnostic.CA2016.severity = warning       # forward CancellationToken
+dotnet_diagnostic.CA1848.severity = suggestion    # LoggerMessage delegates (hot paths only)
+dotnet_diagnostic.CA2254.severity = warning       # log message template must be constant
+
+[tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none          # underscores in test method names
+dotnet_diagnostic.CA1515.severity = none          # xUnit test classes must be public
+dotnet_diagnostic.CA2000.severity = none          # WebApplicationFactory/HttpClient disposal is owned by the fixture
+dotnet_diagnostic.CA1861.severity = none          # request bodies are clearer written inline
+
+[*.{json,yml,yaml,xml,csproj,props,targets,slnx}]
+indent_size = 2
+
+[*.{ts,tsx,js,jsx,css,html}]
+indent_size = 2
+end_of_line = lf

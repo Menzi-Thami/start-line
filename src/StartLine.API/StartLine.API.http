@@ -1,0 +1,45 @@
+@host = http://localhost:5122
+
+### Upcoming races
+GET {{host}}/api/v1/races
+Accept: application/json
+
+### Plan for a catalogue race
+POST {{host}}/api/v1/plans
+Content-Type: application/json
+
+{
+  "raceSlug": "comrades-2027",
+  "goalTime": "10:30:00",
+  "runDays": ["Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday"],
+  "longRunDay": "Sunday",
+  "currentWeeklyKm": 40,
+  "experience": "Regular",
+  "strengthDays": ["Monday", "Thursday"]
+}
+
+### Plan for any race
+POST {{host}}/api/v1/plans
+Content-Type: application/json
+
+{
+  "raceName": "Parkrun PB",
+  "distanceKm": 5,
+  "raceDate": "2027-01-16",
+  "goalTime": "00:24:30",
+  "runDays": ["Monday", "Wednesday", "Friday", "Saturday"],
+  "longRunDay": "Saturday",
+  "experience": "New"
+}
+
+### Invalid request -> 400 ValidationProblemDetails
+POST {{host}}/api/v1/plans
+Content-Type: application/json
+
+{ "distanceKm": 42.2, "raceDate": "2027-05-01", "goalTime": "00:03:00", "runDays": ["Sunday"], "longRunDay": "Monday" }
+
+### Predict a marathon from a 10K
+GET {{host}}/api/v1/predictions?fromKm=10&time=00:50:00&toKm=42.195
+
+### Health
+GET {{host}}/health/ready

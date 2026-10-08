@@ -23,8 +23,9 @@ builder.Services
 
 var app = builder.Build();
 
-// Build the catalogue now, so a bad race entry stops the app at boot instead of failing every request.
-_ = app.Services.GetRequiredService<IRaceCatalogue>();
+// Publish the race calendar before serving requests. Building the sync also builds every source,
+// so a bad race entry stops the app here instead of failing every request.
+await app.Services.GetRequiredService<RaceCalendarSync>().RunAsync(app.Lifetime.ApplicationStopping);
 
 app.UseForwardedHeaders();
 app.UseMiddleware<TraceIdMiddleware>();

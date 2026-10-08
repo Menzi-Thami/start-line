@@ -1,9 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Predictions;
+using StartLine.Application.Features.Races;
 
 namespace StartLine.Application.Tests.Common;
 
@@ -12,10 +16,13 @@ public sealed class DispatcherPipelineTests
 {
     private static IDispatcher Dispatcher()
     {
+        // Everything AddApplication needs from the outer layers, so ValidateOnBuild passes as it does in the real host.
         var services = new ServiceCollection()
             .AddApplication()
             .AddSingleton<TimeProvider>(new FakeTimeProvider(TestRaces.Now))
-            .AddSingleton(TestRaces.Catalogue());
+            .AddSingleton(TestRaces.Catalogue())
+            .AddSingleton(Substitute.For<IRaceStore>())
+            .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true })
             .CreateScope().ServiceProvider.GetRequiredService<IDispatcher>();
     }

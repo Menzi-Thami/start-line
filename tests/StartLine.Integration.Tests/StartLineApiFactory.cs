@@ -15,10 +15,17 @@ public class StartLineApiFactory : WebApplicationFactory<Program>
 {
     public static readonly DateTimeOffset Now = new(2026, 10, 8, 9, 0, 0, TimeSpan.Zero);
 
+    /// <summary>The clock the whole app runs on. Advancing it fires the race-sync timer.</summary>
+    public FakeTimeProvider Time { get; } = new(Now);
+
     /// <summary>The address every test request appears to come from. The test server leaves it empty otherwise.</summary>
     protected virtual IPAddress CallerAddress => IPAddress.Parse("198.51.100.7");
 
     protected virtual IDictionary<string, string?> Settings => new Dictionary<string, string?>();
+
+    protected virtual void ConfigureServices(IServiceCollection services)
+    {
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -27,7 +34,8 @@ public class StartLineApiFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<TimeProvider>();
-            services.AddSingleton<TimeProvider>(new FakeTimeProvider(Now));
+            services.AddSingleton<TimeProvider>(Time);
+            ConfigureServices(services);
             services.AddSingleton<IStartupFilter>(new CallerAddressFilter(CallerAddress));
         });
     }

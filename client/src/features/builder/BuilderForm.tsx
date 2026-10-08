@@ -175,7 +175,10 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               </span>
               <span className="choice-name">{race.name}</span>
               <span className="choice-meta">
+                {race.distanceConfirmed ? '' : 'About '}
                 {formatDistance(race.distanceKm, units)} · {race.location}
+                {race.dateStatus === 'Provisional' && <span className="tag">Date to be confirmed</span>}
+                {!race.distanceConfirmed && <span className="tag">Distance to be confirmed</span>}
               </span>
             </label>
           ))}

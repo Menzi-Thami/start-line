@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Plans;
 using StartLine.Domain.Plans;
+using StartLine.Domain.Races;
 
 namespace StartLine.Application.Tests.Features;
 
@@ -169,6 +171,24 @@ public sealed class GeneratePlanTests
     public void Plan_from_must_be_recent_and_not_in_the_future(int daysFromToday) =>
         Validator().Validate(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 8).AddDays(daysFromToday) })
             .Errors.Select(e => e.PropertyName).ShouldContain("PlanFrom");
+
+    [Fact]
+    public async Task Warns_when_a_race_date_or_distance_is_not_confirmed_yet()
+    {
+        var unconfirmed = TestRaces.Comrades with { DateStatus = DateStatus.Provisional, DistanceConfirmed = false };
+        var catalogue = TestRaces.Catalogue();
+        catalogue.FindBySlug("comrades-2027").Returns(unconfirmed);
+
+        var plan = await new GeneratePlanHandler(catalogue, _time).Handle(CatalogueRace("comrades-2027"), CancellationToken.None);
+
+        plan.Warnings.Select(w => w.Code).ShouldContain("date-provisional");
+        plan.Warnings.Select(w => w.Code).ShouldContain("distance-provisional");
+    }
+
+    [Fact]
+    public async Task A_confirmed_race_carries_no_caveats() =>
+        (await Handler().Handle(CatalogueRace("comrades-2027"), CancellationToken.None))
+            .Warnings.ShouldNotContain(w => w.Code.EndsWith("-provisional", StringComparison.Ordinal));
 
     [Fact]
     public async Task An_unknown_race_is_not_found() =>

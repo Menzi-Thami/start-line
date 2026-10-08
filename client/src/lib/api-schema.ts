@@ -163,6 +163,8 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /** @enum {unknown} */
+        DateStatus: "Confirmed" | "Provisional";
+        /** @enum {unknown} */
         DayOfWeek: "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday";
         /** @enum {unknown} */
         DistanceCategory: "FiveK" | "TenK" | "HalfMarathon" | "Marathon" | "Ultra" | "LongUltra";
@@ -238,6 +240,8 @@ export interface components {
             summary: string;
             /** Format: uri */
             website: null | string;
+            dateStatus: components["schemas"]["DateStatus"];
+            distanceConfirmed: boolean;
         };
         RaceSummaryDto: {
             slug: null | string;

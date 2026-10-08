@@ -45,8 +45,21 @@ internal static class PresentationDependencyInjection
             ctx.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? ctx.HttpContext.TraceIdentifier);
         services.AddExceptionHandler<ProblemDetailsExceptionHandler>();
 
+        // The OpenAPI generator reads the minimal-API JSON options, not MVC's, so both need the
+        // string-enum converter or the document describes enums as integers the API never sends.
+        // Numbers must be JSON numbers: the web defaults also accept "40", which loosens input and
+        // makes the documented schema number-or-string.
+        services.ConfigureHttpJsonOptions(o =>
+        {
+            o.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            o.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+        });
         services.AddControllers()
-            .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+            .AddJsonOptions(o =>
+            {
+                o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                o.JsonSerializerOptions.NumberHandling = JsonNumberHandling.Strict;
+            })
             .ConfigureApiBehaviorOptions(o =>
             {
                 // Malformed JSON never reaches the validators; give it the same error code they use.

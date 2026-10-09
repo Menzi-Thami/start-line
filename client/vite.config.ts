@@ -4,6 +4,10 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    // Small font subsets would otherwise be inlined as data: URIs, which the site's CSP (font-src 'self') blocks.
+    assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined),
+  },
   server: {
     // The API runs separately in development; same-origin requests avoid CORS entirely.
     proxy: { '/api': 'http://localhost:5122' },

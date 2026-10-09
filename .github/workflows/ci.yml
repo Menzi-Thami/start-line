@@ -12,7 +12,7 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Integration tests run against real SQL Server, never EF's in-memory provider. The password is
       # generated per run and masked, so nothing secret lives in the repo.
       - name: Start SQL Server
@@ -28,7 +28,7 @@ jobs:
             sleep 3
           done
           echo "SQL Server did not start in time" && docker logs sql && exit 1
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - run: dotnet restore StartLine.slnx
@@ -42,7 +42,7 @@ jobs:
       run:
         working-directory: client
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version-file: client/.nvmrc

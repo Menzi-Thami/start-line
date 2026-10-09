@@ -1,4 +1,6 @@
-# Start Line
+# Taperday
+
+Product name **Taperday** (domain taperday.run). Code and project names stay `StartLine.*` on purpose.
 
 A free running-plan builder. Pick a race (from the catalogue or any distance and date), a goal time,
 the days you can run and your long-run day, and get a week-by-week plan with pace zones. No account

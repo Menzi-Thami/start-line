@@ -1,8 +1,8 @@
-# Start Line
+# Taperday
 
 A free, no-sign-up training plan builder for runners, from a first 5K to Comrades.
 
-Pick a race, a goal time and the days you can run. Start Line builds a week-by-week plan with a
+Pick a race, a goal time and the days you can run. Taperday builds a week-by-week plan with a
 pace and a purpose for every session, and you can share it as a link.
 
 ## What it does

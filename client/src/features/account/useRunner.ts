@@ -11,7 +11,7 @@ export type RunnerState =
   | { kind: 'ready'; runner: Runner }
   | { kind: 'error'; message: string }
 
-/** Who the runner is, as far as Start Line knows: signed out, mid sign-up, or registered. */
+/** Who the runner is, as far as Taperday knows: signed out, mid sign-up, or registered. */
 export function useRunner() {
   const auth = useAuth()
   const [state, setState] = useState<RunnerState>(() => (auth.enabled ? { kind: 'loading' } : { kind: 'off' }))

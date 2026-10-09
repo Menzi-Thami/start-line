@@ -32,7 +32,7 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
     public async Task<IActionResult> Export(CancellationToken cancellationToken)
     {
         var export = await dispatcher.Send(new ExportAccountQuery(), cancellationToken);
-        Response.Headers.ContentDisposition = "attachment; filename=start-line-my-data.json";
+        Response.Headers.ContentDisposition = "attachment; filename=taperday-my-data.json";
         return Ok(export);
     }
 

@@ -1,4 +1,4 @@
-# Engineering Principles: Start Line
+# Engineering Principles: Taperday
 
 Enforced rules. Flag violations proactively during any code review or generation task.
 

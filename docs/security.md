@@ -1,6 +1,6 @@
 # Security
 
-Start Line is a public, anonymous, stateless API. It stores nothing and holds no user data, which
+Taperday is a public, anonymous, stateless API. It stores nothing and holds no user data, which
 removes whole classes of risk (account takeover, data leaks, row-level access bugs) until accounts
 arrive. What's left is abuse: scraping, flooding and malformed input.
 

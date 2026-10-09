@@ -1,7 +1,7 @@
 # "Night run": the approved redesign
 
-Approved on 9 October 2026. These are **concept screens**, not the live site: the build into `client/` happens in
-stages (below). The interactive versions, with every animation playing, live on the design canvas at
+Approved on 9 October 2026 and **built into `client/`** in five pull requests (#23 to #27, below), so the live site
+now has it. These are the **concept screens** it was built from. The interactive versions, with every animation playing, live on the design canvas at
 https://claude.ai/artifact/C2av5H74ixmNehMA8JuRbA (private to the owner). The `.concept.html` files here are their
 source, kept for reference; they need that canvas's runtime to render.
 
@@ -63,11 +63,11 @@ Company Branding.
 **Within reason:** nothing makes anyone wait or blocks what they came to do; every animation stops for
 `prefers-reduced-motion`; tap targets stay at least 44px; text contrast stays at 4.5:1 or better.
 
-## Building it (one pull request each)
+## Building it (one pull request each, all merged)
 
 1. Design tokens and type (palette, JetBrains Mono, glass cards, pill buttons); update `docs/brand.md`, where volt
-   replaces track red.
-2. Intro (once per session, skipped for reduced motion) + hero ring + race ticker.
-3. Race rack, bento grid and experience slider on the home page.
-4. Plan page restyle: glass tab bar, sliding runs, confetti tick, course bar with the runner.
-5. Sign-up: the dash-off before the Microsoft redirect, the bib-builder profile step, the start-list celebration.
+   replaces track red. (#23)
+2. Intro (once per session, skipped for reduced motion) + hero ring + race ticker. (#24)
+3. Race rack, bento grid and experience slider on the home page. (#25)
+4. Plan page restyle: glass tab bar, sliding runs, confetti tick, course bar with the runner, which sleeps on rest days and breaks the tape on race day. (#26)
+5. Sign-up: the dash-off before the Microsoft redirect, the bib-builder profile step, the start-list celebration. (#27)

@@ -311,3 +311,73 @@ describe('a signed-up runner', () => {
     expect(await screen.findByText(/sign-in has expired/)).toBeInTheDocument()
   })
 })
+
+describe('signing up, with a little theatre', () => {
+  // Motion on, and the starting-gun intro already seen so it doesn't sit over the page.
+  beforeEach(() => {
+    vi.stubGlobal('matchMedia', () => ({ matches: false }))
+    window.sessionStorage.setItem('taperday:intro-seen', '1')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.sessionStorage.clear()
+  })
+
+  it('lets the runner dash off before going to Microsoft, without waiting long', async () => {
+    const auth = signedOut()
+    const user = renderWith(auth)
+
+    await user.click(await screen.findByRole('button', { name: 'Sign up free' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Taking you to sign up')
+    expect(screen.getByRole('button', { name: 'Sign up free' })).toBeDisabled()
+    expect(auth.signUp).not.toHaveBeenCalled()
+    await waitFor(() => expect(auth.signUp).toHaveBeenCalledTimes(1), { timeout: 3000 })
+  })
+
+  it('puts them on the start list once the profile is saved, then gets out of the way', async () => {
+    accountApi({ runner: null })
+    const user = renderWith(signedIn())
+
+    const name = await screen.findByLabelText('What should we call you?')
+    await user.clear(name)
+    await user.type(name, 'Thandi M')
+    await user.click(screen.getByRole('checkbox', { name: /I’ve read this/ }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    const status = await screen.findByRole('status')
+    expect(status).toHaveTextContent('You’re on the start list!')
+    expect(status).toHaveTextContent('Welcome, Thandi M.')
+    // The next question is already there underneath; the celebration doesn't hold it up.
+    expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('You’re on the start list!')).not.toBeInTheDocument(), { timeout: 5000 })
+  }, 10000)
+})
+
+describe('the race bib on the profile step', () => {
+  it('prints the name as it’s typed and stamps it official when the privacy notice is accepted', async () => {
+    accountApi({ runner: null })
+    const user = renderWith(signedIn())
+    const bib = () => document.querySelector('.entry-bib')
+
+    const name = await screen.findByLabelText('What should we call you?')
+    await user.clear(name)
+    expect(bib()).toHaveTextContent('Your name here')
+    await user.type(name, 'Thandi M')
+    expect(bib()).toHaveTextContent('Thandi M')
+    expect(bib()).not.toHaveTextContent('Official')
+
+    await user.click(screen.getByRole('checkbox', { name: /I’ve read this/ }))
+    expect(bib()).toHaveTextContent('Official')
+  })
+
+  it('only appears while signing up, not when editing an account', async () => {
+    accountApi({ runner: thandi })
+    window.history.replaceState(null, '', '/?view=account')
+    renderWith(signedIn())
+
+    expect(await screen.findByRole('heading', { name: 'Account' })).toBeInTheDocument()
+    expect(document.querySelector('.entry-bib')).toBeNull()
+  })
+})

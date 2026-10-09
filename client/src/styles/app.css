@@ -2434,6 +2434,313 @@ a.menu-item {
   padding-top: var(--space-5);
 }
 
+/* ---------- Signing up ---------- */
+
+/* "Sign up free": the runner dashes off to the sign-up desk before Microsoft's page loads. */
+.button.is-dashing {
+  animation: squash 260ms cubic-bezier(0.3, 0, 0.4, 1.6);
+}
+
+@keyframes squash {
+  40% {
+    transform: scale(0.9, 0.82);
+  }
+}
+
+.dash-off {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-4);
+  background: rgb(10 10 11 / 0.86);
+  backdrop-filter: blur(10px);
+  animation: fade-in 200ms ease both;
+}
+
+.dash-off-track {
+  position: relative;
+  width: min(80vw, 420px);
+  height: 64px;
+  border-bottom: 3px dashed rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.dash-off-runner {
+  position: absolute;
+  bottom: 4px;
+  color: var(--accent);
+  animation: dash-across 1300ms cubic-bezier(0.5, 0, 0.8, 0.6) both;
+}
+
+@keyframes dash-across {
+  from {
+    left: -60px;
+  }
+  to {
+    left: 110%;
+  }
+}
+
+.dash-off-quips {
+  position: relative;
+  width: min(80vw, 420px);
+  height: 1.6em;
+  text-align: center;
+  color: var(--ink-2);
+}
+
+.dash-off-quips span {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  animation: quip 430ms ease both;
+}
+
+.dash-off-quips span:nth-child(2) { animation-delay: 430ms; }
+.dash-off-quips span:nth-child(3) { animation-delay: 860ms; animation-fill-mode: forwards; }
+
+@keyframes quip {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  30%,
+  70% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.dash-off-quips span:nth-child(3) {
+  animation-name: quip-stay;
+}
+
+@keyframes quip-stay {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The race bib on the profile step: name printed live, number rolled in, stamped on consent. */
+.entry-bib {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  max-width: 22rem;
+  margin: 0 auto var(--space-5);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border-radius: var(--radius-md);
+  background: #f2f2f2;
+  color: #0a0a0b;
+  border-top: 10px solid var(--accent);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 0.5);
+  transform: rotate(-1.5deg);
+  overflow: hidden;
+}
+
+.entry-bib-pin {
+  position: absolute;
+  top: 10px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, #8c9099);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+.entry-bib-pin-left { left: 12px; }
+.entry-bib-pin-right { right: 12px; }
+
+.entry-bib-brand {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #4a4d55;
+}
+
+.entry-bib-number {
+  display: flex;
+  font-size: clamp(2.6rem, 12vw, 3.4rem);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.reel {
+  display: inline-block;
+  height: 1em;
+  overflow: hidden;
+}
+
+.reel-strip {
+  display: block;
+  transform: translateY(calc((10 + var(--d)) * -1em));
+  animation: reel-roll calc(700ms + var(--i) * 180ms) cubic-bezier(0.2, 0.7, 0.3, 1.05) both;
+}
+
+.reel-strip span {
+  display: block;
+  height: 1em;
+}
+
+@keyframes reel-roll {
+  from {
+    transform: translateY(0);
+  }
+}
+
+.entry-bib-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.entry-bib-stamp {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 1px 8px;
+  font-size: 0.75rem;
+  border: 3px solid var(--coral);
+  border-radius: 6px;
+  color: var(--coral);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transform: rotate(-14deg);
+  mix-blend-mode: multiply;
+  animation: stamp-slam 340ms cubic-bezier(0.3, 0, 0.5, 1.4) both;
+}
+
+@keyframes stamp-slam {
+  from {
+    opacity: 0;
+    transform: rotate(-14deg) scale(2.6);
+  }
+}
+
+/* Signed up: pins, confetti and a hop, over the page without blocking it. */
+.start-list {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  pointer-events: none;
+  animation: start-list-out 400ms ease 2.8s forwards;
+}
+
+@keyframes start-list-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.start-list-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  box-shadow: var(--glow), 0 30px 60px rgb(0 0 0 / 0.6);
+  text-align: center;
+  animation: start-list-pop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+
+@keyframes start-list-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6) rotate(-4deg);
+  }
+}
+
+.start-list-card .runner {
+  color: var(--accent);
+  animation: victory-hop 420ms cubic-bezier(0.3, 0, 0.5, 1) infinite alternate;
+}
+
+.start-list-pin {
+  position: absolute;
+  top: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff, #8c9099);
+  animation: pin-pop 300ms cubic-bezier(0.3, 0, 0.4, 1.8) both;
+}
+
+.start-list-pin-left { left: 14px; animation-delay: 350ms; }
+.start-list-pin-right { right: 14px; animation-delay: 480ms; }
+
+@keyframes pin-pop {
+  from {
+    transform: scale(0);
+  }
+}
+
+.start-list-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  font-weight: 800;
+}
+
+.start-list-name {
+  color: var(--ink-2);
+}
+
+.start-list-confetti i {
+  position: absolute;
+  top: -16px;
+  width: 7px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: start-confetti linear both;
+}
+
+@keyframes start-confetti {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+  }
+}
+
+.start-list-confetti i:nth-child(3n) { background: var(--coral); }
+.start-list-confetti i:nth-child(3n + 1) { background: var(--violet); }
+
+.start-list-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

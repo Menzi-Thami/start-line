@@ -4,6 +4,7 @@ import { MyPlans } from '../features/account/MyPlans'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
+import { StartListCelebration } from '../features/account/StartListCelebration'
 import { useRunner } from '../features/account/useRunner'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { Hero, RaceTicker } from '../features/home/Hero'
@@ -15,7 +16,7 @@ import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
-import type { GeneratePlanRequest, TrainingPlan } from '../lib/types'
+import type { GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
 type PlanState =
@@ -72,6 +73,9 @@ export function App() {
   // The starting-gun intro: once per visit, only when landing on the builder, never for reduced motion.
   const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen())
   const finishIntro = useCallback(() => setPlayIntro(false), [])
+  // Who just made the start list, while their celebration plays.
+  const [celebrating, setCelebrating] = useState<string | null>(null)
+  const finishCelebrating = useCallback(() => setCelebrating(null), [])
   const inflight = useRef<AbortController | null>(null)
 
   // Only sets state once the request settles; callers set the loading state themselves.
@@ -189,6 +193,10 @@ export function App() {
   }
 
   const state = runner.state
+  const signedUp = (saved: Runner) => {
+    runner.setRunner(saved)
+    if (prefersMotion()) setCelebrating(saved.displayName)
+  }
   const builderInitial = plan.kind === 'ready' || plan.kind === 'error' ? plan.inputs : initial
   const showBuilder = view === 'build' && (editing || plan.kind === 'idle')
   const showPlan = view === 'build' && plan.kind === 'ready' && !editing
@@ -207,7 +215,7 @@ export function App() {
             key: 'profile',
             title: 'A bit about you',
             hint: 'So your plans and emails fit you. Then on to your race.',
-            body: <ProfileForm submitLabel="Continue" onSaved={runner.setRunner} />,
+            body: <ProfileForm submitLabel="Continue" onSaved={signedUp} />,
           }
         : state.kind === 'error'
           ? {
@@ -230,6 +238,7 @@ export function App() {
   return (
     <div className="page">
       {playIntro && <RaceStartIntro onDone={finishIntro} />}
+      {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">
         <button type="button" className="wordmark wordmark-button" onClick={() => go('build')}>
           {/* "taper" steps down letter by letter, like a taper; "day" comes back full size: race day. */}
@@ -314,7 +323,7 @@ export function App() {
             <p className="plan-focus">Two quick things, then your plans are saved to your account.</p>
             <ProfileForm
               onSaved={(saved) => {
-                runner.setRunner(saved)
+                signedUp(saved)
                 go('build')
               }}
             />

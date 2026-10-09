@@ -14,14 +14,29 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 const setup = () => ({ user: userEvent.setup(), ...render(<App />) })
+type User = ReturnType<typeof userEvent.setup>
 
 const runDays = () => screen.getByRole('group', { name: 'Which days can you run?' })
+const wizard = () => screen.queryByRole('form', { name: 'Build your plan' })
+const onStep = (n: number) => expect(screen.getByText(`Step ${n} of 5`)).toBeInTheDocument()
+const next = (user: User) => user.click(screen.getByRole('button', { name: 'Continue' }))
+const buildIt = (user: User) => user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
-async function fillGoal(user: ReturnType<typeof userEvent.setup>, h: string, m: string, s: string) {
+async function fillGoal(user: User, h: string, m: string, s: string) {
   const goal = screen.getByRole('group', { name: 'Goal finish time' })
   await user.type(within(goal).getByLabelText('Hours'), h)
   await user.type(within(goal).getByLabelText('Minutes'), m)
   await user.type(within(goal).getByLabelText('Seconds'), s)
+}
+
+/** Picks Comrades and a goal, takes the defaults for everything else, and stops on the summary screen. */
+async function answerEverything(user: User, goal: [string, string, string] = ['11', '0', '0']) {
+  await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
+  await next(user)
+  await fillGoal(user, ...goal)
+  await next(user)
+  await next(user)
+  await next(user)
 }
 
 describe('building a plan', () => {
@@ -41,18 +56,37 @@ describe('building a plan', () => {
     expect(screen.getByRole('radio', { name: /Cape Town Marathon/ })).toHaveAccessibleName(expect.stringContaining('Date to be confirmed'))
   })
 
-  it('builds a plan for any race and sends the runner’s own choices', async () => {
+  it('asks one question per screen, then builds the plan from the runner’s own choices', async () => {
     const { user } = setup()
+    onStep(1)
+    expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
 
     await user.click(await screen.findByRole('radio', { name: /Another race/ }))
     await user.click(screen.getByRole('radio', { name: '5K' }))
     await user.type(screen.getByLabelText('Race date'), '2026-12-13')
     await user.type(screen.getByLabelText(/Name/), 'Parkrun PB')
+    await next(user)
+
+    onStep(2)
+    expect(screen.queryByRole('radio', { name: /Another race/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'What’s your goal time?' })).toHaveFocus()
     await fillGoal(user, '0', '24', '30')
+    await next(user)
+
+    onStep(3)
     await user.click(within(runDays()).getByRole('checkbox', { name: 'Saturday' }))
-    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+    await next(user)
+
+    onStep(4)
+    await next(user)
+
+    onStep(5)
+    expect(screen.getByText(/Parkrun PB: 5 km/)).toBeInTheDocument()
+    expect(screen.getByText('Tue, Thu, Sun. Long run on Sunday.')).toBeInTheDocument()
+    await buildIt(user)
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(wizard()).not.toBeInTheDocument()
     expect(lastPlanRequest.body).toMatchObject({
       distanceKm: 5,
       raceDate: '2026-12-13',
@@ -68,39 +102,76 @@ describe('building a plan', () => {
     const { user } = setup()
 
     await user.click(await screen.findByRole('radio', { name: /Cape Town Marathon/ }))
+    await next(user)
     await fillGoal(user, '4', '0', '0')
 
     expect(screen.getByText('That’s 5:41/km on average.')).toBeInTheDocument()
   })
 
-  it('catches missing answers before calling the API', async () => {
+  it('checks each screen before moving on, and only that screen', async () => {
     const { user } = setup()
     await screen.findByRole('radio', { name: /Comrades/ })
 
-    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+    await next(user)
 
-    const errors = screen.getByRole('alert')
-    expect(within(errors).getByText(/Choose a race/)).toBeInTheDocument()
-    expect(within(errors).getByText(/Enter a goal time/)).toBeInTheDocument()
+    onStep(1)
+    expect(within(screen.getByRole('alert')).getByText(/Choose a race/)).toBeInTheDocument()
+    expect(screen.queryByText(/Enter a goal time/)).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: /Comrades/ }))
+    await next(user)
+    await next(user)
+
+    onStep(2)
+    expect(within(screen.getByRole('alert')).getByText(/Enter a goal time/)).toBeInTheDocument()
     expect(lastPlanRequest.body).toBeUndefined()
   })
 
   it('needs at least three run days and a long-run day among them', async () => {
     const { user } = setup()
     await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
+    await next(user)
     await fillGoal(user, '11', '0', '0')
+    await next(user)
 
     await user.click(within(runDays()).getByRole('checkbox', { name: 'Sunday' }))
     await user.click(within(runDays()).getByRole('checkbox', { name: 'Saturday' }))
-    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+    await next(user)
 
     // Each message shows twice by design: in the summary at the top and beside its field.
+    onStep(3)
     expect(within(screen.getByRole('alert')).getByText(/Pick at least three days/)).toBeInTheDocument()
     expect(within(runDays()).getByText(/Pick at least three days/)).toBeInTheDocument()
     expect(screen.getAllByText(/Pick which of your days is the long run/)).toHaveLength(2)
   })
 
-  it('puts the API’s validation messages next to the right field', async () => {
+  it('keeps every answer when going back', async () => {
+    const { user } = setup()
+    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
+    await next(user)
+    await fillGoal(user, '11', '30', '0')
+
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    onStep(1)
+    expect(screen.getByRole('radio', { name: /Comrades/ })).toBeChecked()
+
+    await next(user)
+    const goal = screen.getByRole('group', { name: 'Goal finish time' })
+    expect(within(goal).getByLabelText('Hours')).toHaveValue('11')
+    expect(within(goal).getByLabelText('Minutes')).toHaveValue('30')
+  })
+
+  it('jumps straight to a screen from the summary', async () => {
+    const { user } = setup()
+    await answerEverything(user)
+
+    await user.click(screen.getByRole('button', { name: 'Change days' }))
+
+    onStep(3)
+    expect(runDays()).toBeInTheDocument()
+  })
+
+  it('takes the runner back to the screen the API complained about', async () => {
     server.use(
       http.post('*/api/v1/plans', () =>
         HttpResponse.json(
@@ -110,23 +181,22 @@ describe('building a plan', () => {
       ),
     )
     const { user } = setup()
-    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
-    await fillGoal(user, '0', '3', '0')
+    await answerEverything(user, ['0', '3', '0'])
 
-    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+    await buildIt(user)
 
-    const goal = screen.getByRole('group', { name: 'Goal finish time' })
-    expect(await within(goal).findByText('That time works out to an unrealistic pace.')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Your plan' })).not.toBeInTheDocument()
+    const goal = await screen.findByRole('group', { name: 'Goal finish time' })
+    onStep(2)
+    expect(within(goal).getByText('That time works out to an unrealistic pace.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
   })
 
   it('explains a rate limit in plain words', async () => {
     server.use(http.post('*/api/v1/plans', () => new HttpResponse(null, { status: 429, headers: { 'Retry-After': '42' } })))
     const { user } = setup()
-    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
-    await fillGoal(user, '11', '0', '0')
+    await answerEverything(user)
 
-    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+    await buildIt(user)
 
     expect(await screen.findByText(/Try again in 42 seconds/)).toBeInTheDocument()
   })
@@ -134,6 +204,7 @@ describe('building a plan', () => {
   it('suggests a goal from a recent race', async () => {
     const { user } = setup()
     await user.click(await screen.findByRole('radio', { name: /Cape Town Marathon/ }))
+    await next(user)
     await user.click(screen.getByText('Not sure? Estimate it from a recent race'))
 
     const estimate = screen.getByRole('group', { name: 'Your time' })
@@ -144,6 +215,23 @@ describe('building a plan', () => {
     const goal = screen.getByRole('group', { name: 'Goal finish time' })
     expect(within(goal).getByLabelText('Hours')).toHaveValue('1')
     expect(within(goal).getByLabelText('Minutes')).toHaveValue('51')
+  })
+
+  it('reopens the answers on the summary from a built plan, and goes back to it', async () => {
+    const { user } = setup()
+    await answerEverything(user)
+    await buildIt(user)
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    await user.click(screen.getByRole('button', { name: 'Change answers' }))
+
+    onStep(5)
+    expect(screen.getByText(/Comrades Marathon, Sunday 13 June 2027/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Back to your plan' }))
+    expect(screen.getByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(wizard()).not.toBeInTheDocument()
   })
 })
 
@@ -163,10 +251,9 @@ describe('when things go wrong', () => {
   it('offers a retry when the server can’t build the plan', async () => {
     server.use(http.post('*/api/v1/plans', () => HttpResponse.json({}, { status: 500 })))
     const { user } = setup()
-    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
-    await fillGoal(user, '11', '0', '0')
+    await answerEverything(user)
 
-    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+    await buildIt(user)
 
     expect(await screen.findByText('We couldn’t build that plan.')).toBeInTheDocument()
     server.resetHandlers()
@@ -178,11 +265,12 @@ describe('when things go wrong', () => {
 describe('a shared plan', () => {
   const link = '?km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&gym=mo&from=2026-10-08'
 
-  it('rebuilds straight from the link', async () => {
+  it('rebuilds straight from the link, without the questions', async () => {
     window.history.replaceState(null, '', `/${link}`)
     setup()
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(wizard()).not.toBeInTheDocument()
     expect(lastPlanRequest.body).toMatchObject({ planFrom: '2026-10-08', strengthDays: ['Monday'] })
   })
 

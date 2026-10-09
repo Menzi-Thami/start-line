@@ -60,6 +60,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       account: info ? toAccount(info) : null,
       // Come back to exactly this page, so a plan being built isn't lost.
       signIn: () => void msal.loginRedirect({ scopes: [config.scope], redirectStartPage: window.location.href }),
+      signUp: () => void msal.loginRedirect({ scopes: [config.scope], prompt: 'create', redirectStartPage: window.location.href }),
       signOut: () => void msal.logoutRedirect({ account: info ?? undefined }),
       getToken: async () => {
         if (!info) return null

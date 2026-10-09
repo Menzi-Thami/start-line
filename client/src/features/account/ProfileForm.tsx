@@ -23,10 +23,12 @@ interface Props {
   /** Present when editing; absent when signing up. */
   runner?: Runner
   onSaved: (runner: Runner) => void
+  /** The sign-up button text; the wizard says "Continue" because the plan questions come next. */
+  submitLabel?: string
 }
 
 /** Sign-up and profile editing in one form. Sign-up adds the privacy notice, which must be accepted. */
-export function ProfileForm({ runner, onSaved }: Props) {
+export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up' }: Props) {
   const auth = useAuth()
   const id = useId()
   const signingUp = runner === undefined
@@ -117,7 +119,7 @@ export function ProfileForm({ runner, onSaved }: Props) {
 
       <div className="submit-row" style={{ marginTop: 'var(--space-4)' }}>
         <button type="submit" className="button button-primary" disabled={status.kind === 'saving'}>
-          {status.kind === 'saving' ? 'Saving…' : signingUp ? 'Finish signing up' : 'Save changes'}
+          {status.kind === 'saving' ? 'Saving…' : signingUp ? submitLabel : 'Save changes'}
         </button>
         <span aria-live="polite">
           {status.kind === 'saved' && !signingUp && <span className="field-help">Saved.</span>}

@@ -181,11 +181,6 @@ select {
   transition: background-color 200ms ease;
 }
 
-.wizard-bar li:nth-child(1) { height: 16px; }
-.wizard-bar li:nth-child(2) { height: 13px; }
-.wizard-bar li:nth-child(3) { height: 10px; }
-.wizard-bar li:nth-child(4) { height: 7px; }
-
 .wizard-bar li:last-child {
   width: 9px;
   height: 9px;
@@ -302,6 +297,63 @@ select {
     grid-column: 1 / -1;
     grid-row: 2;
   }
+}
+
+/* The sign-up screen: why Taperday, in plain words, then one clear way in. */
+.pitch-reasons {
+  list-style: none;
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.pitch-reasons li {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-5);
+  position: relative;
+}
+
+/* A small race-day dot marks each reason, echoing the app icon. */
+.pitch-reasons li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.45em;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.pitch-reasons strong {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.pitch-reasons span {
+  color: var(--ink-2);
+  max-width: 36rem;
+}
+
+.pitch-soon {
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-6);
+  max-width: 36rem;
+}
+
+.pitch-soon .tag {
+  margin-right: var(--space-2);
+}
+
+.pitch-actions {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
 }
 
 .loading-line {

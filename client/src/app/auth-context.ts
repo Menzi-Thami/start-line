@@ -12,6 +12,8 @@ export interface Auth {
   loading: boolean
   account: Account | null
   signIn: () => void
+  /** Like signIn, but opens straight on "create account". */
+  signUp: () => void
   signOut: () => void
   /** An access token for the API, or null if the runner isn't signed in. */
   getToken: () => Promise<string | null>
@@ -22,6 +24,7 @@ export const accountsOff: Auth = {
   loading: false,
   account: null,
   signIn: () => undefined,
+  signUp: () => undefined,
   signOut: () => undefined,
   getToken: () => Promise.resolve(null),
 }

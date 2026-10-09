@@ -15,7 +15,7 @@ Portal labels move around; if a step's wording doesn't match, the Microsoft Lear
    If you don't have an Azure subscription yet, create a free one first.
 2. Create an **external tenant** (Entra ID → Overview → Manage tenants → Create → External).
 3. Pick a subdomain, e.g. `taperday`. Your sign-in authority becomes
-   `https://taperday.ciamlogin.com/`.
+   `https://taperday.ciamlogin.com/<tenant-id>/` (the tenant ID in the path matters, see step 5).
 4. Note the tenant's **Directory (tenant) ID**.
 
 > Don't sign up as a runner using the same email you administer the tenant with. External ID creates a
@@ -38,8 +38,9 @@ In the external tenant: App registrations → New registration, name **Taperday 
 
 New registration, name **Taperday Web**.
 
-1. Platform: **Single-page application**, redirect URI `http://localhost:5173` (add the production URL later).
-2. **API permissions** → add *Taperday API* → `Plans.ReadWrite` → grant admin consent.
+1. Platform: **Single-page application**, redirect URIs `http://localhost:5173` and the website's production URL.
+2. **API permissions** → add *Taperday API* → `Plans.ReadWrite`, plus Microsoft Graph `openid` and
+   `offline_access` → grant admin consent, so runners never see a permissions prompt.
 3. Note the web app's **Application (client) ID**.
 
 ## 4. Sign-up and sign-in flow
@@ -64,9 +65,15 @@ Client (`client/.env.local`, git-ignored):
 
 ```bash
 VITE_AUTH_CLIENT_ID=<web-client-id>
-VITE_AUTH_AUTHORITY=https://<subdomain>.ciamlogin.com/
+VITE_AUTH_AUTHORITY=https://<subdomain>.ciamlogin.com/<tenant-id>/
 VITE_AUTH_SCOPE=api://<api-client-id>/Plans.ReadWrite
 ```
+
+> **The client authority must end in the tenant ID**, not `<subdomain>.onmicrosoft.com` and not a bare host.
+> External ID issues tokens as `https://<tenant-id>.ciamlogin.com/<tenant-id>/v2.0`, and MSAL 5 checks the issuer
+> against the tenant named in the authority's path. Any other form fails before the sign-in page opens, with
+> `endpoints_resolution_error` in the console and no visible error. The API's `AzureAd:Instance` stays the bare
+> `https://<subdomain>.ciamlogin.com/`: Microsoft.Identity.Web adds the tenant ID itself.
 
 ## Database
 

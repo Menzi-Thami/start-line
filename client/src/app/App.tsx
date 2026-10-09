@@ -155,12 +155,17 @@ export function App() {
     <div className="page">
       <header className="masthead">
         <button type="button" className="wordmark wordmark-button" onClick={() => go('build')}>
-          <svg className="wordmark-mark" viewBox="0 0 32 32" aria-hidden="true">
-            <rect width="32" height="32" rx="7" fill="var(--accent)" />
-            <path d="M6 22h20" stroke="var(--on-accent)" strokeWidth="3" strokeLinecap="round" />
-            <path d="M10 10v12M16 10v12M22 10v12" stroke="var(--on-accent)" strokeOpacity=".45" strokeWidth="2" />
+          {/* Four bars stepping down = the taper; the dot = race day. */}
+          <svg className="wordmark-mark" viewBox="0 0 44 26" aria-hidden="true">
+            <rect x="0" y="2" width="6" height="22" rx="1.5" fill="currentColor" />
+            <rect x="9" y="7" width="6" height="17" rx="1.5" fill="currentColor" />
+            <rect x="18" y="12" width="6" height="12" rx="1.5" fill="currentColor" />
+            <rect x="27" y="17" width="6" height="7" rx="1.5" fill="currentColor" />
+            <circle cx="39.5" cy="20.5" r="3.5" fill="var(--accent)" />
           </svg>
-          Taperday
+          <span>
+            taper<span className="wordmark-accent">day</span>
+          </span>
         </button>
 
         {state.kind !== 'off' && (

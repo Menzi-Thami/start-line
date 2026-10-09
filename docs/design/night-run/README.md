@@ -29,6 +29,8 @@ Type: **Bricolage Grotesque** (display, 800), **Atkinson Hyperlegible Next** (bo
 paces, dates, bib numbers). Buttons are chunky pills that spring on hover and press. The tapering wordmark stays.
 
 Rejected along the way, so not to revisit: cream and brown (too bland), SA-flag/Ndebele and Xhosa-inspired palettes.
+An "asphalt slate" variant (`#121824` base, tinted cards, film grain) was compared side by side; the near-black
+original was kept.
 
 ## The theatre
 
@@ -40,8 +42,16 @@ Rejected along the way, so not to revisit: cream and brown (too bland), SA-flag/
 4. **The race rack:** race bibs hang from hooks on a rail and sway; touching one makes it swing harder.
 5. **The course:** a route line draws itself as you scroll; steps rise in; a springy slider picks experience.
 6. **Bento:** working miniatures: tick a run (volt confetti), pace bars that grow, the build-up chart.
-7. **Plan on a phone:** header drops in, progress ring draws, runs slide in one after another, a tiny runner sprints on
-   the spot at your place on the course, ticking pops confetti, and a floating frosted-glass tab bar.
+7. **Plan on a phone:** header drops in, runs slide in one after another, ticking pops confetti, and a floating
+   frosted-glass tab bar. The progress ring and the runner on the course bar are driven by **today's date**: the ring
+   fills day by day from the plan's first day and closes completely on race day, and the runner moves along the course
+   towards the chequered flag. What the runner does depends on the day:
+   - **Training day:** sprints on the spot where today is.
+   - **Rest day:** lies down asleep, breathing slowly, with "z z z" drifting up (also on the rest day's card).
+   - **Race day:** at the flag, bursting through the finish tape with arms up; the week is replaced by one volt
+     "It's race day" card with falling confetti.
+
+   (The concept's dashed "Training day / Rest day / Race day" switch is only there to preview the states.)
 8. **Sign-up:** the button squashes; the runner dashes off to "the sign-up desk" ("Lacing up…", "Finding the other
    sock…", "Pretending to stretch…"); back from the email code, the name you type prints live on your race bib, the bib
    number rolls like a slot machine, ticking the privacy notice slams an OFFICIAL stamp on it; then safety pins pop in,

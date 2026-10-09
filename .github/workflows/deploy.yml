@@ -68,12 +68,21 @@ jobs:
 
       # Migrations run before the new API starts, so it never meets a schema older than it expects.
       # Keep migrations additive: the old API keeps serving until the deploy below swaps it out.
-      # Waking the paused free database can take a minute, hence the long connect timeout.
+      # The free database pauses when idle and answers 40613 ("not currently available") while it wakes, which can
+      # take a minute or two, so keep trying. Retrying is safe: migrations that already ran are skipped.
       - name: Migrate database
         run: |
-          dotnet ef database update --configuration Release \
-            --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure \
-            --connection "Server=tcp:${{ vars.SQL_SERVER }},1433;Database=${{ vars.SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True;Connect Timeout=120;"
+          dotnet build src/StartLine.Infrastructure -c Release -v q
+          for attempt in 1 2 3 4 5 6; do
+            if dotnet ef database update --no-build --configuration Release \
+              --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure \
+              --connection "Server=tcp:${{ vars.SQL_SERVER }},1433;Database=${{ vars.SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True;Connect Timeout=120;"; then
+              exit 0
+            fi
+            echo "Attempt $attempt failed; the database may still be waking. Trying again in 30 s."
+            sleep 30
+          done
+          echo "Database migration failed after 6 attempts" && exit 1
 
       - name: Deploy API
         run: az webapp deploy -g rg-taperday -n "${{ vars.API_APP_NAME }}" --src-path api.zip --type zip --restart true

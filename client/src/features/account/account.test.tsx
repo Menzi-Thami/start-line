@@ -85,7 +85,9 @@ const signedIn = (overrides: Partial<Auth> = {}): Auth => ({
   enabled: true,
   loading: false,
   account: { name: 'Thandi', email: 'thandi@example.com' },
+  error: null,
   signIn: vi.fn(),
+  signUp: vi.fn(),
   signOut: vi.fn(),
   getToken: () => Promise.resolve(TOKEN),
   ...overrides,
@@ -135,25 +137,74 @@ describe('signed out', () => {
   })
 })
 
-describe('signing up', () => {
-  it('needs the privacy notice accepted, then saves the profile with the runner’s time zone', async () => {
+describe('signing up comes first', () => {
+  it('says why a sign-in didn’t finish instead of failing silently', async () => {
+    const auth = { ...signedOut(), error: 'AADSTS50020: User account from identity provider google.com does not exist in tenant Taperday.' }
+    const user = renderWith(auth)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Sign-in didn’t finish. AADSTS50020')
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }))
+    expect(auth.signIn).toHaveBeenCalled()
+  })
+
+
+  it('opens on why Taperday is worth it, with sign-up as the way in', async () => {
+    const auth = signedOut()
+    const user = renderWith(auth)
+
+    expect(await screen.findByRole('heading', { name: 'Your race, your week, your plan' })).toBeInTheDocument()
+    expect(screen.getByText('Step 1 of 6')).toBeInTheDocument()
+    expect(screen.getByText('A pace and a reason for every run')).toBeInTheDocument()
+    // Nothing unbuilt is promised as if it were there.
+    expect(screen.getByText('Coming soon').parentElement).toHaveTextContent(/weekly email/)
+    expect(screen.queryByRole('radio', { name: /Comrades/ })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Sign up free' }))
+    expect(auth.signUp).toHaveBeenCalled()
+
+    await user.click(within(screen.getByRole('main')).getByRole('button', { name: 'Sign in' }))
+    expect(auth.signIn).toHaveBeenCalled()
+  })
+
+  it('asks for the profile next, needs the privacy notice accepted, then moves on to the race', async () => {
     const db = accountApi({ runner: null })
     const user = renderWith(signedIn())
 
-    await user.click(await screen.findByRole('button', { name: 'finish signing up' }))
+    expect(await screen.findByRole('heading', { name: 'A bit about you' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'finish signing up' })).not.toBeInTheDocument()
     const name = screen.getByLabelText('What should we call you?')
     await user.clear(name)
     await user.type(name, 'Thandi M')
-    await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
     expect(screen.getByText(/accept the privacy notice/)).toBeInTheDocument()
     expect(db.profiles).toHaveLength(0)
 
     await user.click(screen.getByRole('checkbox', { name: /I’ve read this/ }))
-    await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
 
-    expect(await screen.findByRole('button', { name: 'My plans' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Which race?' })).toHaveFocus()
+    expect(screen.getByText('Step 2 of 6')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'My plans' })).toBeInTheDocument()
     expect(db.profiles[0]).toMatchObject({ displayName: 'Thandi M', acceptPrivacyNotice: true, units: 'Kilometres' })
     expect(typeof (db.profiles[0] as { timeZone: string }).timeZone).toBe('string')
+  })
+
+  it('takes a returning runner straight to the questions', async () => {
+    accountApi({ runner: thandi })
+    renderWith(signedIn())
+
+    expect(await screen.findByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
+    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Your race, your week, your plan' })).not.toBeInTheDocument()
+  })
+
+  it('still opens a shared plan without an account', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    renderWith(signedOut())
+
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Your race, your week, your plan' })).not.toBeInTheDocument()
   })
 })
 
@@ -168,6 +219,32 @@ describe('a signed-up runner', () => {
 
     expect(await screen.findByRole('button', { name: 'Saved. Open My plans' })).toBeInTheDocument()
     expect(db.saved[0]).toMatchObject({ plan: { distanceKm: 5, raceDate: '2026-12-13', goalTime: '00:24:30', planFrom: '2026-10-08' } })
+  })
+
+  it('gets a new plan saved as soon as it’s built, but not every re-run of changed answers', async () => {
+    const db = accountApi({ runner: thandi })
+    const user = renderWith(signedIn())
+    const next = () => user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
+    await next()
+    const goal = screen.getByRole('group', { name: 'Goal finish time' })
+    await user.type(within(goal).getByLabelText('Hours'), '11')
+    await next()
+    await next()
+    await next()
+    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+
+    expect(await screen.findByRole('button', { name: 'Saved. Open My plans' })).toBeInTheDocument()
+    expect(db.saved).toHaveLength(1)
+
+    await user.click(screen.getByRole('button', { name: 'Change answers' }))
+    await user.click(screen.getByText('Add strength and mobility sessions'))
+    await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
+    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+
+    expect(await screen.findByRole('button', { name: 'Save to My plans' })).toBeInTheDocument()
+    expect(db.saved).toHaveLength(1)
   })
 
   it('sees an empty state before saving anything', async () => {

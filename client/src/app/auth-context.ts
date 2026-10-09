@@ -11,7 +11,11 @@ export interface Auth {
   /** True until a returning sign-in redirect has been processed. */
   loading: boolean
   account: Account | null
+  /** Why the last sign-in didn't finish, in Microsoft's words, or null. Shown so failures are never silent. */
+  error: string | null
   signIn: () => void
+  /** Like signIn, but opens straight on "create account". */
+  signUp: () => void
   signOut: () => void
   /** An access token for the API, or null if the runner isn't signed in. */
   getToken: () => Promise<string | null>
@@ -21,7 +25,9 @@ export const accountsOff: Auth = {
   enabled: false,
   loading: false,
   account: null,
+  error: null,
   signIn: () => undefined,
+  signUp: () => undefined,
   signOut: () => undefined,
   getToken: () => Promise.resolve(null),
 }

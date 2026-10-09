@@ -3,8 +3,9 @@ import { AccountPage } from '../features/account/AccountPage'
 import { MyPlans } from '../features/account/MyPlans'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
+import { SignUpPitch } from '../features/account/SignUpPitch'
 import { useRunner } from '../features/account/useRunner'
-import { BuilderForm, type FieldErrors, type RacesState } from '../features/builder/BuilderForm'
+import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { PlanView } from '../features/plan/PlanView'
 import { api, ApiError } from '../lib/api-client'
 import { localToday, type Units } from '../lib/format'
@@ -63,6 +64,7 @@ export function App() {
   const [builderKey, setBuilderKey] = useState(0)
   // True while the wizard is open over a plan (or about to produce one). A built plan replaces the wizard.
   const [editing, setEditing] = useState(false)
+  const [freshBuild, setFreshBuild] = useState(false)
   const inflight = useRef<AbortController | null>(null)
 
   // Only sets state once the request settles; callers set the loading state themselves.
@@ -122,6 +124,9 @@ export function App() {
   }
 
   const buildFromWizard = (inputs: PlanInputs) => {
+    // A brand-new plan is saved to the runner's account as soon as it's built; a re-run of changed answers isn't,
+    // so trying a different goal doesn't fill My plans with near-copies.
+    setFreshBuild(plan.kind !== 'ready')
     setEditing(true)
     build(inputs)
   }
@@ -177,6 +182,40 @@ export function App() {
   const showBuilder = view === 'build' && (editing || plan.kind === 'idle')
   const showPlan = view === 'build' && plan.kind === 'ready' && !editing
 
+  // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
+  const gate: Gate | undefined =
+    state.kind === 'signed-out'
+      ? {
+          key: 'pitch',
+          title: 'Your race, your week, your plan',
+          hint: 'A free account keeps your plans with you, from the first easy run to the start line.',
+          body: <SignUpPitch onSignUp={auth.signUp} onSignIn={auth.signIn} />,
+        }
+      : state.kind === 'needs-sign-up'
+        ? {
+            key: 'profile',
+            title: 'A bit about you',
+            hint: 'So your plans and emails fit you. Then on to your race.',
+            body: <ProfileForm submitLabel="Continue" onSaved={runner.setRunner} />,
+          }
+        : state.kind === 'error'
+          ? {
+              key: 'error',
+              title: 'We couldn’t load your account',
+              hint: state.message,
+              body: (
+                <div className="submit-row">
+                  <button type="button" className="button" onClick={() => runner.refresh()}>
+                    Try again
+                  </button>
+                  <button type="button" className="link-button" onClick={auth.signOut}>
+                    Sign out
+                  </button>
+                </div>
+              ),
+            }
+          : undefined
+
   return (
     <div className="page">
       <header className="masthead">
@@ -222,7 +261,17 @@ export function App() {
       </header>
 
       <main>
-        {state.kind === 'needs-sign-up' && view !== 'sign-up' && (
+        {auth.error && (
+          <div className="callout" role="alert">
+            <p>
+              Sign-in didn’t finish. {auth.error}{' '}
+              <button type="button" className="link-button" onClick={auth.signIn}>
+                Try again
+              </button>
+            </p>
+          </div>
+        )}
+        {state.kind === 'needs-sign-up' && view !== 'sign-up' && !showBuilder && (
           <div className="callout" role="note">
             <p>
               You’re signed in. One more step to save plans:{' '}
@@ -233,7 +282,7 @@ export function App() {
             </p>
           </div>
         )}
-        {state.kind === 'error' && (
+        {state.kind === 'error' && !showBuilder && (
           <div className="callout" role="alert">
             <p>
               We couldn’t load your account. {state.message}{' '}
@@ -285,7 +334,10 @@ export function App() {
 
         {(view === 'build' || view === 'sign-up') && (
           <>
-            {showBuilder && (
+            {/* Wait to hear who the runner is, so a returning runner never sees the sign-up screen flash past. */}
+            {showBuilder && state.kind === 'loading' && <p className="loading-line">Checking your account…</p>}
+
+            {showBuilder && state.kind !== 'loading' && (
               <BuilderForm
                 key={builderKey}
                 races={races}
@@ -297,14 +349,16 @@ export function App() {
                 today={today}
                 onSubmit={buildFromWizard}
                 onCancel={plan.kind === 'ready' ? backToPlan : undefined}
+                gate={gate}
                 intro={
                   <div className="intro">
                     <h1>
                       You’ve entered the race. <em>Let’s get you to the start.</em>
                     </h1>
                     <p>
-                      Five quick questions and you’ll have a week-by-week plan with a pace and a reason for every session. No
-                      account, no app, nothing to pay.
+                      {auth.enabled
+                        ? 'A week-by-week running plan built around your race and the days you can run, with a pace and a reason for every session.'
+                        : 'Five quick questions and you’ll have a week-by-week plan with a pace and a reason for every session. No account, no app, nothing to pay.'}
                     </p>
                   </div>
                 }
@@ -349,6 +403,7 @@ export function App() {
                       request={toRequest(plan.inputs)}
                       onOpenMyPlans={() => go('plans')}
                       onFinishSignUp={() => go('sign-up')}
+                      autoSave={freshBuild}
                     />
                   </>
                 }

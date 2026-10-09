@@ -9,34 +9,43 @@
 ## The idea
 
 A taper is the last few weeks before a race, when training volume steps down so you arrive fresh.
-The mark draws exactly that: four bars stepping down, then a dot for race day. It's the same
-shape as the weekly-distance chart in every plan, so the logo and the product tell one story.
+The logo does exactly that: the letters of "taper" each get a step smaller and lighter, then "day"
+comes back at full size in track red. Race day, fresh.
 
-## Logo
+## Logo (the wordmark)
 
 | Part | Light background | Dark background |
 |---|---|---|
-| Bars and "taper" | Ink `#16181b` | `#eeebe5` |
-| Race-day dot and "day" | Track red `#b93a1c` | `#e8613b` |
+| "taper" | Ink `#16181b`, fading by step | `#eeebe5`, fading by step |
+| "day" | Track red `#b93a1c` | `#e8613b` |
 
-In the app these come from the `--ink` and `--accent` tokens (`client/src/styles/tokens.css`), so
-dark mode follows automatically. Don't hard-code them in components.
+In the app the colours come from the `--ink` and `--accent` tokens (`client/src/styles/tokens.css`),
+so dark mode follows automatically. Don't hard-code them in components.
 
-- **Wordmark type:** Bricolage Grotesque, bold, letter-spacing −0.03em.
-- **Mark geometry** (44 × 26 grid): bars 6 wide with gaps of 3, heights 22, 17, 12 and 7, corner
-  radius 1.5; dot radius 3.5, centred at (39.5, 20.5).
+- **Type:** Bricolage Grotesque, bold, letter-spacing −0.03em, letters sitting on one baseline.
+- **The taper**, relative to the size of "day":
+
+  | Letter | t | a | p | e | r | day |
+  |---|---|---|---|---|---|---|
+  | Size | 1.12 | 1.00 | 0.88 | 0.79 | 0.70 | 1.00 |
+  | Opacity | 1 | 0.85 | 0.70 | 0.58 | 0.48 | 1 |
+
 - **Clear space:** at least the height of the "t" all round.
-- **Smallest size:** the full logo at 20px tall; below that use the mark or the app icon alone.
+- **Smallest size:** "day" at least 20px tall. Below that the small letters turn to mush, so use the
+  app icon instead.
+- Screen readers get the plain word "Taperday"; the stepped letters are hidden from them.
 
-## App icon
+## App icon (small sizes only)
 
-The mark in white on a track-red rounded square (`client/public/favicon.svg`). Three bars plus the
-dot, because four bars blur at 16px.
+The wordmark can't shrink to a browser tab, so tiny places use a mark with the same idea: three
+bars stepping down and a race-day dot, white on a track-red rounded square
+(`client/public/favicon.svg`). Use it for the favicon, the home-screen icon and social avatars,
+never next to the wordmark.
 
 ## Please don't
 
-- Recolour the bars, or make every part red.
-- Change the order of the bars, stretch the mark, or add shadows, gradients or outlines.
+- Make "taper" red, make "day" fade, or reverse the steps (it must get smaller towards "day").
+- Stretch the logo, or add shadows, gradients or outlines.
 - Write the name with separators (`taper.day`, `taper|day`): `taper.day` is someone else's domain.
 - Put the full logo on a busy photo. Use a solid background, or the app icon.
 

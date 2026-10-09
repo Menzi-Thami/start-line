@@ -155,16 +155,15 @@ export function App() {
     <div className="page">
       <header className="masthead">
         <button type="button" className="wordmark wordmark-button" onClick={() => go('build')}>
-          {/* Four bars stepping down = the taper; the dot = race day. */}
-          <svg className="wordmark-mark" viewBox="0 0 44 26" aria-hidden="true">
-            <rect x="0" y="2" width="6" height="22" rx="1.5" fill="currentColor" />
-            <rect x="9" y="7" width="6" height="17" rx="1.5" fill="currentColor" />
-            <rect x="18" y="12" width="6" height="12" rx="1.5" fill="currentColor" />
-            <rect x="27" y="17" width="6" height="7" rx="1.5" fill="currentColor" />
-            <circle cx="39.5" cy="20.5" r="3.5" fill="var(--accent)" />
-          </svg>
-          <span>
-            taper<span className="wordmark-accent">day</span>
+          {/* "taper" steps down letter by letter, like a taper; "day" comes back full size: race day. */}
+          <span className="visually-hidden">Taperday</span>
+          <span className="wordmark-letters" aria-hidden="true">
+            <span className="wl wl-1">t</span>
+            <span className="wl wl-2">a</span>
+            <span className="wl wl-3">p</span>
+            <span className="wl wl-4">e</span>
+            <span className="wl wl-5">r</span>
+            <span className="wordmark-accent">day</span>
           </span>
         </button>
 

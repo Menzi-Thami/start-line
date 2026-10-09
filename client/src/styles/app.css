@@ -85,14 +85,39 @@ select {
   gap: var(--space-2);
 }
 
-.wordmark-accent {
-  color: var(--accent);
+.wordmark-letters {
+  display: inline-flex;
+  align-items: baseline;
 }
 
-.wordmark-mark {
-  width: 34px;
-  height: 20px;
-  flex: none;
+/* Each letter of "taper" a step smaller and lighter: the taper. Sizes are relative so the logo scales as one. */
+.wl-1 {
+  font-size: 1.12em;
+}
+
+.wl-2 {
+  font-size: 1em;
+  opacity: 0.85;
+}
+
+.wl-3 {
+  font-size: 0.88em;
+  opacity: 0.7;
+}
+
+.wl-4 {
+  font-size: 0.79em;
+  opacity: 0.58;
+}
+
+.wl-5 {
+  font-size: 0.7em;
+  opacity: 0.48;
+}
+
+.wordmark-accent {
+  color: var(--accent);
+  margin-left: 0.06em;
 }
 
 .intro {

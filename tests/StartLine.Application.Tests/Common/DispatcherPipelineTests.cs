@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
+using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Plans;
@@ -22,6 +23,8 @@ public sealed class DispatcherPipelineTests
             .AddSingleton<TimeProvider>(new FakeTimeProvider(TestRaces.Now))
             .AddSingleton(TestRaces.Catalogue())
             .AddSingleton(Substitute.For<IRaceStore>())
+            .AddScoped(_ => Substitute.For<IApplicationDbContext>())
+            .AddScoped(_ => Substitute.For<ICurrentUser>())
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true })
             .CreateScope().ServiceProvider.GetRequiredService<IDispatcher>();

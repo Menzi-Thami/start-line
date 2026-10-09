@@ -98,51 +98,8 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
             : catalogue.FindBySlug(q.RaceSlug)?.Distance.Kilometres;
 }
 
-internal sealed class GeneratePlanHandler(IRaceCatalogue catalogue, TimeProvider timeProvider)
-    : IRequestHandler<GeneratePlanQuery, TrainingPlanDto>
+internal sealed class GeneratePlanHandler(PlanBuilder builder) : IRequestHandler<GeneratePlanQuery, TrainingPlanDto>
 {
-    public Task<TrainingPlanDto> Handle(GeneratePlanQuery request, CancellationToken cancellationToken)
-    {
-        var race = ResolveRace(request);
-        var plan = TrainingPlanGenerator.Generate(new PlanParameters(
-            race.Distance,
-            request.GoalTime,
-            race.Date,
-            request.PlanFrom ?? timeProvider.Today(),
-            request.RunDays,
-            request.LongRunDay,
-            request.CurrentWeeklyKm,
-            request.Experience,
-            request.StrengthDays));
-
-        var dto = TrainingPlanDto.From(plan, race.Summary);
-        return Task.FromResult(race.Caveats.Count == 0 ? dto : dto with { Warnings = [.. race.Caveats, .. dto.Warnings] });
-    }
-
-    private (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) ResolveRace(GeneratePlanQuery request)
-    {
-        if (!string.IsNullOrWhiteSpace(request.RaceSlug))
-        {
-            var race = catalogue.FindBySlug(request.RaceSlug) ?? throw new NotFoundException("Race", request.RaceSlug);
-            List<PlanWarningDto> caveats = [];
-            if (race.DateStatus == DateStatus.Provisional)
-            {
-                caveats.Add(new("date-provisional",
-                    $"{race.Name}'s date isn't confirmed by the organiser yet. If it moves, open your plan link again and the plan moves with it."));
-            }
-
-            if (!race.DistanceConfirmed)
-            {
-                caveats.Add(new("distance-provisional",
-                    $"{race.Name}'s official distance isn't confirmed yet. The plan uses about {race.Distance.Kilometres.ToString("0.#", CultureInfo.InvariantCulture)} km, which makes little difference to the training."));
-            }
-
-            return (race.Distance, race.Date, new RaceSummaryDto(race.Slug, race.Name, race.Date, race.Distance.Kilometres), caveats);
-        }
-
-        var distance = Distance.FromKilometres(request.DistanceKm!.Value);
-        var date = request.RaceDate!.Value;
-        var name = string.IsNullOrWhiteSpace(request.RaceName) ? "Your race" : request.RaceName.Trim();
-        return (distance, date, new RaceSummaryDto(null, name, date, distance.Kilometres), []);
-    }
+    public Task<TrainingPlanDto> Handle(GeneratePlanQuery request, CancellationToken cancellationToken) =>
+        Task.FromResult(builder.Build(request));
 }

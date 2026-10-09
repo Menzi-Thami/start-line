@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { loadDone, saveDone } from '../../lib/storage'
@@ -13,6 +13,8 @@ interface Props {
   onUnitsChange: (units: Units) => void
   shareUrl: string
   today: string
+  /** Extra toolbar actions, such as saving the plan to an account. */
+  toolbarExtra?: ReactNode
 }
 
 /** Which plan week contains today, if any. */
@@ -25,7 +27,7 @@ function weekContaining(plan: TrainingPlan, today: string): number | null {
   return week?.number ?? null
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today }: Props) {
+export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
@@ -121,6 +123,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today }: Props)
         <button type="button" className="button button-quiet" onClick={() => window.print()}>
           Print
         </button>
+        {toolbarExtra}
         <span className="visually-hidden" aria-live="polite">
           {copied === 'copied' ? 'Link copied to the clipboard.' : copied === 'failed' ? 'Couldn’t copy. The link is in your address bar.' : ''}
         </span>

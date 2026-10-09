@@ -1,5 +1,5 @@
 import { WEEK, type DayOfWeek, type Experience, type GeneratePlanRequest } from './types'
-import { toTimeSpan } from './format'
+import { parseTimeSpan, toTimeSpan } from './format'
 
 /** Everything needed to rebuild a plan. It lives in the URL, so a plan is shared by sharing the link. */
 export interface PlanInputs {
@@ -88,6 +88,25 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
     experience,
     strengthDays: decodeDays(params.get('gym')).slice(0, 3),
     planFrom: planFrom && ISO_DATE.test(planFrom) ? planFrom : undefined,
+  }
+}
+
+/** The inputs a saved plan was built from, ready to rebuild and to share as a link. */
+export function fromRequest(request: GeneratePlanRequest): PlanInputs | null {
+  const goalSeconds = parseTimeSpan(request.goalTime)
+  if (!goalSeconds) return null
+  return {
+    raceSlug: request.raceSlug ?? undefined,
+    raceName: request.raceName ?? undefined,
+    distanceKm: request.distanceKm ?? undefined,
+    raceDate: request.raceDate ?? undefined,
+    goalSeconds,
+    runDays: WEEK.filter((d) => request.runDays.includes(d)),
+    longRunDay: request.longRunDay,
+    currentWeeklyKm: request.currentWeeklyKm ?? undefined,
+    experience: request.experience ?? 'Regular',
+    strengthDays: WEEK.filter((d) => (request.strengthDays ?? []).includes(d)),
+    planFrom: request.planFrom ?? undefined,
   }
 }
 

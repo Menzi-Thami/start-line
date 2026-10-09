@@ -820,6 +820,112 @@ select {
   font-size: var(--text-sm);
 }
 
+/* ---------- Account ---------- */
+.masthead {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.wordmark-button {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  cursor: pointer;
+  min-height: var(--tap);
+}
+
+.masthead-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.nav-link,
+.link-button {
+  background: none;
+  border: 0;
+  padding: 0 var(--space-1);
+  min-height: var(--tap);
+  color: var(--ink-2);
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 0.25em;
+}
+
+.link-button {
+  min-height: auto;
+  padding: 0;
+  color: var(--accent-strong);
+  text-decoration-color: currentColor;
+}
+
+.nav-link:hover,
+.nav-link[aria-current='page'] {
+  color: var(--ink);
+  text-decoration-color: var(--accent);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  margin-top: var(--space-4);
+}
+
+.notice {
+  border-top: 1px solid var(--line);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+}
+
+.notice h3 {
+  font-size: var(--text-md);
+  margin-bottom: var(--space-2);
+}
+
+.notice ul {
+  margin: 0 0 var(--space-2);
+  padding-left: var(--space-5);
+  color: var(--ink-2);
+}
+
+.saved-plan {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+
+.saved-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.button-danger {
+  background: var(--danger-ink);
+  border-color: var(--danger-ink);
+  color: var(--surface);
+}
+
+.button-danger:hover {
+  background: var(--danger-ink);
+  filter: brightness(0.9);
+}
+
+.danger-zone {
+  border-top: 1px solid var(--line);
+  padding-top: var(--space-5);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

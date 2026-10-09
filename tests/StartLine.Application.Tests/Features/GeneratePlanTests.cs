@@ -32,7 +32,7 @@ public sealed class GeneratePlanTests
 
     private GeneratePlanValidator Validator() => new(TestRaces.Catalogue(), _time);
 
-    private GeneratePlanHandler Handler() => new(TestRaces.Catalogue(), _time);
+    private GeneratePlanHandler Handler() => new(new PlanBuilder(TestRaces.Catalogue(), _time));
 
     [Fact]
     public void A_complete_custom_race_is_valid() =>
@@ -179,7 +179,7 @@ public sealed class GeneratePlanTests
         var catalogue = TestRaces.Catalogue();
         catalogue.FindBySlug("comrades-2027").Returns(unconfirmed);
 
-        var plan = await new GeneratePlanHandler(catalogue, _time).Handle(CatalogueRace("comrades-2027"), CancellationToken.None);
+        var plan = await new GeneratePlanHandler(new PlanBuilder(catalogue, _time)).Handle(CatalogueRace("comrades-2027"), CancellationToken.None);
 
         plan.Warnings.Select(w => w.Code).ShouldContain("date-provisional");
         plan.Warnings.Select(w => w.Code).ShouldContain("distance-provisional");

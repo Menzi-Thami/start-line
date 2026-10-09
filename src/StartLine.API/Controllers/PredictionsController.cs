@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Predictions;
@@ -6,6 +7,7 @@ using StartLine.Application.Features.Predictions;
 namespace StartLine.API.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [ApiVersion(1)]
 [Route("api/v{version:apiVersion}/predictions")]
 public sealed class PredictionsController(IDispatcher dispatcher) : ControllerBase

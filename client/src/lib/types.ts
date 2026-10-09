@@ -16,6 +16,11 @@ export type Session = Schemas['SessionDto']
 export type PaceZoneRange = Schemas['PaceZoneDto']
 export type Prediction = Schemas['PredictionDto']
 export type GeneratePlanRequest = Schemas['GeneratePlanQuery']
+export type Runner = Schemas['RunnerDto']
+export type Units = Schemas['Units']
+export type SaveProfileRequest = Schemas['SaveProfileCommand']
+export type SavedPlanSummary = Schemas['SavedPlanSummaryDto']
+export type SavedPlan = Schemas['SavedPlanDto']
 
 /** Monday first, the way most runners plan a week. */
 export const WEEK: readonly DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

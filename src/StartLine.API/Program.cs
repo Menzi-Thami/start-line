@@ -1,9 +1,11 @@
+using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using StartLine.API;
 using StartLine.API.Infrastructure;
 using StartLine.Application;
 using StartLine.Application.Features.Races;
 using StartLine.Infrastructure;
+using StartLine.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +25,13 @@ builder.Services
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+{
+    // Locally the schema follows the code. Elsewhere, migrations are applied by the deploy pipeline.
+    await using var scope = app.Services.CreateAsyncScope();
+    await scope.ServiceProvider.GetRequiredService<StartLineDbContext>().Database.MigrateAsync();
+}
+
 // Publish the race calendar before serving requests. Building the sync also builds every source,
 // so a bad race entry stops the app here instead of failing every request.
 await app.Services.GetRequiredService<RaceCalendarSync>().RunAsync(app.Lifetime.ApplicationStopping);
@@ -30,6 +39,8 @@ await app.Services.GetRequiredService<RaceCalendarSync>().RunAsync(app.Lifetime.
 app.UseForwardedHeaders();
 app.UseMiddleware<TraceIdMiddleware>();
 app.UseExceptionHandler();
+// Empty 401/403/404 responses (from auth or routing) become ProblemDetails like every other error.
+app.UseStatusCodePages();
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
@@ -38,16 +49,18 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseCors(PresentationDependencyInjection.SpaCorsPolicy);
+app.UseAuthentication();
+app.UseAuthorization();
 app.UseRateLimiter();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi().WithDocumentPerVersion();
-    app.MapScalarApiReference();
+    app.MapOpenApi().WithDocumentPerVersion().AllowAnonymous();
+    app.MapScalarApiReference().AllowAnonymous();
 }
 
-app.MapHealthChecks("/health/live", new() { Predicate = _ => false });
-app.MapHealthChecks("/health/ready", new() { Predicate = c => c.Tags.Contains("ready") });
+app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new() { Predicate = c => c.Tags.Contains("ready") }).AllowAnonymous();
 app.MapControllers();
 
 await app.RunAsync();

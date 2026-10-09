@@ -4,14 +4,19 @@ using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Identity.Web;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using StartLine.API.Infrastructure;
+using StartLine.Application.Common;
 
 namespace StartLine.API;
 
@@ -19,6 +24,8 @@ internal static class PresentationDependencyInjection
 {
     public const string SpaCorsPolicy = "spa";
     public const string PlanRateLimitPolicy = "plans";
+    public const string RunnerPolicy = "runner";
+    public const string DefaultScope = "Plans.ReadWrite";
 
     public static IServiceCollection AddPresentation(
         this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
@@ -40,6 +47,8 @@ internal static class PresentationDependencyInjection
                 o.KnownIPNetworks.Add(System.Net.IPNetwork.Parse(network));
             }
         });
+
+        AddIdentity(services, configuration);
 
         services.AddProblemDetails(o => o.CustomizeProblemDetails = ctx =>
             ctx.ProblemDetails.Extensions["traceId"] = Activity.Current?.Id ?? ctx.HttpContext.TraceIdentifier);
@@ -91,8 +100,8 @@ internal static class PresentationDependencyInjection
 
         services.AddCors(o => o.AddPolicy(SpaCorsPolicy, p => p
             .WithOrigins(configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
-            .WithMethods("GET", "POST")
-            .WithHeaders("Content-Type")));
+            .WithMethods("GET", "POST", "PUT", "DELETE")
+            .WithHeaders("Content-Type", "Authorization")));
 
         services.AddRateLimiter(o =>
         {
@@ -108,7 +117,7 @@ internal static class PresentationDependencyInjection
                 return ValueTask.CompletedTask;
             };
 
-            // No accounts yet, so every caller is partitioned by IP address.
+            // Signed-in runners get their own bucket; anonymous callers share one per IP address.
             o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx =>
                 RateLimitPartition.GetTokenBucketLimiter(ClientKey(ctx), _ => new TokenBucketRateLimiterOptions
                 {
@@ -145,5 +154,33 @@ internal static class PresentationDependencyInjection
     }
 
     private static string ClientKey(HttpContext context) =>
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        context.User.GetObjectId() is { } user
+            ? $"user:{user}"
+            : $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+    private static void AddIdentity(IServiceCollection services, IConfiguration configuration)
+    {
+        // Sign-in is optional to run: without an External ID app registration, accounts are switched off.
+        if (string.IsNullOrWhiteSpace(configuration["AzureAd:ClientId"]))
+        {
+            services.AddAuthentication(AccountsDisabledHandler.SchemeName)
+                .AddScheme<AuthenticationSchemeOptions, AccountsDisabledHandler>(AccountsDisabledHandler.SchemeName, null);
+        }
+        else
+        {
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddMicrosoftIdentityWebApi(configuration.GetSection("AzureAd"));
+        }
+
+        // Fail closed: every endpoint needs a signed-in user unless it opts out with [AllowAnonymous].
+        services.AddAuthorizationBuilder()
+            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build())
+            .AddPolicy(RunnerPolicy, p => p.RequireAuthenticatedUser().RequireScope(configuration["AzureAd:Scope"] ?? DefaultScope));
+
+        // RequireScope needs this handler. AddMicrosoftIdentityWebApi registers it, but the accounts-off path and the
+        // test sign-in don't, and without it the requirement can never pass.
+        services.AddRequiredScopeAuthorization();
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUser, HttpCurrentUser>();
+    }
 }

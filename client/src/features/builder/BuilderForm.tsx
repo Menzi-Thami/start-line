@@ -1,7 +1,7 @@
-import { useMemo, useState, type FormEvent } from 'react'
-import { formatDate, formatDistance, formatPace, toKilometres, type Units } from '../../lib/format'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { formatDate, formatDistance, formatDuration, formatPace, toKilometres, type Units } from '../../lib/format'
 import type { PlanInputs } from '../../lib/plan-url'
-import type { DayOfWeek, Experience, Race } from '../../lib/types'
+import { SHORT_DAY, WEEK, type DayOfWeek, type Experience, type Race } from '../../lib/types'
 import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
@@ -24,6 +24,24 @@ const EXPERIENCE: { value: Experience; title: string; note: string }[] = [
 ]
 
 export type FieldErrors = Partial<Record<'race' | 'distance' | 'date' | 'goal' | 'runDays' | 'longRunDay' | 'currentKm' | 'strength', string>>
+type Field = keyof FieldErrors
+
+// One question per screen. Each field lives on exactly one step, so an error (ours or the server's) can send the
+// runner straight back to the screen that needs fixing.
+const STEPS = [
+  { title: 'Which race?', hint: 'Pick it from the list, or tell us about any other race.', fields: ['race', 'distance', 'date'] },
+  { title: 'What’s your goal time?', hint: 'Every session’s pace is worked out from this.', fields: ['goal'] },
+  { title: 'When can you run?', hint: 'Hard sessions go on days that aren’t back to back, wherever your choice allows.', fields: ['runDays', 'longRunDay'] },
+  { title: 'About you', hint: 'So the plan starts where you are, not where a template thinks you should be.', fields: ['currentKm'] },
+  { title: 'Check and build', hint: 'Change anything you like, then build your plan.', fields: ['strength'] },
+] as const satisfies readonly { title: string; hint: string; fields: readonly Field[] }[]
+
+const LAST_STEP = STEPS.length - 1
+
+function firstStepWith(errors: FieldErrors): number | null {
+  const index = STEPS.findIndex((step) => step.fields.some((field) => errors[field]))
+  return index === -1 ? null : index
+}
 
 interface Props {
   races: RacesState
@@ -34,6 +52,10 @@ interface Props {
   serverErrors: FieldErrors
   today: string
   onSubmit: (inputs: PlanInputs) => void
+  /** Shown above the first question only. */
+  intro?: ReactNode
+  /** Offered while changing the answers of a plan that's already built. */
+  onCancel?: () => void
 }
 
 interface Draft {
@@ -79,41 +101,90 @@ function draftFrom(initial: PlanInputs | null, units: Units): Draft {
   }
 }
 
-export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit }: Props) {
+function validate(draft: Draft, goalSeconds: number): FieldErrors {
+  const found: FieldErrors = {}
+  if (!draft.race) found.race = 'Choose a race, or pick "another race" and tell us about it.'
+  if (draft.race === OTHER) {
+    if (!(Number(draft.otherKm) > 0)) found.distance = 'Enter the race distance.'
+    if (!draft.otherDate) found.date = 'Enter the race date.'
+  }
+  if (goalSeconds <= 0) found.goal = 'Enter a goal time. Not sure? Use the estimate below.'
+  if (draft.runDays.length < 3) found.runDays = 'Pick at least three days. Two runs a week isn’t enough to build on.'
+  if (!draft.longRunDay) found.longRunDay = 'Pick which of your days is the long run.'
+  return found
+}
+
+const onStep = (errors: FieldErrors, step: number): FieldErrors =>
+  Object.fromEntries(Object.entries(errors).filter(([field]) => (STEPS[step]!.fields as readonly string[]).includes(field)))
+
+const dayList = (days: DayOfWeek[]) => WEEK.filter((d) => days.includes(d)).map((d) => SHORT_DAY[d]).join(', ')
+
+export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel }: Props) {
+  const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units))
   const [clientErrors, setClientErrors] = useState<FieldErrors>({})
+  // Changing an existing plan opens on the summary: every answer is already there.
+  const [step, setStep] = useState(() => firstStepWith(serverErrors) ?? (initial ? LAST_STEP : 0))
+  const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
+  const [seenServerErrors, setSeenServerErrors] = useState(serverErrors)
+  const titleRef = useRef<HTMLHeadingElement>(null)
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))
+
+  // The server turned the plan down: go back to the first screen it complained about.
+  if (serverErrors !== seenServerErrors) {
+    setSeenServerErrors(serverErrors)
+    const target = firstStepWith(serverErrors)
+    if (target !== null && target !== step) {
+      setDirection(target > step ? 'forward' : 'back')
+      setStep(target)
+    }
+  }
+
+  // Move focus to each new question so keyboard and screen-reader users land on it, but not on first load.
+  useEffect(() => {
+    if (direction) titleRef.current?.focus()
+  }, [step, direction])
 
   const catalogue = races.kind === 'ready' ? races.races : []
   const chosenRace = catalogue.find((r) => r.slug === draft.race)
   const targetKm = chosenRace?.distanceKm ?? (draft.race === OTHER && Number(draft.otherKm) > 0 ? toKilometres(Number(draft.otherKm), units) : null)
   const goalSeconds = durationSeconds(draft.goal)
   const errors: FieldErrors = { ...serverErrors, ...clientErrors }
+  const stepErrors = Object.values(onStep(errors, step)).filter(Boolean)
 
-  const pacePreview = useMemo(
-    () => (targetKm && goalSeconds > 0 ? `That’s ${formatPace(goalSeconds / targetKm, units)} on average.` : undefined),
-    [targetKm, goalSeconds, units],
-  )
+  const pacePreview = targetKm && goalSeconds > 0 ? `That’s ${formatPace(goalSeconds / targetKm, units)} on average.` : undefined
 
   const setRunDays = (days: DayOfWeek[]) =>
     setDraft((d) => ({ ...d, runDays: days, longRunDay: d.longRunDay && days.includes(d.longRunDay) ? d.longRunDay : null }))
 
+  const goTo = (next: number, keepErrors: FieldErrors = {}) => {
+    setClientErrors(keepErrors)
+    setDirection(next > step ? 'forward' : 'back')
+    setStep(next)
+  }
+
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    const found: FieldErrors = {}
-    if (!draft.race) found.race = 'Choose a race, or pick "another race" and tell us about it.'
-    if (draft.race === OTHER) {
-      const km = Number(draft.otherKm)
-      if (!(km > 0)) found.distance = 'Enter the race distance.'
-      if (!draft.otherDate) found.date = 'Enter the race date.'
+    const found = validate(draft, goalSeconds)
+
+    if (step < LAST_STEP) {
+      const here = onStep(found, step)
+      if (Object.keys(here).length > 0) {
+        setClientErrors(here)
+        titleRef.current?.focus()
+        return
+      }
+      goTo(step + 1)
+      return
     }
-    if (goalSeconds <= 0) found.goal = 'Enter a goal time. Not sure? Use the estimate below.'
-    if (draft.runDays.length < 3) found.runDays = 'Pick at least three days. Two runs a week isn’t enough to build on.'
-    if (!draft.longRunDay) found.longRunDay = 'Pick which of your days is the long run.'
 
-    setClientErrors(found)
-    if (Object.keys(found).length > 0 || !draft.longRunDay) return
+    const target = firstStepWith(found)
+    if (target !== null || !draft.longRunDay) {
+      goTo(target ?? 2, found)
+      return
+    }
 
+    setClientErrors({})
     const currentKm = Number(draft.currentKm)
     onSubmit({
       raceSlug: draft.race === OTHER ? undefined : draft.race,
@@ -130,202 +201,253 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     })
   }
 
-  const summary = Object.values(errors).filter(Boolean)
+  const current = STEPS[step]!
+  const otherKm = Number(draft.otherKm)
+  const raceSummary = chosenRace
+    ? `${chosenRace.name}, ${formatDate(chosenRace.date, 'long')}`
+    : `${draft.otherName.trim() || 'Your race'}: ${otherKm > 0 ? formatDistance(toKilometres(otherKm, units), units) : '?'}${
+        draft.otherDate ? `, ${formatDate(draft.otherDate, 'long')}` : ''
+      }`
+  const experience = EXPERIENCE.find((e) => e.value === draft.experience)!
+
+  const reviewRow = (label: string, value: ReactNode, target: number) => (
+    <div className="review-row">
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+      <button type="button" className="link-button" onClick={() => goTo(target)} aria-label={`Change ${label.toLowerCase()}`}>
+        Change
+      </button>
+    </div>
+  )
 
   return (
-    <form className="builder" onSubmit={submit} noValidate>
-      {summary.length > 0 && (
-        <div className="form-errors" role="alert">
-          <h2>A few things to fix</h2>
-          <ul>
-            {summary.map((message) => (
-              <li key={message}>{message}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <form className="builder wizard" onSubmit={submit} noValidate aria-label="Build your plan">
+      {step === 0 && intro}
 
-      <fieldset className="step">
-        <legend className="step-head">
-          <span className="step-number">1</span>
-          <span className="step-title">Which race?</span>
-        </legend>
+      <div className="wizard-progress">
+        <p className="wizard-count">
+          Step {step + 1} of {STEPS.length}
+        </p>
+        {/* The taper again: the bars step down towards the last step, which is a race-day dot. */}
+        <ol className="wizard-bar" aria-hidden="true">
+          {STEPS.map((s, i) => (
+            <li key={s.title} className={i <= step ? 'is-done' : undefined} />
+          ))}
+        </ol>
+        {onCancel && (
+          <button type="button" className="link-button wizard-cancel" onClick={onCancel}>
+            Back to your plan
+          </button>
+        )}
+      </div>
 
-        <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
-          {races.kind === 'loading' &&
-            [0, 1, 2].map((i) => <div className="skeleton" key={i} aria-hidden="true" />)}
-          {races.kind === 'loading' && <span className="visually-hidden">Loading races…</span>}
+      <div className="wizard-viewport">
+        <section key={step} className={`wizard-panel${direction ? ` slide-${direction}` : ''}`} aria-labelledby={`${id}-title`}>
+          <h2 className="wizard-title" id={`${id}-title`} ref={titleRef} tabIndex={-1}>
+            {current.title}
+          </h2>
+          <p className="wizard-hint">{current.hint}</p>
 
-          {races.kind === 'error' && (
-            <div className="error-panel">
-              <strong>We couldn’t load the race list.</strong>
-              <p>{races.message} You can still enter any race below.</p>
-              <button type="button" className="button button-quiet" onClick={onRetryRaces} style={{ marginTop: 'var(--space-3)' }}>
-                Try again
-              </button>
+          {stepErrors.length > 0 && (
+            <div className="form-errors" role="alert">
+              <h3>{stepErrors.length === 1 ? 'One thing to fix' : 'A few things to fix'}</h3>
+              <ul>
+                {stepErrors.map((message) => (
+                  <li key={message}>{message}</li>
+                ))}
+              </ul>
             </div>
           )}
 
-          {catalogue.map((race) => (
-            <label className="choice" key={race.slug}>
-              <input type="radio" name="race" value={race.slug} checked={draft.race === race.slug} onChange={() => set('race', race.slug)} />
-              <span className="choice-date">
-                {formatDate(race.date, 'dayMonth')}
-                <small>{formatDate(race.date, 'year')}</small>
-              </span>
-              <span className="choice-name">{race.name}</span>
-              <span className="choice-meta">
-                {race.distanceConfirmed ? '' : 'About '}
-                {formatDistance(race.distanceKm, units)} · {race.location}
-                {race.dateStatus === 'Provisional' && <span className="tag">Date to be confirmed</span>}
-                {!race.distanceConfirmed && <span className="tag">Distance to be confirmed</span>}
-              </span>
-            </label>
-          ))}
+          {step === 0 && (
+            <>
+              <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
+                {races.kind === 'loading' && [0, 1, 2].map((i) => <div className="skeleton" key={i} aria-hidden="true" />)}
+                {races.kind === 'loading' && <span className="visually-hidden">Loading races…</span>}
 
-          <label className="choice choice-other">
-            <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
-            <span className="choice-name">Another race</span>
-            <span className="choice-meta">Any distance, any date: a parkrun PB, a local half, your first ultra.</span>
-          </label>
-        </div>
-        <FieldError id="race-error" message={errors.race} />
+                {races.kind === 'error' && (
+                  <div className="error-panel">
+                    <strong>We couldn’t load the race list.</strong>
+                    <p>{races.message} You can still enter any race below.</p>
+                    <button type="button" className="button button-quiet" onClick={onRetryRaces} style={{ marginTop: 'var(--space-3)' }}>
+                      Try again
+                    </button>
+                  </div>
+                )}
 
-        {draft.race === OTHER && (
-          <div style={{ marginTop: 'var(--space-4)' }}>
-            <div className="field">
-              <span className="field-label" id="distance-label">
-                Distance ({units})
-              </span>
-              <div className="pills" role="group" aria-labelledby="distance-label">
-                {SHORTCUTS.map((s) => {
-                  const value = String(Math.round((units === 'mi' ? s.km / 1.609344 : s.km) * 100) / 100)
-                  return (
-                    <label className="pill" key={s.label}>
-                      <input type="radio" name="distance-shortcut" checked={draft.otherKm === value} onChange={() => set('otherKm', value)} />
-                      {s.label}
-                    </label>
-                  )
-                })}
+                {catalogue.map((race) => (
+                  <label className="choice" key={race.slug}>
+                    <input type="radio" name="race" value={race.slug} checked={draft.race === race.slug} onChange={() => set('race', race.slug)} />
+                    <span className="choice-date">
+                      {formatDate(race.date, 'dayMonth')}
+                      <small>{formatDate(race.date, 'year')}</small>
+                    </span>
+                    <span className="choice-name">{race.name}</span>
+                    <span className="choice-meta">
+                      {race.distanceConfirmed ? '' : 'About '}
+                      {formatDistance(race.distanceKm, units)} · {race.location}
+                      {race.dateStatus === 'Provisional' && <span className="tag">Date to be confirmed</span>}
+                      {!race.distanceConfirmed && <span className="tag">Distance to be confirmed</span>}
+                    </span>
+                  </label>
+                ))}
+
+                <label className="choice choice-other">
+                  <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
+                  <span className="choice-name">Another race</span>
+                  <span className="choice-meta">Any distance, any date: a parkrun PB, a local half, your first ultra.</span>
+                </label>
               </div>
-              <input
-                className="input"
-                aria-labelledby="distance-label"
-                inputMode="decimal"
-                placeholder={`Or type it, e.g. ${units === 'mi' ? '35' : '56'}`}
-                value={draft.otherKm}
-                aria-invalid={errors.distance ? true : undefined}
-                onChange={(e) => set('otherKm', e.target.value.replace(/[^\d.]/g, ''))}
+              <FieldError id="race-error" message={errors.race} />
+
+              {draft.race === OTHER && (
+                <div style={{ marginTop: 'var(--space-4)' }}>
+                  <div className="field">
+                    <span className="field-label" id="distance-label">
+                      Distance ({units})
+                    </span>
+                    <div className="pills" role="group" aria-labelledby="distance-label">
+                      {SHORTCUTS.map((s) => {
+                        const value = String(Math.round((units === 'mi' ? s.km / 1.609344 : s.km) * 100) / 100)
+                        return (
+                          <label className="pill" key={s.label}>
+                            <input type="radio" name="distance-shortcut" checked={draft.otherKm === value} onChange={() => set('otherKm', value)} />
+                            {s.label}
+                          </label>
+                        )
+                      })}
+                    </div>
+                    <input
+                      className="input"
+                      aria-labelledby="distance-label"
+                      inputMode="decimal"
+                      placeholder={`Or type it, e.g. ${units === 'mi' ? '35' : '56'}`}
+                      value={draft.otherKm}
+                      aria-invalid={errors.distance ? true : undefined}
+                      onChange={(e) => set('otherKm', e.target.value.replace(/[^\d.]/g, ''))}
+                    />
+                    <FieldError id="distance-error" message={errors.distance} />
+                  </div>
+                  <div className="row">
+                    <div className="field">
+                      <label className="field-label" htmlFor="race-date">
+                        Race date
+                      </label>
+                      <input
+                        id="race-date"
+                        className="input"
+                        type="date"
+                        min={today}
+                        value={draft.otherDate}
+                        aria-invalid={errors.date ? true : undefined}
+                        onChange={(e) => set('otherDate', e.target.value)}
+                      />
+                      <FieldError id="date-error" message={errors.date} />
+                    </div>
+                    <div className="field">
+                      <label className="field-label" htmlFor="race-name">
+                        Name <span className="field-help">(optional)</span>
+                      </label>
+                      <input id="race-name" className="input" maxLength={100} value={draft.otherName} onChange={(e) => set('otherName', e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {step === 1 && (
+            <>
+              <DurationInput legend="Goal finish time" value={draft.goal} onChange={(v) => set('goal', v)} error={errors.goal} help={pacePreview} />
+              <details className="disclosure">
+                <summary>Not sure? Estimate it from a recent race</summary>
+                <GoalEstimator targetKm={targetKm} onUse={(seconds) => set('goal', toDuration(seconds))} />
+              </details>
+            </>
+          )}
+
+          {step === 2 && (
+            <>
+              <DayPills legend="Which days can you run?" hint="Three to seven." selected={draft.runDays} onChange={setRunDays} error={errors.runDays} />
+              <DayChoice
+                legend="Which one is your long run?"
+                days={draft.runDays}
+                value={draft.longRunDay}
+                onChange={(d) => set('longRunDay', d)}
+                error={errors.longRunDay}
               />
-              <FieldError id="distance-error" message={errors.distance} />
-            </div>
-            <div className="row">
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <div className="segmented" role="radiogroup" aria-label="Running experience">
+                {EXPERIENCE.map((e) => (
+                  <label className="segment" key={e.value}>
+                    <input type="radio" name="experience" checked={draft.experience === e.value} onChange={() => set('experience', e.value)} />
+                    <strong>{e.title}</strong>
+                    <span>{e.note}</span>
+                  </label>
+                ))}
+              </div>
               <div className="field">
-                <label className="field-label" htmlFor="race-date">
-                  Race date
+                <label className="field-label" htmlFor="current-km">
+                  Roughly how far do you run a week now? <span className="field-help">(optional, {units})</span>
                 </label>
                 <input
-                  id="race-date"
+                  id="current-km"
                   className="input"
-                  type="date"
-                  min={today}
-                  value={draft.otherDate}
-                  aria-invalid={errors.date ? true : undefined}
-                  onChange={(e) => set('otherDate', e.target.value)}
+                  inputMode="decimal"
+                  value={draft.currentKm}
+                  onChange={(e) => set('currentKm', e.target.value.replace(/[^\d.]/g, ''))}
+                  style={{ maxWidth: '10rem' }}
                 />
-                <FieldError id="date-error" message={errors.date} />
+                <p className="field-help">We build from here by no more than 10% a week.</p>
+                <FieldError id="km-error" message={errors.currentKm} />
               </div>
-              <div className="field">
-                <label className="field-label" htmlFor="race-name">
-                  Name <span className="field-help">(optional)</span>
-                </label>
-                <input id="race-name" className="input" maxLength={100} value={draft.otherName} onChange={(e) => set('otherName', e.target.value)} />
-              </div>
-            </div>
-          </div>
+            </>
+          )}
+
+          {step === LAST_STEP && (
+            <>
+              <dl className="review">
+                {reviewRow('Race', raceSummary, 0)}
+                {reviewRow('Goal', `${formatDuration(goalSeconds)}${pacePreview ? `. ${pacePreview}` : ''}`, 1)}
+                {reviewRow('Days', `${dayList(draft.runDays)}. Long run on ${draft.longRunDay ?? '?'}.`, 2)}
+                {reviewRow(
+                  'You',
+                  `${experience.title} runner${Number(draft.currentKm) > 0 ? `, about ${draft.currentKm} ${units} a week now` : ''}.`,
+                  3,
+                )}
+              </dl>
+              <details className="disclosure" open={draft.strengthDays.length > 0}>
+                <summary>Add strength and mobility sessions</summary>
+                <DayPills
+                  legend="Strength days"
+                  hint="Up to three, about 30 minutes each. Pairing them with a hard run day keeps your easy days easy."
+                  selected={draft.strengthDays}
+                  onChange={(d) => set('strengthDays', d)}
+                  max={3}
+                  error={errors.strength}
+                />
+              </details>
+              <p className="field-help">Free, no sign-up. Your plan lives in the link.</p>
+            </>
+          )}
+        </section>
+      </div>
+
+      <div className="wizard-nav">
+        {step > 0 ? (
+          <button type="button" className="button button-quiet" onClick={() => goTo(step - 1)}>
+            Back
+          </button>
+        ) : (
+          <span />
         )}
-      </fieldset>
-
-      <fieldset className="step">
-        <legend className="step-head">
-          <span className="step-number">2</span>
-          <span className="step-title">What’s your goal time?</span>
-        </legend>
-        <DurationInput legend="Goal finish time" value={draft.goal} onChange={(v) => set('goal', v)} error={errors.goal} help={pacePreview} />
-        <details className="disclosure">
-          <summary>Not sure? Estimate it from a recent race</summary>
-          <GoalEstimator targetKm={targetKm} onUse={(seconds) => set('goal', toDuration(seconds))} />
-        </details>
-      </fieldset>
-
-      <fieldset className="step">
-        <legend className="step-head">
-          <span className="step-number">3</span>
-          <span className="step-title">Your week</span>
-        </legend>
-        <DayPills
-          legend="Which days can you run?"
-          hint="Three to seven. Hard sessions go on days that aren’t back to back, wherever your choice allows."
-          selected={draft.runDays}
-          onChange={setRunDays}
-          error={errors.runDays}
-        />
-        <DayChoice
-          legend="Which one is your long run?"
-          days={draft.runDays}
-          value={draft.longRunDay}
-          onChange={(d) => set('longRunDay', d)}
-          error={errors.longRunDay}
-        />
-        <div className="field">
-          <label className="field-label" htmlFor="current-km">
-            Roughly how far do you run a week now? <span className="field-help">(optional, {units})</span>
-          </label>
-          <input
-            id="current-km"
-            className="input"
-            inputMode="decimal"
-            value={draft.currentKm}
-            onChange={(e) => set('currentKm', e.target.value.replace(/[^\d.]/g, ''))}
-            style={{ maxWidth: '10rem' }}
-          />
-          <p className="field-help">We build from here by no more than 10% a week.</p>
-          <FieldError id="km-error" message={errors.currentKm} />
-        </div>
-      </fieldset>
-
-      <fieldset className="step">
-        <legend className="step-head">
-          <span className="step-number">4</span>
-          <span className="step-title">About you</span>
-        </legend>
-        <div className="segmented" role="radiogroup" aria-label="Running experience">
-          {EXPERIENCE.map((e) => (
-            <label className="segment" key={e.value}>
-              <input type="radio" name="experience" checked={draft.experience === e.value} onChange={() => set('experience', e.value)} />
-              <strong>{e.title}</strong>
-              <span>{e.note}</span>
-            </label>
-          ))}
-        </div>
-        <details className="disclosure" open={draft.strengthDays.length > 0}>
-          <summary>Add strength and mobility sessions</summary>
-          <DayPills
-            legend="Strength days"
-            hint="Up to three, about 30 minutes each. Pairing them with a hard run day keeps your easy days easy."
-            selected={draft.strengthDays}
-            onChange={(d) => set('strengthDays', d)}
-            max={3}
-            error={errors.strength}
-          />
-        </details>
-      </fieldset>
-
-      <div className="submit-row">
         <button type="submit" className="button button-primary" disabled={busy}>
-          {busy ? 'Building your plan…' : 'Build my plan'}
+          {step < LAST_STEP ? 'Continue' : busy ? 'Building your plan…' : 'Build my plan'}
         </button>
-        <span className="field-help">Free, no sign-up. Your plan lives in the link.</span>
       </div>
     </form>
   )

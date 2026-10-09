@@ -1,16 +1,6 @@
 import { useId } from 'react'
-import { WEEK, type DayOfWeek } from '../../lib/types'
+import { SHORT_DAY, WEEK, type DayOfWeek } from '../../lib/types'
 import type { Duration } from './duration'
-
-const SHORT: Record<DayOfWeek, string> = {
-  Monday: 'Mon',
-  Tuesday: 'Tue',
-  Wednesday: 'Wed',
-  Thursday: 'Thu',
-  Friday: 'Fri',
-  Saturday: 'Sat',
-  Sunday: 'Sun',
-}
 
 export function FieldError({ id, message }: { id: string; message?: string }) {
   return message ? (
@@ -52,7 +42,7 @@ export function DayPills({ legend, hint, selected, onChange, max, error }: DayPi
                 onChange={(e) => toggle(day, e.target.checked)}
                 aria-label={day}
               />
-              {SHORT[day]}
+              {SHORT_DAY[day]}
             </label>
           )
         })}
@@ -83,7 +73,7 @@ export function DayChoice({ legend, days, value, onChange, error }: DayChoicePro
           {WEEK.filter((d) => days.includes(d)).map((day) => (
             <label className="pill" key={day}>
               <input type="radio" name={`${id}-day`} checked={value === day} onChange={() => onChange(day)} aria-label={day} />
-              {SHORT[day]}
+              {SHORT_DAY[day]}
             </label>
           ))}
         </div>

@@ -61,6 +61,8 @@ export function App() {
   const [plan, setPlan] = useState<PlanState>(() => (initial ? { kind: 'loading' } : { kind: 'idle' }))
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [builderKey, setBuilderKey] = useState(0)
+  // True while the wizard is open over a plan (or about to produce one). A built plan replaces the wizard.
+  const [editing, setEditing] = useState(false)
   const inflight = useRef<AbortController | null>(null)
 
   // Only sets state once the request settles; callers set the loading state themselves.
@@ -96,7 +98,11 @@ export function App() {
 
     api
       .plan(toRequest(withDate), controller.signal)
-      .then((result) => setPlan({ kind: 'ready', plan: result, inputs: withDate }))
+      .then((result) => {
+        setPlan({ kind: 'ready', plan: result, inputs: withDate })
+        setEditing(false)
+        window.scrollTo?.({ top: 0 })
+      })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
         if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
@@ -113,6 +119,23 @@ export function App() {
     setFieldErrors({})
     setPlan({ kind: 'loading' })
     fetchPlan(inputs)
+  }
+
+  const buildFromWizard = (inputs: PlanInputs) => {
+    setEditing(true)
+    build(inputs)
+  }
+
+  const changeAnswers = () => {
+    // Remount so the wizard starts from this plan's answers, on its summary screen.
+    setBuilderKey((k) => k + 1)
+    setEditing(true)
+    window.scrollTo?.({ top: 0 })
+  }
+
+  const backToPlan = () => {
+    setEditing(false)
+    window.scrollTo?.({ top: 0 })
   }
 
   // A shared link builds its plan straight away.
@@ -140,6 +163,7 @@ export function App() {
     setView('build')
     // Remount the form so it shows the saved plan's choices, not whatever was typed before.
     setBuilderKey((k) => k + 1)
+    setEditing(false)
     build(inputs)
   }
 
@@ -150,6 +174,8 @@ export function App() {
 
   const state = runner.state
   const builderInitial = plan.kind === 'ready' || plan.kind === 'error' ? plan.inputs : initial
+  const showBuilder = view === 'build' && (editing || plan.kind === 'idle')
+  const showPlan = view === 'build' && plan.kind === 'ready' && !editing
 
   return (
     <div className="page">
@@ -259,19 +285,7 @@ export function App() {
 
         {(view === 'build' || view === 'sign-up') && (
           <>
-            {view === 'build' && (
-              <div className="intro">
-                <h1>
-                  You’ve entered the race. <em>Let’s get you to the start.</em>
-                </h1>
-                <p>
-                  Tell us the race, your goal and the days you can run. You’ll get a week-by-week plan with a pace and a reason
-                  for every session. No account, no app, nothing to pay.
-                </p>
-              </div>
-            )}
-
-            {view === 'build' && (
+            {showBuilder && (
               <BuilderForm
                 key={builderKey}
                 races={races}
@@ -281,12 +295,25 @@ export function App() {
                 busy={plan.kind === 'loading'}
                 serverErrors={fieldErrors}
                 today={today}
-                onSubmit={build}
+                onSubmit={buildFromWizard}
+                onCancel={plan.kind === 'ready' ? backToPlan : undefined}
+                intro={
+                  <div className="intro">
+                    <h1>
+                      You’ve entered the race. <em>Let’s get you to the start.</em>
+                    </h1>
+                    <p>
+                      Five quick questions and you’ll have a week-by-week plan with a pace and a reason for every session. No
+                      account, no app, nothing to pay.
+                    </p>
+                  </div>
+                }
               />
             )}
 
             <div aria-live="polite" aria-busy={plan.kind === 'loading'}>
-              {plan.kind === 'loading' && <p className="visually-hidden">Building your plan…</p>}
+              {plan.kind === 'loading' &&
+                (showBuilder ? <p className="visually-hidden">Building your plan…</p> : <p className="loading-line">Building your plan…</p>)}
               {plan.kind === 'error' && view === 'build' && (
                 <div className="error-panel" style={{ marginTop: 'var(--space-7)' }} role="alert">
                   <strong>We couldn’t build that plan.</strong>
@@ -303,7 +330,7 @@ export function App() {
               )}
             </div>
 
-            {plan.kind === 'ready' && view === 'build' && (
+            {showPlan && (
               <PlanView
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
@@ -312,13 +339,18 @@ export function App() {
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
                 today={today}
                 toolbarExtra={
-                  <SavePlanButton
-                    key={toSearchParams(plan.inputs).toString()}
-                    runner={state}
-                    request={toRequest(plan.inputs)}
-                    onOpenMyPlans={() => go('plans')}
-                    onFinishSignUp={() => go('sign-up')}
-                  />
+                  <>
+                    <button type="button" className="button button-quiet" onClick={changeAnswers}>
+                      Change answers
+                    </button>
+                    <SavePlanButton
+                      key={toSearchParams(plan.inputs).toString()}
+                      runner={state}
+                      request={toRequest(plan.inputs)}
+                      onOpenMyPlans={() => go('plans')}
+                      onFinishSignUp={() => go('sign-up')}
+                    />
+                  </>
                 }
               />
             )}

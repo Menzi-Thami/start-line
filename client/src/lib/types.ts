@@ -24,3 +24,13 @@ export type SavedPlan = Schemas['SavedPlanDto']
 
 /** Monday first, the way most runners plan a week. */
 export const WEEK: readonly DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+export const SHORT_DAY: Record<DayOfWeek, string> = {
+  Monday: 'Mon',
+  Tuesday: 'Tue',
+  Wednesday: 'Wed',
+  Thursday: 'Thu',
+  Friday: 'Fri',
+  Saturday: 'Sat',
+  Sunday: 'Sun',
+}

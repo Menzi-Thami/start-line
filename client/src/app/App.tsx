@@ -6,11 +6,14 @@ import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { useRunner } from '../features/account/useRunner'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
+import { Hero, RaceTicker } from '../features/home/Hero'
+import { RaceStartIntro } from '../features/home/RaceStartIntro'
 import { PlanView } from '../features/plan/PlanView'
 import { api, ApiError, apiOrigin } from '../lib/api-client'
 import { calendarLinks } from '../lib/calendar-links'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs } from '../lib/plan-url'
+import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
 import type { GeneratePlanRequest, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
@@ -66,6 +69,9 @@ export function App() {
   // True while the wizard is open over a plan (or about to produce one). A built plan replaces the wizard.
   const [editing, setEditing] = useState(false)
   const [freshBuild, setFreshBuild] = useState(false)
+  // The starting-gun intro: once per visit, only when landing on the builder, never for reduced motion.
+  const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen())
+  const finishIntro = useCallback(() => setPlayIntro(false), [])
   const inflight = useRef<AbortController | null>(null)
 
   // Only sets state once the request settles; callers set the loading state themselves.
@@ -144,6 +150,10 @@ export function App() {
     window.scrollTo?.({ top: 0 })
   }
 
+  useEffect(() => {
+    if (playIntro) markIntroSeen()
+  }, [playIntro])
+
   // A shared link builds its plan straight away.
   useEffect(() => {
     if (initial) fetchPlan(initial)
@@ -219,6 +229,7 @@ export function App() {
 
   return (
     <div className="page">
+      {playIntro && <RaceStartIntro onDone={finishIntro} />}
       <header className="masthead">
         <button type="button" className="wordmark wordmark-button" onClick={() => go('build')}>
           {/* "taper" steps down letter by letter, like a taper; "day" comes back full size: race day. */}
@@ -353,16 +364,19 @@ export function App() {
                 onCancel={plan.kind === 'ready' ? backToPlan : undefined}
                 gate={gate}
                 intro={
-                  <div className="intro">
-                    <h1>
-                      You’ve entered the race. <em>Let’s get you to the start.</em>
-                    </h1>
-                    <p>
-                      {auth.enabled
-                        ? 'A week-by-week running plan built around your race and the days you can run, with a pace and a reason for every session.'
-                        : 'Five quick questions and you’ll have a week-by-week plan with a pace and a reason for every session. No account, no app, nothing to pay.'}
-                    </p>
-                  </div>
+                  <>
+                    <Hero
+                      races={races.kind === 'ready' ? races.races : []}
+                      today={today}
+                      units={units}
+                      lede={
+                        auth.enabled
+                          ? 'A week-by-week running plan built around your race and the days you can run, with a pace and a reason for every session.'
+                          : 'Five quick questions and you’ll have a week-by-week plan with a pace and a reason for every session. No account, no app, nothing to pay.'
+                      }
+                    />
+                    <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
+                  </>
                 }
               />
             )}

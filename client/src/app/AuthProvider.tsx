@@ -1,13 +1,7 @@
-import { AuthError, InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
+import { InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, accountsOff, type Auth, type AuthConfig } from './auth-context'
-
-// "AADSTS50020: User account ... Trace ID: ...": keep the code and the first sentence, which is the useful part.
-const describe = (error: unknown): string => {
-  const text = error instanceof AuthError ? error.errorMessage || error.errorCode : error instanceof Error ? error.message : String(error)
-  const firstSentence = text.split(/(?<=\.)\s|\r?\n/)[0]?.trim()
-  return firstSentence || 'Something went wrong while signing in.'
-}
+import { describeSignInError, type SignInProblem } from './sign-in-errors'
 
 const toAccount = (info: AccountInfo) => ({ name: info.name || info.username, email: info.username || null })
 
@@ -34,7 +28,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
   )
   const [info, setInfo] = useState<AccountInfo | null>(null)
   const [loading, setLoading] = useState(msal !== null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<SignInProblem | null>(null)
 
   // Finish any sign-in that just redirected back here, then pick up an existing session.
   useEffect(() => {
@@ -51,7 +45,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       })
       .catch((failure: unknown) => {
         // The runner stays signed out, but is told why rather than left guessing.
-        if (!cancelled) setError(describe(failure))
+        if (!cancelled) setError(describeSignInError(failure))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)

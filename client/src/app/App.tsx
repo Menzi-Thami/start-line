@@ -264,11 +264,12 @@ export function App() {
         {auth.error && (
           <div className="callout" role="alert">
             <p>
-              Sign-in didn’t finish. {auth.error}{' '}
+              {auth.error.message}{' '}
               <button type="button" className="link-button" onClick={auth.signIn}>
                 Try again
               </button>
             </p>
+            {auth.error.code && <p className="field-help">Error code {auth.error.code}, if you contact us.</p>}
           </div>
         )}
         {state.kind === 'needs-sign-up' && view !== 'sign-up' && !showBuilder && (

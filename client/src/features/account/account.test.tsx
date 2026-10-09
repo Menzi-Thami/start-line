@@ -139,11 +139,12 @@ describe('signed out', () => {
 
 describe('signing up comes first', () => {
   it('says why a sign-in didn’t finish instead of failing silently', async () => {
-    const auth = { ...signedOut(), error: 'AADSTS50020: User account from identity provider google.com does not exist in tenant Taperday.' }
+    const auth = { ...signedOut(), error: { message: 'Your sign-in timed out before it finished. Please try again.', code: 'AADSTS50132' } }
     const user = renderWith(auth)
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Sign-in didn’t finish. AADSTS50020')
+    expect(alert).toHaveTextContent('Your sign-in timed out before it finished.')
+    expect(alert).toHaveTextContent('Error code AADSTS50132')
     await user.click(within(alert).getByRole('button', { name: 'Try again' }))
     expect(auth.signIn).toHaveBeenCalled()
   })

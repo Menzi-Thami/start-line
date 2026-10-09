@@ -178,6 +178,511 @@ select {
   font-size: var(--text-lg);
 }
 
+/* ---------- Hero: headline, countdown ring, race ticker ---------- */
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
+  position: relative;
+  /* Speed lines stream past behind the headline. */
+  background:
+    repeating-linear-gradient(0deg, transparent 0 37px, rgba(215, 255, 62, 0.05) 37px 38px),
+    repeating-linear-gradient(90deg, transparent 0 140px, rgba(255, 255, 255, 0.035) 140px 220px, transparent 220px 380px);
+  background-size: 100% 100%, 760px 100%;
+  animation: speed-lines 3.2s linear infinite;
+  border-bottom: 0;
+  padding: var(--space-5) 0 var(--space-6);
+}
+
+@keyframes speed-lines {
+  to {
+    background-position: 0 0, -760px 0;
+  }
+}
+
+.hero-copy {
+  flex: 999 1 20rem;
+  min-width: 0;
+}
+
+.countdown {
+  flex: 1 1 13rem;
+  max-width: 17rem;
+  margin-inline: auto;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+}
+
+.countdown-ring {
+  position: relative;
+  width: 11rem;
+  aspect-ratio: 1;
+}
+
+.countdown-ring svg {
+  width: 100%;
+  height: 100%;
+}
+
+.countdown-track,
+.countdown-fill {
+  fill: none;
+  stroke-width: 18;
+}
+
+.countdown-track {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+/* The ring draws itself in, once the page has settled. */
+.countdown-fill {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-dashoffset: var(--ring-offset);
+  animation: ring-draw 1.6s cubic-bezier(0.3, 0.8, 0.3, 1) 0.4s both;
+}
+
+@keyframes ring-draw {
+  from {
+    stroke-dashoffset: 553;
+  }
+}
+
+.countdown-number {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+}
+
+.countdown-number span {
+  font-size: 2.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.countdown-number small {
+  font-size: var(--text-xs);
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.countdown-race {
+  display: grid;
+  text-align: center;
+  gap: 2px;
+}
+
+.countdown-race strong {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.countdown-race span {
+  font-size: var(--text-xs);
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+/* Full-bleed volt band, breaking out of the page column. */
+.ticker {
+  margin: 0 calc(50% - 50vw) var(--space-6);
+  overflow: hidden;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  padding: var(--space-3) 0;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  animation: ticker 40s linear infinite;
+}
+
+.ticker-track span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding-left: var(--space-6);
+  white-space: nowrap;
+}
+
+.ticker-track i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--on-accent);
+}
+
+@keyframes ticker {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ---------- The runner (features/shared/Runner.tsx) ---------- */
+.runner {
+  color: var(--accent);
+  display: block;
+  overflow: visible;
+}
+
+.runner .limb {
+  transform-box: view-box;
+}
+
+.runner-sprint .leg-a,
+.runner-sprint .leg-b {
+  transform-origin: 30px 46px;
+  animation: stride 0.3s ease-in-out infinite alternate;
+}
+
+.runner-sprint .leg-b {
+  animation-direction: alternate-reverse;
+}
+
+.runner-sprint .arm-a,
+.runner-sprint .arm-b {
+  transform-origin: 31px 24px;
+  animation: swing 0.3s ease-in-out infinite alternate-reverse;
+}
+
+.runner-sprint .arm-b {
+  animation-direction: alternate;
+}
+
+@keyframes stride {
+  from {
+    transform: rotate(-38deg);
+  }
+  to {
+    transform: rotate(38deg);
+  }
+}
+
+@keyframes swing {
+  from {
+    transform: rotate(-45deg);
+  }
+  to {
+    transform: rotate(45deg);
+  }
+}
+
+.runner-breathe {
+  transform-box: view-box;
+  transform-origin: 50% 100%;
+  animation: breathe 2.6s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  50% {
+    transform: scaleY(1.08);
+  }
+}
+
+/* ---------- The starting-gun intro (features/home/RaceStartIntro.tsx) ---------- */
+.race-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--paper);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  animation: curtain 520ms cubic-bezier(0.7, 0, 0.3, 1) 3000ms both;
+}
+
+@keyframes curtain {
+  to {
+    clip-path: inset(0 0 100% 0);
+  }
+}
+
+.race-intro-call {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 18%;
+  text-align: center;
+  opacity: 0;
+}
+
+.race-intro-set {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: clamp(18px, 2.4vw, 28px);
+  letter-spacing: 0.2em;
+  animation: call 600ms ease 750ms both;
+}
+
+.race-intro-go {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(56px, 8vw, 120px);
+  color: var(--accent);
+  animation: call-go 700ms cubic-bezier(0.2, 1.6, 0.4, 1) 1350ms both;
+}
+
+@keyframes call {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  20%,
+  80% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes call-go {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  30%,
+  75% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.3);
+  }
+}
+
+.race-intro-word {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(72px, 12vw, 168px);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  display: flex;
+  align-items: baseline;
+}
+
+.race-intro-letter {
+  display: inline-block;
+  opacity: 0;
+  animation: land 420ms cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+@keyframes land {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The letters keep their taper but must still land: their resting opacity comes from the wl-* classes. */
+.race-intro-letter.wl-2 {
+  animation-name: land-85;
+}
+
+.race-intro-letter.wl-3 {
+  animation-name: land-70;
+}
+
+.race-intro-letter.wl-4 {
+  animation-name: land-58;
+}
+
+.race-intro-letter.wl-5 {
+  animation-name: land-48;
+}
+
+@keyframes land-85 {
+  from { opacity: 0; transform: translateY(24px) scale(0.6); }
+  to { opacity: 0.85; transform: none; }
+}
+
+@keyframes land-70 {
+  from { opacity: 0; transform: translateY(24px) scale(0.6); }
+  to { opacity: 0.7; transform: none; }
+}
+
+@keyframes land-58 {
+  from { opacity: 0; transform: translateY(24px) scale(0.6); }
+  to { opacity: 0.58; transform: none; }
+}
+
+@keyframes land-48 {
+  from { opacity: 0; transform: translateY(24px) scale(0.6); }
+  to { opacity: 0.48; transform: none; }
+}
+
+.race-intro-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 30%;
+  height: 3px;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.35) 0 28px, transparent 28px 44px);
+}
+
+.race-intro-startline {
+  position: absolute;
+  left: calc(12% + 70px);
+  bottom: 30%;
+  width: 6px;
+  height: 40px;
+  background: var(--ink);
+}
+
+.race-intro-starter {
+  position: absolute;
+  right: 10%;
+  bottom: 30%;
+  color: var(--muted);
+}
+
+.race-intro-starter svg {
+  overflow: visible;
+  display: block;
+}
+
+.race-intro-gun {
+  transform-box: view-box;
+  transform-origin: 30px 30px;
+  animation: gun-raise 420ms cubic-bezier(0.3, 1.3, 0.5, 1) 700ms both, gun-kick 160ms ease-out 1330ms;
+}
+
+@keyframes gun-raise {
+  to {
+    transform: rotate(-150deg);
+  }
+}
+
+@keyframes gun-kick {
+  0%,
+  100% {
+    transform: rotate(-150deg);
+  }
+  40% {
+    transform: rotate(-168deg);
+  }
+}
+
+.race-intro-flash,
+.race-intro-smoke {
+  transform-box: view-box;
+  transform-origin: 46px 2px;
+  opacity: 0;
+}
+
+.race-intro-flash {
+  animation: muzzle 260ms ease-out 1330ms both;
+}
+
+@keyframes muzzle {
+  30% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+.race-intro-smoke {
+  animation: smoke 1.1s ease-out 1380ms both;
+}
+
+@keyframes smoke {
+  from {
+    opacity: 0.8;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: translate(14px, -46px) scale(2.4);
+  }
+}
+
+.race-intro-screen-flash {
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  animation: screen-flash 220ms ease-out 1330ms both;
+}
+
+@keyframes screen-flash {
+  25% {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* On your marks: crouched at the line, hips rise on SET, gone the instant the gun fires. */
+.race-intro-crouch {
+  position: absolute;
+  left: 12%;
+  bottom: 30%;
+  transform-origin: 80% 90%;
+  animation: set-hips 380ms cubic-bezier(0.3, 1.4, 0.5, 1) 800ms both, vanish 1ms linear 1380ms both;
+}
+
+@keyframes set-hips {
+  to {
+    transform: translateY(-8px) rotate(-10deg);
+  }
+}
+
+@keyframes vanish {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Only one runner: the sprinter stays invisible until the gun, then crosses the screen. */
+.race-intro-sprinter {
+  position: absolute;
+  bottom: calc(30% + 3px);
+  left: 12%;
+  opacity: 0;
+  animation: launch 1.5s cubic-bezier(0.55, 0, 0.6, 1) 1380ms both;
+}
+
+@keyframes launch {
+  0% {
+    opacity: 0;
+    left: 12%;
+  }
+  1% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    left: 106%;
+  }
+}
+
 /* ---------- Builder: one question per screen ---------- */
 .wizard-progress {
   display: flex;

@@ -39,6 +39,53 @@ async function answerEverything(user: User, goal: [string, string, string] = ['1
   await next(user)
 }
 
+describe('the home page', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    window.sessionStorage.clear()
+  })
+
+  const withMotion = (reduce = false) =>
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: reduce && query.includes('reduce') }))
+  const intro = () => document.querySelector('.race-intro')
+
+  it('counts down to the next race on the list', async () => {
+    setup()
+
+    // Today is pinned to 8 October 2026; the first race in the fixture is Two Oceans on 4 April 2027.
+    expect(await screen.findByRole('group', { name: '178 days to go: Two Oceans Ultra' })).toBeInTheDocument()
+  })
+
+  it('plays the starting-gun intro once per visit, and a tap skips it', async () => {
+    withMotion()
+    const { user, unmount } = setup()
+
+    expect(intro()).not.toBeNull()
+    await user.click(document.body)
+    expect(intro()).toBeNull()
+    unmount()
+
+    setup()
+    expect(intro()).toBeNull()
+  })
+
+  it('leaves the intro out for anyone who has asked for less motion', () => {
+    withMotion(true)
+    setup()
+
+    expect(intro()).toBeNull()
+  })
+
+  it('goes straight to a shared plan, without the intro', async () => {
+    withMotion()
+    window.history.replaceState(null, '', '/?km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08')
+    setup()
+
+    expect(intro()).toBeNull()
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+  })
+})
+
 describe('building a plan', () => {
   it('lists upcoming races from the API', async () => {
     setup()

@@ -28,7 +28,7 @@ jobs:
             sleep 3
           done
           echo "SQL Server did not start in time" && docker logs sql && exit 1
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - run: dotnet restore StartLine.slnx

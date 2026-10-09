@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api, ApiError } from '../../lib/api-client'
 import type { Runner, Units } from '../../lib/types'
+import { RaceBib } from './RaceBib'
 
 const detectedTimeZone = () => {
   try {
@@ -64,6 +65,8 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
 
   return (
     <form className="panel" onSubmit={submit} noValidate>
+      {signingUp && <RaceBib name={name} official={accepted} />}
+
       <div className="field">
         <label className="field-label" htmlFor={`${id}-name`}>
           What should we call you?

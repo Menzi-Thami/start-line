@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { addDays, formatDate, formatDistance, formatPaceRange, type Units } from '../../lib/format'
 import type { PaceZone, PaceZoneRange, PlanWeek, Session } from '../../lib/types'
 import { PHASES, ZONES } from './copy'
+import { Runner } from '../shared/Runner'
 import { sessionKey, trainingKm } from './plan-math'
 
 interface Props {
@@ -19,6 +21,8 @@ function SessionItem({ session, pace, units, isDone, onToggle }: {
   isDone: boolean
   onToggle: (done: boolean) => void
 }) {
+  // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
+  const [bursts, setBursts] = useState(0)
   const zone = session.zone ? ZONES[session.zone] : undefined
   const numbers = [
     session.distanceKm > 0 ? formatDistance(session.distanceKm, units) : null,
@@ -36,7 +40,23 @@ function SessionItem({ session, pace, units, isDone, onToggle }: {
       <p className="session-why">Why: {session.purpose}</p>
       {session.type !== 'Race' && (
         <label className="session-done">
-          <input type="checkbox" checked={isDone} onChange={(e) => onToggle(e.target.checked)} />
+          <span className="tick-wrap">
+            <input
+              type="checkbox"
+              checked={isDone}
+              onChange={(e) => {
+                if (e.target.checked) setBursts((n) => n + 1)
+                onToggle(e.target.checked)
+              }}
+            />
+            {bursts > 0 && isDone && (
+              <span className="sparks" key={bursts} aria-hidden="true">
+                {[0, 60, 120, 180, 240, 300].map((a) => (
+                  <i key={a} style={{ ['--a' as string]: `${a}deg` }} />
+                ))}
+              </span>
+            )}
+          </span>
           Done
         </label>
       )}
@@ -66,7 +86,17 @@ export function WeekDays({ week, byZone, units, done, onToggleDone }: WeekDaysPr
               <small>{formatDate(date, 'dayMonth')}</small>
             </span>
             {sessions.length === 0 ? (
-              <span className="day-rest">Rest</span>
+              <span className="day-rest">
+                <span className="day-rest-sleeper" aria-hidden="true">
+                  <Runner pose="sleep" size={11} />
+                  <span className="zzz">
+                    <i>z</i>
+                    <i>z</i>
+                    <i>z</i>
+                  </span>
+                </span>
+                <span>Rest</span>
+              </span>
             ) : (
               <div>
                 {sessions.map((s) => (

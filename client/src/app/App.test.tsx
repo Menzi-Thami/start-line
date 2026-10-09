@@ -341,11 +341,15 @@ describe('a shared plan', () => {
     const firstDone = screen.getAllByRole('checkbox', { name: 'Done' })[0]!
     await user.click(firstDone)
     expect(firstDone).toBeChecked()
+    // Ticking throws a little confetti...
+    expect(document.querySelector('.sparks')).not.toBeNull()
     unmount()
 
     setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
     await waitFor(() => expect(screen.getAllByRole('checkbox', { name: 'Done' })[0]).toBeChecked())
+    // ...but a session that was already done doesn't celebrate again on every visit.
+    expect(document.querySelector('.sparks')).toBeNull()
   })
 
   it('splits the plan into tabs and opens on this week', async () => {
@@ -403,6 +407,16 @@ describe('a shared plan', () => {
     expect(screen.getByRole('link', { name: /Google Calendar/ }).getAttribute('href')?.startsWith('https://calendar.google.com/')).toBe(true)
     expect(screen.getByRole('link', { name: /Outlook/ }).getAttribute('href')?.startsWith('https://outlook.live.com/')).toBe(true)
     expect(screen.getByRole('button', { name: /Download a calendar file/ })).toBeVisible()
+  })
+
+  it('shows how long until the plan starts, with the runner on their marks', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    // Today is Thursday 8 October; the plan starts on Monday 12 October.
+    expect(screen.getByText('Starts in 4 days')).toBeInTheDocument()
+    expect(document.querySelector('.plan-progress.is-before .runner-crouch')).not.toBeNull()
   })
 
   it('opens the current week and shows rest days', async () => {

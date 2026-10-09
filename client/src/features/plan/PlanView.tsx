@@ -2,10 +2,12 @@ import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type T
 import type { CalendarLinks } from '../../lib/calendar-links'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
+import { planProgress } from '../../lib/plan-day'
 import { loadDone, saveDone } from '../../lib/storage'
 import type { PlanWeek, TrainingPlan } from '../../lib/types'
 import { FOCUS, PHASES, ZONES } from './copy'
 import { trainingKm } from './plan-math'
+import { PlanProgress } from './PlanProgress'
 import { VolumeChart } from './VolumeChart'
 import { WeekDays, WeekList } from './WeekList'
 
@@ -64,6 +66,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
   const shown = weekToShow(plan, today, currentWeek)
   const goalSeconds = parseTimeSpan(plan.goalTime) ?? 0
   const byZone = new Map(plan.paces.map((p) => [p.zone, p]))
+  const progress = planProgress(plan, today)
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -193,6 +196,8 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
         </li>
       </ul>
 
+      <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
+
       {plan.warnings.length > 0 && (
         <div className="callout" role="note">
           <ul>
@@ -281,6 +286,18 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
 
       <div className="tab-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         <div {...panel('week')}>
+          {progress.kind === 'race' && (
+            <div className="race-day-card">
+              <span className="race-day-confetti" aria-hidden="true">
+                {Array.from({ length: 14 }, (_, i) => (
+                  <i key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `-${(i % 5) * 0.35}s`, animationDuration: `${1.8 + (i % 4) * 0.4}s` }} />
+                ))}
+              </span>
+              <p className="mono">{formatDate(plan.race.date, 'long').toUpperCase()}</p>
+              <h3>It’s race day.</h3>
+              <p>Start at goal pace, not faster, and save something for the second half. This is what every run was for. Enjoy it.</p>
+            </div>
+          )}
           {shown && (
             <>
               <div className="this-week-head">

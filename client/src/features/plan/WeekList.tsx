@@ -1,5 +1,5 @@
 import { addDays, formatDate, formatDistance, formatPaceRange, type Units } from '../../lib/format'
-import type { PaceZoneRange, PlanWeek, Session } from '../../lib/types'
+import type { PaceZone, PaceZoneRange, PlanWeek, Session } from '../../lib/types'
 import { PHASES, ZONES } from './copy'
 import { sessionKey, trainingKm } from './plan-math'
 
@@ -44,6 +44,50 @@ function SessionItem({ session, pace, units, isDone, onToggle }: {
   )
 }
 
+interface WeekDaysProps {
+  week: PlanWeek
+  byZone: Map<PaceZone, PaceZoneRange>
+  units: Units
+  done: Set<string>
+  onToggleDone: (key: string, done: boolean) => void
+}
+
+/** One week, every day listed, rest days included, so the shape of the week is obvious. */
+export function WeekDays({ week, byZone, units, done, onToggleDone }: WeekDaysProps) {
+  const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
+  return (
+    <ol className="days">
+      {days.map((date) => {
+        const sessions = week.sessions.filter((s) => s.date === date)
+        return (
+          <li className="day" key={date}>
+            <span className="day-date">
+              {formatDate(date, 'weekday')}
+              <small>{formatDate(date, 'dayMonth')}</small>
+            </span>
+            {sessions.length === 0 ? (
+              <span className="day-rest">Rest</span>
+            ) : (
+              <div>
+                {sessions.map((s) => (
+                  <SessionItem
+                    key={sessionKey(s)}
+                    session={s}
+                    pace={s.zone ? byZone.get(s.zone) : undefined}
+                    units={units}
+                    isDone={done.has(sessionKey(s))}
+                    onToggle={(d) => onToggleDone(sessionKey(s), d)}
+                  />
+                ))}
+              </div>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
 /** Every week as a disclosure, every day of the week listed, rest days included, so the shape of the week is obvious. */
 export function WeekList({ weeks, paces, units, currentWeek, done, onToggleDone }: Props) {
   const byZone = new Map(paces.map((p) => [p.zone, p]))
@@ -52,7 +96,6 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onToggleDone 
   return (
     <div className="weeks">
       {weeks.map((week) => {
-        const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
         const completed = week.sessions.filter((s) => done.has(sessionKey(s))).length
         return (
           <details className="week" key={week.number} open={week.number === openWeek}>
@@ -69,35 +112,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onToggleDone 
               </span>
               <span className="week-km">{formatDistance(trainingKm(week), units)}</span>
             </summary>
-            <ol className="days">
-              {days.map((date) => {
-                const sessions = week.sessions.filter((s) => s.date === date)
-                return (
-                  <li className="day" key={date}>
-                    <span className="day-date">
-                      {formatDate(date, 'weekday')}
-                      <small>{formatDate(date, 'dayMonth')}</small>
-                    </span>
-                    {sessions.length === 0 ? (
-                      <span className="day-rest">Rest</span>
-                    ) : (
-                      <div>
-                        {sessions.map((s) => (
-                          <SessionItem
-                            key={sessionKey(s)}
-                            session={s}
-                            pace={s.zone ? byZone.get(s.zone) : undefined}
-                            units={units}
-                            isDone={done.has(sessionKey(s))}
-                            onToggle={(d) => onToggleDone(sessionKey(s), d)}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </li>
-                )
-              })}
-            </ol>
+            <WeekDays week={week} byZone={byZone} units={units} done={done} onToggleDone={onToggleDone} />
           </details>
         )
       })}

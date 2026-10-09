@@ -110,7 +110,7 @@ export function ProfileForm({ runner, onSaved }: Props) {
           </ul>
           <label className="session-done" style={{ color: 'var(--ink)' }}>
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
-            I’ve read this and I’m happy for Start Line to keep this information.
+            I’ve read this and I’m happy for Taperday to keep this information.
           </label>
         </div>
       )}

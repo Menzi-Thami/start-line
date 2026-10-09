@@ -1,6 +1,6 @@
 # Setting up sign-in (Microsoft Entra External ID)
 
-Start Line signs runners in with **your own personal External ID tenant**. Use your personal Microsoft
+Taperday signs runners in with **your own personal External ID tenant**. Use your personal Microsoft
 account and a personal Azure subscription: never a work tenant, and never an employer's sandbox.
 
 Until this is done, accounts are simply off: the plan builder works as normal, and the "My plans" API
@@ -14,8 +14,8 @@ Portal labels move around; if a step's wording doesn't match, the Microsoft Lear
 1. Sign in to the [Microsoft Entra admin center](https://entra.microsoft.com) with your **personal** account.
    If you don't have an Azure subscription yet, create a free one first.
 2. Create an **external tenant** (Entra ID → Overview → Manage tenants → Create → External).
-3. Pick a subdomain, e.g. `startlinerun`. Your sign-in authority becomes
-   `https://startlinerun.ciamlogin.com/`.
+3. Pick a subdomain, e.g. `taperday`. Your sign-in authority becomes
+   `https://taperday.ciamlogin.com/`.
 4. Note the tenant's **Directory (tenant) ID**.
 
 > Don't sign up as a runner using the same email you administer the tenant with. External ID creates a
@@ -24,7 +24,7 @@ Portal labels move around; if a step's wording doesn't match, the Microsoft Lear
 
 ## 2. Register the API
 
-In the external tenant: App registrations → New registration, name **Start Line API**.
+In the external tenant: App registrations → New registration, name **Taperday API**.
 
 1. **Expose an API** → set the Application ID URI (accept the default `api://<api-client-id>`).
 2. **Add a scope** named `Plans.ReadWrite` (who can consent: admins and users).
@@ -36,10 +36,10 @@ In the external tenant: App registrations → New registration, name **Start Lin
 
 ## 3. Register the web app
 
-New registration, name **Start Line Web**.
+New registration, name **Taperday Web**.
 
 1. Platform: **Single-page application**, redirect URI `http://localhost:5173` (add the production URL later).
-2. **API permissions** → add *Start Line API* → `Plans.ReadWrite` → grant admin consent.
+2. **API permissions** → add *Taperday API* → `Plans.ReadWrite` → grant admin consent.
 3. Note the web app's **Application (client) ID**.
 
 ## 4. Sign-up and sign-in flow
@@ -47,7 +47,7 @@ New registration, name **Start Line Web**.
 1. External Identities → **User flows** → New → "Sign up and sign in".
 2. Sign-in methods: **Email one-time passcode** (no passwords to leak). Add Google later if wanted.
 3. Attributes to collect: **Display name**.
-4. In the flow's **Applications**, add *Start Line Web*.
+4. In the flow's **Applications**, add *Taperday Web*.
 
 ## 5. Point the app at it
 

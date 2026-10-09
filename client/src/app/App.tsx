@@ -160,7 +160,7 @@ export function App() {
             <path d="M6 22h20" stroke="var(--on-accent)" strokeWidth="3" strokeLinecap="round" />
             <path d="M10 10v12M16 10v12M22 10v12" stroke="var(--on-accent)" strokeOpacity=".45" strokeWidth="2" />
           </svg>
-          Start Line
+          Taperday
         </button>
 
         {state.kind !== 'off' && (

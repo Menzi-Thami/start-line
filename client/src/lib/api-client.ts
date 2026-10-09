@@ -40,7 +40,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
     })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new ApiError("We couldn't reach Start Line. Check your connection and try again.", 0)
+    throw new ApiError("We couldn't reach Taperday. Check your connection and try again.", 0)
   }
 
   if (response.status === 204) {

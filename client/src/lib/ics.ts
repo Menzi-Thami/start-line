@@ -26,7 +26,7 @@ const stamp = (now: Date) => now.toISOString().replace(/[-:]/g, '').replace(/\.\
 /** One all-day event per session, so the plan sits in the runner's own calendar. */
 export function buildIcs(plan: TrainingPlan, units: Units, now: Date = new Date()): string {
   const paces = new Map<string, PaceZoneRange>(plan.paces.map((p) => [p.zone, p]))
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Start Line//Training plan//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH']
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Taperday//Training plan//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH']
 
   plan.weeks.forEach((week) =>
     week.sessions.forEach((session, index) => {
@@ -40,7 +40,7 @@ export function buildIcs(plan: TrainingPlan, units: Units, now: Date = new Date(
 
       lines.push(
         'BEGIN:VEVENT',
-        `UID:${compactDate(session.date)}-${index}-${session.type.toLowerCase()}@startline`,
+        `UID:${compactDate(session.date)}-${index}-${session.type.toLowerCase()}@taperday.run`,
         `DTSTAMP:${stamp(now)}`,
         `DTSTART;VALUE=DATE:${compactDate(session.date)}`,
         `DTEND;VALUE=DATE:${compactDate(addDays(session.date, 1))}`,

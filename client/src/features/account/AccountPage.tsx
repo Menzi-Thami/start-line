@@ -34,7 +34,7 @@ export function AccountPage({ runner, onSaved, onDeleted }: Props) {
       const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
       const link = document.createElement('a')
       link.href = url
-      link.download = 'start-line-my-data.json'
+      link.download = 'taperday-my-data.json'
       link.click()
       URL.revokeObjectURL(url)
     })
@@ -59,7 +59,7 @@ export function AccountPage({ runner, onSaved, onDeleted }: Props) {
 
       <div className="section">
         <h3>Your data</h3>
-        <p>Download a copy of everything Start Line holds about you: your profile and every saved plan.</p>
+        <p>Download a copy of everything Taperday holds about you: your profile and every saved plan.</p>
         <button type="button" className="button" onClick={() => void download()} disabled={status.kind === 'busy'}>
           Download my data
         </button>

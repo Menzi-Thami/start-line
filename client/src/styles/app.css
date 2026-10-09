@@ -807,6 +807,26 @@ select {
   background: var(--surface-sunk);
 }
 
+a.menu-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  text-decoration: none;
+}
+
+.menu-note {
+  font-weight: 400;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.menu-help {
+  margin: var(--space-1) var(--space-3) var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
 /* On a narrow phone the Share button can wrap to the start of its row, so hang the menu from the row itself. */
 @media (max-width: 30rem) {
   .plan-actions {

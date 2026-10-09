@@ -329,7 +329,7 @@ describe('a shared plan', () => {
 
     await user.click(screen.getByText('Share'))
 
-    for (const action of ['Copy link to this plan', 'Add to calendar', 'Print']) {
+    for (const action of ['Copy link to this plan', 'Print']) {
       expect(screen.getByRole('button', { name: action })).toBeVisible()
     }
 
@@ -339,6 +339,23 @@ describe('a shared plan', () => {
     await user.click(screen.getByText('Share'))
     await user.click(screen.getByRole('heading', { name: 'Parkrun PB' }))
     expect(screen.getByRole('button', { name: 'Print', hidden: true })).not.toBeVisible()
+  })
+
+  it('offers to subscribe Apple, Google or Outlook calendars to the plan', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    const { user } = setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    await user.click(screen.getByText('Add to calendar'))
+
+    const apple = screen.getByRole('link', { name: /Apple Calendar/ })
+    const appleHref = apple.getAttribute('href') ?? ''
+    expect(appleHref.startsWith('webcal://')).toBe(true)
+    expect(appleHref).toContain('/api/v1/plans/calendar.ics?')
+    expect(appleHref).toContain('goalTime=00%3A24%3A30')
+    expect(screen.getByRole('link', { name: /Google Calendar/ }).getAttribute('href')?.startsWith('https://calendar.google.com/')).toBe(true)
+    expect(screen.getByRole('link', { name: /Outlook/ }).getAttribute('href')?.startsWith('https://outlook.live.com/')).toBe(true)
+    expect(screen.getByRole('button', { name: /Download a calendar file/ })).toBeVisible()
   })
 
   it('opens the current week and shows rest days', async () => {

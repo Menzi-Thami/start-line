@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
+import type { CalendarLinks } from '../../lib/calendar-links'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { loadDone, saveDone } from '../../lib/storage'
@@ -16,6 +17,8 @@ interface Props {
   today: string
   /** Extra actions beside Share, such as changing the answers or saving the plan to an account. */
   toolbarExtra?: ReactNode
+  /** Links that subscribe Apple, Google or Outlook calendars to this plan. Without them, only the file download shows. */
+  calendar?: CalendarLinks
 }
 
 // "This week" first: on most days it's all a runner needs.
@@ -46,9 +49,10 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra }: Props) {
+export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, calendar }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
+  const calendarRef = useRef<HTMLDetailsElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
@@ -72,13 +76,14 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
     return () => window.removeEventListener('beforeprint', openAll)
   }, [])
 
-  // The Share menu is a <details>, which stays open on its own; close it on Escape or a tap anywhere else.
+  // The menus are <details>, which stay open on their own; close them on Escape or a tap anywhere else.
   useEffect(() => {
     const dismiss = (event: Event) => {
-      const menu = menuRef.current
-      if (!menu?.open) return
-      const outside = event instanceof KeyboardEvent ? event.key === 'Escape' : !menu.contains(event.target as Node)
-      if (outside) menu.open = false
+      for (const menu of [menuRef.current, calendarRef.current]) {
+        if (!menu?.open) continue
+        const outside = event instanceof KeyboardEvent ? event.key === 'Escape' : !menu.contains(event.target as Node)
+        if (outside) menu.open = false
+      }
     }
     document.addEventListener('pointerdown', dismiss)
     document.addEventListener('keydown', dismiss)
@@ -98,7 +103,10 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
     })
   }
 
-  const closeMenu = () => menuRef.current?.removeAttribute('open')
+  const closeMenu = () => {
+    menuRef.current?.removeAttribute('open')
+    calendarRef.current?.removeAttribute('open')
+  }
 
   const copyLink = async () => {
     closeMenu()
@@ -203,9 +211,6 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
             <button type="button" className="menu-item" onClick={() => void copyLink()}>
               Copy link to this plan
             </button>
-            <button type="button" className="menu-item" onClick={downloadCalendar}>
-              Add to calendar
-            </button>
             <button
               type="button"
               className="menu-item"
@@ -216,6 +221,28 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
             >
               Print
             </button>
+          </div>
+        </details>
+        <details className="menu" ref={calendarRef}>
+          <summary className="button button-quiet">Add to calendar</summary>
+          <div className="menu-panel">
+            {calendar && (
+              <>
+                <a className="menu-item" href={calendar.apple} onClick={closeMenu}>
+                  Apple Calendar <span className="menu-note">iPhone, iPad, Mac</span>
+                </a>
+                <a className="menu-item" href={calendar.google} target="_blank" rel="noopener noreferrer" onClick={closeMenu}>
+                  Google Calendar <span className="menu-note">shows on your phone too</span>
+                </a>
+                <a className="menu-item" href={calendar.outlook} target="_blank" rel="noopener noreferrer" onClick={closeMenu}>
+                  Outlook
+                </a>
+              </>
+            )}
+            <button type="button" className="menu-item" onClick={downloadCalendar}>
+              Download a calendar file <span className="menu-note">.ics, one-off</span>
+            </button>
+            {calendar && <p className="menu-help">Subscribing keeps your calendar in step with your plan.</p>}
           </div>
         </details>
         <div className="pills pills-compact" role="radiogroup" aria-label="Units">

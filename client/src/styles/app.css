@@ -10,7 +10,8 @@ html {
 
 body {
   margin: 0;
-  background: var(--paper);
+  background: radial-gradient(90rem 40rem at 100% -10%, rgba(215, 255, 62, 0.08), transparent 60%) no-repeat, var(--paper);
+  min-height: 100vh;
   color: var(--ink);
   font-family: var(--font-body);
   font-size: var(--text-md);
@@ -22,8 +23,8 @@ h1,
 h2,
 h3 {
   font-family: var(--font-display);
-  line-height: 1.12;
-  letter-spacing: -0.015em;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
   margin: 0;
 }
 
@@ -47,6 +48,13 @@ select {
   outline: none;
   box-shadow: var(--focus);
   border-radius: var(--radius-sm);
+}
+
+/* Numbers that matter (paces, times, dates, distances) read like a stopwatch. */
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .visually-hidden {
@@ -142,9 +150,9 @@ select {
 
 .intro {
   padding-bottom: var(--space-6);
-  border-bottom: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
   margin-bottom: var(--space-6);
-  /* The start line itself: a solid rule under the intro, with lane ticks. */
+  /* The start line itself: a rule under the intro, with lane ticks. */
   background-image: repeating-linear-gradient(90deg, var(--line-strong) 0 2px, transparent 2px 25%);
   background-size: 100% 10px;
   background-repeat: no-repeat;
@@ -153,7 +161,8 @@ select {
 
 .intro h1 {
   font-size: var(--text-hero);
-  font-weight: 750;
+  font-weight: 800;
+  line-height: 0.95;
   max-width: 14ch;
 }
 
@@ -405,11 +414,11 @@ select {
 }
 
 .input {
-  min-height: var(--tap);
+  min-height: 48px;
   padding: var(--space-2) var(--space-3);
-  border: 1.5px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.06);
   width: 100%;
 }
 
@@ -443,10 +452,11 @@ select {
   grid-template-columns: 5.5rem 1fr;
   gap: var(--space-1) var(--space-4);
   padding: var(--space-3) var(--space-4);
-  background: var(--surface);
-  border: 1.5px solid var(--line);
+  background: var(--glass);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease;
 }
 
 .choice:hover {
@@ -455,7 +465,7 @@ select {
 
 .choice:has(input:checked) {
   border-color: var(--accent);
-  box-shadow: inset 4px 0 0 var(--accent);
+  box-shadow: var(--glow);
 }
 
 .choice:has(input:focus-visible) {
@@ -471,7 +481,7 @@ select {
 }
 
 .choice-date {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 700;
   line-height: 1.15;
   grid-row: span 2;
@@ -527,9 +537,9 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--line-strong);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.05);
   font-weight: 700;
   font-size: var(--text-sm);
   cursor: pointer;
@@ -545,9 +555,9 @@ select {
 }
 
 .pill:has(input:checked) {
-  background: var(--ink);
-  border-color: var(--ink);
-  color: var(--paper);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
 }
 
 .pill:has(input:focus-visible) {
@@ -567,10 +577,10 @@ select {
 
 .segment {
   position: relative;
-  padding: var(--space-3);
-  border: 1.5px solid var(--line);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: var(--glass);
   cursor: pointer;
 }
 
@@ -584,7 +594,7 @@ select {
 
 .segment:has(input:checked) {
   border-color: var(--accent);
-  box-shadow: inset 0 -3px 0 var(--accent);
+  box-shadow: var(--glow);
 }
 
 .segment:has(input:focus-visible) {
@@ -620,7 +630,8 @@ select {
 }
 
 .estimate {
-  background: var(--surface-sunk);
+  background: var(--glass);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: var(--space-4);
 }
@@ -643,10 +654,11 @@ select {
 .button {
   min-height: var(--tap);
   padding: 0 var(--space-5);
-  border-radius: var(--radius-sm);
-  border: 1.5px solid var(--ink);
-  background: var(--surface);
-  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 800;
+  transition: transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1), background-color 160ms ease, box-shadow 160ms ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -656,7 +668,12 @@ select {
 }
 
 .button:hover {
-  background: var(--surface-sunk);
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.button:active {
+  transform: translateY(1px) scale(0.98);
 }
 
 .button-primary {
@@ -664,7 +681,9 @@ select {
   border-color: var(--accent);
   color: var(--on-accent);
   font-size: var(--text-lg);
-  min-height: 3.25rem;
+  min-height: 3.5rem;
+  padding: 0 var(--space-6);
+  box-shadow: var(--glow);
 }
 
 .button-primary:hover {
@@ -675,6 +694,7 @@ select {
 .button[disabled] {
   opacity: 0.6;
   cursor: progress;
+  transform: none;
 }
 
 .button-quiet {
@@ -689,8 +709,9 @@ select {
 }
 
 .form-errors {
-  border-left: 4px solid var(--danger-ink);
-  background: var(--surface);
+  border: 1px solid rgba(255, 140, 122, 0.4);
+  border-radius: var(--radius-md);
+  background: rgba(255, 140, 122, 0.08);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-5);
 }
@@ -708,21 +729,23 @@ select {
 
 /* ---------- Plan ---------- */
 .plan {
-  margin-top: var(--space-8);
+  margin-top: var(--space-6);
   padding-top: var(--space-6);
-  border-top: 2px solid var(--ink);
+  border-top: 1px solid var(--line);
 }
 
 .plan-kicker {
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: 700;
-  color: var(--accent-strong);
+  color: var(--accent);
 }
 
 .plan-title {
-  font-size: var(--text-2xl);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
   margin-top: var(--space-1);
 }
 
@@ -778,7 +801,7 @@ select {
 
 .menu-panel {
   position: absolute;
-  z-index: 2;
+  z-index: 3;
   top: calc(100% + var(--space-1));
   /* Opens leftwards from the button's right edge, so it never runs off a phone screen. */
   right: 0;
@@ -788,7 +811,7 @@ select {
   background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.55);
 }
 
 .menu-item {
@@ -976,7 +999,7 @@ a.menu-item {
 }
 
 .zone-pace {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: var(--text-lg);
 }
@@ -1002,8 +1025,9 @@ a.menu-item {
   position: absolute;
   pointer-events: none;
   transform: translate(-50%, calc(-100% - 8px));
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
@@ -1043,7 +1067,7 @@ a.menu-item {
 }
 
 .week {
-  background: var(--surface);
+  background: var(--glass);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
 }
@@ -1078,7 +1102,7 @@ a.menu-item {
 }
 
 .week-km {
-  font-family: var(--font-display);
+  font-family: var(--font-mono);
   font-weight: 700;
   text-align: right;
 }
@@ -1115,6 +1139,7 @@ a.menu-item {
 }
 
 .day-date {
+  font-family: var(--font-mono);
   font-weight: 700;
   font-size: var(--text-sm);
   line-height: 1.2;
@@ -1150,6 +1175,7 @@ a.menu-item {
 
 .session-numbers {
   color: var(--ink-2);
+  font-family: var(--font-mono);
   font-size: var(--text-sm);
 }
 
@@ -1270,9 +1296,9 @@ a.menu-item {
 }
 
 .panel {
-  background: var(--surface);
+  background: var(--glass);
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--space-5);
   margin-top: var(--space-4);
 }
@@ -1313,7 +1339,7 @@ a.menu-item {
 .button-danger {
   background: var(--danger-ink);
   border-color: var(--danger-ink);
-  color: var(--surface);
+  color: var(--on-accent);
 }
 
 .button-danger:hover {

@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Taperday home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&amp;family=Atkinson+Hyperlegible+Next:wght@400;700&amp;family=JetBrains+Mono:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body { margin: 0; background: #0a0a0b; color: #f2f2f2; font-family: 'Atkinson Hyperlegible Next', 'Segoe UI', sans-serif; }
+a { color: #d7ff3e; } a:hover { color: #ecff9e; }
+.display { font-family: 'Bricolage Grotesque', 'Segoe UI', sans-serif; letter-spacing: -0.035em; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* ---------- Intro: on your marks, set, BANG, the runner explodes off the line, the wordmark lands in their
+   wake, then the curtain lifts. About 3.4 s, once. ---------- */
+.intro { animation: curtain 520ms cubic-bezier(.7,0,.3,1) 3000ms both; }
+@keyframes curtain { to { clip-path: inset(0 0 100% 0); } }
+/* The calls, one after another. */
+.call { position: absolute; left: 0; right: 0; top: 18%; text-align: center; opacity: 0; }
+.call-1 { animation: call 600ms ease both 100ms; }
+.call-2 { animation: call 600ms ease both 750ms; }
+.call-3 { animation: callGo 700ms cubic-bezier(.2,1.6,.4,1) both 1350ms; }
+@keyframes call { 0% { opacity: 0; transform: translateY(10px); } 20%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes callGo { 0% { opacity: 0; transform: scale(.4); } 30%, 75% { opacity: 1; transform: scale(1.15); } 100% { opacity: 0; transform: scale(1.3); } }
+/* On your marks: the runner crouches at the line; on "set" their hips rise; they vanish the instant the gun fires. */
+.crouch { animation: setHips 380ms cubic-bezier(.3,1.4,.5,1) 800ms both, gone 1ms linear 1380ms both; }
+.crouch svg { transform-box: view-box; transform-origin: 66px 50px; }
+@keyframes setHips { to { transform: translateY(-8px) rotate(-10deg); } }
+@keyframes gone { to { opacity: 0; } }
+/* The starter lifts the pistol on "set", it kicks when it fires. */
+.gun-arm { transform-box: view-box; transform-origin: 30px 30px; animation: raise 420ms cubic-bezier(.3,1.3,.5,1) 700ms both, kick 160ms ease-out 1330ms; }
+@keyframes raise { from { transform: rotate(0deg); } to { transform: rotate(-150deg); } }
+@keyframes kick { 0% { transform: rotate(-150deg); } 40% { transform: rotate(-168deg); } 100% { transform: rotate(-150deg); } }
+.flash { opacity: 0; transform-origin: 50% 50%; animation: flash 260ms ease-out 1330ms both; }
+@keyframes flash { 0% { opacity: 0; transform: scale(.2); } 30% { opacity: 1; transform: scale(1.4); } 100% { opacity: 0; transform: scale(1.8); } }
+.smoke { opacity: 0; animation: smoke 1.1s ease-out 1380ms both; }
+@keyframes smoke { 0% { opacity: .8; transform: translate(0, 0) scale(.4); } 100% { opacity: 0; transform: translate(14px, -46px) scale(2.4); } }
+.screen-flash { opacity: 0; animation: screenFlash 220ms ease-out 1330ms both; }
+@keyframes screenFlash { 0% { opacity: 0; } 25% { opacity: .35; } 100% { opacity: 0; } }
+/* GO: the runner launches from the crouch and sprints off the right edge. */
+/* Only one runner: the sprinter stays invisible (even during its delay) until the crouch disappears. */
+.runner { opacity: 0; left: 12%; animation: launch 1.5s cubic-bezier(.55,0,.6,1) 1380ms both; }
+@keyframes launch { 0% { opacity: 0; left: 12%; } 1% { opacity: 1; left: 12%; } 100% { opacity: 1; left: 106%; } }
+.runner svg { animation: bob 0.32s ease-in-out infinite alternate; }
+@keyframes bob { to { transform: translateY(-4px); } }
+.limb { transform-box: view-box; }
+.leg-a { transform-origin: 30px 46px; animation: stride 0.32s ease-in-out infinite alternate; }
+.leg-b { transform-origin: 30px 46px; animation: stride 0.32s ease-in-out infinite alternate-reverse; }
+.arm-a { transform-origin: 31px 24px; animation: swing 0.32s ease-in-out infinite alternate-reverse; }
+.arm-b { transform-origin: 31px 24px; animation: swing 0.32s ease-in-out infinite alternate; }
+@keyframes stride { from { transform: rotate(-38deg); } to { transform: rotate(38deg); } }
+@keyframes swing { from { transform: rotate(-45deg); } to { transform: rotate(45deg); } }
+.letter { display: inline-block; opacity: 0; animation: land 420ms cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes land { from { opacity: 0; transform: translateY(24px) scale(.6); } to { opacity: 1; transform: none; } }
+
+/* ---------- Hero ---------- */
+.speed { background:
+  repeating-linear-gradient(0deg, transparent 0 37px, rgba(215,255,62,0.07) 37px 38px),
+  repeating-linear-gradient(90deg, transparent 0 140px, rgba(255,255,255,0.05) 140px 220px, transparent 220px 380px);
+  background-size: 100% 100%, 760px 100%; animation: rush 3.2s linear infinite; }
+@keyframes rush { to { background-position: 0 0, -760px 0; } }
+.ring-fill { stroke-dasharray: 553; animation: ring 1.6s cubic-bezier(.3,.8,.3,1) 3.3s both; }
+@keyframes ring { from { stroke-dashoffset: 553; } to { stroke-dashoffset: 177; } }
+.glow { box-shadow: 0 0 0 1px rgba(215,255,62,0.4), 0 10px 40px rgba(215,255,62,0.25); }
+
+/* ---------- Chunky pill buttons spring back ---------- */
+.pill-btn { transition: transform 160ms cubic-bezier(.3,1.6,.5,1), box-shadow 160ms ease; }
+.pill-btn:hover { transform: translateY(-3px) scale(1.02); }
+.pill-btn:active { transform: translateY(1px) scale(0.98); }
+
+/* ---------- Ticker ---------- */
+.ticker { animation: scroll 38s linear infinite; }
+@keyframes scroll { to { transform: translateX(-50%); } }
+
+/* ---------- The race rack: bibs hang from hooks and swing ---------- */
+.hanger { transform-origin: 50% 0; animation: hang 4.6s ease-in-out infinite alternate; }
+.hanger:hover, .hanger:focus-within { animation: swingHard 0.8s cubic-bezier(.3,.1,.3,1) infinite alternate; }
+@keyframes hang { from { transform: rotate(-2.5deg); } to { transform: rotate(2.5deg); } }
+@keyframes swingHard { from { transform: rotate(-9deg); } to { transform: rotate(7deg); } }
+
+/* ---------- Bento ---------- */
+.card { background: linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03)); border: 1px solid rgba(255,255,255,0.12); border-radius: 22px; backdrop-filter: blur(14px); transition: border-color 200ms ease, transform 200ms ease; }
+.card:hover { border-color: rgba(215,255,62,0.5); transform: translateY(-3px); }
+.bar { transform-origin: 0 50%; }
+@supports (animation-timeline: view()) {
+  .bar { animation: grow linear both; animation-timeline: view(); animation-range: entry 0% cover 40%; }
+  .route { animation: draw linear both; animation-timeline: view(); animation-range: entry 10% cover 55%; }
+  .rise { animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 80%; }
+}
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes draw { from { stroke-dashoffset: 1400; } to { stroke-dashoffset: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: none; } }
+.route { stroke-dasharray: 1400; }
+
+/* A ticked run pops a little volt confetti. */
+.spark { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 2px; background: #d7ff3e; animation: burst 650ms cubic-bezier(.1,.8,.3,1) both; }
+@keyframes burst { from { transform: translate(-50%, -50%) rotate(0) translate(0); opacity: 1; } to { transform: translate(-50%, -50%) rotate(var(--a)) translate(30px); opacity: 0; } }
+
+.focusable:focus-visible { outline: 3px solid #d7ff3e; outline-offset: 4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .intro { display: none; }
+  .speed, .ticker, .hanger, .hanger:hover, .ring-fill, .spark, .runner, .runner svg, .limb, .letter { animation: none; }
+  .ring-fill { stroke-dashoffset: 177; }
+  .letter { opacity: 1; }
+  .pill-btn, .card { transition: none; }
+}
+@media (max-width: 900px) { .route-wrap { display: none; } }
+</style>
+</helmet>
+
+<div style="min-height: 100vh; background: #0a0a0b; overflow-x: clip;">
+
+  <!-- ===================== HERO (with the intro playing over it) ===================== -->
+  <section id="top" class="speed" style="position: relative; min-height: 780px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+
+    <sc-if value="{{ showIntro }}" hint-placeholder-val="{{ false }}">
+      <div class="intro" aria-hidden="true" style="position: absolute; inset: 0; z-index: 5; background: #0a0a0b; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+        <!-- The starter's calls -->
+        <div class="call call-2 mono" style="font-size: clamp(18px, 2.4vw, 28px); font-weight: 800; letter-spacing: 0.2em; color: #f2f2f2;">SET</div>
+        <div class="call call-3 display" style="font-size: clamp(56px, 8vw, 120px); font-weight: 800; color: #d7ff3e;">GO!</div>
+
+        <!-- The wordmark lands in the runner's wake -->
+        <div class="display" style="font-size: clamp(72px, 12vw, 168px); font-weight: 800; line-height: 1;">
+          <span class="letter" style="animation-delay: 1720ms; font-size: 1.12em;">t</span><span class="letter" style="animation-delay: 1840ms; opacity: 0.85;">a</span><span class="letter" style="animation-delay: 1950ms; font-size: 0.88em;">p</span><span class="letter" style="animation-delay: 2050ms; font-size: 0.79em;">e</span><span class="letter" style="animation-delay: 2140ms; font-size: 0.7em;">r</span><span class="letter" style="animation-delay: 2300ms; color: #d7ff3e;">day</span>
+        </div>
+
+        <!-- The start line -->
+        <div style="position: absolute; left: 0; right: 0; bottom: 30%; height: 3px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.35) 0 28px, transparent 28px 44px);"></div>
+        <div style="position: absolute; left: calc(12% + 70px); bottom: 30%; width: 6px; height: 40px; background: #f2f2f2;"></div>
+
+        <!-- The starter, standing trackside with the pistol -->
+        <div style="position: absolute; right: 10%; bottom: 30%; width: 66px; height: 104px;">
+          <svg viewBox="0 -20 70 110" width="66" height="104" fill="none" stroke="#9ea2aa" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible;">
+            <circle cx="36" cy="10" r="7" fill="#9ea2aa" stroke="none"></circle>
+            <path d="M34 20 L34 54"></path>
+            <path d="M34 54 L27 88"></path>
+            <path d="M34 54 L41 88"></path>
+            <path d="M34 26 L45 22 L42 12"></path>
+            <g class="gun-arm"><path d="M30 30 L30 54"></path><path d="M30 54 L30 60 L36 60" stroke-width="5"></path></g>
+            <g class="smoke" style="transform-box: view-box; transform-origin: 46px 2px;"><circle cx="46" cy="2" r="9" fill="rgba(242,242,242,0.35)" stroke="none"></circle></g>
+            <g class="flash" style="transform-box: view-box; transform-origin: 46px 2px;"><path d="M46 -14 L49 -2 L62 2 L49 6 L46 18 L43 6 L30 2 L43 -2 Z" fill="#d7ff3e" stroke="none"></path></g>
+          </svg>
+        </div>
+
+        <!-- On your marks: crouched at the line -->
+        <div class="crouch" style="position: absolute; left: 12%; bottom: 30%; width: 80px; height: 60px;">
+          <svg viewBox="0 0 80 60" width="80" height="60" fill="none" stroke="#d7ff3e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" style="overflow: visible;">
+            <circle cx="64" cy="22" r="7" fill="#d7ff3e" stroke="none"></circle>
+            <path d="M58 28 L34 32"></path>
+            <path d="M58 30 L63 56"></path>
+            <path d="M34 32 L47 43 L41 56"></path>
+            <path d="M34 32 L22 54 L9 56"></path>
+          </svg>
+        </div>
+
+        <!-- The bang lights the whole screen for a moment -->
+        <div class="screen-flash" style="position: absolute; inset: 0; background: #d7ff3e; pointer-events: none;"></div>
+
+        <div class="runner" style="position: absolute; bottom: calc(30% + 3px); width: 72px; height: 96px;">
+          <svg viewBox="0 0 60 80" width="72" height="96" fill="none" stroke="#d7ff3e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="33" cy="10" r="7" fill="#d7ff3e" stroke="none"></circle>
+            <path d="M32 21 L29 46"></path>
+            <g class="limb arm-a"><path d="M31 24 L22 34 L28 42"></path></g>
+            <g class="limb arm-b"><path d="M31 24 L40 33 L47 28"></path></g>
+            <g class="limb leg-a"><path d="M30 46 L22 62 L28 76"></path></g>
+            <g class="limb leg-b"><path d="M30 46 L40 60 L34 76"></path></g>
+          </svg>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 24px;">
+      <!-- Floating glass nav -->
+      <header style="position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 18px; padding: 10px 10px 10px 20px; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(16px); flex-wrap: wrap;">
+        <a href="#top" aria-label="Taperday home" class="display focusable" style="text-decoration: none; color: #f2f2f2; display: flex; align-items: baseline;">
+          <span style="font-weight: 800; font-size: 27px;">t</span><span style="font-weight: 800; font-size: 24px; opacity: 0.85;">a</span><span style="font-weight: 800; font-size: 21px; opacity: 0.7;">p</span><span style="font-weight: 800; font-size: 19px; opacity: 0.58;">e</span><span style="font-weight: 800; font-size: 17px; opacity: 0.48;">r</span><span style="font-weight: 800; font-size: 24px; color: #d7ff3e;">day</span>
+        </a>
+        <nav aria-label="Main" style="display: flex; align-items: center; gap: 4px; flex-wrap: wrap;">
+          <a href="#races" class="focusable" style="color: #f2f2f2; font-weight: 700; text-decoration: none; padding: 12px 14px;">Races</a>
+          <a href="#how" class="focusable" style="color: #f2f2f2; font-weight: 700; text-decoration: none; padding: 12px 14px;">How it works</a>
+          <button type="button" class="pill-btn focusable" style="min-height: 44px; padding: 0 20px; border-radius: 999px; border: 0; background: #f2f2f2; color: #0a0a0b; font: inherit; font-weight: 800; cursor: pointer;">Sign in</button>
+        </nav>
+      </header>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 56px; padding: 72px 0 88px; position: relative; z-index: 1;">
+        <div style="flex: 999 1 540px; min-width: 0;">
+          <h1 class="display" style="margin: 0; font-size: clamp(48px, 7vw, 104px); line-height: 0.92; font-weight: 800;">You’ve entered the race.<br><span style="color: #d7ff3e;">Let’s get you to the start.</span></h1>
+          <p style="margin: 28px 0 0; max-width: 34rem; font-size: 20px; line-height: 1.5; color: #b9bcc3;">A week-by-week plan built around your race and the days you can actually run, with a pace and a reason for every session.</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 36px;">
+            <button type="button" class="pill-btn glow focusable" style="min-height: 60px; padding: 0 32px; border-radius: 999px; border: 0; background: #d7ff3e; color: #0a0a0b; font: inherit; font-size: 19px; font-weight: 800; cursor: pointer;">Sign up free</button>
+            <a href="#how" class="pill-btn focusable" style="min-height: 60px; padding: 0 26px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); color: #f2f2f2; font-weight: 800; display: inline-flex; align-items: center; text-decoration: none;">See how it works</a>
+          </div>
+          <p style="margin: 18px 0 0; font-size: 15px; color: #9ea2aa;">Email code sign-in. No password, no card.</p>
+        </div>
+
+        <!-- Countdown ring: days to race day -->
+        <div class="card" style="flex: 1 1 320px; max-width: 380px; padding: 28px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+          <div style="position: relative; width: 220px; height: 220px;">
+            <svg viewBox="0 0 220 220" width="220" height="220" aria-hidden="true">
+              <circle cx="110" cy="110" r="88" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="18"></circle>
+              <circle class="ring-fill" cx="110" cy="110" r="88" fill="none" stroke="#d7ff3e" stroke-width="18" stroke-linecap="round" transform="rotate(-90 110 110)"></circle>
+            </svg>
+            <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+              <span class="mono" style="font-size: 56px; font-weight: 800; line-height: 1;">247</span>
+              <span class="mono" style="font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #9ea2aa;">DAYS TO GO</span>
+            </div>
+          </div>
+          <div style="text-align: center;">
+            <div class="display" style="font-size: 24px; font-weight: 800;">Comrades Marathon</div>
+            <div class="mono" style="font-size: 14px; color: #9ea2aa;">13 JUN 2027 · 90 KM · GOAL 10:30</div>
+          </div>
+          <button type="button" onClick="{{ replay }}" class="focusable" style="min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: transparent; color: #b9bcc3; font: inherit; font-size: 14px; cursor: pointer;">Replay the intro</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Ticker of races ===================== -->
+  <div aria-hidden="true" style="overflow: hidden; border-bottom: 1px solid rgba(255,255,255,0.1); background: #d7ff3e; color: #0a0a0b;">
+    <div class="ticker mono" style="display: flex; width: max-content; padding: 14px 0; font-weight: 800; font-size: 15px; letter-spacing: 0.06em;">
+      <sc-for list="{{ ticker }}" as="t" hint-placeholder-count="10">
+        <span style="display: inline-flex; align-items: center; gap: 28px; padding: 0 14px; white-space: nowrap;">{{ t }}<span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #0a0a0b;"></span></span>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ===================== The race rack (bibs hanging on a rail) ===================== -->
+  <section id="races" aria-labelledby="races-title" style="padding: 96px 0 56px;">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 24px;">
+      <p class="mono" style="margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #d7ff3e;">PICK YOUR RACE</p>
+      <h2 class="display" id="races-title" style="margin: 0 0 10px; font-size: clamp(40px, 5vw, 64px); font-weight: 800; line-height: 1;">Take one off the rack</h2>
+      <p style="margin: 0 0 48px; max-width: 36rem; font-size: 18px; color: #b9bcc3;">South Africa’s big races first, with more added every week. Or bring your own: a parkrun PB, a local half, your first ultra.</p>
+
+      <div style="position: relative; padding-top: 22px;">
+        <!-- The rail -->
+        <div aria-hidden="true" style="position: absolute; left: -12px; right: -12px; top: 10px; height: 10px; border-radius: 999px; background: linear-gradient(180deg, #e8e8e8, #8a8d94); box-shadow: 0 6px 18px rgba(0,0,0,0.5);"></div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 28px; position: relative;">
+          <sc-for list="{{ races }}" as="race" hint-placeholder-count="4">
+            <div class="hanger" style="{{ race.swing }}">
+              <!-- Hook -->
+              <svg aria-hidden="true" width="40" height="40" viewBox="0 0 40 40" style="display: block; margin: -16px auto 0;"><path d="M20 4 C 30 4, 30 16, 20 16 L 20 36" fill="none" stroke="#c9ccd2" stroke-width="3" stroke-linecap="round"></path></svg>
+              <button type="button" class="focusable" onClick="{{ race.pick }}" aria-pressed="{{ race.pressed }}" style="{{ race.style }}">
+                <span style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="mono" style="font-size: 12px; font-weight: 800; letter-spacing: 0.08em;">{{ race.date }}</span>
+                  <sc-if value="{{ race.on }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size: 11px; font-weight: 800; background: #0a0a0b; color: #d7ff3e; padding: 4px 8px; border-radius: 999px;">PICKED</span></sc-if>
+                </span>
+                <span class="display" style="display: block; margin-top: 10px; font-size: 28px; font-weight: 800; line-height: 1;">{{ race.name }}</span>
+                <span class="mono" style="display: block; margin-top: 14px; font-size: 40px; font-weight: 800; line-height: 1; letter-spacing: -0.03em;">{{ race.km }}</span>
+                <span style="display: block; margin-top: 8px; font-size: 14px; font-weight: 700;">{{ race.place }}</span>
+              </button>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== How it works: a route that draws itself ===================== -->
+  <section id="how" aria-labelledby="how-title" style="padding: 56px 0 72px;">
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 24px;">
+      <p class="mono" style="margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #d7ff3e;">THE COURSE</p>
+      <h2 class="display" id="how-title" style="margin: 0 0 40px; font-size: clamp(40px, 5vw, 64px); font-weight: 800; line-height: 1;">Five markers to your plan</h2>
+      <div class="route-wrap" aria-hidden="true" style="height: 70px; margin-bottom: -10px;">
+        <svg viewBox="0 0 1200 70" preserveAspectRatio="none" style="width: 100%; height: 70px;">
+          <path class="route" d="M40 50 C 180 0, 300 70, 400 40 S 640 0, 760 40 S 1020 70, 1160 20" fill="none" stroke="#d7ff3e" stroke-width="4" stroke-linecap="round" stroke-dasharray="1400"></path>
+        </svg>
+      </div>
+      <ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px;">
+        <sc-for list="{{ steps }}" as="step" hint-placeholder-count="5">
+          <li class="card rise" style="padding: 22px;">
+            <span class="mono" style="display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; border-radius: 50%; background: #d7ff3e; color: #0a0a0b; font-weight: 800; font-size: 16px;">{{ step.km }}</span>
+            <h3 class="display" style="margin: 16px 0 6px; font-size: 22px; font-weight: 800;">{{ step.title }}</h3>
+            <p style="margin: 0; color: #b9bcc3; line-height: 1.5;">{{ step.body }}</p>
+          </li>
+        </sc-for>
+      </ol>
+
+      <!-- Godly-style slider: where are you starting from? -->
+      <div class="card" style="margin-top: 24px; padding: 26px; display: flex; flex-wrap: wrap; align-items: center; gap: 24px;">
+        <div style="flex: 1 1 260px; min-width: 0;">
+          <div class="display" style="font-size: 24px; font-weight: 800;">Where are you starting from?</div>
+          <p style="margin: 6px 0 0; color: #b9bcc3;">The plan meets you there, then builds no more than 10% a week.</p>
+        </div>
+        <div role="radiogroup" aria-label="Running experience" style="flex: 2 1 420px; position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 6px; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);">
+          <div aria-hidden="true" style="{{ thumb }}"></div>
+          <sc-for list="{{ levels }}" as="lv" hint-placeholder-count="3">
+            <button type="button" role="radio" aria-checked="{{ lv.checked }}" onClick="{{ lv.pick }}" class="focusable" style="{{ lv.style }}">{{ lv.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Bento: the real thing, in miniature ===================== -->
+  <section aria-labelledby="bento-title" style="padding: 24px 0 96px; position: relative;">
+    <!-- Dashed construction lines behind the grid -->
+    <div aria-hidden="true" style="position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 1px), rgba(255,255,255,0.06) calc(25% - 1px) 25%); mask-image: linear-gradient(transparent, #000 15%, #000 85%, transparent);"></div>
+    <div style="max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative;">
+      <p class="mono" style="margin: 0 0 12px; font-size: 13px; font-weight: 700; letter-spacing: 0.12em; color: #d7ff3e;">WHAT YOU GET</p>
+      <h2 class="display" id="bento-title" style="margin: 0 0 40px; font-size: clamp(40px, 5vw, 64px); font-weight: 800; line-height: 1;">Every run has a pace and a reason</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+
+        <!-- This week, tickable -->
+        <div class="card" style="padding: 22px; grid-row: span 2;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;"><span class="display" style="font-size: 22px; font-weight: 800;">This week</span><span class="mono" style="font-size: 13px; color: #9ea2aa;">WEEK 3 OF 24</span></div>
+          <p style="margin: 6px 0 14px; color: #b9bcc3;">Tap a run when it’s done.</p>
+          <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;">
+            <sc-for list="{{ week }}" as="w" hint-placeholder-count="4">
+              <li style="display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 10px 10px 10px 12px; border-radius: 14px; background: rgba(255,255,255,0.05);">
+                <span class="mono" style="font-weight: 800; font-size: 13px; color: #9ea2aa;">{{ w.day }}</span>
+                <span style="min-width: 0;"><span style="{{ w.titleStyle }}">{{ w.title }}</span><span class="mono" style="display: block; font-size: 13px; color: #9ea2aa;">{{ w.numbers }}</span></span>
+                <button type="button" onClick="{{ w.toggle }}" aria-pressed="{{ w.pressed }}" aria-label="{{ w.label }}" class="focusable" style="{{ w.tick }}">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+                  <sc-if value="{{ w.done }}" hint-placeholder-val="{{ false }}">
+                    <span aria-hidden="true"><span class="spark" style="--a: 0deg;"></span><span class="spark" style="--a: 60deg;"></span><span class="spark" style="--a: 120deg;"></span><span class="spark" style="--a: 180deg;"></span><span class="spark" style="--a: 240deg;"></span><span class="spark" style="--a: 300deg;"></span></span>
+                  </sc-if>
+                </button>
+              </li>
+            </sc-for>
+          </ol>
+        </div>
+
+        <!-- Pace zones -->
+        <div class="card" style="padding: 22px;">
+          <span class="display" style="font-size: 22px; font-weight: 800;">Your paces</span>
+          <p style="margin: 6px 0 16px; color: #b9bcc3;">All from your goal time.</p>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <sc-for list="{{ zones }}" as="z" hint-placeholder-count="4">
+              <div style="display: grid; grid-template-columns: 76px 1fr 72px; gap: 10px; align-items: center;">
+                <span style="font-size: 14px; font-weight: 700;">{{ z.name }}</span>
+                <span style="height: 10px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden;"><span class="bar" style="{{ z.bar }}"></span></span>
+                <span class="mono" style="font-size: 13px; font-weight: 700; text-align: right;">{{ z.pace }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- Build-up -->
+        <div class="card" style="padding: 22px;">
+          <span class="display" style="font-size: 22px; font-weight: 800;">Builds you up safely</span>
+          <p style="margin: 6px 0 16px; color: #b9bcc3;">Easier every fourth week, then a taper.</p>
+          <div aria-hidden="true" style="display: flex; align-items: flex-end; gap: 5px; height: 90px;">
+            <sc-for list="{{ volume }}" as="v" hint-placeholder-count="14">
+              <span class="rise" style="{{ v }}"></span>
+            </sc-for>
+          </div>
+        </div>
+
+        <!-- Calendar + any device -->
+        <div class="card" style="padding: 22px; display: flex; flex-direction: column; justify-content: space-between; gap: 16px;">
+          <div>
+            <span class="display" style="font-size: 22px; font-weight: 800;">On every screen</span>
+            <p style="margin: 6px 0 0; color: #b9bcc3;">Saved to your account. Add it to your calendar or print it for the fridge.</p>
+          </div>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <span class="mono" style="padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 13px; font-weight: 700;">Calendar</span>
+            <span class="mono" style="padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 13px; font-weight: 700;">Print</span>
+            <span class="mono" style="padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,0.08); font-size: 13px; font-weight: 700;">Share link</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== Finish ===================== -->
+  <section aria-labelledby="finish-title" style="background: #d7ff3e; color: #0a0a0b;">
+    <div aria-hidden="true" style="height: 26px; background-image: repeating-conic-gradient(#0a0a0b 0 25%, #d7ff3e 0 50%); background-size: 26px 26px;"></div>
+    <div style="max-width: 1200px; margin: 0 auto; padding: 88px 24px 104px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 32px;">
+      <h2 id="finish-title" class="display" style="margin: 0; font-size: clamp(48px, 7vw, 104px); font-weight: 800; line-height: 0.92;">Your taper<br>starts today.</h2>
+      <div style="display: flex; flex-direction: column; gap: 12px; align-items: flex-start;">
+        <button type="button" class="pill-btn focusable" style="min-height: 64px; padding: 0 36px; border-radius: 999px; border: 0; background: #0a0a0b; color: #d7ff3e; font: inherit; font-size: 21px; font-weight: 800; cursor: pointer;">Sign up free</button>
+        <span style="font-weight: 700;">Free. Works on any screen.</span>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":3600}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { intro: true, picked: 'comrades', level: 1, done: { tue: true } };
+  }
+  componentDidMount() { this.hideIntroSoon(); }
+  componentWillUnmount() { clearTimeout(this.timer); }
+  hideIntroSoon() {
+    clearTimeout(this.timer);
+    // The curtain finishes lifting at about 3.5 s; then the overlay leaves the page entirely.
+    this.timer = setTimeout(() => this.setState({ intro: false }), 3600);
+  }
+  renderVals() {
+    const replay = () => {
+      this.setState({ intro: false }, () => this.setState({ intro: true }, () => this.hideIntroSoon()));
+    };
+    const ticker = ['TWO OCEANS ULTRA · 56 KM', 'CAPE TOWN MARATHON · 42.2 KM', 'COMRADES MARATHON · 90 KM', 'CAPE100 · 100 KM', 'YOUR PARKRUN PB · 5 KM'];
+    const rackColours = [['#d7ff3e', '#0a0a0b'], ['#ff5a36', '#0a0a0b'], ['#f2f2f2', '#0a0a0b'], ['#7c5cff', '#ffffff']];
+    const list = [
+      { id: 'two-oceans', name: 'Two Oceans Ultra', date: '4 APR 2027', km: '56 km', place: 'Cape Town' },
+      { id: 'cape-town', name: 'Cape Town Marathon', date: '23 MAY 2027', km: '42.2 km', place: 'Cape Town' },
+      { id: 'comrades', name: 'Comrades Marathon', date: '13 JUN 2027', km: '90 km', place: 'Pietermaritzburg to Durban' },
+      { id: 'cape100', name: 'Cape100', date: '5 SEP 2027', km: '100 km', place: 'Hermanus to Stellenbosch' },
+    ];
+    const races = list.map((r, i) => {
+      const on = this.state.picked === r.id;
+      const [bg, fg] = rackColours[i];
+      return {
+        ...r,
+        on,
+        pressed: on ? 'true' : 'false',
+        pick: () => this.setState({ picked: r.id }),
+        swing: 'animation-delay: -' + (i * 1.1).toFixed(1) + 's; animation-duration: ' + (4.2 + i * 0.4).toFixed(1) + 's;',
+        style: 'display: block; width: 100%; text-align: left; padding: 22px 20px 24px; border-radius: 20px; cursor: pointer; font: inherit; border: 0; ' +
+          'background: ' + bg + '; color: ' + fg + '; ' +
+          (on ? 'box-shadow: 0 0 0 3px #0a0a0b, 0 0 0 6px ' + bg + ', 0 18px 40px rgba(0,0,0,0.5);' : 'box-shadow: 0 14px 30px rgba(0,0,0,0.45);'),
+      };
+    });
+    const steps = [
+      { km: '1K', title: 'Your race', body: 'Pick it off the rack, or tell us about any other race.' },
+      { km: '2K', title: 'Your goal', body: 'A finish time. Not sure? Estimate it from a recent race.' },
+      { km: '3K', title: 'Your days', body: 'Three to seven days a week, and which one is your long run.' },
+      { km: '4K', title: 'About you', body: 'How long you’ve been running and roughly how far a week now.' },
+      { km: '5K', title: 'Your plan', body: 'Week by week to race day, saved to your account.' },
+    ];
+    const levels = ['Fairly new', 'Regular', 'Experienced'].map((label, i) => ({
+      label,
+      checked: this.state.level === i ? 'true' : 'false',
+      pick: () => this.setState({ level: i }),
+      style: 'position: relative; z-index: 1; min-height: 52px; border: 0; border-radius: 999px; background: transparent; font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; transition: color 200ms ease; color: ' +
+        (this.state.level === i ? '#0a0a0b' : '#b9bcc3') + ';',
+    }));
+    const thumb = 'position: absolute; top: 6px; bottom: 6px; left: 6px; width: calc((100% - 12px) / 3); border-radius: 999px; background: #d7ff3e; transition: transform 380ms cubic-bezier(.3,1.5,.5,1); transform: translateX(' + this.state.level * 100 + '%);';
+    const week = [
+      { id: 'tue', day: 'TUE', title: 'Hill repeats', numbers: '7 km · 5:41–6:05' },
+      { id: 'thu', day: 'THU', title: 'Easy + strides', numbers: '6 km · 7:24–8:04' },
+      { id: 'sat', day: 'SAT', title: 'Easy run', numbers: '6 km · 7:24–8:04' },
+      { id: 'sun', day: 'SUN', title: 'Long run', numbers: '16 km · 7:58–8:31' },
+    ].map((w) => {
+      const done = Boolean(this.state.done[w.id]);
+      return {
+        ...w,
+        done,
+        pressed: done ? 'true' : 'false',
+        label: (done ? 'Mark not done: ' : 'Mark done: ') + w.title,
+        toggle: () => this.setState({ done: { ...this.state.done, [w.id]: !done } }),
+        titleStyle: 'display: block; font-weight: 700;' + (done ? ' text-decoration: line-through; text-decoration-color: #d7ff3e; text-decoration-thickness: 3px; color: #9ea2aa;' : ''),
+        tick: 'position: relative; width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; ' +
+          (done ? 'background: #d7ff3e; color: #0a0a0b; border: 0;' : 'background: transparent; color: #6b6f77; border: 2px solid #3a3d43;'),
+      };
+    });
+    const zones = [
+      { name: 'Easy', pace: '7:24', w: 55, c: '#7c5cff' },
+      { name: 'Long run', pace: '7:58', w: 48, c: '#f2f2f2' },
+      { name: 'Tempo', pace: '6:05', w: 74, c: '#ff5a36' },
+      { name: 'Intervals', pace: '5:41', w: 88, c: '#d7ff3e' },
+    ].map((z) => ({ ...z, bar: 'display: block; height: 100%; width: ' + z.w + '%; border-radius: 999px; background: ' + z.c + ';' }));
+    const heights = [30, 36, 42, 26, 46, 52, 60, 38, 64, 72, 80, 50, 34, 18];
+    const volume = heights.map((h, i) => 'flex: 1; height: ' + h + '%; border-radius: 6px 6px 2px 2px; background: ' + ((i + 1) % 4 === 0 ? 'rgba(215,255,62,0.35)' : i >= 12 ? '#ff5a36' : '#d7ff3e') + ';');
+    return { showIntro: this.state.intro, replay, ticker: [...ticker, ...ticker], races, steps, levels, thumb, week, zones, volume };
+  }
+}
+</script>
+</body>
+</html>

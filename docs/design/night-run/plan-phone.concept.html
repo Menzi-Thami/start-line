@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Your plan on a phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&amp;family=Atkinson+Hyperlegible+Next:wght@400;700&amp;family=JetBrains+Mono:wght@500;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body { margin: 0; font-family: 'Atkinson Hyperlegible Next', 'Segoe UI', sans-serif; color: #f2f2f2; background: #0a0a0b; }
+a { color: #d7ff3e; } a:hover { color: #ecff9e; }
+.display { font-family: 'Bricolage Grotesque', 'Segoe UI', sans-serif; letter-spacing: -0.035em; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+/* Opening: the header drops in, the ring draws, then each run slides up in turn. */
+.drop { animation: drop 600ms cubic-bezier(.2,1.3,.4,1) both; }
+@keyframes drop { from { opacity: 0; transform: translateY(-24px) scale(.96); } to { opacity: 1; transform: none; } }
+.ring-fill { stroke-dasharray: 151; animation: ring 1.2s cubic-bezier(.3,.8,.3,1) 300ms both; }
+@keyframes ring { from { stroke-dashoffset: 151; } to { stroke-dashoffset: 132; } }
+.slide { animation: slide 520ms cubic-bezier(.2,1.2,.4,1) both; }
+@keyframes slide { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+
+/* A tiny runner sprints on the spot where you are on the course. */
+.mini .leg-a { transform-box: view-box; transform-origin: 30px 46px; animation: stride .3s ease-in-out infinite alternate; }
+.mini .leg-b { transform-box: view-box; transform-origin: 30px 46px; animation: stride .3s ease-in-out infinite alternate-reverse; }
+.mini .arm-a { transform-box: view-box; transform-origin: 31px 24px; animation: swing .3s ease-in-out infinite alternate-reverse; }
+.mini .arm-b { transform-box: view-box; transform-origin: 31px 24px; animation: swing .3s ease-in-out infinite alternate; }
+@keyframes stride { from { transform: rotate(-38deg); } to { transform: rotate(38deg); } }
+@keyframes swing { from { transform: rotate(-45deg); } to { transform: rotate(45deg); } }
+
+/* Ticking a run: the button pops and throws volt confetti. */
+.tick { transition: transform 160ms cubic-bezier(.3,1.8,.5,1), background 160ms ease; }
+.tick:active { transform: scale(.85); }
+.spark { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 2px; background: #d7ff3e; animation: burst 650ms cubic-bezier(.1,.8,.3,1) both; }
+@keyframes burst { from { transform: translate(-50%, -50%) rotate(var(--a)) translate(0); opacity: 1; } to { transform: translate(-50%, -50%) rotate(var(--a)) translate(30px); opacity: 0; } }
+
+.tick:focus-visible, .tab:focus-visible { outline: 3px solid #d7ff3e; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .drop, .ring-fill, .slide, .spark, .mini .leg-a, .mini .leg-b, .mini .arm-a, .mini .arm-b { animation: none; }
+  .ring-fill { stroke-dashoffset: 132; }
+  .tick { transition: none; }
+}
+</style>
+</helmet>
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: radial-gradient(120% 60% at 100% 0%, rgba(215,255,62,0.16), transparent 60%), #0a0a0b; overflow: hidden; position: relative; display: flex; flex-direction: column;">
+
+  <!-- Header: race and progress -->
+  <div class="drop" style="padding: 22px 18px 0; display: flex; gap: 14px; align-items: center;">
+    <div style="position: relative; width: 64px; height: 64px; flex-shrink: 0;">
+      <svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+        <circle cx="32" cy="32" r="24" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="7"></circle>
+        <circle class="ring-fill" cx="32" cy="32" r="24" fill="none" stroke="#d7ff3e" stroke-width="7" stroke-linecap="round" transform="rotate(-90 32 32)"></circle>
+      </svg>
+      <span class="mono" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800;">3/24</span>
+    </div>
+    <div style="min-width: 0;">
+      <div class="mono" style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: #d7ff3e;">247 DAYS TO GO</div>
+      <h1 class="display" style="margin: 2px 0 0; font-size: 28px; font-weight: 800; line-height: 1;">Comrades Marathon</h1>
+      <div class="mono" style="margin-top: 4px; font-size: 13px; color: #9ea2aa;">13 JUN 2027 · 90 KM · 10:30</div>
+    </div>
+  </div>
+
+  <!-- Course bar with the runner -->
+  <div class="drop" style="padding: 18px 18px 6px; animation-delay: 120ms;">
+    <div style="display: flex; justify-content: space-between; font-size: 13px; color: #9ea2aa;">
+      <span class="mono" style="font-weight: 800; color: #f2f2f2;">WEEK 3</span>
+      <span>Base building</span>
+    </div>
+    <div aria-hidden="true" style="position: relative; height: 40px; margin-top: 4px;">
+      <div style="position: absolute; left: 0; right: 0; bottom: 6px; height: 6px; border-radius: 999px; background: repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0 10px, transparent 10px 16px);"></div>
+      <div style="position: absolute; left: 0; width: 12.5%; bottom: 6px; height: 6px; border-radius: 999px; background: #d7ff3e;"></div>
+      <svg class="mini" viewBox="0 0 60 80" width="26" height="34" fill="none" stroke="#d7ff3e" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" style="position: absolute; left: calc(12.5% - 13px); bottom: 10px;">
+        <circle cx="33" cy="10" r="8" fill="#d7ff3e" stroke="none"></circle>
+        <path d="M32 21 L29 46"></path>
+        <g class="arm-a"><path d="M31 24 L22 34 L28 42"></path></g>
+        <g class="arm-b"><path d="M31 24 L40 33 L47 28"></path></g>
+        <g class="leg-a"><path d="M30 46 L22 62 L28 76"></path></g>
+        <g class="leg-b"><path d="M30 46 L40 60 L34 76"></path></g>
+      </svg>
+      <div style="position: absolute; right: 0; bottom: 2px; width: 14px; height: 16px; background-image: repeating-conic-gradient(#f2f2f2 0 25%, #0a0a0b 0 50%); background-size: 7px 8px; border-radius: 2px;"></div>
+    </div>
+  </div>
+
+  <!-- This week's runs -->
+  <div style="padding: 10px 16px 0; display: flex; justify-content: space-between; align-items: baseline;">
+    <h2 class="display" style="margin: 0; font-size: 22px; font-weight: 800;">This week</h2>
+    <span class="mono" style="font-size: 13px; color: #9ea2aa;">{{ doneCount }} OF 4 DONE</span>
+  </div>
+  <ol style="list-style: none; margin: 0; padding: 12px 16px 120px; display: flex; flex-direction: column; gap: 10px; overflow: hidden;">
+    <sc-for list="{{ runs }}" as="run" hint-placeholder-count="5">
+      <li class="slide" style="{{ run.card }}">
+        <div style="display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center;">
+          <span class="mono" style="font-size: 13px; font-weight: 800; line-height: 1.25; color: #9ea2aa;">{{ run.day }}<br><span style="font-weight: 500;">{{ run.date }}</span></span>
+          <span style="min-width: 0;">
+            <span style="{{ run.titleStyle }}">{{ run.title }}</span>
+            <span class="mono" style="display: block; font-size: 13px; color: #9ea2aa; margin-top: 2px;">{{ run.numbers }}</span>
+          </span>
+          <sc-if value="{{ run.isRun }}" hint-placeholder-val="{{ true }}">
+            <button type="button" class="tick" onClick="{{ run.toggle }}" aria-pressed="{{ run.pressed }}" aria-label="{{ run.label }}" style="{{ run.tickStyle }}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>
+              <sc-if value="{{ run.done }}" hint-placeholder-val="{{ false }}">
+                <span aria-hidden="true"><span class="spark" style="--a: 0deg;"></span><span class="spark" style="--a: 60deg;"></span><span class="spark" style="--a: 120deg;"></span><span class="spark" style="--a: 180deg;"></span><span class="spark" style="--a: 240deg;"></span><span class="spark" style="--a: 300deg;"></span></span>
+              </sc-if>
+            </button>
+          </sc-if>
+        </div>
+      </li>
+    </sc-for>
+  </ol>
+
+  <!-- Floating frosted-glass tab bar -->
+  <nav aria-label="Your plan" style="position: absolute; left: 16px; right: 16px; bottom: 22px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 6px; border-radius: 999px; background: rgba(40,42,48,0.55); border: 1px solid rgba(255,255,255,0.14); backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 12px 30px rgba(0,0,0,0.5);">
+    <button type="button" class="tab" aria-current="page" style="min-height: 48px; border-radius: 999px; border: 0; background: #d7ff3e; color: #0a0a0b; font: inherit; font-size: 13px; font-weight: 800;">This week</button>
+    <button type="button" class="tab" style="min-height: 48px; border-radius: 999px; border: 0; background: transparent; color: #d0d2d7; font: inherit; font-size: 13px; font-weight: 700;">All weeks</button>
+    <button type="button" class="tab" style="min-height: 48px; border-radius: 999px; border: 0; background: transparent; color: #d0d2d7; font: inherit; font-size: 13px; font-weight: 700;">Paces</button>
+    <button type="button" class="tab" style="min-height: 48px; border-radius: 999px; border: 0; background: transparent; color: #d0d2d7; font: inherit; font-size: 13px; font-weight: 700;">Progress</button>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { done: { tue: true } };
+  }
+  renderVals() {
+    const list = [
+      { id: 'mon', day: 'MON', date: '11 Jan', title: 'Strength & mobility', numbers: 'About 30 min', isRun: false },
+      { id: 'tue', day: 'TUE', date: '12 Jan', title: 'Hill repeats', numbers: '7 km · 5:41–6:05/km', isRun: true },
+      { id: 'thu', day: 'THU', date: '14 Jan', title: 'Easy run + strides', numbers: '6 km · 7:24–8:04/km', isRun: true },
+      { id: 'sat', day: 'SAT', date: '16 Jan', title: 'Easy run', numbers: '6 km · 7:24–8:04/km', isRun: true },
+      { id: 'sun', day: 'SUN', date: '17 Jan', title: 'Long run', numbers: '16 km · 7:58–8:31/km', isRun: true },
+    ];
+    const runs = list.map((r, i) => {
+      const done = Boolean(this.state.done[r.id]);
+      return {
+        ...r,
+        done,
+        pressed: done ? 'true' : 'false',
+        label: (done ? 'Mark not done: ' : 'Mark done: ') + r.title,
+        toggle: () => this.setState({ done: { ...this.state.done, [r.id]: !done } }),
+        card: 'animation-delay: ' + (380 + i * 90) + 'ms; border-radius: 18px; padding: 12px 12px 12px 14px; ' +
+          (r.isRun ? 'background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04)); border: 1px solid rgba(255,255,255,0.12);' : 'background: transparent; border: 1px dashed rgba(255,255,255,0.18);'),
+        titleStyle: 'display: block; font-weight: 700;' + (done ? ' text-decoration: line-through; text-decoration-color: #d7ff3e; text-decoration-thickness: 3px; color: #9ea2aa;' : ''),
+        tickStyle: 'position: relative; width: 44px; height: 44px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; ' +
+          (done ? 'background: #d7ff3e; color: #0a0a0b; border: 0;' : 'background: transparent; color: #6b6f77; border: 2px solid #3a3d43;'),
+      };
+    });
+    const doneCount = list.filter((r) => r.isRun && this.state.done[r.id]).length;
+    return { runs, doneCount };
+  }
+}
+</script>
+</body>
+</html>

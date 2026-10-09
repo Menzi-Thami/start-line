@@ -301,6 +301,46 @@ describe('a shared plan', () => {
     await waitFor(() => expect(screen.getAllByRole('checkbox', { name: 'Done' })[0]).toBeChecked())
   })
 
+  it('splits the plan into tabs and opens on this week', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    const { user } = setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    const tabs = screen.getByRole('tablist', { name: 'Your plan' })
+    expect(within(tabs).getAllByRole('tab').map((t) => t.textContent)).toEqual(['This week', 'All weeks', 'Paces', 'Progress'])
+    expect(within(tabs).getByRole('tab', { name: 'This week' })).toHaveAttribute('aria-selected', 'true')
+    // The plan starts on Monday 12 October, after "today", so This week shows the first week.
+    expect(screen.getByRole('heading', { name: 'Your first week' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Weekly distance' })).not.toBeInTheDocument()
+
+    await user.click(within(tabs).getByRole('tab', { name: 'Paces' }))
+    expect(screen.getByRole('tabpanel', { name: 'Paces' })).toHaveTextContent('Recovery')
+    expect(screen.queryByRole('heading', { name: 'Your first week' })).not.toBeInTheDocument()
+
+    await user.keyboard('{ArrowRight}')
+    expect(within(tabs).getByRole('tab', { name: 'Progress' })).toHaveFocus()
+    expect(screen.getByRole('heading', { name: 'Weekly distance' })).toBeInTheDocument()
+  })
+
+  it('keeps sharing in one menu', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    const { user } = setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    await user.click(screen.getByText('Share'))
+
+    for (const action of ['Copy link to this plan', 'Add to calendar', 'Print']) {
+      expect(screen.getByRole('button', { name: action })).toBeVisible()
+    }
+
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Print', hidden: true })).not.toBeVisible()
+
+    await user.click(screen.getByText('Share'))
+    await user.click(screen.getByRole('heading', { name: 'Parkrun PB' }))
+    expect(screen.getByRole('button', { name: 'Print', hidden: true })).not.toBeVisible()
+  })
+
   it('opens the current week and shows rest days', async () => {
     window.history.replaceState(null, '', `/${link}`)
     setup()

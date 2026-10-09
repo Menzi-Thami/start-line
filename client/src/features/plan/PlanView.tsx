@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { loadDone, saveDone } from '../../lib/storage'
-import type { TrainingPlan } from '../../lib/types'
-import { FOCUS, ZONES } from './copy'
+import type { PlanWeek, TrainingPlan } from '../../lib/types'
+import { FOCUS, PHASES, ZONES } from './copy'
+import { trainingKm } from './plan-math'
 import { VolumeChart } from './VolumeChart'
-import { WeekList } from './WeekList'
+import { WeekDays, WeekList } from './WeekList'
 
 interface Props {
   plan: TrainingPlan
@@ -13,9 +14,18 @@ interface Props {
   onUnitsChange: (units: Units) => void
   shareUrl: string
   today: string
-  /** Extra toolbar actions, such as saving the plan to an account. */
+  /** Extra actions beside Share, such as changing the answers or saving the plan to an account. */
   toolbarExtra?: ReactNode
 }
+
+// "This week" first: on most days it's all a runner needs.
+const TABS = [
+  { id: 'week', label: 'This week' },
+  { id: 'all', label: 'All weeks' },
+  { id: 'paces', label: 'Paces' },
+  { id: 'progress', label: 'Progress' },
+] as const
+type TabId = (typeof TABS)[number]['id']
 
 /** Which plan week contains today, if any. */
 function weekContaining(plan: TrainingPlan, today: string): number | null {
@@ -27,23 +37,55 @@ function weekContaining(plan: TrainingPlan, today: string): number | null {
   return week?.number ?? null
 }
 
+/** The week to show on "This week": today's, or the first one before the plan starts, or race week after it ends. */
+function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | null): { week: PlanWeek; when: 'now' | 'soon' | 'past' } | null {
+  const first = plan.weeks[0]
+  const last = plan.weeks.at(-1)
+  if (!first || !last) return null
+  if (currentWeek !== null) return { week: plan.weeks.find((w) => w.number === currentWeek)!, when: 'now' }
+  return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
+}
+
 export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const menuRef = useRef<HTMLDetailsElement>(null)
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
   const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const [tab, setTab] = useState<TabId>('week')
+  const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
   const currentWeek = weekContaining(plan, today)
+  const shown = weekToShow(plan, today, currentWeek)
   const goalSeconds = parseTimeSpan(plan.goalTime) ?? 0
+  const byZone = new Map(plan.paces.map((p) => [p.zone, p]))
 
   useEffect(() => {
     headingRef.current?.focus()
   }, [plan])
 
-  // Printing should show every week, not just the ones left open.
+  // Printing shows every tab and every week, not just the ones on screen.
   useEffect(() => {
     const openAll = () => document.querySelectorAll<HTMLDetailsElement>('.week').forEach((d) => (d.open = true))
     window.addEventListener('beforeprint', openAll)
     return () => window.removeEventListener('beforeprint', openAll)
+  }, [])
+
+  // The Share menu is a <details>, which stays open on its own; close it on Escape or a tap anywhere else.
+  useEffect(() => {
+    const dismiss = (event: Event) => {
+      const menu = menuRef.current
+      if (!menu?.open) return
+      const outside = event instanceof KeyboardEvent ? event.key === 'Escape' : !menu.contains(event.target as Node)
+      if (outside) menu.open = false
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', dismiss)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', dismiss)
+    }
   }, [])
 
   const toggleDone = (key: string, isDone: boolean) => {
@@ -56,7 +98,10 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
     })
   }
 
+  const closeMenu = () => menuRef.current?.removeAttribute('open')
+
   const copyLink = async () => {
+    closeMenu()
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied('copied')
@@ -66,6 +111,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
   }
 
   const downloadCalendar = () => {
+    closeMenu()
     const blob = new Blob([buildIcs(plan, units)], { type: 'text/calendar;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -74,6 +120,51 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
     link.click()
     URL.revokeObjectURL(url)
   }
+
+  const index = TABS.findIndex((t) => t.id === tab)
+
+  const showTab = (next: number, focus = false) => {
+    const target = TABS[(next + TABS.length) % TABS.length]!
+    if (target.id === tab) return
+    setDirection(next > index ? 'forward' : 'back')
+    setTab(target.id)
+    if (focus) tabRefs.current[TABS.indexOf(target)]?.focus()
+  }
+
+  // Arrow keys move between tabs, as screen-reader users expect from a tab list.
+  const onTabKey = (event: KeyboardEvent) => {
+    const moves: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: TABS.length - 1 }
+    const next = moves[event.key]
+    if (next === undefined) return
+    event.preventDefault()
+    showTab(next, true)
+  }
+
+  // A sideways swipe on a phone flips to the next or previous tab; mostly-vertical drags are scrolling.
+  const onTouchStart = (event: TouchEvent) => {
+    const t = event.touches[0]
+    touchStart.current = t ? { x: t.clientX, y: t.clientY } : null
+  }
+  const onTouchEnd = (event: TouchEvent) => {
+    const start = touchStart.current
+    const t = event.changedTouches[0]
+    touchStart.current = null
+    if (!start || !t) return
+    const dx = t.clientX - start.x
+    const dy = t.clientY - start.y
+    if (Math.abs(dx) < 60 || Math.abs(dx) < 2 * Math.abs(dy)) return
+    const next = index + (dx < 0 ? 1 : -1)
+    // Swiping stops at the ends rather than wrapping round, which would feel like a jump.
+    if (next >= 0 && next < TABS.length) showTab(next)
+  }
+
+  const panel = (id: TabId) => ({
+    id: `plan-panel-${id}`,
+    role: 'tabpanel',
+    'aria-labelledby': `plan-tab-${id}`,
+    hidden: tab !== id,
+    className: `tab-panel${tab === id && direction ? ` slide-${direction}` : ''}`,
+  })
 
   return (
     <section className="plan" aria-labelledby="plan-title">
@@ -93,7 +184,6 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
           {plan.weeks.length} weeks from {formatDate(plan.startDate)}
         </li>
       </ul>
-      <p className="plan-focus">{FOCUS[plan.category]}</p>
 
       {plan.warnings.length > 0 && (
         <div className="callout" role="note">
@@ -105,57 +195,114 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
         </div>
       )}
 
-      <div className="toolbar">
-        <div className="pills" role="radiogroup" aria-label="Units">
+      <div className="plan-actions">
+        {toolbarExtra}
+        <details className="menu" ref={menuRef}>
+          <summary className="button button-quiet">Share</summary>
+          <div className="menu-panel">
+            <button type="button" className="menu-item" onClick={() => void copyLink()}>
+              Copy link to this plan
+            </button>
+            <button type="button" className="menu-item" onClick={downloadCalendar}>
+              Add to calendar
+            </button>
+            <button
+              type="button"
+              className="menu-item"
+              onClick={() => {
+                closeMenu()
+                window.print()
+              }}
+            >
+              Print
+            </button>
+          </div>
+        </details>
+        <div className="pills pills-compact" role="radiogroup" aria-label="Units">
           {(['km', 'mi'] as const).map((u) => (
             <label className="pill" key={u}>
-              <input type="radio" name="units" checked={units === u} onChange={() => onUnitsChange(u)} />
-              {u === 'km' ? 'Kilometres' : 'Miles'}
+              <input type="radio" name="units" checked={units === u} onChange={() => onUnitsChange(u)} aria-label={u === 'km' ? 'Kilometres' : 'Miles'} />
+              {u}
             </label>
           ))}
         </div>
-        <button type="button" className="button button-quiet" onClick={copyLink}>
-          {copied === 'copied' ? 'Link copied' : 'Copy link to this plan'}
-        </button>
-        <button type="button" className="button button-quiet" onClick={downloadCalendar}>
-          Add to calendar
-        </button>
-        <button type="button" className="button button-quiet" onClick={() => window.print()}>
-          Print
-        </button>
-        {toolbarExtra}
-        <span className="visually-hidden" aria-live="polite">
-          {copied === 'copied' ? 'Link copied to the clipboard.' : copied === 'failed' ? 'Couldn’t copy. The link is in your address bar.' : ''}
+        <span className="field-help" aria-live="polite">
+          {copied === 'copied' ? 'Link copied.' : copied === 'failed' ? 'Your browser blocked copying. The link in the address bar is your plan.' : ''}
         </span>
       </div>
-      {copied === 'failed' && <p className="field-help">Your browser blocked copying. The link in the address bar is your plan.</p>}
 
-      <section className="section" aria-labelledby="paces-title">
-        <h3 id="paces-title">Your paces</h3>
-        <p>Every pace comes from your goal time, so easy days stay easy and hard days hit the right effort.</p>
-        <ul className="zones">
-          {plan.paces.map((p) => (
-            <li className="zone" key={p.zone}>
-              <span className="zone-swatch" style={{ background: ZONES[p.zone].colour }} aria-hidden="true" />
-              <span className="zone-name">{ZONES[p.zone].name}</span>
-              <span className="zone-pace">{formatPaceRange(p.fastestSecondsPerKm, p.slowestSecondsPerKm, units)}</span>
-              <span className="zone-note">{ZONES[p.zone].note}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="tabs" role="tablist" aria-label="Your plan" onKeyDown={onTabKey}>
+        {TABS.map((t, i) => (
+          <button
+            key={t.id}
+            ref={(el) => {
+              tabRefs.current[i] = el
+            }}
+            type="button"
+            role="tab"
+            id={`plan-tab-${t.id}`}
+            className="tab"
+            aria-selected={tab === t.id}
+            aria-controls={`plan-panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
+            onClick={() => showTab(i)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
 
-      <section className="section" aria-labelledby="volume-title">
-        <h3 id="volume-title">Weekly distance</h3>
-        <p>It builds gradually, eases off every fourth week, and drops away before race day so you start fresh.</p>
-        <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} />
-      </section>
+      <div className="tab-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div {...panel('week')}>
+          {shown && (
+            <>
+              <div className="this-week-head">
+                <h3>
+                  {shown.when === 'now' ? `Week ${shown.week.number} of ${plan.weeks.length}` : shown.when === 'soon' ? 'Your first week' : 'Race week'}
+                  {shown.week.isCutback && <span className="tag">Easier week</span>}
+                </h3>
+                <p className="week-meta">
+                  {shown.when === 'soon' ? `Starts ${formatDate(shown.week.startDate, 'long')}` : `From ${formatDate(shown.week.startDate)}`} ·{' '}
+                  {PHASES[shown.week.phase]} · {formatDistance(trainingKm(shown.week), units)}
+                </p>
+              </div>
+              <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onToggleDone={toggleDone} />
+              <p className="field-help">
+                Ticks are saved on this device.{' '}
+                <button type="button" className="link-button" onClick={() => showTab(1)}>
+                  See every week
+                </button>
+              </p>
+            </>
+          )}
+        </div>
 
-      <section className="section" aria-labelledby="weeks-title">
-        <h3 id="weeks-title">Week by week</h3>
-        <p>Tick sessions off as you go. Ticks are saved on this device only.</p>
-        <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onToggleDone={toggleDone} />
-      </section>
+        <div {...panel('all')}>
+          <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
+          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onToggleDone={toggleDone} />
+        </div>
+
+        <div {...panel('paces')}>
+          <p className="tab-intro">Every pace comes from your goal time, so easy days stay easy and hard days hit the right effort.</p>
+          <ul className="zones">
+            {plan.paces.map((p) => (
+              <li className="zone" key={p.zone}>
+                <span className="zone-swatch" style={{ background: ZONES[p.zone].colour }} aria-hidden="true" />
+                <span className="zone-name">{ZONES[p.zone].name}</span>
+                <span className="zone-pace">{formatPaceRange(p.fastestSecondsPerKm, p.slowestSecondsPerKm, units)}</span>
+                <span className="zone-note">{ZONES[p.zone].note}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div {...panel('progress')}>
+          <p className="tab-intro">{FOCUS[plan.category]}</p>
+          <h3>Weekly distance</h3>
+          <p>It builds gradually, eases off every fourth week, and drops away before race day so you start fresh.</p>
+          <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} />
+        </div>
+      </div>
     </section>
   )
 }

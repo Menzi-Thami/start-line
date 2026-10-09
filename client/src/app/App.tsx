@@ -261,6 +261,16 @@ export function App() {
       </header>
 
       <main>
+        {auth.error && (
+          <div className="callout" role="alert">
+            <p>
+              Sign-in didn’t finish. {auth.error}{' '}
+              <button type="button" className="link-button" onClick={auth.signIn}>
+                Try again
+              </button>
+            </p>
+          </div>
+        )}
         {state.kind === 'needs-sign-up' && view !== 'sign-up' && !showBuilder && (
           <div className="callout" role="note">
             <p>

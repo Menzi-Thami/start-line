@@ -85,6 +85,7 @@ const signedIn = (overrides: Partial<Auth> = {}): Auth => ({
   enabled: true,
   loading: false,
   account: { name: 'Thandi', email: 'thandi@example.com' },
+  error: null,
   signIn: vi.fn(),
   signUp: vi.fn(),
   signOut: vi.fn(),
@@ -137,6 +138,17 @@ describe('signed out', () => {
 })
 
 describe('signing up comes first', () => {
+  it('says why a sign-in didn’t finish instead of failing silently', async () => {
+    const auth = { ...signedOut(), error: 'AADSTS50020: User account from identity provider google.com does not exist in tenant Taperday.' }
+    const user = renderWith(auth)
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Sign-in didn’t finish. AADSTS50020')
+    await user.click(within(alert).getByRole('button', { name: 'Try again' }))
+    expect(auth.signIn).toHaveBeenCalled()
+  })
+
+
   it('opens on why Taperday is worth it, with sign-up as the way in', async () => {
     const auth = signedOut()
     const user = renderWith(auth)

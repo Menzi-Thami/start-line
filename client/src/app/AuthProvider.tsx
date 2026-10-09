@@ -1,6 +1,13 @@
-import { InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
+import { AuthError, InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { AuthContext, accountsOff, type Auth, type AuthConfig } from './auth-context'
+
+// "AADSTS50020: User account ... Trace ID: ...": keep the code and the first sentence, which is the useful part.
+const describe = (error: unknown): string => {
+  const text = error instanceof AuthError ? error.errorMessage || error.errorCode : error instanceof Error ? error.message : String(error)
+  const firstSentence = text.split(/(?<=\.)\s|\r?\n/)[0]?.trim()
+  return firstSentence || 'Something went wrong while signing in.'
+}
 
 const toAccount = (info: AccountInfo) => ({ name: info.name || info.username, email: info.username || null })
 
@@ -27,6 +34,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
   )
   const [info, setInfo] = useState<AccountInfo | null>(null)
   const [loading, setLoading] = useState(msal !== null)
+  const [error, setError] = useState<string | null>(null)
 
   // Finish any sign-in that just redirected back here, then pick up an existing session.
   useEffect(() => {
@@ -41,8 +49,9 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         if (account) msal.setActiveAccount(account)
         setInfo(account)
       })
-      .catch(() => {
-        // A failed redirect leaves the runner signed out; the builder still works.
+      .catch((failure: unknown) => {
+        // The runner stays signed out, but is told why rather than left guessing.
+        if (!cancelled) setError(describe(failure))
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -58,6 +67,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       enabled: true,
       loading,
       account: info ? toAccount(info) : null,
+      error,
       // Come back to exactly this page, so a plan being built isn't lost.
       signIn: () => void msal.loginRedirect({ scopes: [config.scope], redirectStartPage: window.location.href }),
       signUp: () => void msal.loginRedirect({ scopes: [config.scope], prompt: 'create', redirectStartPage: window.location.href }),
@@ -74,7 +84,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         }
       },
     }
-  }, [msal, config, info, loading])
+  }, [msal, config, info, loading, error])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

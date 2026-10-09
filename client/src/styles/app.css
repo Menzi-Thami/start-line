@@ -834,41 +834,148 @@ select {
 }
 
 /* The sign-up screen: why Taperday, in plain words, then one clear way in. */
-.pitch-reasons {
+/* A bento of what you get: each card shows the real thing in miniature. */
+.bento {
   list-style: none;
   margin: 0 0 var(--space-5);
   padding: 0;
   display: grid;
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-3);
 }
 
-.pitch-reasons li {
+.bento-card {
   display: grid;
-  gap: var(--space-1);
-  padding-left: var(--space-5);
-  position: relative;
+  align-content: start;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  transition: border-color 200ms ease, transform 200ms ease;
 }
 
-/* A small race-day dot marks each reason, echoing the app icon. */
-.pitch-reasons li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.45em;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--accent);
+.bento-card:hover {
+  border-color: rgba(215, 255, 62, 0.5);
+  transform: translateY(-3px);
 }
 
-.pitch-reasons strong {
+.bento-wide {
+  grid-column: 1 / -1;
+}
+
+.bento-card strong {
   font-family: var(--font-display);
   font-size: var(--text-lg);
 }
 
-.pitch-reasons span {
+.bento-card > span:last-child {
   color: var(--ink-2);
-  max-width: 36rem;
+}
+
+.bento-mini {
+  min-height: 3.25rem;
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: var(--space-2);
+}
+
+.mini-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.mini-chips span {
+  padding: var(--space-1) var(--space-3);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.mini-days {
+  display: flex;
+  gap: 6px;
+}
+
+.mini-days span {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+
+.mini-days .is-on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.mini-paces {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.mini-paces span {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mini-paces small {
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.mini-paces i {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  transform-origin: 0 50%;
+  animation: bar-grow 1s cubic-bezier(0.3, 0.8, 0.3, 1) 0.3s both;
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.mini-build {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 3.25rem;
+  width: 100%;
+}
+
+.mini-build i {
+  flex: 1;
+  border-radius: 4px 4px 1px 1px;
+  background: var(--accent);
+  transform-origin: 50% 100%;
+  animation: bar-rise 0.9s cubic-bezier(0.3, 0.8, 0.3, 1) both;
+}
+
+.mini-build .is-easier {
+  background: rgba(215, 255, 62, 0.35);
+}
+
+.mini-build .is-taper {
+  background: var(--coral);
+}
+
+@keyframes bar-rise {
+  from {
+    transform: scaleY(0);
+  }
 }
 
 .pitch-soon {
@@ -1013,6 +1120,143 @@ select {
   grid-template-columns: 1fr;
 }
 
+/* ---------- The race rack: bibs hang from hooks on a rail and sway ---------- */
+.race-rack {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--space-4) var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+.race-bib {
+  position: relative;
+  display: block;
+  padding-top: 26px;
+  cursor: pointer;
+}
+
+/* Each bib's stretch of rail overlaps its neighbours', so a row reads as one rail. */
+.race-bib::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: calc(var(--space-4) / -2 - 2px);
+  right: calc(var(--space-4) / -2 - 2px);
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e8e8e8, #7d8088);
+  box-shadow: 0 6px 14px rgb(0 0 0 / 0.5);
+}
+
+/* The hook. */
+.race-bib::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: calc(50% - 7px);
+  width: 14px;
+  height: 26px;
+  border: 3px solid #c9ccd2;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.race-bib input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.bib-card {
+  display: grid;
+  gap: 6px;
+  padding: var(--space-4) var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  transform-origin: 50% 0;
+  animation: bib-hang 4.6s ease-in-out infinite alternate;
+  box-shadow: 0 14px 30px rgb(0 0 0 / 0.45);
+  transition: box-shadow 160ms ease;
+}
+
+.race-bib:hover .bib-card,
+.race-bib:has(input:focus-visible) .bib-card {
+  animation: bib-swing 0.8s cubic-bezier(0.3, 0.1, 0.3, 1) infinite alternate;
+}
+
+@keyframes bib-hang {
+  from {
+    transform: rotate(-2.5deg);
+  }
+  to {
+    transform: rotate(2.5deg);
+  }
+}
+
+@keyframes bib-swing {
+  from {
+    transform: rotate(-9deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+
+.race-bib:has(input:checked) .bib-card {
+  box-shadow: 0 0 0 3px var(--paper), 0 0 0 6px var(--accent), 0 18px 40px rgb(0 0 0 / 0.5);
+}
+
+.race-bib:has(input:focus-visible) .bib-card {
+  outline: 3px solid var(--accent);
+  outline-offset: 6px;
+}
+
+.bib-card .choice-date {
+  font-size: var(--text-sm);
+  letter-spacing: 0.04em;
+}
+
+.bib-card .choice-date small {
+  font-size: inherit;
+  opacity: 0.75;
+}
+
+.bib-card .choice-name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.bib-card .choice-meta {
+  color: inherit;
+  opacity: 0.85;
+  font-weight: 700;
+}
+
+/* Text colours chosen to stay readable on each bib. */
+.bib-colour-0 {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.bib-colour-1 {
+  background: var(--coral);
+  color: #0a0a0b;
+}
+
+.bib-colour-2 {
+  background: #f2f2f2;
+  color: #0a0a0b;
+}
+
+.bib-colour-3 {
+  background: #1d1f24;
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+
 .skeleton {
   height: 4.25rem;
   border-radius: var(--radius-md);
@@ -1082,6 +1326,7 @@ select {
 
 .segment {
   position: relative;
+  transition: transform 200ms cubic-bezier(0.3, 1.6, 0.5, 1), border-color 160ms ease;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -1100,6 +1345,14 @@ select {
 .segment:has(input:checked) {
   border-color: var(--accent);
   box-shadow: var(--glow);
+  transform: translateY(-3px);
+  animation: spring-pick 380ms cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes spring-pick {
+  from {
+    transform: scale(0.94);
+  }
 }
 
 .segment:has(input:focus-visible) {

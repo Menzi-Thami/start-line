@@ -94,13 +94,13 @@ describe('building a plan', () => {
     expect(screen.getByRole('radio', { name: /Another race/ })).toBeInTheDocument()
   })
 
-  it('says when a race’s date or distance is not confirmed yet', async () => {
+  it('shows each race’s date plainly, and a distance still being re-measured as approximate', async () => {
     setup()
 
     const comrades = await screen.findByRole('radio', { name: /Comrades Marathon/ })
     expect(comrades).toHaveAccessibleName(expect.stringContaining('About 90 km'))
-    expect(comrades).toHaveAccessibleName(expect.stringContaining('Distance to be confirmed'))
-    expect(screen.getByRole('radio', { name: /Cape Town Marathon/ })).toHaveAccessibleName(expect.stringContaining('Date to be confirmed'))
+    expect(comrades).toHaveAccessibleName(expect.stringContaining('13 Jun 2027'))
+    expect(screen.getByRole('radio', { name: /Cape Town Marathon/ })).not.toHaveAccessibleName(expect.stringContaining('to be confirmed'))
   })
 
   it('asks one question per screen, then builds the plan from the runner’s own choices', async () => {

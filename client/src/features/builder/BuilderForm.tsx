@@ -315,22 +315,27 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       </div>
                     )}
     
-                    {catalogue.map((race) => (
-                      <label className="choice" key={race.slug}>
-                        <input type="radio" name="race" value={race.slug} checked={draft.race === race.slug} onChange={() => set('race', race.slug)} />
-                        <span className="choice-date">
-                          {formatDate(race.date, 'dayMonth')}
-                          <small>{formatDate(race.date, 'year')}</small>
-                        </span>
-                        <span className="choice-name">{race.name}</span>
-                        <span className="choice-meta">
-                          {race.distanceConfirmed ? '' : 'About '}
-                          {formatDistance(race.distanceKm, units)} · {race.location}
-                          {race.dateStatus === 'Provisional' && <span className="tag">Date to be confirmed</span>}
-                          {!race.distanceConfirmed && <span className="tag">Distance to be confirmed</span>}
-                        </span>
-                      </label>
-                    ))}
+                    {catalogue.length > 0 && (
+                      // The race rack: bibs hang from hooks on a rail and sway. The label stays put; only its card
+                      // swings, and the radio underneath does the work for keyboards and screen readers.
+                      <div className="race-rack">
+                        {catalogue.map((race, i) => (
+                          <label className="race-bib" key={race.slug}>
+                            <input type="radio" name="race" value={race.slug} checked={draft.race === race.slug} onChange={() => set('race', race.slug)} />
+                            <span className={`bib-card bib-colour-${i % 4}`} style={{ animationDelay: `-${(i * 1.1).toFixed(1)}s` }}>
+                              <span className="choice-date mono">
+                                {formatDate(race.date, 'dayMonth')} <small>{formatDate(race.date, 'year')}</small>
+                              </span>
+                              <span className="choice-name">{race.name}</span>
+                              <span className="choice-meta">
+                                {race.distanceConfirmed ? '' : 'About '}
+                                {formatDistance(race.distanceKm, units)} · {race.location}
+                              </span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
     
                     <label className="choice choice-other">
                       <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />

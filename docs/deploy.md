@@ -69,7 +69,34 @@ Run both as yourself (the database's Entra admin) with a token from the Taperday
 
 Both files are safe to run again.
 
-## Deploying the code
+## Automatic deploys
+
+Every push to `main` deploys itself once CI passes (`.github/workflows/deploy.yml`): it builds the API and the
+website, applies any new migrations, deploys the API, deploys the website, then waits for `/health/ready`. It can also
+be run by hand: Actions → deploy → Run workflow.
+
+How it signs in, with no password stored anywhere:
+
+- GitHub's `production` environment holds the settings as variables (app names, client IDs, the VITE_* values) plus
+  one secret, the Static Web Apps deployment token.
+- An app registration in your Azure tenant, **Taperday GitHub deploy**, trusts GitHub's OIDC tokens only for
+  `repo:Menzi-Thami@43884343/start-line@1410876756:environment:production` (GitHub now puts the owner and repo
+  IDs in the subject, so a deleted-and-recreated repo with the same name can't inherit the trust), and the
+  environment only accepts runs from `main`.
+- It holds **Website Contributor on the API app only**: it can't touch the database server, the resource group or
+  anything else in the subscription.
+- In the database it is a user with `db_ddladmin` (to run migrations) plus read/write. The API itself still only
+  has read/write.
+
+Migrations run before the new API starts, so **keep them additive** (add columns and tables; drop old ones in a
+later release, once nothing reads them).
+
+If a setting changes (for example a new domain), update the environment's variables in GitHub (Settings →
+Environments → production) and the CSP in `client/public/staticwebapp.config.json`.
+
+## Deploying the code by hand
+
+Only needed if the workflow is broken.
 
 **API**: publish, zip, upload. (Use Windows' `tar`, not PowerShell's `Compress-Archive`, whose zips Linux unpacks badly.)
 

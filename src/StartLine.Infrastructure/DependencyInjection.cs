@@ -1,6 +1,10 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using StartLine.Application.Common;
 using StartLine.Application.Features.Races;
+using StartLine.Infrastructure.Persistence;
 using StartLine.Infrastructure.Races;
 
 namespace StartLine.Infrastructure;
@@ -29,6 +33,22 @@ public static class DependencyInjection
         services.AddSingleton<IRaceSource, ConfiguredRaceSource>();
 
         services.AddHostedService<RaceSyncWorker>();
+
+        services.AddOptions<DatabaseOptions>()
+            .Configure<IConfiguration>((o, config) => o.ConnectionString = config.GetConnectionString(DatabaseOptions.ConnectionStringName) ?? "")
+            .Validate(o => !string.IsNullOrWhiteSpace(o.ConnectionString), $"ConnectionStrings:{DatabaseOptions.ConnectionStringName} is required.")
+            .ValidateOnStart();
+        services.AddSingleton<AuditTimestampsInterceptor>();
+        services.AddDbContext<StartLineDbContext>((sp, o) =>
+        {
+            var database = sp.GetRequiredService<IOptions<DatabaseOptions>>().Value;
+            // Retries cover Azure SQL's transient faults, including the free tier waking from auto-pause.
+            o.UseSqlServer(database.ConnectionString, sql => sql.EnableRetryOnFailure());
+            o.AddInterceptors(sp.GetRequiredService<AuditTimestampsInterceptor>());
+        });
+        services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<StartLineDbContext>());
+        services.AddHealthChecks().AddDbContextCheck<StartLineDbContext>("database", tags: ["ready"]);
+
         return services;
     }
 }

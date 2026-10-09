@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using StartLine.Application.Common.Dispatcher;
@@ -7,6 +8,7 @@ using StartLine.Application.Features.Plans;
 namespace StartLine.API.Controllers;
 
 [ApiController]
+[AllowAnonymous]
 [ApiVersion(1)]
 [Route("api/v{version:apiVersion}/plans")]
 public sealed class PlansController(IDispatcher dispatcher) : ControllerBase

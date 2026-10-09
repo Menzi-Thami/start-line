@@ -13,6 +13,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Integration tests run against real SQL Server, never EF's in-memory provider. The password is
+      # generated per run and masked, so nothing secret lives in the repo.
+      - name: Start SQL Server
+        run: |
+          password="$(openssl rand -hex 16)Aa1!"
+          echo "::add-mask::$password"
+          docker run -d --name sql -p 1433:1433 -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=$password" mcr.microsoft.com/mssql/server:2022-latest
+          echo "STARTLINE_TEST_SQL=Server=localhost,1433;Database=StartLine_IntegrationTests;User Id=sa;Password=$password;TrustServerCertificate=True" >> "$GITHUB_ENV"
+          for attempt in $(seq 1 40); do
+            if docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$password" -Q "SELECT 1" > /dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "SQL Server did not start in time" && docker logs sql && exit 1
       - uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json

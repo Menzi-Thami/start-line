@@ -15,6 +15,7 @@
     "gen:api": "npx -y openapi-typescript@7 http://localhost:5122/openapi/v1.json -o src/lib/api-schema.ts"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.25.0",
     "@fontsource-variable/bricolage-grotesque": "^5.3.0",
     "@fontsource/atkinson-hyperlegible-next": "^5.3.0",
     "react": "^19.2.8",

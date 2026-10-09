@@ -73,12 +73,16 @@ public sealed class LayerTests
     }
 
     [Fact]
-    public void Application_references_no_web_or_data_framework()
+    public void Application_references_no_web_framework_or_database_provider()
     {
         var references = ApplicationAssembly.GetReferencedAssemblies().Select(a => a.Name!).ToList();
 
+        // Application may use EF Core's querying abstractions (IApplicationDbContext exposes DbSet, by design:
+        // no generic repository over EF). It must never know which database it talks to.
         references.ShouldNotContain(name => name.StartsWith("Microsoft.AspNetCore", StringComparison.Ordinal));
-        references.ShouldNotContain(name => name.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal));
+        references.ShouldNotContain("Microsoft.EntityFrameworkCore.SqlServer");
+        references.ShouldNotContain("Microsoft.EntityFrameworkCore.Relational");
+        references.ShouldNotContain("Microsoft.Data.SqlClient");
         references.ShouldNotContain("StartLine.Infrastructure");
         references.ShouldNotContain("StartLine.API");
     }

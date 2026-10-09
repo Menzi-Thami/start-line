@@ -9,4 +9,16 @@ public sealed class ValidationException(IReadOnlyDictionary<string, string[]> er
 {
     public IReadOnlyDictionary<string, string[]> Errors { get; } = errors;
 }
+
+/// <summary>The caller is signed in but may not do this yet. <see cref="Code"/> tells the client what to fix.</summary>
+public sealed class ForbiddenException(string code, string message) : Exception(message)
+{
+    public string Code { get; } = code;
+}
+
+/// <summary>The request clashes with current state, such as a limit already reached.</summary>
+public sealed class ConflictException(string code, string message) : Exception(message)
+{
+    public string Code { get; } = code;
+}
 #pragma warning restore CA1032

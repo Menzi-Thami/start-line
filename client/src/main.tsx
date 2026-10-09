@@ -6,12 +6,16 @@ import '@fontsource/atkinson-hyperlegible-next/700.css'
 import './styles/tokens.css'
 import './styles/app.css'
 import { App } from './app/App'
+import { readAuthConfig } from './app/auth-context'
+import { AuthProvider } from './app/AuthProvider'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <AuthProvider config={readAuthConfig()}>
+      <App />
+    </AuthProvider>
   </StrictMode>,
 )

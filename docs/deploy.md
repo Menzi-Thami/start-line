@@ -80,7 +80,9 @@ How it signs in, with no password stored anywhere:
 - GitHub's `production` environment holds the settings as variables (app names, client IDs, the VITE_* values) plus
   one secret, the Static Web Apps deployment token.
 - An app registration in your Azure tenant, **Taperday GitHub deploy**, trusts GitHub's OIDC tokens only for
-  `repo:Menzi-Thami/start-line:environment:production`, and the environment only accepts runs from `main`.
+  `repo:Menzi-Thami@43884343/start-line@1410876756:environment:production` (GitHub now puts the owner and repo
+  IDs in the subject, so a deleted-and-recreated repo with the same name can't inherit the trust), and the
+  environment only accepts runs from `main`.
 - It holds **Website Contributor on the API app only**: it can't touch the database server, the resource group or
   anything else in the subscription.
 - In the database it is a user with `db_ddladmin` (to run migrations) plus read/write. The API itself still only

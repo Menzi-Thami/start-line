@@ -98,7 +98,7 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   name: names.database
   location: location
   sku: databaseTier == 'free'
-    ? { name: 'GP_S_Gen5_2', tier: 'GeneralPurpose', family: 'Gen5', capacity: 2 }
+    ? { name: 'GP_S_Gen5', tier: 'GeneralPurpose', family: 'Gen5', capacity: 2 }
     : { name: 'Basic', tier: 'Basic' }
   properties: databaseTier == 'free'
     ? {

@@ -7,7 +7,8 @@ import { SignUpPitch } from '../features/account/SignUpPitch'
 import { useRunner } from '../features/account/useRunner'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { PlanView } from '../features/plan/PlanView'
-import { api, ApiError } from '../lib/api-client'
+import { api, ApiError, apiOrigin } from '../lib/api-client'
+import { calendarLinks } from '../lib/calendar-links'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs } from '../lib/plan-url'
 import { loadUnits, saveUnits } from '../lib/storage'
@@ -392,6 +393,7 @@ export function App() {
                 units={units}
                 onUnitsChange={changeUnits}
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
+                calendar={calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())}
                 today={today}
                 toolbarExtra={
                   <>

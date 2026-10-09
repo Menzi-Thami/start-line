@@ -19,6 +19,9 @@ export class ApiError extends Error {
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
 
+/** The API's origin, for links that leave the app (calendar subscriptions). In development it sits behind the dev server. */
+export const apiOrigin = (): string => BASE_URL || window.location.origin
+
 interface Problem {
   code?: string
   title?: string | null

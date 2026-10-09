@@ -1,13 +1,15 @@
 using Microsoft.Extensions.Options;
-using StartLine.Application.Features.Races;
-using StartLine.Domain.Races;
 using StartLine.Domain.Running;
 
 namespace StartLine.Infrastructure.Races;
 
+/// <summary>The hand-curated race list: one source among many, and a fallback when online sources are down.</summary>
 public sealed class RaceCatalogueOptions
 {
     public const string Section = "RaceCatalogue";
+
+    /// <summary>Low by default so any real source (organiser, federation) overrides a stale curated entry.</summary>
+    public int Priority { get; set; } = 10;
 
     public IList<RaceEntry> Races { get; } = [];
 
@@ -20,7 +22,20 @@ public sealed class RaceCatalogueOptions
         public string Location { get; set; } = "";
         public string Summary { get; set; } = "";
         public Uri? Website { get; set; }
+
+        /// <summary>The organiser has announced this date. Leave false for dates seen only on calendar sites.</summary>
+        public bool DateConfirmed { get; set; }
+
+        /// <summary>False while the official distance is still being measured.</summary>
+        public bool DistanceConfirmed { get; set; } = true;
     }
+}
+
+public sealed class RaceCalendarOptions
+{
+    public const string Section = "RaceCalendar";
+
+    public TimeSpan SyncInterval { get; set; } = TimeSpan.FromHours(6);
 }
 
 internal sealed class RaceCatalogueOptionsValidator : IValidateOptions<RaceCatalogueOptions>
@@ -35,7 +50,7 @@ internal sealed class RaceCatalogueOptionsValidator : IValidateOptions<RaceCatal
                 failures.Add($"Race {index} needs a slug and a name.");
             }
 
-            if (race.DistanceKm is <= 0 or > Distance.MaxKilometres)
+            if (!double.IsFinite(race.DistanceKm) || race.DistanceKm is <= 0 or > Distance.MaxKilometres)
             {
                 failures.Add($"Race '{race.Slug}' has an invalid distance.");
             }
@@ -47,7 +62,7 @@ internal sealed class RaceCatalogueOptionsValidator : IValidateOptions<RaceCatal
         }
 
         failures.AddRange(options.Races
-            .GroupBy(r => r.Slug, StringComparer.OrdinalIgnoreCase)
+            .GroupBy(r => r.Slug.Trim(), StringComparer.OrdinalIgnoreCase)
             .Where(g => g.Count() > 1)
             .Select(g => $"Race slug '{g.Key}' is used more than once."));
 
@@ -55,25 +70,10 @@ internal sealed class RaceCatalogueOptionsValidator : IValidateOptions<RaceCatal
     }
 }
 
-internal sealed class ConfiguredRaceCatalogue : IRaceCatalogue
+internal sealed class RaceCalendarOptionsValidator : IValidateOptions<RaceCalendarOptions>
 {
-    private readonly IReadOnlyList<Race> _races;
-    private readonly Dictionary<string, Race> _bySlug;
-
-    public ConfiguredRaceCatalogue(IOptions<RaceCatalogueOptions> options)
-    {
-        _races = [.. options.Value.Races.Select(r => new Race(
-            r.Slug.Trim(),
-            r.Name,
-            r.Date,
-            Distance.FromKilometres(r.DistanceKm),
-            r.Location,
-            r.Summary,
-            r.Website))];
-        _bySlug = _races.ToDictionary(r => r.Slug, StringComparer.OrdinalIgnoreCase);
-    }
-
-    public IReadOnlyList<Race> All() => _races;
-
-    public Race? FindBySlug(string slug) => _bySlug.GetValueOrDefault(slug.Trim());
+    public ValidateOptionsResult Validate(string? name, RaceCalendarOptions options) =>
+        options.SyncInterval >= TimeSpan.FromMinutes(5)
+            ? ValidateOptionsResult.Success
+            : ValidateOptionsResult.Fail("RaceCalendar:SyncInterval must be at least five minutes; race dates don't change that fast.");
 }

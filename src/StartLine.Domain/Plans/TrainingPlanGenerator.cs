@@ -10,6 +10,7 @@ public static class TrainingPlanGenerator
     public const int MaxRunsPerWeek = 7;
     public const int MinWeeks = 2;
     public const int MaxStrengthDays = 3;
+    public const int MaxYearsAhead = 2;
 
     private const double MaxWeeklyIncrease = 1.10;
     private const double CutbackFactor = 0.8;
@@ -115,6 +116,17 @@ public static class TrainingPlanGenerator
         if (p.GoalTime <= TimeSpan.Zero)
         {
             throw new DomainException("The goal time must be positive.");
+        }
+
+        if (p.RunDays.Any(d => !Enum.IsDefined(d)) || !Enum.IsDefined(p.LongRunDay)
+            || (p.StrengthDays ?? []).Any(d => !Enum.IsDefined(d)))
+        {
+            throw new DomainException("Run, long-run and strength days must be days of the week.");
+        }
+
+        if (p.RaceDate > p.Today.AddYears(MaxYearsAhead))
+        {
+            throw new DomainException($"The race must be within {MaxYearsAhead} years.");
         }
 
         if (p.RunsPerWeek is < MinRunsPerWeek or > MaxRunsPerWeek)
@@ -375,7 +387,7 @@ public static class TrainingPlanGenerator
         var sessions = new List<PlannedSession>(runDays.Count + 1);
         if (runDays.Count > 0)
         {
-            var maxRunKm = profile.Category is DistanceCategory.Marathon or DistanceCategory.Ultra ? 8 : 6;
+            var maxRunKm = profile.Category == DistanceCategory.Marathon || IsUltra(profile.Category) ? 8 : 6;
             var easyKm = WorkoutBuilder.Round(Math.Clamp(budgetKm / runDays.Count, MinRunKm, maxRunKm));
             var lastDay = runDays[^1].Date;
             var sharpenerDay = runDays

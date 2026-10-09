@@ -2,9 +2,13 @@ using Scalar.AspNetCore;
 using StartLine.API;
 using StartLine.API.Infrastructure;
 using StartLine.Application;
+using StartLine.Application.Features.Races;
 using StartLine.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Plan requests are a few hundred bytes; anything near this size is a mistake or an attack.
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 16 * 1024);
 
 builder.Host.UseDefaultServiceProvider(o =>
 {
@@ -19,6 +23,12 @@ builder.Services
 
 var app = builder.Build();
 
+// Publish the race calendar before serving requests. Building the sync also builds every source,
+// so a bad race entry stops the app here instead of failing every request.
+await app.Services.GetRequiredService<RaceCalendarSync>().RunAsync(app.Lifetime.ApplicationStopping);
+
+app.UseForwardedHeaders();
+app.UseMiddleware<TraceIdMiddleware>();
 app.UseExceptionHandler();
 if (!app.Environment.IsDevelopment())
 {

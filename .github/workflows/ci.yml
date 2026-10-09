@@ -20,3 +20,22 @@ jobs:
       - run: dotnet format StartLine.slnx --verify-no-changes --no-restore
       - run: dotnet build StartLine.slnx -c Release --no-restore
       - run: dotnet test StartLine.slnx -c Release --no-build --logger trx
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: client/.nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm audit --audit-level=high

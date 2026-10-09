@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using StartLine.Application.Common.Behaviours;
 using StartLine.Application.Common.Dispatcher;
+using StartLine.Application.Features.Races;
 
 namespace StartLine.Application;
 
@@ -21,6 +22,7 @@ public static class DependencyInjection
             }
         }
 
+        services.AddSingleton<RaceCalendarSync>();
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
         services.AddScoped(typeof(IPipelineBehaviour<,>), typeof(ValidationBehaviour<,>));
         return services;

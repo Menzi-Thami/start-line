@@ -100,6 +100,20 @@ public sealed class ApiTests(StartLineApiFactory factory) : IClassFixture<StartL
     }
 
     [Fact]
+    public async Task Numbers_sent_as_strings_are_rejected()
+    {
+        // Strict number handling keeps input tight and the published OpenAPI schema honest (number, not number-or-string).
+        using var body = new StringContent(
+            "{ \"distanceKm\": \"5\", \"raceDate\": \"2027-01-16\", \"goalTime\": \"00:24:30\", \"runDays\": [\"Tuesday\", \"Thursday\", \"Sunday\"], \"longRunDay\": \"Sunday\" }",
+            Encoding.UTF8,
+            "application/json");
+
+        var response = await _client.PostAsync(new Uri("/api/v1/plans", UriKind.Relative), body);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task An_unknown_race_is_a_404_problem()
     {
         var response = await _client.PostAsJsonAsync(new Uri("/api/v1/plans", UriKind.Relative), ComradesPlan(slug: "no-such-race"));

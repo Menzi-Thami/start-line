@@ -41,7 +41,12 @@ dotnet test StartLine.slnx
 cd client && npm test
 ```
 
-## Race dates
+## Race calendar
 
-The race catalogue lives in `src/StartLine.API/appsettings.json`. Check dates and distances against
-the organisers' sites before relying on them: events move, and down/up-run distances change.
+The race calendar builds itself. Each race source (organiser feeds, federation calendars, a curated list) is
+fetched at startup and on a schedule. Sources are reconciled automatically: the most authoritative one wins,
+and every race says whether its date and distance are confirmed. If a source goes down, its last good data is
+kept. Plans for unconfirmed races say so, and because plans live in the link, they move if the date moves.
+
+The curated list in `src/StartLine.API/appsettings.json` is the fallback source. Adding an online source means
+writing one small `IRaceSource` class; check that site's terms of use first.

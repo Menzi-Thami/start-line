@@ -17,6 +17,7 @@ public sealed class PlansController(IDispatcher dispatcher) : ControllerBase
     /// </summary>
     [HttpPost]
     [EnableRateLimiting(PresentationDependencyInjection.PlanRateLimitPolicy)]
+    [RequestSizeLimit(16 * 1024)]
     [ProducesResponseType<TrainingPlanDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

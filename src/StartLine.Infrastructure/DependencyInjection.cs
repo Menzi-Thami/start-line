@@ -15,8 +15,20 @@ public static class DependencyInjection
             .BindConfiguration(RaceCatalogueOptions.Section)
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<RaceCatalogueOptions>, RaceCatalogueOptionsValidator>();
-        services.AddSingleton<IRaceCatalogue, ConfiguredRaceCatalogue>();
+        services.AddOptions<RaceCalendarOptions>()
+            .BindConfiguration(RaceCalendarOptions.Section)
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<RaceCalendarOptions>, RaceCalendarOptionsValidator>();
 
+        // One store behind two narrow interfaces: readers can't write, the sync can't be asked for races.
+        services.AddSingleton<InMemoryRaceStore>();
+        services.AddSingleton<IRaceCatalogue>(sp => sp.GetRequiredService<InMemoryRaceStore>());
+        services.AddSingleton<IRaceStore>(sp => sp.GetRequiredService<InMemoryRaceStore>());
+
+        // Race sources. Each new source (organiser feed, federation calendar) is one more line here.
+        services.AddSingleton<IRaceSource, ConfiguredRaceSource>();
+
+        services.AddHostedService<RaceSyncWorker>();
         return services;
     }
 }

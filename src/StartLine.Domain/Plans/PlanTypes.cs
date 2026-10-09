@@ -98,5 +98,5 @@ public sealed record PlanParameters(
     Experience Experience = Experience.Regular,
     IReadOnlyCollection<DayOfWeek>? StrengthDays = null)
 {
-    public int RunsPerWeek => RunDays.Distinct().Count();
+    public int RunsPerWeek => RunDays.Where(Enum.IsDefined).Distinct().Count();
 }

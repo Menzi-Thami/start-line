@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Time.Testing;
+using NSubstitute;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Plans;
 using StartLine.Domain.Plans;
+using StartLine.Domain.Races;
 
 namespace StartLine.Application.Tests.Features;
 
@@ -135,6 +137,58 @@ public sealed class GeneratePlanTests
 
         plan.Race.Name.ShouldBe("Your race");
     }
+
+    [Fact]
+    public void A_race_more_than_two_years_away_is_rejected() =>
+        Validator().Validate(CustomRace(raceDate: new DateOnly(2028, 10, 9))).Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("RaceDate");
+
+    [Fact]
+    public async Task Plan_from_lets_a_shared_link_rebuild_the_same_plan_later()
+    {
+        var builtToday = await Handler().Handle(CustomRace(), CancellationToken.None);
+
+        _time.Advance(TimeSpan.FromDays(9));
+        var openedLater = await Handler().Handle(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 8) }, CancellationToken.None);
+
+        openedLater.StartDate.ShouldBe(builtToday.StartDate);
+        openedLater.Weeks.Count.ShouldBe(builtToday.Weeks.Count);
+    }
+
+    [Fact]
+    public async Task Plan_from_uses_the_runners_local_date_ahead_of_utc()
+    {
+        // 23:30 UTC on Sunday is already Monday morning in South Africa.
+        _time.SetUtcNow(new DateTimeOffset(2026, 10, 11, 23, 30, 0, TimeSpan.Zero));
+
+        var plan = await Handler().Handle(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 12) }, CancellationToken.None);
+
+        plan.StartDate.ShouldBe(new DateOnly(2026, 10, 12));
+    }
+
+    [Theory]
+    [InlineData(-401)]
+    [InlineData(2)]
+    public void Plan_from_must_be_recent_and_not_in_the_future(int daysFromToday) =>
+        Validator().Validate(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 8).AddDays(daysFromToday) })
+            .Errors.Select(e => e.PropertyName).ShouldContain("PlanFrom");
+
+    [Fact]
+    public async Task Warns_when_a_race_date_or_distance_is_not_confirmed_yet()
+    {
+        var unconfirmed = TestRaces.Comrades with { DateStatus = DateStatus.Provisional, DistanceConfirmed = false };
+        var catalogue = TestRaces.Catalogue();
+        catalogue.FindBySlug("comrades-2027").Returns(unconfirmed);
+
+        var plan = await new GeneratePlanHandler(catalogue, _time).Handle(CatalogueRace("comrades-2027"), CancellationToken.None);
+
+        plan.Warnings.Select(w => w.Code).ShouldContain("date-provisional");
+        plan.Warnings.Select(w => w.Code).ShouldContain("distance-provisional");
+    }
+
+    [Fact]
+    public async Task A_confirmed_race_carries_no_caveats() =>
+        (await Handler().Handle(CatalogueRace("comrades-2027"), CancellationToken.None))
+            .Warnings.ShouldNotContain(w => w.Code.EndsWith("-provisional", StringComparison.Ordinal));
 
     [Fact]
     public async Task An_unknown_race_is_not_found() =>

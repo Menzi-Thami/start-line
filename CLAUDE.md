@@ -12,8 +12,11 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
   CQRS dispatcher (`Application/Common/Dispatcher`, **not MediatR**), FluentValidation in a pipeline
   behaviour, typed exceptions → ProblemDetails, API versioning (`/api/v1`), OpenAPI + Scalar (dev),
   rate limiting (per IP), health checks, OpenTelemetry (OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set).
-- **No database and no auth yet.** Races come from `RaceCatalogue` in `appsettings.json`. Add EF/SQL and
-  Entra External ID only when accounts arrive. Don't add them speculatively.
+- **No database and no auth yet.** Add EF/SQL and Entra External ID only when accounts arrive. Don't add them speculatively.
+- **Race calendar** syncs itself: every `IRaceSource` is fetched at startup and every `RaceCalendar:SyncInterval`,
+  reconciled by `RaceReconciler` (highest priority wins; organiser or agreeing sources = confirmed date) and published
+  to the in-memory store. The curated list in `appsettings.json` is just the lowest-priority source. To add a source,
+  implement `IRaceSource` in `Infrastructure/Races` and register it in `AddInfrastructure`. Check the site's terms first.
 - **Frontend** (`client/`): React + Vite + TypeScript.
 - **Tests**: xUnit + Shouldly + NSubstitute + `FakeTimeProvider`; ArchUnitNET layer rules; integration
   tests through `WebApplicationFactory` with a pinned clock.
@@ -31,7 +34,7 @@ dotnet run --project src/StartLine.API --launch-profile http   # http://localhos
 - `Domain/Plans` — `TrainingPlanGenerator` (phases, volume, taper), `WeekLayout` (which run goes on which
   chosen day), `WorkoutBuilder` (concrete sessions per distance), `PlanProfile` (per-distance shape).
 - `Application/Features/{Plans,Races,Predictions}` — query + validator + handler per feature.
-- `Infrastructure/Races` — configured race catalogue with options validation at startup.
+- `Infrastructure/Races` — race sources, the in-memory store and `RaceSyncWorker` (timer on `TimeProvider`).
 - `API/Controllers` — thin: bind → dispatch → return.
 
 ## Conventions

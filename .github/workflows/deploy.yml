@@ -1,0 +1,98 @@
+name: deploy
+
+# Ships main to production once CI has passed on it. Also runnable by hand (Actions → deploy → Run workflow).
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time, and never cancel one halfway through a migration.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    # The environment holds the settings, and is the only thing Azure trusts (see docs/deploy.md).
+    environment:
+      name: production
+      url: ${{ vars.API_URL }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # workflow_run starts from the default branch's head; deploy exactly the commit CI passed.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: client/.nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      # Build everything before touching production, so a broken build can't leave it half-deployed.
+      - name: Build API
+        run: |
+          dotnet tool restore
+          dotnet publish src/StartLine.API -c Release -o publish
+          (cd publish && zip -qr ../api.zip .)
+      - name: Build website
+        working-directory: client
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_AUTH_CLIENT_ID: ${{ vars.VITE_AUTH_CLIENT_ID }}
+          VITE_AUTH_AUTHORITY: ${{ vars.VITE_AUTH_AUTHORITY }}
+          VITE_AUTH_SCOPE: ${{ vars.VITE_AUTH_SCOPE }}
+        run: |
+          npm ci
+          npm run build
+
+      # No stored Azure password: GitHub's OIDC token is exchanged for one scoped to this environment.
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Migrations run before the new API starts, so it never meets a schema older than it expects.
+      # Keep migrations additive: the old API keeps serving until the deploy below swaps it out.
+      # Waking the paused free database can take a minute, hence the long connect timeout.
+      - name: Migrate database
+        run: |
+          dotnet ef database update --configuration Release \
+            --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure \
+            --connection "Server=tcp:${{ vars.SQL_SERVER }},1433;Database=${{ vars.SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True;Connect Timeout=120;"
+
+      - name: Deploy API
+        run: az webapp deploy -g rg-taperday -n "${{ vars.API_APP_NAME }}" --src-path api.zip --type zip --restart true
+
+      - name: Deploy website
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: client/dist
+          skip_app_build: true
+          skip_api_build: true
+
+      # The free tier cold-starts in 30-40 s, so allow a few minutes before calling it broken.
+      - name: Smoke test
+        run: |
+          for attempt in $(seq 1 12); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "${{ vars.API_URL }}/health/ready" || true)
+            if [ "$status" = "200" ]; then echo "API healthy"; exit 0; fi
+            echo "attempt $attempt: $status"; sleep 15
+          done
+          echo "API did not become healthy" && exit 1

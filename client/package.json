@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "gen:api": "npx -y openapi-typescript@7 http://localhost:5122/openapi/v1.json -o src/lib/api-schema.ts"
+    "gen:api": "npx -y openapi-typescript@7 http://localhost:5122/openapi/v1.json -o src/lib/api-schema.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
     "@azure/msal-browser": "^5.25.0",
@@ -23,6 +24,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",

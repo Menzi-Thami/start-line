@@ -54,3 +54,39 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm audit --audit-level=high
+
+  e2e:
+    name: end-to-end (Playwright)
+    runs-on: ubuntu-latest
+    # Fails cleanly with its log kept, rather than letting a runaway starve the runner.
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: client/.nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      # The real API (no database needed: plans are stateless and accounts stay off) and a
+      # production build of the client, driven through Chromium.
+      - run: npx playwright install --with-deps chromium
+      - name: npx playwright test
+        run: |
+          # Memory and CPU every 20 s, so a runaway process is visible in the log.
+          (while true; do echo "--- resources $(date +%T)"; free -m | sed -n 2p; ps -eo pid,rss,pcpu,comm --sort=-rss | head -6; sleep 20; done) &
+          npx playwright test
+        env:
+          CI: true
+          DEBUG: pw:webserver
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: client/playwright-report

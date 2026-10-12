@@ -1,6 +1,6 @@
-/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
@@ -16,6 +16,8 @@ export default defineConfig({
     environment: 'jsdom',
     // Forked workers time out starting on slow Windows machines; threads start reliably everywhere.
     pool: 'threads',
+    // Playwright's end-to-end specs run in a real browser, not here.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,

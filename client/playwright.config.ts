@@ -9,6 +9,9 @@ const web = 'http://localhost:5173'
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
+  // A hard ceiling on the whole run, so a hang fails fast with a report instead of running away.
+  globalTimeout: 12 * 60_000,
+  maxFailures: process.env.CI ? 3 : 0,
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
@@ -18,6 +21,8 @@ export default defineConfig({
   use: {
     baseURL: web,
     channel: process.env.PW_CHANNEL,
+    // CI runs on UTC; PW_TZ lets a local run reproduce another time zone.
+    timezoneId: process.env.PW_TZ,
     // The starting-gun intro is tested on its own; everywhere else it would only sit in front of the page.
     reducedMotion: 'reduce',
     trace: 'retain-on-failure',

@@ -4,6 +4,8 @@ on:
   pull_request:
   push:
     branches: [main]
+  # Lets Deps doctor run CI on branches it pushes with GITHUB_TOKEN. Deploy only follows push runs on main.
+  workflow_dispatch:
 
 permissions:
   contents: read

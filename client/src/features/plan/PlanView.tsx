@@ -6,6 +6,8 @@ import { planProgress } from '../../lib/plan-day'
 import { ranKmByWeek, runsByDate } from '../../lib/plan-runs'
 import { loadDone, saveDone } from '../../lib/storage'
 import type { ActivitySummary, PlanWeek, TrainingPlan } from '../../lib/types'
+import { StrengthTab } from '../strength/StrengthTab'
+import type { DoneUpdate } from '../strength/strength-progress'
 import { FOCUS, PHASES, ZONES } from './copy'
 import { trainingKm } from './plan-math'
 import { PlanProgress } from './PlanProgress'
@@ -33,6 +35,7 @@ interface Props {
 const TABS = [
   { id: 'week', label: 'This week' },
   { id: 'all', label: 'All weeks' },
+  { id: 'strength', label: 'Strength' },
   { id: 'paces', label: 'Paces' },
   { id: 'progress', label: 'Progress' },
 ] as const
@@ -104,11 +107,9 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
     }
   }, [])
 
-  const toggleDone = (key: string, isDone: boolean) => {
+  const updateDone = (update: DoneUpdate) => {
     setDone((current) => {
-      const next = new Set(current)
-      if (isDone) next.add(key)
-      else next.delete(key)
+      const next = update(current)
       saveDone(planKey, next)
       return next
     })
@@ -318,7 +319,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
                   {PHASES[shown.week.phase]} · {formatDistance(trainingKm(shown.week), units)}
                 </p>
               </div>
-              <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onToggleDone={toggleDone} runs={byDate} onOpenRun={onOpenRun} />
+              <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} />
               <p className="field-help">
                 Ticks are saved on this device.{' '}
                 <button type="button" className="link-button" onClick={() => showTab(1)}>
@@ -331,7 +332,11 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
 
         <div {...panel('all')}>
           <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
-          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onToggleDone={toggleDone} runs={byDate} onOpenRun={onOpenRun} />
+          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} />
+        </div>
+
+        <div {...panel('strength')}>
+          <StrengthTab plan={plan} week={shown?.week} done={done} onDoneChange={updateDone} />
         </div>
 
         <div {...panel('paces')}>

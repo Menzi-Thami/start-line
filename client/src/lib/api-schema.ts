@@ -799,6 +799,7 @@ export interface components {
         DistanceFit: "ShorterThanPlanned" | "AsPlanned" | "LongerThanPlanned";
         /** @enum {unknown} */
         EffortStanding: "FirstTime" | "PersonalBest" | "NearBest" | "Slower";
+        Exercise: "Squat" | "RomanianDeadlift" | "ReverseLunge" | "BulgarianSplitSquat" | "StepUp" | "GluteBridge" | "CalfRaise" | "Plank" | "SidePlank" | "SquatJump";
         /**
          * @default Regular
          * @enum {unknown}
@@ -949,6 +950,8 @@ export interface components {
             /** Format: double */
             distanceKm: number;
         };
+        /** @enum {unknown} */
+        RepUnit: "Reps" | "RepsEachLeg" | "Seconds" | "SecondsEachSide";
         ReviewDto: {
             /** Format: double */
             startedFastBySecondsPerKm: null | number;
@@ -1027,6 +1030,7 @@ export interface components {
             /** Format: double */
             distanceKm: number;
             zone: null | components["schemas"]["PaceZone"];
+            exercises: components["schemas"]["StrengthExerciseDto"][];
         };
         /** @enum {unknown} */
         SessionType: "Easy" | "Recovery" | "EasyWithStrides" | "Hills" | "Fartlek" | "Intervals" | "Tempo" | "CruiseIntervals" | "ProgressionRun" | "RacePace" | "MediumLongRun" | "LongRun" | "LongRunFastFinish" | "LongRunRacePace" | "Shakeout" | "Race" | "Strength";
@@ -1053,6 +1057,14 @@ export interface components {
         };
         /** @enum {unknown} */
         SplitRole: "Steady" | "WarmUp" | "Work" | "CoolDown";
+        StrengthExerciseDto: {
+            exercise: components["schemas"]["Exercise"];
+            /** Format: int32 */
+            sets: number;
+            /** Format: int32 */
+            reps: number;
+            unit: components["schemas"]["RepUnit"];
+        };
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";
         TrainingPlanDto: {

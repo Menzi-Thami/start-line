@@ -51,7 +51,7 @@ test('the plan opens on this week, and its tabs and keys move between views', as
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
 
   const tabs = page.getByRole('tablist', { name: 'Your plan' })
-  await expect(tabs.getByRole('tab')).toHaveText(['This week', 'All weeks', 'Paces', 'Progress'])
+  await expect(tabs.getByRole('tab')).toHaveText(['This week', 'All weeks', 'Strength', 'Paces', 'Progress'])
   await expect(tabs.getByRole('tab', { name: 'This week' })).toHaveAttribute('aria-selected', 'true')
 
   await tabs.getByRole('tab', { name: 'Paces' }).click()

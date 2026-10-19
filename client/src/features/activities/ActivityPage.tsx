@@ -2,8 +2,19 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
-import type { Activity, Split } from '../../lib/types'
-import { actualLine, distanceDifference, halvesSummary, KIND_LABEL, paceVerdict, plannedLine } from './activity-copy'
+import type { Activity, BestEffort, HeartRate, Split } from '../../lib/types'
+import {
+  actualLine,
+  distanceDifference,
+  driftText,
+  halvesSummary,
+  KIND_LABEL,
+  plannedLine,
+  runVerdict,
+  splitFit,
+  ZONE_COLOUR,
+  ZONE_LABEL,
+} from './activity-copy'
 
 type LoadState = { kind: 'loading' } | { kind: 'ready'; activity: Activity } | { kind: 'error'; message: string }
 
@@ -14,10 +25,12 @@ interface Props {
   units: Units
   onBack: () => void
   onDeleted: () => void
+  /** Opens Account, where the runner can add a max heart rate for zones. */
+  onOpenAccount?: () => void
 }
 
-/** One run: the headline numbers, how it went against the plan, km by km, and the fastest stretches in it. */
-export function ActivityPage({ id, initial, units, onBack, onDeleted }: Props) {
+/** One run, judged against what it was for: the verdict, the numbers, km by km, heart rate, and any bests worth a mention. */
+export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAccount }: Props) {
   const auth = useAuth()
   const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
@@ -92,6 +105,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted }: Props) {
 
   const run = state.activity
   const title = run.plan?.title ?? KIND_LABEL[run.kind]
+  const verdict = runVerdict(run, units)
 
   return (
     <article className="activity" aria-labelledby="activity-title">
@@ -102,6 +116,30 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted }: Props) {
       <h2 className="plan-title" id="activity-title">
         {title}
       </h2>
+
+      <section className="panel verdict" aria-labelledby="verdict-title" data-pace={run.plan?.pace ?? 'Unplanned'}>
+        <h3 id="verdict-title" className="verdict-headline">
+          {verdict.headline}
+        </h3>
+        {verdict.details.map((line) => (
+          <p key={line} className="verdict-detail">
+            {line}
+          </p>
+        ))}
+        {run.plan && (
+          <div className="vs-rows">
+            <p>
+              <span className="vs-label">Planned</span> <strong className="mono">{plannedLine(run.plan, units)}</strong>
+            </p>
+            <p>
+              <span className="vs-label">You ran</span> <strong className="mono">{actualLine(run.plan, units)}</strong>{' '}
+              <span className="tag">{distanceDifference(run.plan, units)}</span>
+            </p>
+            <p className="field-help">From your plan “{run.plan.planName}”.</p>
+          </div>
+        )}
+        {verdict.next && <p className="verdict-next">{verdict.next}</p>}
+      </section>
 
       <dl className="activity-stats">
         <Stat label="Distance" value={formatDistance(run.distanceKm, units)} lead />
@@ -114,45 +152,11 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted }: Props) {
         {run.elapsedSeconds - run.movingSeconds >= 60 && <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />}
       </dl>
 
-      {run.plan ? (
-        <section className="panel plan-vs-actual" aria-labelledby="vs-plan-title">
-          <h3 id="vs-plan-title">Against your plan</h3>
-          <p className="field-help">
-            {run.plan.planName} · {run.plan.title}
-          </p>
-          <div className="vs-rows">
-            <p>
-              <span className="vs-label">Planned</span> <strong className="mono">{plannedLine(run.plan, units)}</strong>
-            </p>
-            <p>
-              <span className="vs-label">You ran</span> <strong className="mono">{actualLine(run.plan, units)}</strong>{' '}
-              <span className="tag">{distanceDifference(run.plan, units)}</span>
-            </p>
-          </div>
-          <p className="vs-verdict" data-pace={run.plan.pace}>{paceVerdict(run.plan, units)}</p>
-        </section>
-      ) : (
-        <p className="plan-focus">No session was planned for this day, so there’s nothing to compare. Every run counts.</p>
-      )}
-
       <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
 
-      {run.bestEfforts.length > 0 && (
-        <section className="section" aria-labelledby="efforts-title">
-          <h3 id="efforts-title">Best efforts</h3>
-          <p>The fastest stretch of each distance anywhere in this run, stops included, like a race clock.</p>
-          <ul className="efforts">
-            {run.bestEfforts.map((effort) => (
-              <li key={effort.distanceMetres} className="effort">
-                <span className="effort-name">{effort.name}</span>
-                <span className="mono effort-time">{formatDuration(effort.seconds)}</span>
-                <span className="mono effort-pace">{formatPace(effort.paceSecondsPerKm, units)}</span>
-                {effort.isPersonalBest && <span className="tag tag-pb">PB</span>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {run.heartRate && <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} />}
+
+      <BestEfforts efforts={run.bestEfforts} units={units} />
 
       <section className="section danger-zone">
         <h3>Delete this run</h3>
@@ -190,18 +194,27 @@ function Stat({ label, value, lead = false }: { label: string; value: string; le
   )
 }
 
-/** Kilometre splits with a bar per km: longer is faster. Splits are always per km, whatever the units. */
+const ROLE_LABEL = { WarmUp: 'Warm-up', Work: 'Work', CoolDown: 'Cool-down', Steady: '' } as const
+
+/**
+ * Kilometre splits. Each bar is coloured by the effort that km was meant to be (the effort ramp), longer is faster,
+ * and the words beside it say whether it was in that zone. Splits are always per km, whatever the units.
+ */
 function Splits({ splits, summary }: { splits: Split[]; summary: string }) {
   if (splits.length === 0) return null
   const paces = splits.map((s) => s.paceSecondsPerKm)
   const fastest = Math.min(...paces)
   const slowest = Math.max(...paces)
   const width = (pace: number) => (slowest === fastest ? 100 : 45 + (55 * (slowest - pace)) / (slowest - fastest))
+  const scored = splits.some((s) => s.fit !== 'Unscored')
 
   return (
     <section className="section" aria-labelledby="splits-title">
       <h3 id="splits-title">Splits</h3>
-      <p>{summary}</p>
+      <p>
+        {summary}
+        {scored && ' Each km is checked against the pace it was meant to be.'}
+      </p>
       <table className="splits">
         <thead>
           <tr>
@@ -210,13 +223,20 @@ function Splits({ splits, summary }: { splits: Split[]; summary: string }) {
             <th scope="col">
               <span className="visually-hidden">Speed</span>
             </th>
-            <th scope="col">Elev</th>
+            {scored && <th scope="col">Zone</th>}
+            <th scope="col" className="split-elev">
+              Elev
+            </th>
             <th scope="col">HR</th>
           </tr>
         </thead>
         <tbody>
           {splits.map((split) => (
-            <tr key={split.number} className={split.isQuickest ? 'split-quickest' : split.isHardest ? 'split-hardest' : undefined}>
+            <tr
+              key={split.number}
+              className={split.isQuickest ? 'split-quickest' : split.isHardest ? 'split-hardest' : undefined}
+              data-fit={split.fit}
+            >
               <th scope="row" className="mono">
                 {split.distanceKm < 0.995 ? split.distanceKm.toFixed(2) : split.number}
               </th>
@@ -226,14 +246,129 @@ function Splits({ splits, summary }: { splits: Split[]; summary: string }) {
                 {split.isHardest && <span className="tag tag-hardest">Hardest</span>}
               </td>
               <td className="split-bar-cell" aria-hidden="true">
-                <span className="split-bar" style={{ width: `${width(split.paceSecondsPerKm)}%` }} />
+                <span
+                  className="split-bar"
+                  style={{ width: `${width(split.paceSecondsPerKm)}%`, background: split.zone ? ZONE_COLOUR[split.zone] : undefined }}
+                />
               </td>
-              <td className="mono">{split.elevationChangeMetres == null ? '–' : `${split.elevationChangeMetres > 0 ? '+' : ''}${Math.round(split.elevationChangeMetres)} m`}</td>
+              {scored && (
+                <td className="split-zone">
+                  {split.zone && (
+                    <span className="split-zone-name">
+                      {ROLE_LABEL[split.role] || ZONE_LABEL[split.zone]}
+                    </span>
+                  )}
+                  <span className="split-fit">{splitFit(split)}</span>
+                </td>
+              )}
+              <td className="mono split-elev">
+                {split.elevationChangeMetres == null
+                  ? '–'
+                  : `${split.elevationChangeMetres > 0 ? '+' : ''}${Math.round(split.elevationChangeMetres)} m`}
+              </td>
               <td className="mono">{split.averageHeartRate ?? '–'}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </section>
+  )
+}
+
+function HeartRateSection({ heartRate, drift, onOpenAccount }: { heartRate: HeartRate; drift: string | null; onOpenAccount?: () => void }) {
+  const zones = heartRate.zones
+  const total = zones?.reduce((sum, z) => sum + z.seconds, 0) ?? 0
+  return (
+    <section className="section" aria-labelledby="hr-title">
+      <h3 id="hr-title">Heart rate</h3>
+      {drift && <p>{drift}</p>}
+      {zones && total > 0 ? (
+        <>
+          <ul className="hr-zones">
+            {zones.map((zone) => {
+              const share = Math.round((zone.seconds / total) * 100)
+              return (
+                <li key={zone.zone} className="hr-zone">
+                  <span className="hr-zone-name">
+                    Zone {zone.zone} <span className="field-help mono">{zone.fromBpm}–{zone.toBpm}</span>
+                  </span>
+                  <span className="hr-zone-track" aria-hidden="true">
+                    <span className="hr-zone-fill" data-zone={zone.zone} style={{ width: `${share}%` }} />
+                  </span>
+                  <span className="mono hr-zone-time">
+                    {formatDuration(zone.seconds)} · {share}%
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          <p className="field-help">Zones are shares of the max heart rate you set ({heartRate.maxHeartRateSetting} bpm). A guide, not a medical measure.</p>
+        </>
+      ) : (
+        <p className="field-help">
+          Add your max heart rate{' '}
+          {onOpenAccount ? (
+            <button type="button" className="link-button" onClick={onOpenAccount}>
+              in Account
+            </button>
+          ) : (
+            'in Account'
+          )}{' '}
+          to see time in heart-rate zones. We don’t guess it.
+        </p>
+      )}
+    </section>
+  )
+}
+
+const STANDING_TAG: Partial<Record<BestEffort['standing'], string>> = { PersonalBest: 'PB', NearBest: 'Near PB' }
+
+/** Bests worth a mention up front (PBs, near misses, race efforts); the full list one tap away. */
+function BestEfforts({ efforts, units }: { efforts: BestEffort[]; units: Units }) {
+  if (efforts.length === 0) return null
+  const highlights = efforts.filter((e) => e.isWorthShowing)
+  const firstRun = efforts.every((e) => e.standing === 'FirstTime')
+
+  return (
+    <section className="section" aria-labelledby="efforts-title">
+      <h3 id="efforts-title">Best efforts</h3>
+      {highlights.length > 0 ? (
+        <EffortList efforts={highlights} units={units} />
+      ) : (
+        <p>
+          {firstRun
+            ? 'Your first run at these distances, so there’s nothing to beat yet. PBs start counting from your next upload.'
+            : 'No PBs this time. That’s normal: most runs aren’t meant to be fast.'}
+        </p>
+      )}
+      <details className="disclosure efforts-all">
+        <summary>All best efforts in this run ({efforts.length})</summary>
+        <p className="field-help">The fastest stretch of each distance anywhere in the run, stops included, like a race clock.</p>
+        <EffortList efforts={efforts} units={units} />
+      </details>
+    </section>
+  )
+}
+
+function EffortList({ efforts, units }: { efforts: BestEffort[]; units: Units }) {
+  return (
+    <ul className="efforts">
+      {efforts.map((effort) => (
+        <li key={effort.distanceMetres} className="effort">
+          <span className="effort-name">{effort.name}</span>
+          <span className="mono effort-time">{formatDuration(effort.seconds)}</span>
+          <span className="mono effort-pace">
+            {effort.previousBestSeconds != null && effort.standing !== 'PersonalBest'
+              ? `best ${formatDuration(effort.previousBestSeconds)}`
+              : formatPace(effort.paceSecondsPerKm, units)}
+          </span>
+          {STANDING_TAG[effort.standing] ? (
+            <span className={effort.standing === 'PersonalBest' ? 'tag tag-pb' : 'tag tag-near'}>{STANDING_TAG[effort.standing]}</span>
+          ) : (
+            <span />
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }

@@ -11,6 +11,12 @@ namespace StartLine.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<int>(
+                name: "MaxHeartRate",
+                table: "Runners",
+                type: "int",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "Activities",
                 columns: table => new
@@ -27,17 +33,34 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     AverageHeartRate = table.Column<int>(type: "int", nullable: true),
                     MaxHeartRate = table.Column<int>(type: "int", nullable: true),
                     Calories = table.Column<int>(type: "int", nullable: true),
+                    HeartRateDriftPercent = table.Column<double>(type: "float", nullable: true),
+                    HeartRateSeconds = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     FirstHalfSeconds = table.Column<double>(type: "float", nullable: false),
                     HalfMetres = table.Column<double>(type: "float", nullable: false),
                     SecondHalfSeconds = table.Column<double>(type: "float", nullable: false),
                     PlannedDistanceKm = table.Column<double>(type: "float", nullable: true),
+                    PlannedEasyFastestPace = table.Column<double>(type: "float", nullable: true),
+                    PlannedEasySlowestPace = table.Column<double>(type: "float", nullable: true),
                     PlannedFastestPace = table.Column<double>(type: "float", nullable: true),
+                    PlannedGoalPace = table.Column<double>(type: "float", nullable: true),
+                    PlannedNextDate = table.Column<DateOnly>(type: "date", nullable: true),
+                    PlannedNextTitle = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     PlannedPlanName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    PlannedRepMetres = table.Column<double>(type: "float", nullable: true),
                     PlannedSessionType = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true),
+                    PlannedShape = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
                     PlannedSlowestPace = table.Column<double>(type: "float", nullable: true),
-                    PlannedTitle = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true)
+                    PlannedTitle = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    PlannedWorkFastestPace = table.Column<double>(type: "float", nullable: true),
+                    PlannedWorkKm = table.Column<double>(type: "float", nullable: true),
+                    PlannedWorkSlowestPace = table.Column<double>(type: "float", nullable: true),
+                    PlannedWorkZone = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
+                    PlannedZone = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true),
+                    WorkSeconds = table.Column<double>(type: "float", nullable: true),
+                    WorkMetres = table.Column<double>(type: "float", nullable: true),
+                    WorkStartMetres = table.Column<double>(type: "float", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -109,6 +132,10 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "Activities");
+
+            migrationBuilder.DropColumn(
+                name: "MaxHeartRate",
+                table: "Runners");
         }
     }
 }

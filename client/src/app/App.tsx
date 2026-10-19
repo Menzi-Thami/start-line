@@ -18,7 +18,7 @@ import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
-import type { Activity, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
+import type { Activity, ActivitySummary, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
 type PlanState =
@@ -73,6 +73,8 @@ export function App() {
   const [initial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
   const [view, setView] = useState<View>(viewFromUrl)
   const [openRun, setOpenRun] = useState<OpenRun | null>(runFromUrl)
+  // The runner's uploaded runs, shown inside the plan. Fetched when the plan view opens, so a new upload appears.
+  const [runs, setRuns] = useState<ActivitySummary[] | undefined>(undefined)
   const [units, setUnits] = useState<Units>(loadUnits)
   const [races, setRaces] = useState<RacesState>({ kind: 'loading' })
   // A shared link starts building straight away, so it opens in the loading state.
@@ -169,6 +171,22 @@ export function App() {
   useEffect(() => {
     if (playIntro) markIntroSeen()
   }, [playIntro])
+
+  useEffect(() => {
+    if (runner.state.kind !== 'ready' || view !== 'build') return
+    let cancelled = false
+    auth
+      .getToken()
+      .then((token) => (token ? api.me.activities(token) : undefined))
+      .then((list) => {
+        if (!cancelled && list) setRuns(list)
+      })
+      // The plan is the point of this view: if runs don't load, it shows without them rather than failing.
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [auth, runner.state.kind, view])
 
   // A shared link builds its plan straight away.
   useEffect(() => {
@@ -365,6 +383,7 @@ export function App() {
               units={units}
               onBack={() => go('runs')}
               onDeleted={() => go('runs')}
+              onOpenAccount={() => go('account')}
             />
           ) : (
             <MyRuns units={units} onOpen={showRun} />
@@ -456,6 +475,8 @@ export function App() {
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
                 calendar={calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())}
                 today={today}
+                runs={state.kind === 'ready' ? runs : undefined}
+                onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
                 toolbarExtra={
                   <>
                     <button type="button" className="button button-quiet" onClick={changeAnswers}>

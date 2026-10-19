@@ -752,9 +752,11 @@ export interface components {
             /** Format: int32 */
             calories: null | number;
             plan: null | components["schemas"]["PlannedVsActualDto"];
+            review: components["schemas"]["ReviewDto"];
             splits: components["schemas"]["SplitDto"][];
             halves: components["schemas"]["HalvesDto"];
             bestEfforts: components["schemas"]["BestEffortDto"][];
+            heartRate: null | components["schemas"]["HeartRateDto"];
         };
         /** @enum {unknown} */
         ActivityKind: "Run" | "TrailRun" | "TreadmillRun" | "Other";
@@ -782,7 +784,10 @@ export interface components {
             seconds: number;
             /** Format: double */
             paceSecondsPerKm: number;
-            isPersonalBest: boolean;
+            standing: components["schemas"]["EffortStanding"];
+            /** Format: double */
+            previousBestSeconds: null | number;
+            isWorthShowing: boolean;
         };
         /** @enum {unknown} */
         DateStatus: "Confirmed" | "Provisional";
@@ -790,6 +795,10 @@ export interface components {
         DayOfWeek: "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday";
         /** @enum {unknown} */
         DistanceCategory: "FiveK" | "TenK" | "HalfMarathon" | "Marathon" | "Ultra" | "LongUltra";
+        /** @enum {unknown} */
+        DistanceFit: "ShorterThanPlanned" | "AsPlanned" | "LongerThanPlanned";
+        /** @enum {unknown} */
+        EffortStanding: "FirstTime" | "PersonalBest" | "NearBest" | "Slower";
         /**
          * @default Regular
          * @enum {unknown}
@@ -821,8 +830,25 @@ export interface components {
             secondHalfSlowerBySecondsPerKm: number;
             verdict: components["schemas"]["PacingVerdict"];
         };
+        HeartRateDto: {
+            /** Format: int32 */
+            maxHeartRateSetting: null | number;
+            zones: null | components["schemas"]["HeartRateZoneDto"][];
+        };
+        HeartRateZoneDto: {
+            /** Format: int32 */
+            zone: number;
+            /** Format: int32 */
+            fromBpm: number;
+            /** Format: int32 */
+            toBpm: number;
+            /** Format: double */
+            seconds: number;
+        };
         /** Format: binary */
         IFormFile: string;
+        /** @enum {unknown} */
+        JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
         /** @enum {unknown} */
         PaceVerdict: "NoTarget" | "Faster" | "OnTarget" | "Slower";
         /** @enum {unknown} */
@@ -840,21 +866,36 @@ export interface components {
             planName: string;
             sessionType: components["schemas"]["SessionType"];
             title: string;
+            shape: components["schemas"]["WorkShape"];
+            zone: null | components["schemas"]["PaceZone"];
+            workZone: null | components["schemas"]["PaceZone"];
+            /** Format: double */
+            workKm: number;
+            /** Format: double */
+            repMetres: null | number;
             /** Format: double */
             plannedKm: number;
-            /** Format: double */
-            fastestPaceSecondsPerKm: null | number;
-            /** Format: double */
-            slowestPaceSecondsPerKm: null | number;
             /** Format: double */
             actualKm: number;
             /** Format: double */
             actualPaceSecondsPerKm: number;
             /** Format: double */
             distanceDifferenceKm: number;
+            judged: components["schemas"]["JudgedPart"];
+            /** Format: double */
+            judgedPaceSecondsPerKm: null | number;
+            /** Format: double */
+            targetFastestSecondsPerKm: null | number;
+            /** Format: double */
+            targetSlowestSecondsPerKm: null | number;
             pace: components["schemas"]["PaceVerdict"];
             /** Format: double */
             secondsPerKmOffTarget: number;
+            /** Format: double */
+            goalPaceSecondsPerKm: null | number;
+            nextTitle: null | string;
+            /** Format: date */
+            nextDate: null | string;
         };
         PlanWarningDto: {
             code: string;
@@ -908,6 +949,18 @@ export interface components {
             /** Format: double */
             distanceKm: number;
         };
+        ReviewDto: {
+            /** Format: double */
+            startedFastBySecondsPerKm: null | number;
+            /** Format: int32 */
+            fadeFromSplit: null | number;
+            distance: null | components["schemas"]["DistanceFit"];
+            /** Format: double */
+            goalPaceGapSecondsPerKm: null | number;
+            /** Format: double */
+            heartRateDriftPercent: null | number;
+            heartRateDriftIsNotable: boolean;
+        };
         RunnerDto: {
             /** Format: uuid */
             id: string;
@@ -918,6 +971,8 @@ export interface components {
             weeklyEmails: boolean;
             /** Format: date-time */
             consentedAt: string;
+            /** Format: int32 */
+            maxHeartRate: null | number;
         };
         SavedPlanDto: {
             /** Format: uuid */
@@ -959,6 +1014,8 @@ export interface components {
             units: components["schemas"]["Units"];
             weeklyEmails: boolean;
             acceptPrivacyNotice: boolean;
+            /** Format: int32 */
+            maxHeartRate?: null | number;
         };
         SessionDto: {
             /** Format: date */
@@ -988,7 +1045,14 @@ export interface components {
             averageHeartRate: null | number;
             isQuickest: boolean;
             isHardest: boolean;
+            role: components["schemas"]["SplitRole"];
+            zone: null | components["schemas"]["PaceZone"];
+            fit: components["schemas"]["ZoneFit"];
+            /** Format: double */
+            secondsPerKmOffZone: number;
         };
+        /** @enum {unknown} */
+        SplitRole: "Steady" | "WarmUp" | "Work" | "CoolDown";
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";
         TrainingPlanDto: {
@@ -1016,6 +1080,10 @@ export interface components {
                 [key: string]: string[];
             };
         };
+        /** @enum {unknown} */
+        WorkShape: "Steady" | "Continuous" | "Reps" | "ByEffort";
+        /** @enum {unknown} */
+        ZoneFit: "Unscored" | "Faster" | "In" | "Slower";
     };
     responses: never;
     parameters: never;

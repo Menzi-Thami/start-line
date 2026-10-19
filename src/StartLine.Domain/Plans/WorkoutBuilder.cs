@@ -58,13 +58,13 @@ internal sealed class WorkoutBuilder(
                 return new(date, type, "Fast-finish long run",
                     $"Run relaxed, then the last {Km(finish)} at {GoalPaceLabel}.{ultraNote}",
                     "Teaches you to hold pace on tired legs, which is how the end of a race feels.",
-                    km, PaceZone.LongRun);
+                    km, PaceZone.LongRun, SessionStructure.Continuous(finish, PaceZone.Race));
             case SessionType.LongRunRacePace:
                 var middle = Clamp(Round(km * 0.35), 3, IsUltra ? 15 : 16);
                 return new(date, type, "Race rehearsal long run",
                     $"Easy start, {Km(middle)} at {GoalPaceLabel} in the middle, easy to finish. Use your race-day food, drink and kit.{ultraNote}",
                     "A dress rehearsal: pace, fuelling and shoes all tested before race day.",
-                    km, PaceZone.LongRun);
+                    km, PaceZone.LongRun, SessionStructure.Continuous(middle, PaceZone.Race));
             default:
                 return new(date, SessionType.LongRun, "Long run",
                     $"Steady and relaxed the whole way. Walk breaks are fine.{ultraNote}",
@@ -103,7 +103,7 @@ internal sealed class WorkoutBuilder(
     public PlannedSession Sharpener(DateOnly date) => new(date, SessionType.RacePace, "Race-pace sharpener",
         $"Short warm-up, then 3 × 1 km at {GoalPaceLabel} with 2 min jog between. It should feel easy; stop there.",
         "Reminds your legs what race pace feels like without tiring them.",
-        Round(2.5 + 3 * 1.25), PaceZone.Race);
+        Round(2.5 + 3 * 1.25), PaceZone.Race, SessionStructure.Reps(3, 1000, PaceZone.Race));
 
     public PlannedSession RaceDay(DateOnly date) => new(date, SessionType.Race, "Race day",
         IsUltra
@@ -122,14 +122,14 @@ internal sealed class WorkoutBuilder(
             return new(date, SessionType.Hills, "Long hill repeats",
                 $"Warm up, then {climbs} × 2–3 min uphill at a strong, steady effort. Run back down relaxed and quick-footed: your quads need the downhill practice as much as your lungs need the climb.",
                 "Builds climbing strength and the downhill toughness that ultras demand.",
-                Round(WarmUpAndCoolDownKm + climbs * 0.8), PaceZone.Interval);
+                Round(WarmUpAndCoolDownKm + climbs * 0.8), PaceZone.Interval, SessionStructure.ByEffort);
         }
 
         var reps = 6 + Steps(progress, 4);
         return new(date, SessionType.Hills, "Hill repeats",
             $"Warm up, then {reps} × 60 s uphill at a hard but controlled effort. Jog back down to recover.",
             "Builds strength and running form before the faster work starts.",
-            Round(WarmUpAndCoolDownKm + reps * 0.35), PaceZone.Interval);
+            Round(WarmUpAndCoolDownKm + reps * 0.35), PaceZone.Interval, SessionStructure.ByEffort);
     }
 
     private PlannedSession Fartlek(DateOnly date, TrainingPhase phase, double progress)
@@ -142,13 +142,13 @@ internal sealed class WorkoutBuilder(
             var on = IsUltra ? 2 : 1;
             return new(date, SessionType.Fartlek, "Fartlek",
                 $"Warm up, then {reps} × {on} min brisk / 1 min easy. Brisk means quicker than tempo, not a sprint.",
-                purpose, Round(WarmUpAndCoolDownKm + KmIn(PaceZone.Tempo, TimeSpan.FromMinutes(reps * (on + 1)))), PaceZone.Interval);
+                purpose, Round(WarmUpAndCoolDownKm + KmIn(PaceZone.Tempo, TimeSpan.FromMinutes(reps * (on + 1)))), PaceZone.Interval, SessionStructure.ByEffort);
         }
 
         var sets = 2 + Steps(progress, 2);
         return new(date, SessionType.Fartlek, "Mixed fartlek",
             $"Warm up, then {sets} sets of 2 min hard, 1 min easy, 1 min hard, 1 min easy, 30 s fast, 90 s easy.",
-            purpose, Round(WarmUpAndCoolDownKm + KmIn(PaceZone.Tempo, TimeSpan.FromMinutes(sets * 7))), PaceZone.Interval);
+            purpose, Round(WarmUpAndCoolDownKm + KmIn(PaceZone.Tempo, TimeSpan.FromMinutes(sets * 7))), PaceZone.Interval, SessionStructure.ByEffort);
     }
 
     private PlannedSession Intervals(DateOnly date, TrainingPhase phase, double progress)
@@ -168,7 +168,7 @@ internal sealed class WorkoutBuilder(
         var where = peak && metres == 400 ? "the quick end of interval pace" : "interval pace";
         return new(date, SessionType.Intervals, title,
             $"Warm up, then {reps} × {metres} m at {where} with {recovery} jog between.",
-            purpose, Round(WarmUpAndCoolDownKm + reps * (metres / 1000.0 + 0.3)), PaceZone.Interval);
+            purpose, Round(WarmUpAndCoolDownKm + reps * (metres / 1000.0 + 0.3)), PaceZone.Interval, SessionStructure.Reps(reps, metres, PaceZone.Interval));
     }
 
     private PlannedSession Tempo(DateOnly date, TrainingPhase phase, double progress)
@@ -182,7 +182,8 @@ internal sealed class WorkoutBuilder(
         return new(date, SessionType.Tempo, "Tempo run",
             $"Warm up, then {minutes} min continuous at tempo pace: comfortably hard, a few words at a time.",
             "Lifts your threshold, the fastest pace you can hold before fatigue builds quickly.",
-            Round(WarmUpAndCoolDownKm + KmIn(PaceZone.Tempo, TimeSpan.FromMinutes(minutes))), PaceZone.Tempo);
+            Round(WarmUpAndCoolDownKm + KmIn(PaceZone.Tempo, TimeSpan.FromMinutes(minutes))), PaceZone.Tempo,
+            SessionStructure.Continuous(KmIn(PaceZone.Tempo, TimeSpan.FromMinutes(minutes)), PaceZone.Tempo));
     }
 
     private PlannedSession CruiseIntervals(DateOnly date, double progress)
@@ -192,7 +193,7 @@ internal sealed class WorkoutBuilder(
         return new(date, SessionType.CruiseIntervals, "Cruise intervals",
             $"Warm up, then {reps} × {Km(repKm)} at tempo pace with 60 s jog between.",
             "Threshold work in chunks, so you can do more of it at exactly the right pace.",
-            Round(WarmUpAndCoolDownKm + reps * (repKm + 0.2)), PaceZone.Tempo);
+            Round(WarmUpAndCoolDownKm + reps * (repKm + 0.2)), PaceZone.Tempo, SessionStructure.Reps(reps, repKm * 1000, PaceZone.Tempo));
     }
 
     private PlannedSession ProgressionRun(DateOnly date, double progress)
@@ -203,13 +204,14 @@ internal sealed class WorkoutBuilder(
         return new(date, SessionType.ProgressionRun, "Progression run",
             $"{minutes} min that start at easy pace and get steadily quicker, with the last {fastMinutes} min at tempo pace.",
             "Teaches you to finish strong, and builds threshold fitness more gently than a full tempo run.",
-            Round(km), PaceZone.Tempo);
+            Round(km), PaceZone.Tempo,
+            SessionStructure.Continuous(KmIn(PaceZone.Tempo, TimeSpan.FromMinutes(fastMinutes)), PaceZone.Tempo));
     }
 
     private PlannedSession RacePace(DateOnly date, double progress)
     {
         const string purpose = "Rehearses your goal pace until it feels familiar.";
-        var (detail, workKm) = category switch
+        var (detail, workKm, structure) = category switch
         {
             DistanceCategory.FiveK => Reps(3 + Steps(progress, 2), 1, "2 min"),
             DistanceCategory.TenK => Reps(3 + Steps(progress, 2), 2, "2 min"),
@@ -219,12 +221,13 @@ internal sealed class WorkoutBuilder(
             _ => Continuous(10 + Steps(progress, 6)),
         };
         return new(date, SessionType.RacePace, $"{Capitalise(GoalPaceLabel)} run",
-            $"Warm up, then {detail}.", purpose, Round(WarmUpAndCoolDownKm + workKm), PaceZone.Race);
+            $"Warm up, then {detail}.", purpose, Round(WarmUpAndCoolDownKm + workKm), PaceZone.Race, structure);
 
-        (string, double) Reps(int count, double km, string recovery) =>
-            ($"{count} × {Km(km)} at {GoalPaceLabel} with {recovery} jog between", count * (km + 0.25));
+        (string, double, SessionStructure) Reps(int count, double km, string recovery) =>
+            ($"{count} × {Km(km)} at {GoalPaceLabel} with {recovery} jog between", count * (km + 0.25), SessionStructure.Reps(count, km * 1000, PaceZone.Race));
 
-        (string, double) Continuous(double km) => ($"{Km(km)} continuous at {GoalPaceLabel}", km);
+        (string, double, SessionStructure) Continuous(double km) =>
+            ($"{Km(km)} continuous at {GoalPaceLabel}", km, SessionStructure.Continuous(km, PaceZone.Race));
     }
 
     private static int Steps(double progress, int maxSteps) => (int)Math.Round(Math.Clamp(progress, 0, 1) * maxSteps);

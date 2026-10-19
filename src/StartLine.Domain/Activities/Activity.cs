@@ -1,4 +1,5 @@
 using StartLine.Domain.Common;
+using StartLine.Domain.Plans;
 
 namespace StartLine.Domain.Activities;
 
@@ -54,6 +55,14 @@ public sealed class Activity
     /// <summary>The plan's session for that day, or null for an unplanned run.</summary>
     public PlannedSessionMatch? PlannedSession { get; private set; }
 
+    /// <summary>Where the session's real work sat in the run: the fastest stretch of the work block's (or one rep's) length.</summary>
+    public WorkWindow? Work { get; private set; }
+
+    /// <summary>Percent the pace per heartbeat dropped from first half to second. Null without heart rate.</summary>
+    public double? HeartRateDriftPercent { get; private set; }
+
+    public IReadOnlyList<HeartRateTime> HeartRateTime { get; private set; } = [];
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -62,8 +71,17 @@ public sealed class Activity
 
     public double PaceSecondsPerKm => MovingTime.TotalSeconds / DistanceKm;
 
-    public PlanComparison? ComparedWithPlan =>
-        PlannedSession is null ? null : PlanComparison.Of(PlannedSession, DistanceKm, PaceSecondsPerKm);
+    public PlanComparison? ComparedWithPlan => PlannedSession switch
+    {
+        null => null,
+        { Shape: WorkShape.Steady } p => PlanComparison.Of(p, DistanceKm, PaceSecondsPerKm),
+        { Shape: WorkShape.Continuous } p => PlanComparison.Of(p, DistanceKm, PaceSecondsPerKm, JudgedPart.WorkBlock, Work?.PaceSecondsPerKm),
+        { Shape: WorkShape.Reps } p => PlanComparison.Of(p, DistanceKm, PaceSecondsPerKm, JudgedPart.FastestRep, Work?.PaceSecondsPerKm),
+        { } p => PlanComparison.Of(p, DistanceKm, PaceSecondsPerKm, JudgedPart.None, null),
+    };
+
+    /// <summary>How the run went against what it was for: split by split, the start, any fade.</summary>
+    public RunReview Review() => RunReview.Of(this);
 
     /// <summary>
     /// Works out everything Taperday shows about a run from the recording, and picks the plan session it was meant
@@ -105,10 +123,17 @@ public sealed class Activity
             MaxHeartRate = device.MaxHeartRate ?? track.MaxHeartRate,
             Calories = device.Calories,
             Halves = Halves.Of(track),
+            HeartRateDriftPercent = track.HeartRateDriftPercent(),
         };
+        activity.HeartRateTime = track.TimeAtHeartRate();
         activity.splits.AddRange(Activities.Splits.ByKilometre(track));
         activity.bestEfforts.AddRange(Activities.BestEfforts.Find(track));
         activity.PlannedSession = PlannedSessionMatch.Pick(plannedThatDay, activity.DistanceKm);
+        if (activity.PlannedSession?.WorkMetres is { } workMetres && track.FastestWindow(Math.Min(workMetres, track.TotalMetres)) is { } window)
+        {
+            activity.Work = new WorkWindow(window.StartMetres, Math.Min(workMetres, track.TotalMetres), TimeSpan.FromSeconds(window.Seconds));
+        }
+
         return activity;
     }
 }

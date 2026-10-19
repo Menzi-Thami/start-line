@@ -13,7 +13,7 @@ using StartLine.Infrastructure.Persistence;
 namespace StartLine.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(StartLineDbContext))]
-    [Migration("20261019130243_ActivityImport")]
+    [Migration("20261019134635_ActivityImport")]
     partial class ActivityImport
     {
         /// <inheritdoc />
@@ -49,6 +49,14 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
                     b.Property<double?>("ElevationGainMetres")
                         .HasColumnType("float");
+
+                    b.Property<double?>("HeartRateDriftPercent")
+                        .HasColumnType("float");
+
+                    b.Property<string>("HeartRateTime")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("HeartRateSeconds");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -97,9 +105,30 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                                 .HasColumnType("float")
                                 .HasColumnName("PlannedDistanceKm");
 
+                            b1.Property<double?>("EasyFastestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedEasyFastestPace");
+
+                            b1.Property<double?>("EasySlowestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedEasySlowestPace");
+
                             b1.Property<double?>("FastestPaceSecondsPerKm")
                                 .HasColumnType("float")
                                 .HasColumnName("PlannedFastestPace");
+
+                            b1.Property<double?>("GoalPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedGoalPace");
+
+                            b1.Property<DateOnly?>("NextDate")
+                                .HasColumnType("date")
+                                .HasColumnName("PlannedNextDate");
+
+                            b1.Property<string>("NextTitle")
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)")
+                                .HasColumnName("PlannedNextTitle");
 
                             b1.Property<string>("PlanName")
                                 .IsRequired()
@@ -107,11 +136,21 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                                 .HasColumnType("nvarchar(100)")
                                 .HasColumnName("PlannedPlanName");
 
+                            b1.Property<double?>("RepMetres")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedRepMetres");
+
                             b1.Property<string>("SessionType")
                                 .IsRequired()
                                 .HasMaxLength(32)
                                 .HasColumnType("nvarchar(32)")
                                 .HasColumnName("PlannedSessionType");
+
+                            b1.Property<string>("Shape")
+                                .IsRequired()
+                                .HasMaxLength(16)
+                                .HasColumnType("nvarchar(16)")
+                                .HasColumnName("PlannedShape");
 
                             b1.Property<double?>("SlowestPaceSecondsPerKm")
                                 .HasColumnType("float")
@@ -122,6 +161,43 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                                 .HasMaxLength(100)
                                 .HasColumnType("nvarchar(100)")
                                 .HasColumnName("PlannedTitle");
+
+                            b1.Property<double?>("WorkFastestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedWorkFastestPace");
+
+                            b1.Property<double>("WorkKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedWorkKm");
+
+                            b1.Property<double?>("WorkSlowestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedWorkSlowestPace");
+
+                            b1.Property<string>("WorkZone")
+                                .HasMaxLength(16)
+                                .HasColumnType("nvarchar(16)")
+                                .HasColumnName("PlannedWorkZone");
+
+                            b1.Property<string>("Zone")
+                                .HasMaxLength(16)
+                                .HasColumnType("nvarchar(16)")
+                                .HasColumnName("PlannedZone");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Work", "StartLine.Domain.Activities.Activity.Work#WorkWindow", b1 =>
+                        {
+                            b1.Property<double>("Elapsed")
+                                .HasColumnType("float")
+                                .HasColumnName("WorkSeconds");
+
+                            b1.Property<double>("Metres")
+                                .HasColumnType("float")
+                                .HasColumnName("WorkMetres");
+
+                            b1.Property<double>("StartMetres")
+                                .HasColumnType("float")
+                                .HasColumnName("WorkStartMetres");
                         });
 
                     b.HasKey("Id");
@@ -248,6 +324,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
+
+                    b.Property<int?>("MaxHeartRate")
+                        .HasColumnType("int");
 
                     b.Property<string>("PrivacyNoticeVersion")
                         .IsRequired()

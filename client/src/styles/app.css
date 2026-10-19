@@ -2741,6 +2741,116 @@ a.menu-item {
   overflow: hidden;
 }
 
+/* ---------- Plan beside what was run: done marks, unplanned runs, ran vs planned by week ---------- */
+.run-marks {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.run-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.run-mark-tick {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* A run on a day the plan had none: the same line, quieter. */
+.run-mark-unplanned {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+.run-mark-unplanned .run-mark-tick {
+  stroke: var(--muted);
+}
+
+.run-mark-button {
+  min-height: var(--tap);
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.run-mark-button.run-mark-unplanned {
+  border-color: var(--line-strong);
+}
+
+.run-mark-button:hover {
+  border-color: var(--accent);
+}
+
+.run-mark-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+/* Mirrors the narrow ink bar drawn for what was run. */
+.key-swatch-ran {
+  width: 5px;
+  background: var(--ink);
+}
+
+.week-totals-title {
+  margin-top: var(--space-6);
+}
+
+.week-totals {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.week-total {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line);
+}
+
+.week-total-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.week-total-numbers {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.week-total-note {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
 /* ---------- Runs: uploading, and one run's numbers, splits and best efforts ---------- */
 .upload h3 {
   font-size: var(--text-lg);
@@ -2804,10 +2914,6 @@ a.menu-item {
   color: var(--accent);
 }
 
-.plan-vs-actual h3 {
-  font-size: var(--text-lg);
-}
-
 .vs-rows {
   display: grid;
   gap: var(--space-2);
@@ -2821,24 +2927,48 @@ a.menu-item {
   color: var(--muted);
 }
 
-/* The verdict's edge colour echoes the effort ramp; the words always say what it means. */
-.vs-verdict {
-  margin-top: var(--space-4);
-  padding-left: var(--space-3);
-  border-left: 3px solid var(--line-strong);
-  color: var(--ink-2);
+/* The verdict card: its edge echoes how the pace went; the words always say what it means. */
+.verdict {
+  margin-top: var(--space-5);
+  border-left: 4px solid var(--line-strong);
 }
 
-.vs-verdict[data-pace='OnTarget'] {
+.verdict[data-pace='OnTarget'] {
   border-left-color: var(--accent);
 }
 
-.vs-verdict[data-pace='Faster'] {
+.verdict[data-pace='Faster'] {
   border-left-color: var(--effort-interval);
 }
 
-.vs-verdict[data-pace='Slower'] {
+.verdict[data-pace='Slower'] {
   border-left-color: var(--violet);
+}
+
+.verdict-headline {
+  font-size: var(--text-xl);
+  line-height: 1.25;
+}
+
+.verdict-detail {
+  margin-top: var(--space-2);
+  color: var(--ink-2);
+}
+
+.verdict-next {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-weight: 700;
+}
+
+.verdict-next::before {
+  content: '→ ';
+  color: var(--accent);
+}
+
+.input-short {
+  max-width: 8rem;
 }
 
 .splits {
@@ -2890,6 +3020,103 @@ a.menu-item {
 .tag-hardest {
   background: rgba(255, 90, 54, 0.16);
   color: var(--danger-ink);
+}
+
+.split-zone {
+  font-size: var(--text-xs);
+  line-height: 1.3;
+}
+
+.split-zone-name {
+  display: block;
+  color: var(--muted);
+}
+
+.split-fit {
+  display: block;
+  font-weight: 700;
+}
+
+/* Out-of-zone km: the words say fast or slow; the bar dims so in-zone km stand out. */
+.splits tr[data-fit='Faster'] .split-fit {
+  color: var(--effort-interval);
+}
+
+.splits tr[data-fit='Slower'] .split-fit {
+  color: var(--ink-2);
+}
+
+.splits tr[data-fit='Faster'] .split-bar,
+.splits tr[data-fit='Slower'] .split-bar {
+  opacity: 0.55;
+}
+
+.hr-zones {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.hr-zone {
+  display: grid;
+  grid-template-columns: 9rem 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hr-zone-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-sunk);
+  overflow: hidden;
+}
+
+.hr-zone-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.hr-zone-fill[data-zone='1'] {
+  background: var(--effort-recovery);
+}
+
+.hr-zone-fill[data-zone='2'] {
+  background: var(--effort-easy);
+}
+
+.hr-zone-fill[data-zone='3'] {
+  background: var(--effort-long);
+}
+
+.hr-zone-fill[data-zone='4'] {
+  background: var(--effort-interval);
+}
+
+.hr-zone-fill[data-zone='5'] {
+  background: var(--effort-race);
+}
+
+.hr-zone-time {
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.tag-near {
+  justify-self: end;
+  margin-left: 0;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.efforts-all {
+  margin-top: var(--space-4);
+}
+
+.efforts-all .efforts {
+  margin-top: var(--space-3);
 }
 
 .efforts {
@@ -2954,6 +3181,23 @@ a.menu-item {
 
   .effort-pace {
     display: none;
+  }
+
+  .split-elev {
+    display: none;
+  }
+
+  .hr-zone {
+    grid-template-columns: 6.5rem 1fr auto;
+    gap: var(--space-2);
+  }
+
+  .hr-zone-name .field-help {
+    display: block;
+  }
+
+  .vs-label {
+    display: block;
   }
 }
 

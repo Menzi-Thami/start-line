@@ -19,6 +19,16 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
 {
     public TrainingPlanDto Build(GeneratePlanQuery request)
     {
+        var (plan, race) = Generate(request);
+        var dto = TrainingPlanDto.From(plan, race.Summary);
+        return race.Caveats.Count == 0 ? dto : dto with { Warnings = [.. race.Caveats, .. dto.Warnings] };
+    }
+
+    /// <summary>The plan itself, for features that need more than the public shape of it (such as each session's structure).</summary>
+    public TrainingPlan BuildPlan(GeneratePlanQuery request) => Generate(request).Plan;
+
+    private (TrainingPlan Plan, (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) Race) Generate(GeneratePlanQuery request)
+    {
         var race = ResolveRace(request);
         var plan = TrainingPlanGenerator.Generate(new PlanParameters(
             race.Distance,
@@ -30,9 +40,7 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
             request.CurrentWeeklyKm,
             request.Experience,
             request.StrengthDays));
-
-        var dto = TrainingPlanDto.From(plan, race.Summary);
-        return race.Caveats.Count == 0 ? dto : dto with { Warnings = [.. race.Caveats, .. dto.Warnings] };
+        return (plan, race);
     }
 
     private (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) ResolveRace(GeneratePlanQuery request)

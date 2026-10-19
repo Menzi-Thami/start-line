@@ -28,10 +28,33 @@ That downloads a `.zip` with one `.fit` inside. Taperday takes either the zip or
 | Quickest / hardest | Fastest and slowest *full* km; none when there are fewer than two | `Splits.Quickest/Hardest` |
 | Halves | Moving time either side of half the distance; within ±3 s/km is "even" | `Halves` |
 | Best efforts | Fastest wall-clock stretch of 400 m, ½ mile, 1K, 1 mile, 2 mile, 5K, 10K, 15K, 10 mile, 20K, half, 30K and marathon anywhere in the run. Stops count, like a race clock | `BestEfforts`, `Track.FastestElapsedOver` |
-| Personal best | The runner's fastest across every stored run, ties included | `BestEfforts.IsPersonalBest` |
+| PB, near PB | Measured against the runner's *other* runs: a PB matches or beats an earlier best; within 3% is a near PB; a first-ever distance is neither. Only PBs, near PBs and race efforts are shown up front | `BestEfforts.Standing`, `IsWorthShowing` |
 | Elevation gain | The watch's total ascent if it has one, else climbs of ≥ 3 m from the last low point | `Track.ElevationGainMetres` |
 | Plan match | Sessions from the runner's active plans on the run's date *in the runner's time zone*; strength never matches; closest distance wins. Frozen at import | `PlannedSessionMatch.Pick` |
-| Pace verdict | Inside the session's zone range is on target; otherwise faster/slower by the gap to the nearest edge | `PlanComparison` |
+| Pace verdict | Judged on the part that matters: the whole run for steady sessions, the fastest stretch of the work block's length for tempo-style sessions, the fastest rep for repeats, nothing for hills and fartlek. Inside the zone range is on target, otherwise faster/slower by the gap to the nearest edge | `PlanComparison`, `Activity.ComparedWithPlan` |
+
+## Judging a run against what it was for
+
+The edge over a plain activity page is that Taperday knows what each run was for. Every planned session now carries a
+`SessionStructure` (Domain/Plans): `Steady` (easy, long, race), `Continuous` (tempo, progression, fast finish, race-pace
+block: warm-up and cool-down at easy pace around one work block), `Reps` (intervals, cruise intervals, race-pace reps)
+or `ByEffort` (hills, fartlek). The import freezes it with the zone paces, the goal pace and the next session.
+
+`RunReview` (Domain/Activities) turns that into facts, and the client words them (`activity-copy.ts`):
+
+| Fact | Rule |
+|---|---|
+| Split scores | Each km against the zone it was meant for (work km against the work zone, warm-up/cool-down against easy), 2 s/km grace. Not scored for repeats, hills, fartlek or unplanned runs |
+| Fast start | The first km of the effort at least 5 s/km quicker than its zone |
+| Fade | The first km at least 8 s/km slower than the opening half of the effort, staying that slow on average to the end, with no later km back within 3 s/km. One hilly km isn't a fade |
+| Quickest / hardest | Ranked within the effort only, never a warm-up, cool-down or the jogs between reps |
+| Distance | As planned within 10% or 500 m |
+| Goal pace | Long runs and races: average pace against the plan's goal pace |
+| Heart-rate drift | Steady runs over 20 min: how much pace per heartbeat dropped from first half to second; over 5% is mentioned, neutrally |
+| HR zones | Five zones as shares of the max heart rate the runner sets in Account (optional, 120–230). No max set, no zones: Taperday doesn't guess. Runs store moving seconds per bpm, so zones follow a changed max |
+
+The plan view also shows uploaded runs: a done mark (linking to the run) on days with a planned run, a quiet
+"Unplanned run" line otherwise, and planned vs run km per week on the Progress tab.
 
 ## Limits (agreed 19 Oct 2026)
 
@@ -64,5 +87,6 @@ Licensee". A public app relies on the second half of that sentence. Worth a seco
 
 - Heart rate is health data (POPIA "special personal information"). The privacy notice should say runs and heart rate
   are stored once this ships, and bumping `PrivacyNotice.CurrentVersion` would ask existing runners to accept again.
-- Re-matching old runs when a plan is saved later, and a weekly "planned vs done" view.
+- Re-matching old runs when a plan is saved later.
+- Laps: Garmin records them (auto-lap or workout steps), and they would judge repeats rep by rep instead of by the fastest stretch.
 - Other files: `.gpx` and `.tcx` (Strava and Apple exports) would need their own readers behind the same interface.

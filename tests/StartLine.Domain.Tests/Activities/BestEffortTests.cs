@@ -50,14 +50,25 @@ public sealed class BestEffortTests
     }
 
     [Fact]
-    public void Matching_your_fastest_time_still_counts_as_a_personal_best()
+    public void A_pb_has_to_match_or_beat_a_best_from_another_run()
     {
         var effort = new BestEffort(5000, TimeSpan.FromMinutes(25));
+        Dictionary<double, TimeSpan> Best(double minutes) => new() { [5000] = TimeSpan.FromMinutes(minutes) };
 
-        BestEfforts.IsPersonalBest(effort, new Dictionary<double, TimeSpan> { [5000] = TimeSpan.FromMinutes(25) }).ShouldBeTrue();
-        BestEfforts.IsPersonalBest(effort, new Dictionary<double, TimeSpan> { [5000] = TimeSpan.FromMinutes(24) }).ShouldBeFalse();
-        BestEfforts.IsPersonalBest(effort, new Dictionary<double, TimeSpan>()).ShouldBeTrue();
+        BestEfforts.Standing(effort, new Dictionary<double, TimeSpan>()).ShouldBe(EffortStanding.FirstTime);
+        BestEfforts.Standing(effort, Best(25)).ShouldBe(EffortStanding.PersonalBest);
+        BestEfforts.Standing(effort, Best(24.5)).ShouldBe(EffortStanding.NearBest);
+        BestEfforts.Standing(effort, Best(24)).ShouldBe(EffortStanding.Slower);
     }
+
+    [Theory]
+    [InlineData(EffortStanding.PersonalBest, false, true)]
+    [InlineData(EffortStanding.NearBest, false, true)]
+    [InlineData(EffortStanding.FirstTime, false, false)]
+    [InlineData(EffortStanding.Slower, false, false)]
+    [InlineData(EffortStanding.Slower, true, true)]
+    public void Only_pbs_near_misses_and_race_efforts_are_worth_putting_up_front(EffortStanding standing, bool isRace, bool shown) =>
+        BestEfforts.IsWorthShowing(standing, isRace).ShouldBe(shown);
 
     [Fact]
     public void Every_standard_distance_has_a_name()

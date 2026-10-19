@@ -1,5 +1,5 @@
 {
-  "id": "406fdd02-2380-4bb6-9dcf-966bd2b2c2c7",
+  "id": "380c8415-5239-4f5c-a633-06a61cb15b4b",
   "startedAt": "2027-01-03T04:12:00\u002B00:00",
   "localDate": "2027-01-03",
   "kind": "Run",
@@ -15,14 +15,32 @@
     "planName": "Comrades Marathon",
     "sessionType": "LongRun",
     "title": "Long run",
+    "shape": "Steady",
+    "zone": "LongRun",
+    "workZone": null,
+    "workKm": 0,
+    "repMetres": null,
     "plannedKm": 14,
-    "fastestPaceSecondsPerKm": 441,
-    "slowestPaceSecondsPerKm": 490,
     "actualKm": 15.35,
     "actualPaceSecondsPerKm": 399.5,
     "distanceDifferenceKm": 1.35,
+    "judged": "WholeRun",
+    "judgedPaceSecondsPerKm": 399.5,
+    "targetFastestSecondsPerKm": 441,
+    "targetSlowestSecondsPerKm": 490,
     "pace": "Faster",
-    "secondsPerKmOffTarget": 42
+    "secondsPerKmOffTarget": 42,
+    "goalPaceSecondsPerKm": 420,
+    "nextTitle": "Fartlek",
+    "nextDate": "2027-01-05"
+  },
+  "review": {
+    "startedFastBySecondsPerKm": 33,
+    "fadeFromSplit": null,
+    "distance": "AsPlanned",
+    "goalPaceGapSecondsPerKm": -21,
+    "heartRateDriftPercent": 6.3,
+    "heartRateDriftIsNotable": true
   },
   "splits": [
     {
@@ -33,7 +51,11 @@
       "elevationChangeMetres": 4,
       "averageHeartRate": 138,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 31
     },
     {
       "number": 2,
@@ -43,7 +65,11 @@
       "elevationChangeMetres": 2,
       "averageHeartRate": 142,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 43
     },
     {
       "number": 3,
@@ -53,7 +79,11 @@
       "elevationChangeMetres": -3,
       "averageHeartRate": 144,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 47
     },
     {
       "number": 4,
@@ -63,7 +93,11 @@
       "elevationChangeMetres": 1,
       "averageHeartRate": 145,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 50
     },
     {
       "number": 5,
@@ -73,7 +107,11 @@
       "elevationChangeMetres": 0,
       "averageHeartRate": 146,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 45
     },
     {
       "number": 6,
@@ -83,7 +121,11 @@
       "elevationChangeMetres": 38,
       "averageHeartRate": 158,
       "isQuickest": false,
-      "isHardest": true
+      "isHardest": true,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 8
     },
     {
       "number": 7,
@@ -93,7 +135,11 @@
       "elevationChangeMetres": -30,
       "averageHeartRate": 149,
       "isQuickest": true,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 54
     },
     {
       "number": 8,
@@ -103,7 +149,11 @@
       "elevationChangeMetres": -6,
       "averageHeartRate": 148,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 49
     },
     {
       "number": 9,
@@ -113,7 +163,11 @@
       "elevationChangeMetres": 2,
       "averageHeartRate": 149,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 46
     },
     {
       "number": 10,
@@ -123,7 +177,11 @@
       "elevationChangeMetres": 3,
       "averageHeartRate": 151,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 41
     },
     {
       "number": 11,
@@ -133,7 +191,11 @@
       "elevationChangeMetres": 0,
       "averageHeartRate": 153,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 38
     },
     {
       "number": 12,
@@ -143,7 +205,11 @@
       "elevationChangeMetres": 4,
       "averageHeartRate": 155,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 32
     },
     {
       "number": 13,
@@ -153,7 +219,11 @@
       "elevationChangeMetres": 1,
       "averageHeartRate": 156,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 29
     },
     {
       "number": 14,
@@ -163,7 +233,11 @@
       "elevationChangeMetres": -2,
       "averageHeartRate": 158,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 35
     },
     {
       "number": 15,
@@ -173,7 +247,11 @@
       "elevationChangeMetres": -4,
       "averageHeartRate": 161,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 40
     },
     {
       "number": 16,
@@ -183,7 +261,11 @@
       "elevationChangeMetres": 0,
       "averageHeartRate": 163,
       "isQuickest": false,
-      "isHardest": false
+      "isHardest": false,
+      "role": "Steady",
+      "zone": "LongRun",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 53
     }
   ],
   "halves": {
@@ -198,56 +280,107 @@
       "distanceMetres": 400,
       "seconds": 154,
       "paceSecondsPerKm": 385,
-      "isPersonalBest": true
+      "standing": "PersonalBest",
+      "previousBestSeconds": 154.4,
+      "isWorthShowing": true
     },
     {
       "name": "\u00BD mile",
       "distanceMetres": 804.672,
       "seconds": 309.8,
       "paceSecondsPerKm": 385,
-      "isPersonalBest": true
+      "standing": "PersonalBest",
+      "previousBestSeconds": 310.6,
+      "isWorthShowing": true
     },
     {
       "name": "1K",
       "distanceMetres": 1000,
       "seconds": 385,
       "paceSecondsPerKm": 385,
-      "isPersonalBest": true
+      "standing": "PersonalBest",
+      "previousBestSeconds": 386,
+      "isWorthShowing": true
     },
     {
       "name": "1 mile",
       "distanceMetres": 1609.344,
       "seconds": 622.6,
       "paceSecondsPerKm": 386.9,
-      "isPersonalBest": true
+      "standing": "NearBest",
+      "previousBestSeconds": 621.2,
+      "isWorthShowing": true
     },
     {
       "name": "2 mile",
       "distanceMetres": 3218.688,
       "seconds": 1255,
       "paceSecondsPerKm": 389.9,
-      "isPersonalBest": true
+      "standing": "NearBest",
+      "previousBestSeconds": 1242.4,
+      "isWorthShowing": true
     },
     {
       "name": "5K",
       "distanceMetres": 5000,
       "seconds": 1967,
       "paceSecondsPerKm": 393.4,
-      "isPersonalBest": true
+      "standing": "NearBest",
+      "previousBestSeconds": 1930,
+      "isWorthShowing": true
     },
     {
       "name": "10K",
       "distanceMetres": 10000,
       "seconds": 3969,
       "paceSecondsPerKm": 396.9,
-      "isPersonalBest": true
+      "standing": "PersonalBest",
+      "previousBestSeconds": 4040,
+      "isWorthShowing": true
     },
     {
       "name": "15K",
       "distanceMetres": 15000,
       "seconds": 5989.2,
       "paceSecondsPerKm": 399.3,
-      "isPersonalBest": true
+      "standing": "FirstTime",
+      "previousBestSeconds": null,
+      "isWorthShowing": false
     }
-  ]
+  ],
+  "heartRate": {
+    "maxHeartRateSetting": 188,
+    "zones": [
+      {
+        "zone": 1,
+        "fromBpm": 94,
+        "toBpm": 113,
+        "seconds": 0
+      },
+      {
+        "zone": 2,
+        "fromBpm": 113,
+        "toBpm": 132,
+        "seconds": 0
+      },
+      {
+        "zone": 3,
+        "fromBpm": 132,
+        "toBpm": 150,
+        "seconds": 3147
+      },
+      {
+        "zone": 4,
+        "fromBpm": 150,
+        "toBpm": 169,
+        "seconds": 2985
+      },
+      {
+        "zone": 5,
+        "fromBpm": 169,
+        "toBpm": 188,
+        "seconds": 0
+      }
+    ]
+  }
 }

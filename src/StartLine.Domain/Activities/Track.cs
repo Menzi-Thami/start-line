@@ -148,7 +148,10 @@ internal sealed class Track
     }
 
     /// <summary>The fastest wall-clock time to cover <paramref name="metres"/> anywhere in the run, or null if the run is shorter.</summary>
-    public double? FastestElapsedOver(double metres)
+    public double? FastestElapsedOver(double metres) => FastestWindow(metres)?.Seconds;
+
+    /// <summary>Where the fastest stretch of <paramref name="metres"/> starts, and how long it took. Null if the run is shorter.</summary>
+    public (double StartMetres, double Seconds)? FastestWindow(double metres)
     {
         if (metres <= 0 || TotalMetres < metres)
         {
@@ -156,21 +159,66 @@ internal sealed class Track
         }
 
         // Time over a window is piecewise linear in where the window sits, so the best window starts or ends on a sample.
-        var best = double.MaxValue;
+        var best = (StartMetres: 0d, Seconds: double.MaxValue);
         for (var i = 0; i < distance.Length; i++)
         {
             if (distance[i] >= metres)
             {
-                best = Math.Min(best, elapsed[i] - LastElapsedAt(distance[i] - metres));
+                var seconds = elapsed[i] - LastElapsedAt(distance[i] - metres);
+                if (seconds < best.Seconds)
+                {
+                    best = (distance[i] - metres, seconds);
+                }
             }
 
             if (distance[i] + metres <= TotalMetres)
             {
-                best = Math.Min(best, FirstElapsedAt(distance[i] + metres) - elapsed[i]);
+                var seconds = FirstElapsedAt(distance[i] + metres) - elapsed[i];
+                if (seconds < best.Seconds)
+                {
+                    best = (distance[i], seconds);
+                }
             }
         }
 
         return best;
+    }
+
+    /// <summary>Moving seconds spent at each heart rate (whole bpm). Empty without heart-rate readings.</summary>
+    public IReadOnlyList<HeartRateTime> TimeAtHeartRate()
+    {
+        var seconds = new SortedDictionary<int, double>();
+        for (var i = 1; i < distance.Length; i++)
+        {
+            var step = moving[i] - moving[i - 1];
+            if (step > 0 && heartRate[i] is { } bpm)
+            {
+                seconds[bpm] = seconds.GetValueOrDefault(bpm) + step;
+            }
+        }
+
+        return [.. seconds.Select(s => new HeartRateTime(s.Key, Math.Round(s.Value, 1)))];
+    }
+
+    /// <summary>
+    /// How much heart rate rose against pace from the first half to the second, in percent (pace per beat, the
+    /// usual "decoupling"). Null without heart rate in both halves. Only meaningful for a steady run.
+    /// </summary>
+    public double? HeartRateDriftPercent()
+    {
+        var half = TotalMetres / 2;
+        var firstSeconds = MovingSecondsAt(half);
+        var secondSeconds = MovingSeconds - firstSeconds;
+        if (AverageHeartRateBetween(double.MinValue, half) is not { } firstHr
+            || AverageHeartRateBetween(half, double.MaxValue) is not { } secondHr
+            || firstSeconds <= 0 || secondSeconds <= 0)
+        {
+            return null;
+        }
+
+        var firstEfficiency = half / firstSeconds / firstHr;
+        var secondEfficiency = half / secondSeconds / secondHr;
+        return Math.Round((1 - (secondEfficiency / firstEfficiency)) * 100, 1);
     }
 
     private double Interpolate(double[] values, int index, double metres)

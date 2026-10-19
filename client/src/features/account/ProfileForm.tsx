@@ -37,6 +37,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
   const [timeZone, setTimeZone] = useState(runner?.timeZone ?? detectedTimeZone())
   const [units, setUnits] = useState<Units>(runner?.units ?? 'Kilometres')
   const [weeklyEmails, setWeeklyEmails] = useState(runner?.weeklyEmails ?? true)
+  const [maxHeartRate, setMaxHeartRate] = useState(runner?.maxHeartRate == null ? '' : String(runner.maxHeartRate))
   const [accepted, setAccepted] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'error'; message: string }>({ kind: 'idle' })
 
@@ -54,7 +55,15 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
     try {
       const token = await auth.getToken()
       if (!token) throw new ApiError('Your sign-in has expired. Sign in again to carry on.', 401)
-      const saved = await api.me.save(token, { displayName: name.trim(), timeZone, units, weeklyEmails, acceptPrivacyNotice: accepted })
+      const bpm = maxHeartRate.trim() === '' ? null : Number(maxHeartRate)
+      const saved = await api.me.save(token, {
+        displayName: name.trim(),
+        timeZone,
+        units,
+        weeklyEmails,
+        acceptPrivacyNotice: accepted,
+        maxHeartRate: Number.isInteger(bpm) ? bpm : null,
+      })
       setStatus({ kind: 'saved' })
       onSaved(saved)
     } catch (error) {
@@ -98,6 +107,27 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
           ))}
         </div>
       </fieldset>
+
+      {!signingUp && (
+        <div className="field">
+          <label className="field-label" htmlFor={`${id}-maxhr`}>
+            Max heart rate <span className="field-help">(optional)</span>
+          </label>
+          <input
+            id={`${id}-maxhr`}
+            className="input input-short"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={3}
+            value={maxHeartRate}
+            onChange={(e) => setMaxHeartRate(e.target.value.replace(/D/g, ''))}
+          />
+          <p className="field-help">
+            With it, your runs show time in heart-rate zones. Use the highest you’ve seen on your watch in a hard race or test. Leave it
+            blank and we won’t guess.
+          </p>
+        </div>
+      )}
 
       <label className="session-done" style={{ color: 'var(--ink)' }}>
         <input type="checkbox" checked={weeklyEmails} onChange={(e) => setWeeklyEmails(e.target.checked)} />

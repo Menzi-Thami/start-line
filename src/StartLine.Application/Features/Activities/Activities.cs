@@ -9,6 +9,7 @@ using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Races;
 using StartLine.Domain.Activities;
 using StartLine.Domain.Plans;
+using StartLine.Domain.Running;
 
 namespace StartLine.Application.Features.Activities;
 
@@ -92,7 +93,8 @@ internal sealed class ImportActivityHandler(
             throw;
         }
 
-        return ActivityDto.From(activity, await personalBests.ForRunnerAsync(runner.Id, cancellationToken));
+        var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
+        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate);
     }
 
     private static ConflictException Duplicate() =>
@@ -115,38 +117,63 @@ internal sealed class ImportActivityHandler(
                 continue;
             }
 
-            var built = builder.Build(SavedPlanMapping.ToQuery(plan.Inputs));
-            var paces = built.Paces.ToDictionary(p => p.Zone);
-            planned.AddRange(built.Weeks
-                .SelectMany(w => w.Sessions)
-                .Where(s => s.Date == date)
-                .Select(s => new PlannedSessionMatch(
-                    plan.Name,
-                    s.Type,
-                    s.Title,
-                    s.DistanceKm,
-                    s.Zone is { } zone && paces.TryGetValue(zone, out var range) ? range.FastestSecondsPerKm : null,
-                    s.Zone is { } z && paces.TryGetValue(z, out var r) ? r.SlowestSecondsPerKm : null)));
+            var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs));
+            var sessions = built.Weeks.SelectMany(w => w.Sessions).ToList();
+            var next = sessions.FirstOrDefault(s => s.Date > date && s.Type != SessionType.Strength);
+            planned.AddRange(sessions.Where(s => s.Date == date).Select(s => Snapshot(plan.Name, s, built, next)));
         }
 
         return planned;
     }
+
+    private static PlannedSessionMatch Snapshot(string planName, PlannedSession session, TrainingPlan plan, PlannedSession? next)
+    {
+        double? Fastest(PaceZone? zone) => zone is { } z && plan.Paces.TryGetValue(z, out var range) ? Math.Round(range.Fastest.SecondsPerKilometre) : null;
+        double? Slowest(PaceZone? zone) => zone is { } z && plan.Paces.TryGetValue(z, out var range) ? Math.Round(range.Slowest.SecondsPerKilometre) : null;
+
+        var shape = session.Shape;
+        return new PlannedSessionMatch(
+            planName,
+            session.Type,
+            session.Title,
+            session.DistanceKm,
+            Fastest(session.Zone),
+            Slowest(session.Zone),
+            session.Zone,
+            shape.Shape,
+            Math.Round(shape.WorkKm, 2),
+            shape.WorkZone,
+            Fastest(shape.WorkZone),
+            Slowest(shape.WorkZone),
+            shape.RepMetres,
+            Fastest(PaceZone.Easy),
+            Slowest(PaceZone.Easy),
+            Math.Round(Pace.Of(plan.RaceDistance, plan.GoalTime).SecondsPerKilometre, 1),
+            next?.Title,
+            next?.Date);
+    }
 }
 
-/// <summary>The runner's fastest time for each standard distance across every run they've stored.</summary>
+/// <summary>Every best effort the runner has stored, so each run can be measured against the others.</summary>
 internal sealed class PersonalBests(IApplicationDbContext db)
 {
-    public async Task<IReadOnlyDictionary<double, TimeSpan>> ForRunnerAsync(Guid runnerId, CancellationToken cancellationToken)
+    public async Task<RunnerBests> ForRunnerAsync(Guid runnerId, CancellationToken cancellationToken)
     {
         var efforts = await db.Activities.AsNoTracking()
             .Where(a => a.RunnerId == runnerId)
-            .SelectMany(a => a.BestEfforts)
-            .Select(e => new { e.DistanceMetres, e.Elapsed })
+            .SelectMany(a => a.BestEfforts.Select(e => new { ActivityId = a.Id, e.DistanceMetres, e.Elapsed }))
             .ToListAsync(cancellationToken);
-        return efforts
-            .GroupBy(e => e.DistanceMetres)
-            .ToDictionary(g => g.Key, g => g.Min(e => e.Elapsed));
+        return new RunnerBests([.. efforts.Select(e => (e.ActivityId, e.DistanceMetres, e.Elapsed))]);
     }
+}
+
+internal sealed class RunnerBests(IReadOnlyList<(Guid ActivityId, double DistanceMetres, TimeSpan Elapsed)> efforts)
+{
+    /// <summary>The fastest time per distance from every run but this one: what this run's efforts are measured against.</summary>
+    public IReadOnlyDictionary<double, TimeSpan> FromRunsOtherThan(Guid activityId) => efforts
+        .Where(e => e.ActivityId != activityId)
+        .GroupBy(e => e.DistanceMetres)
+        .ToDictionary(g => g.Key, g => g.Min(e => e.Elapsed));
 }
 
 /// <summary>The runner's runs, newest first. At most <see cref="Activity.MaxPerRunner"/>, so no paging yet.</summary>
@@ -190,7 +217,8 @@ internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunn
             throw new NotFoundException("Activity", request.Id.ToString());
         }
 
-        return ActivityDto.From(activity, await personalBests.ForRunnerAsync(runner!.Id, cancellationToken));
+        var bests = await personalBests.ForRunnerAsync(runner!.Id, cancellationToken);
+        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate);
     }
 }
 

@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Identity.Web;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
@@ -98,6 +99,7 @@ internal static class PresentationDependencyInjection
                 o.SubstituteApiVersionInUrl = true;
             })
             .AddOpenApi();
+        services.ConfigureAll<OpenApiOptions>(o => o.AddSchemaTransformer<EnumSchemaTransformer>());
 
         services.AddCors(o => o.AddPolicy(SpaCorsPolicy, p => p
             .WithOrigins(configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])

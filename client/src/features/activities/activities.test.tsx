@@ -6,10 +6,12 @@ import { App } from '../../app/App'
 import { AuthContext, type Auth } from '../../app/auth-context'
 import type { Activity, ActivitySummary, Runner } from '../../lib/types'
 import longRunFixture from '../../test/fixtures/activity-long-run.json'
+import tempoFixture from '../../test/fixtures/activity-tempo.json'
 import { server } from '../../test/server'
 
 const TOKEN = 'test-token'
 const longRun = longRunFixture as Activity
+const tempo = tempoFixture as Activity
 
 const thandi: Runner = {
   id: 'runner-1',
@@ -19,6 +21,7 @@ const thandi: Runner = {
   units: 'Kilometres',
   weeklyEmails: false,
   consentedAt: '2026-10-08T09:00:00Z',
+  maxHeartRate: null,
 }
 
 const summaryOf = (run: Activity): ActivitySummary => ({
@@ -144,8 +147,8 @@ describe('a run', () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    const term = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent
     await screen.findByRole('heading', { name: 'Long run', level: 2 })
+    const term = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent
     expect(term('Distance')).toBe('15.4 km')
     expect(term('Moving time')).toBe('1:42:12')
     expect(term('Pace')).toBe('6:40/km')
@@ -156,48 +159,98 @@ describe('a run', () => {
     expect(screen.queryByText('Elapsed time')).not.toBeInTheDocument()
   })
 
-  it('compares the run with the plan session for that day', async () => {
+  it('leads with a verdict on what the run was for, the plan beside it, and the next session', async () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    const panel = (await screen.findByRole('heading', { name: 'Against your plan' })).closest('section')!
-    expect(within(panel).getByText('Comrades Marathon · Long run')).toBeInTheDocument()
-    expect(within(panel).getByText('14 km at 7:21–8:10/km')).toBeInTheDocument()
-    expect(within(panel).getByText('15.4 km at 6:40/km')).toBeInTheDocument()
-    expect(within(panel).getByText('+1.4 km')).toBeInTheDocument()
-    expect(within(panel).getByText(/42 s\/km quicker than planned/)).toBeInTheDocument()
+    const verdict = (await screen.findByRole('heading', { name: 'Long run, but quicker than long-run pace.' })).closest('section')!
+    expect(within(verdict).getByText('14 km at 7:21–8:10/km')).toBeInTheDocument()
+    expect(within(verdict).getByText('15.4 km at 6:40/km')).toBeInTheDocument()
+    expect(within(verdict).getByText('+1.4 km')).toBeInTheDocument()
+    expect(within(verdict).getByText(/42 s\/km quicker than the plan’s range/)).toBeInTheDocument()
+    expect(within(verdict).getByText(/quicker than your goal pace of 7:00\/km/)).toBeInTheDocument()
+    expect(within(verdict).getByText('Next up: Fartlek, Tuesday 5 January 2027. Start it at the slow end of its range.')).toBeInTheDocument()
   })
 
-  it('marks the quickest and hardest kilometres and sums up the halves', async () => {
+  it('checks every km against its zone and marks the quickest and hardest', async () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
     const table = await screen.findByRole('table')
     const rows = within(table).getAllByRole('row').slice(1)
     expect(rows).toHaveLength(16)
+    expect(within(rows[0]!).getByText('31 s fast')).toBeInTheDocument()
+    expect(within(rows[0]!).getByText('Long')).toBeInTheDocument()
     expect(within(rows[5]!).getByText('Hardest')).toBeInTheDocument()
     expect(within(rows[6]!).getByText('Quickest')).toBeInTheDocument()
     expect(within(rows[15]!).getByRole('rowheader')).toHaveTextContent('0.35')
-    expect(screen.getByText('Even halves: nicely paced.')).toBeInTheDocument()
+    expect(screen.getByText(/Even halves: nicely paced\./)).toBeInTheDocument()
   })
 
-  it('lists best efforts with personal bests flagged', async () => {
+  it('splits a tempo into warm-up, work and cool-down, and says it started fast', async () => {
+    runsApi([tempo])
+    renderApp(`/?view=runs&run=${tempo.id}`)
+
+    expect(await screen.findByRole('heading', { name: 'Tempo run started 14 s/km fast, then settled into range.' })).toBeInTheDocument()
+    const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
+    expect(within(rows[0]!).getByText('Warm-up')).toBeInTheDocument()
+    expect(within(rows[2]!).getByText('Work')).toBeInTheDocument()
+    expect(within(rows[8]!).getByText('Cool-down')).toBeInTheDocument()
+  })
+
+  it('shows heart-rate drift and time in zones from the max heart rate the runner set', async () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    const efforts = (await screen.findByRole('heading', { name: 'Best efforts' })).closest('section')!
-    const fiveK = within(efforts).getByText('5K').closest('li')!
-    expect(fiveK).toHaveTextContent('32:47')
-    expect(within(fiveK).getByText('PB')).toBeInTheDocument()
-    expect(within(efforts).getAllByRole('listitem')).toHaveLength(8)
+    const section = (await screen.findByRole('heading', { name: 'Heart rate' })).closest('section')!
+    expect(within(section).getByText(/Heart rate rose 6\.3% against pace/)).toBeInTheDocument()
+    expect(within(section).getAllByRole('listitem')).toHaveLength(5)
+    expect(within(section).getByText(/max heart rate you set \(188 bpm\)/)).toBeInTheDocument()
   })
 
-  it('says so when nothing was planned that day', async () => {
+  it('asks for a max heart rate instead of guessing zones', async () => {
+    runsApi([{ ...longRun, heartRate: { maxHeartRateSetting: null, zones: null } }])
+    const user = renderApp(`/?view=runs&run=${longRun.id}`)
+
+    const section = (await screen.findByRole('heading', { name: 'Heart rate' })).closest('section')!
+    expect(within(section).getByText(/to see time in heart-rate zones\. We don’t guess it\./)).toBeInTheDocument()
+    await user.click(within(section).getByRole('button', { name: 'in Account' }))
+    expect(await screen.findByRole('heading', { name: 'Account' })).toBeInTheDocument()
+  })
+
+  it('puts PBs and near misses up front and keeps the rest one tap away', async () => {
+    runsApi([longRun])
+    renderApp(`/?view=runs&run=${longRun.id}`)
+
+    const section = (await screen.findByRole('heading', { name: 'Best efforts' })).closest('section')!
+    const upFront = section.querySelector<HTMLElement>(':scope > .efforts')!
+    expect(within(upFront).getAllByRole('listitem')).toHaveLength(7)
+    const fiveK = within(upFront).getByText('5K').closest('li')!
+    expect(fiveK).toHaveTextContent('32:47')
+    expect(fiveK).toHaveTextContent('best 32:10')
+    expect(within(fiveK).getByText('Near PB')).toBeInTheDocument()
+    expect(within(within(upFront).getByText('10K').closest('li')!).getByText('PB')).toBeInTheDocument()
+    expect(within(section).getByText('All best efforts in this run (8)')).toBeInTheDocument()
+  })
+
+  it('says a first run has nothing to beat yet', async () => {
+    runsApi([
+      {
+        ...longRun,
+        bestEfforts: longRun.bestEfforts.map((e) => ({ ...e, standing: 'FirstTime' as const, isWorthShowing: false, previousBestSeconds: null })),
+      },
+    ])
+    renderApp(`/?view=runs&run=${longRun.id}`)
+
+    expect(await screen.findByText(/Your first run at these distances, so there’s nothing to beat yet\./)).toBeInTheDocument()
+  })
+
+  it('logs an unplanned run without judging it', async () => {
     runsApi([{ ...longRun, plan: null }])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
     expect(await screen.findByRole('heading', { name: 'Run', level: 2 })).toBeInTheDocument()
-    expect(screen.getByText(/No session was planned for this day/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'An extra run, logged.' })).toBeInTheDocument()
   })
 
   it('can be deleted, back to the list', async () => {

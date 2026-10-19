@@ -63,7 +63,12 @@ public sealed record PlannedSession(
     string Detail,
     string Purpose,
     double DistanceKm,
-    PaceZone? Zone);
+    PaceZone? Zone,
+    SessionStructure? Structure = null)
+{
+    /// <summary>How the session is built. Without one, the whole run is meant to sit in <see cref="Zone"/>.</summary>
+    public SessionStructure Shape => Structure ?? SessionStructure.Steady;
+}
 
 public sealed record PlanWeek(
     int Number,

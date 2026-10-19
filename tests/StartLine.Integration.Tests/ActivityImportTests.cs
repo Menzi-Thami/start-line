@@ -85,7 +85,8 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
 
         var efforts = run.GetProperty("bestEfforts").EnumerateArray().ToList();
         efforts.Select(e => e.GetProperty("name").GetString()).ShouldBe(["400 m", "½ mile", "1K", "1 mile", "2 mile", "5K", "10K"]);
-        efforts.ShouldAllBe(e => e.GetProperty("isPersonalBest").GetBoolean());
+        // A first run has nothing to beat yet, so nothing is put up front.
+        efforts.ShouldAllBe(e => e.GetProperty("standing").GetString() == "FirstTime" && !e.GetProperty("isWorthShowing").GetBoolean());
         run.GetProperty("plan").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
@@ -125,7 +126,7 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
         compared.GetProperty("planName").GetString().ShouldBe("Comrades Marathon");
         compared.GetProperty("plannedKm").GetDouble().ShouldBe(session.GetProperty("distanceKm").GetDouble());
         compared.GetProperty("actualKm").GetDouble().ShouldBe(8, tolerance: 0.01);
-        compared.GetProperty("pace").GetString().ShouldBeOneOf("Faster", "OnTarget", "Slower");
+        compared.GetProperty("pace").GetString().ShouldBeOneOf("Faster", "OnTarget", "Slower", "NoTarget");
 
         var listed = await Json(await client.GetAsync(Url("/api/v1/me/activities")));
         listed[0].GetProperty("plannedTitle").GetString().ShouldBe(session.GetProperty("title").GetString());
@@ -211,17 +212,70 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
     }
 
     [Fact]
-    public async Task A_slower_run_is_not_a_personal_best_but_the_faster_one_stays_one()
+    public async Task Each_run_is_measured_against_the_runners_other_runs()
     {
         var client = await SignedUp();
         var fast = await Uploaded(client, FitFiles.Run(Morning, 5000, 280));
         var slow = await Uploaded(client, FitFiles.Run(Morning.AddDays(1), 5000, 320));
+        var close = await Uploaded(client, FitFiles.Run(Morning.AddDays(2), 5000, 285));
 
-        static bool FiveKIsBest(JsonElement run) =>
-            run.GetProperty("bestEfforts").EnumerateArray().Single(e => e.GetProperty("name").GetString() == "5K").GetProperty("isPersonalBest").GetBoolean();
+        static JsonElement FiveK(JsonElement run) =>
+            run.GetProperty("bestEfforts").EnumerateArray().Single(e => e.GetProperty("name").GetString() == "5K");
 
-        FiveKIsBest(slow).ShouldBeFalse();
-        FiveKIsBest(await Json(await client.GetAsync(Url($"/api/v1/me/activities/{fast.GetProperty("id").GetGuid()}")))).ShouldBeTrue();
+        FiveK(slow).GetProperty("standing").GetString().ShouldBe("Slower");
+        FiveK(slow).GetProperty("previousBestSeconds").GetDouble().ShouldBe(1400, tolerance: 1);
+        FiveK(close).GetProperty("standing").GetString().ShouldBe("NearBest");
+        FiveK(close).GetProperty("isWorthShowing").GetBoolean().ShouldBeTrue();
+        var fastNow = await Json(await client.GetAsync(Url($"/api/v1/me/activities/{fast.GetProperty("id").GetGuid()}")));
+        FiveK(fastNow).GetProperty("standing").GetString().ShouldBe("PersonalBest");
+    }
+
+    [Fact]
+    public async Task A_tempo_is_judged_on_its_work_block_with_the_warm_up_and_cool_down_marked()
+    {
+        var client = await SignedUp();
+        var saved = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = ComradesPlan });
+        var planId = (await Json(saved)).GetProperty("id").GetGuid();
+        var plan = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{planId}")));
+        var tempoZone = plan.GetProperty("plan").GetProperty("paces").EnumerateArray().Single(p => p.GetProperty("zone").GetString() == "Tempo");
+        var tempo = plan.GetProperty("plan").GetProperty("weeks").EnumerateArray()
+            .SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .First(s => s.GetProperty("type").GetString() == "Tempo");
+        var day = DateOnly.Parse(tempo.GetProperty("date").GetString()!, CultureInfo.InvariantCulture);
+        var tempoPace = (tempoZone.GetProperty("fastestSecondsPerKm").GetDouble() + tempoZone.GetProperty("slowestSecondsPerKm").GetDouble()) / 2;
+        var workKm = Math.Ceiling(tempo.GetProperty("distanceKm").GetDouble() - 3.5);
+
+        var run = await Uploaded(client, FitFiles.Run(day.ToDateTime(new TimeOnly(4, 0), DateTimeKind.Utc),
+            [new Stretch(2000, 420), new Stretch(workKm * 1000, tempoPace), new Stretch(1500, 430)]));
+
+        var compared = run.GetProperty("plan");
+        compared.GetProperty("shape").GetString().ShouldBe("Continuous");
+        compared.GetProperty("judged").GetString().ShouldBe("WorkBlock");
+        compared.GetProperty("pace").GetString().ShouldBe("OnTarget");
+        var roles = run.GetProperty("splits").EnumerateArray().Select(s => s.GetProperty("role").GetString()).ToList();
+        roles[0].ShouldBe("WarmUp");
+        roles.ShouldContain("Work");
+        roles[^1].ShouldBe("CoolDown");
+        run.GetProperty("splits").EnumerateArray().Where(s => s.GetProperty("role").GetString() == "Work")
+            .ShouldAllBe(s => s.GetProperty("zone").GetString() == "Tempo");
+        compared.GetProperty("nextTitle").GetString().ShouldNotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Heart_rate_zones_appear_once_the_runner_sets_a_max_heart_rate()
+    {
+        var client = await SignedUp();
+        var id = (await Uploaded(client, FitFiles.Run(Morning, 5000, 300))).GetProperty("id").GetGuid();
+        (await Json(await client.GetAsync(Url($"/api/v1/me/activities/{id}")))).GetProperty("heartRate").GetProperty("zones").ValueKind
+            .ShouldBe(JsonValueKind.Null);
+
+        var tooHigh = await client.PutAsJsonAsync(Url("/api/v1/me"), new { displayName = "Thandi", timeZone = "Africa/Johannesburg", units = "Kilometres", weeklyEmails = false, acceptPrivacyNotice = true, maxHeartRate = 260 });
+        tooHigh.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await client.PutAsJsonAsync(Url("/api/v1/me"), new { displayName = "Thandi", timeZone = "Africa/Johannesburg", units = "Kilometres", weeklyEmails = false, acceptPrivacyNotice = true, maxHeartRate = 190 })).EnsureSuccessStatusCode();
+
+        var zones = (await Json(await client.GetAsync(Url($"/api/v1/me/activities/{id}")))).GetProperty("heartRate").GetProperty("zones");
+        zones.GetArrayLength().ShouldBe(5);
+        zones[2].GetProperty("seconds").GetDouble().ShouldBe(1500, tolerance: 2); // 150 bpm is 79% of 190: zone 3
     }
 
     [Fact]

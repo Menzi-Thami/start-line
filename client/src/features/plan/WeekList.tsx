@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { addDays, formatDate, formatDistance, formatPaceRange, type Units } from '../../lib/format'
-import type { PaceZone, PaceZoneRange, PlanWeek, Session } from '../../lib/types'
+import { dayRuns, type RunsByDate } from '../../lib/plan-runs'
+import type { ActivitySummary, PaceZone, PaceZoneRange, PlanWeek, Session } from '../../lib/types'
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
 import { sessionKey, trainingKm } from './plan-math'
@@ -12,6 +13,35 @@ interface Props {
   currentWeek: number | null
   done: Set<string>
   onToggleDone: (key: string, done: boolean) => void
+  /** Uploaded runs by date. Without them, the weeks show the plan alone. */
+  runs?: RunsByDate
+  onOpenRun?: (id: string) => void
+}
+
+/**
+ * One uploaded run beside the plan: a done mark on a day with a planned run, or a quiet line on a day without one.
+ * The words carry the meaning; the tick is decoration.
+ */
+function RunMark({ run, units, unplanned, onOpenRun }: { run: ActivitySummary; units: Units; unplanned: boolean; onOpenRun?: (id: string) => void }) {
+  const distance = formatDistance(run.distanceKm, units)
+  const text = unplanned ? `Unplanned run · ${distance}` : `Ran ${distance}`
+  const className = `run-mark${unplanned ? ' run-mark-unplanned' : ''}`
+  const content = (
+    <>
+      <svg className="run-mark-tick" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M3.5 8.5l3 3 6-7" />
+      </svg>
+      <span>{text}</span>
+    </>
+  )
+  if (!onOpenRun) return <span className={className}>{content}</span>
+  // The name starts with what the button does and still holds the words on it, for voice control.
+  const day = formatDate(run.localDate, 'long').replace(/ \d{4}$/, '')
+  return (
+    <button type="button" className={`${className} run-mark-button`} aria-label={`Open your run on ${day}: ${text}`} onClick={() => onOpenRun(run.id)}>
+      {content}
+    </button>
+  )
 }
 
 function SessionItem({ session, pace, units, isDone, onToggle }: {
@@ -70,22 +100,26 @@ interface WeekDaysProps {
   units: Units
   done: Set<string>
   onToggleDone: (key: string, done: boolean) => void
+  runs?: RunsByDate
+  onOpenRun?: (id: string) => void
 }
 
 /** One week, every day listed, rest days included, so the shape of the week is obvious. */
-export function WeekDays({ week, byZone, units, done, onToggleDone }: WeekDaysProps) {
+export function WeekDays({ week, byZone, units, done, onToggleDone, runs, onOpenRun }: WeekDaysProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
     <ol className="days">
       {days.map((date) => {
         const sessions = week.sessions.filter((s) => s.date === date)
+        const ran = dayRuns(sessions, runs?.get(date))
+        const marks = [...ran.done.map((run) => ({ run, unplanned: false })), ...ran.unplanned.map((run) => ({ run, unplanned: true }))]
         return (
           <li className="day" key={date}>
             <span className="day-date">
               {formatDate(date, 'weekday')}
               <small>{formatDate(date, 'dayMonth')}</small>
             </span>
-            {sessions.length === 0 ? (
+            {sessions.length === 0 && marks.length === 0 ? (
               <span className="day-rest">
                 <span className="day-rest-sleeper" aria-hidden="true">
                   <Runner pose="sleep" size={11} />
@@ -109,6 +143,15 @@ export function WeekDays({ week, byZone, units, done, onToggleDone }: WeekDaysPr
                     onToggle={(d) => onToggleDone(sessionKey(s), d)}
                   />
                 ))}
+                {marks.length > 0 && (
+                  <ul className="run-marks">
+                    {marks.map(({ run, unplanned }) => (
+                      <li key={run.id}>
+                        <RunMark run={run} units={units} unplanned={unplanned} onOpenRun={onOpenRun} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </li>
@@ -119,7 +162,7 @@ export function WeekDays({ week, byZone, units, done, onToggleDone }: WeekDaysPr
 }
 
 /** Every week as a disclosure, every day of the week listed, rest days included, so the shape of the week is obvious. */
-export function WeekList({ weeks, paces, units, currentWeek, done, onToggleDone }: Props) {
+export function WeekList({ weeks, paces, units, currentWeek, done, onToggleDone, runs, onOpenRun }: Props) {
   const byZone = new Map(paces.map((p) => [p.zone, p]))
   const openWeek = currentWeek ?? weeks[0]?.number
 
@@ -142,7 +185,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onToggleDone 
               </span>
               <span className="week-km">{formatDistance(trainingKm(week), units)}</span>
             </summary>
-            <WeekDays week={week} byZone={byZone} units={units} done={done} onToggleDone={onToggleDone} />
+            <WeekDays week={week} byZone={byZone} units={units} done={done} onToggleDone={onToggleDone} runs={runs} onOpenRun={onOpenRun} />
           </details>
         )
       })}

@@ -5,6 +5,7 @@ using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.MyPlans;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Runners;
 using ValidationException = StartLine.Application.Common.Exceptions.ValidationException;
 
@@ -17,12 +18,13 @@ public sealed record RunnerDto(
     string TimeZone,
     Units Units,
     bool WeeklyEmails,
-    DateTimeOffset ConsentedAt)
+    DateTimeOffset ConsentedAt,
+    int? MaxHeartRate)
 {
     public static RunnerDto From(Runner r)
     {
         ArgumentNullException.ThrowIfNull(r);
-        return new(r.Id, r.DisplayName, r.Email, r.TimeZone, r.Units, r.WeeklyEmails, r.ConsentedAt);
+        return new(r.Id, r.DisplayName, r.Email, r.TimeZone, r.Units, r.WeeklyEmails, r.ConsentedAt, r.MaxHeartRate);
     }
 }
 
@@ -38,7 +40,8 @@ public sealed record SaveProfileCommand(
     string TimeZone,
     Units Units,
     bool WeeklyEmails,
-    bool AcceptPrivacyNotice) : IRequest<RunnerDto>;
+    bool AcceptPrivacyNotice,
+    int? MaxHeartRate = null) : IRequest<RunnerDto>;
 
 internal sealed class SaveProfileValidator : AbstractValidator<SaveProfileCommand>
 {
@@ -51,6 +54,10 @@ internal sealed class SaveProfileValidator : AbstractValidator<SaveProfileComman
             .Must(tz => TimeZoneInfo.TryFindSystemTimeZoneById(tz, out _))
             .WithMessage("That isn't a time zone we recognise.");
         RuleFor(c => c.Units).IsInEnum();
+        RuleFor(c => c.MaxHeartRate)
+            .InclusiveBetween(HeartRateZones.LowestMaxHeartRate, HeartRateZones.HighestMaxHeartRate)
+            .When(c => c.MaxHeartRate is not null)
+            .WithMessage($"A max heart rate is between {HeartRateZones.LowestMaxHeartRate} and {HeartRateZones.HighestMaxHeartRate} beats a minute.");
     }
 }
 
@@ -71,7 +78,7 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
             }
 
             runner = Runner.Register(current.Subject, user.Email, request.DisplayName, request.TimeZone, request.Units,
-                request.WeeklyEmails, PrivacyNotice.CurrentVersion, time.GetUtcNow());
+                request.WeeklyEmails, PrivacyNotice.CurrentVersion, time.GetUtcNow(), request.MaxHeartRate);
             db.Runners.Add(runner);
             try
             {
@@ -91,7 +98,7 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
             }
         }
 
-        runner.UpdateProfile(user.Email ?? runner.Email, request.DisplayName, request.TimeZone, request.Units, request.WeeklyEmails);
+        runner.UpdateProfile(user.Email ?? runner.Email, request.DisplayName, request.TimeZone, request.Units, request.WeeklyEmails, request.MaxHeartRate);
         await db.SaveChangesAsync(cancellationToken);
         return RunnerDto.From(runner);
     }
@@ -124,8 +131,8 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .Where(a => a.RunnerId == runner.Id)
             .OrderBy(a => a.StartedAt)
             .ToListAsync(cancellationToken);
-        var fastest = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
-        return new AccountExportDto(RunnerDto.From(runner), [.. plans.Select(SavedPlanExportDto.From)], [.. activities.Select(a => ActivityDto.From(a, fastest))]);
+        var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
+        return new AccountExportDto(RunnerDto.From(runner), [.. plans.Select(SavedPlanExportDto.From)], [.. activities.Select(a => ActivityDto.From(a, bests.FromRunsOtherThan(a.Id), runner.MaxHeartRate))]);
     }
 }
 

@@ -28,6 +28,9 @@ export type Split = Schemas['SplitDto']
 export type BestEffort = Schemas['BestEffortDto']
 export type PlannedVsActual = Schemas['PlannedVsActualDto']
 export type Halves = Schemas['HalvesDto']
+export type Review = Schemas['ReviewDto']
+export type HeartRate = Schemas['HeartRateDto']
+export type HeartRateZone = Schemas['HeartRateZoneDto']
 
 /** Monday first, the way most runners plan a week. */
 export const WEEK: readonly DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

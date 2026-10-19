@@ -3,6 +3,8 @@ import { addDays, formatDate, formatDistance, formatPaceRange, type Units } from
 import type { PaceZone, PaceZoneRange, PlanWeek, Session } from '../../lib/types'
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
+import { ExerciseList } from '../strength/ExerciseList'
+import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey, trainingKm } from './plan-math'
 
 interface Props {
@@ -11,23 +13,25 @@ interface Props {
   units: Units
   currentWeek: number | null
   done: Set<string>
-  onToggleDone: (key: string, done: boolean) => void
+  onDoneChange: (update: DoneUpdate) => void
 }
 
-function SessionItem({ session, pace, units, isDone, onToggle }: {
+function SessionItem({ session, pace, units, done, onDoneChange }: {
   session: Session
   pace: PaceZoneRange | undefined
   units: Units
-  isDone: boolean
-  onToggle: (done: boolean) => void
+  done: Set<string>
+  onDoneChange: (update: DoneUpdate) => void
 }) {
   // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
   const [bursts, setBursts] = useState(0)
+  const isDone = done.has(sessionKey(session))
   const zone = session.zone ? ZONES[session.zone] : undefined
   const numbers = [
     session.distanceKm > 0 ? formatDistance(session.distanceKm, units) : null,
     pace && zone ? `${zone.name} ${formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}` : null,
   ].filter(Boolean)
+  const sets = setsDone(done, session)
 
   return (
     <div className={`session${isDone ? ' is-done' : ''}`}>
@@ -38,6 +42,17 @@ function SessionItem({ session, pace, units, isDone, onToggle }: {
       </div>
       <p className="session-detail">{session.detail}</p>
       <p className="session-why">Why: {session.purpose}</p>
+      {session.exercises.length > 0 && (
+        <details className="disclosure strength-moves">
+          <summary>
+            How to do each exercise
+            <span className="strength-moves-count mono">
+              {sets.done}/{sets.total} sets
+            </span>
+          </summary>
+          <ExerciseList session={session} done={done} onDoneChange={onDoneChange} />
+        </details>
+      )}
       {session.type !== 'Race' && (
         <label className="session-done">
           <span className="tick-wrap">
@@ -45,8 +60,9 @@ function SessionItem({ session, pace, units, isDone, onToggle }: {
               type="checkbox"
               checked={isDone}
               onChange={(e) => {
-                if (e.target.checked) setBursts((n) => n + 1)
-                onToggle(e.target.checked)
+                const checked = e.target.checked
+                if (checked) setBursts((n) => n + 1)
+                onDoneChange((current) => withSessionDone(current, session, checked))
               }}
             />
             {bursts > 0 && isDone && (
@@ -69,11 +85,11 @@ interface WeekDaysProps {
   byZone: Map<PaceZone, PaceZoneRange>
   units: Units
   done: Set<string>
-  onToggleDone: (key: string, done: boolean) => void
+  onDoneChange: (update: DoneUpdate) => void
 }
 
 /** One week, every day listed, rest days included, so the shape of the week is obvious. */
-export function WeekDays({ week, byZone, units, done, onToggleDone }: WeekDaysProps) {
+export function WeekDays({ week, byZone, units, done, onDoneChange }: WeekDaysProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
     <ol className="days">
@@ -105,8 +121,8 @@ export function WeekDays({ week, byZone, units, done, onToggleDone }: WeekDaysPr
                     session={s}
                     pace={s.zone ? byZone.get(s.zone) : undefined}
                     units={units}
-                    isDone={done.has(sessionKey(s))}
-                    onToggle={(d) => onToggleDone(sessionKey(s), d)}
+                    done={done}
+                    onDoneChange={onDoneChange}
                   />
                 ))}
               </div>
@@ -119,7 +135,7 @@ export function WeekDays({ week, byZone, units, done, onToggleDone }: WeekDaysPr
 }
 
 /** Every week as a disclosure, every day of the week listed, rest days included, so the shape of the week is obvious. */
-export function WeekList({ weeks, paces, units, currentWeek, done, onToggleDone }: Props) {
+export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange }: Props) {
   const byZone = new Map(paces.map((p) => [p.zone, p]))
   const openWeek = currentWeek ?? weeks[0]?.number
 
@@ -142,7 +158,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onToggleDone 
               </span>
               <span className="week-km">{formatDistance(trainingKm(week), units)}</span>
             </summary>
-            <WeekDays week={week} byZone={byZone} units={units} done={done} onToggleDone={onToggleDone} />
+            <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} />
           </details>
         )
       })}

@@ -1,10 +1,11 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { zipSync } from 'fflate'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../../app/App'
 import { AuthContext, type Auth } from '../../app/auth-context'
-import type { Activity, ActivitySummary, Runner } from '../../lib/types'
+import type { Activity, ActivitySummary, BulkImportFile, ImportStatus, Runner } from '../../lib/types'
 import longRunFixture from '../../test/fixtures/activity-long-run.json'
 import tempoFixture from '../../test/fixtures/activity-tempo.json'
 import { server } from '../../test/server'
@@ -36,8 +37,9 @@ const summaryOf = (run: Activity): ActivitySummary => ({
 })
 
 /** The runs API, insisting on the bearer token like the real one. */
-function runsApi(start: Activity[] = []) {
-  const db = { runs: [...start], uploads: [] as { contentType: string; body: string }[] }
+function runsApi(start: Activity[] = [], statuses: ImportStatus[] = []) {
+  const db = { runs: [...start], uploads: [] as { contentType: string; body: string; files: number }[] }
+  let seen = 0
   const authorised = (request: Request) => request.headers.get('Authorization') === `Bearer ${TOKEN}`
   const unauthorised = () => HttpResponse.json({ title: 'Unauthorized' }, { status: 401 })
 
@@ -49,11 +51,23 @@ function runsApi(start: Activity[] = []) {
       const run = db.runs.find((r) => r.id === params.id)
       return run ? HttpResponse.json(run) : HttpResponse.json({ title: 'Not found.', code: 'not_found' }, { status: 404 })
     }),
-    http.post('*/api/v1/me/activities', async ({ request }) => {
+    http.post('*/api/v1/me/activities/batch', async ({ request }) => {
       if (!authorised(request)) return unauthorised()
-      db.uploads.push({ contentType: request.headers.get('Content-Type') ?? '', body: await request.text() })
-      db.runs.unshift(longRun)
-      return HttpResponse.json(longRun, { status: 201 })
+      const body = await request.text()
+      // jsdom files lose their names on the way into undici, so the parts are counted, not read.
+      const files = body.split('name="files"').length - 1
+      db.uploads.push({ contentType: request.headers.get('Content-Type') ?? '', body, files })
+      const results: BulkImportFile[] = Array.from({ length: files }, (_, i) => {
+        const status = statuses[seen++] ?? 'Imported'
+        if (status === 'Imported' && !db.runs.includes(longRun)) db.runs.unshift(longRun)
+        return {
+          name: `file-${i}`,
+          status,
+          message: status === 'Unreadable' ? 'That isn’t a .fit file. Use Export Original.' : status === 'Skipped' ? 'Taperday only reads runs.' : null,
+          activity: status === 'Imported' ? summaryOf(longRun) : null,
+        }
+      })
+      return HttpResponse.json({ files: results })
     }),
     http.delete('*/api/v1/me/activities/:id', ({ request, params }) => {
       if (!authorised(request)) return unauthorised()
@@ -102,32 +116,48 @@ describe('my runs', () => {
     await user.click(await screen.findByRole('button', { name: 'My runs' }))
     expect(await screen.findByText(/No runs yet/)).toBeInTheDocument()
 
-    await user.upload(screen.getByLabelText('Upload a run'), fitFile())
+    await user.upload(screen.getByLabelText('Upload runs'), fitFile())
 
     expect(await screen.findByRole('heading', { name: 'Long run', level: 2 })).toBeInTheDocument()
     expect(db.uploads).toHaveLength(1)
     expect(db.uploads[0]?.contentType).toMatch(/^multipart\/form-data; boundary=/)
-    // jsdom files lose their name and bytes on the way into undici; the field itself is what the API binds.
-    expect(db.uploads[0]?.body).toContain('name="file"')
+    expect(db.uploads[0]?.files).toBe(1)
     expect(window.location.search).toBe(`?view=runs&run=${longRun.id}`)
   })
 
-  it('shows what was wrong with a file the API couldn’t read', async () => {
-    runsApi()
-    server.use(
-      http.post('*/api/v1/me/activities', () =>
-        HttpResponse.json(
-          { title: 'One or more fields are invalid.', code: 'validation_failed', errors: { file: ['That isn’t a .fit file. Use Export Original.'] } },
-          { status: 400 },
-        ),
-      ),
-    )
+  it('shows what was wrong with a single file the API couldn’t read', async () => {
+    runsApi([], ['Unreadable'])
     const user = renderApp('/?view=runs')
 
-    await user.upload(await screen.findByLabelText('Upload a run'), fitFile())
+    await user.upload(await screen.findByLabelText('Upload runs'), fitFile())
 
     expect(await screen.findByRole('alert')).toHaveTextContent('That isn’t a .fit file. Use Export Original.')
     expect(screen.getByRole('heading', { name: 'My runs' })).toBeInTheDocument()
+  })
+
+  it('takes several files at once and sums up what happened to each', async () => {
+    const db = runsApi([], ['Imported', 'Skipped'])
+    const user = renderApp('/?view=runs')
+
+    await user.upload(await screen.findByLabelText('Upload runs'), [fitFile(), new File([new Uint8Array(8)], 'ride.fit')])
+
+    expect(await screen.findByText('1 run added.')).toBeInTheDocument()
+    expect(screen.getByText(/Also 1 file that wasn’t a run\./)).toBeInTheDocument()
+    expect(screen.getByText('Files that weren’t added (1)')).toBeInTheDocument()
+    expect(db.uploads.map((u) => u.files)).toEqual([2])
+    expect(await screen.findByText('Long run')).toBeInTheDocument()
+  })
+
+  it('opens a Garmin account export in the browser and sends only the .fit files', async () => {
+    const db = runsApi()
+    const user = renderApp('/?view=runs')
+    const inner = zipSync({ 'a.fit': new Uint8Array(64).fill(1), 'b.fit': new Uint8Array(64).fill(2) })
+    const exported = new File([zipSync({ 'DI_CONNECT/DI-Connect-Uploaded-Files/UploadedFiles_0-_Part1.zip': inner, 'summary.json': new Uint8Array(4) })], 'export.zip')
+
+    await user.upload(await screen.findByLabelText('Upload runs'), exported)
+
+    expect(await screen.findByText('2 runs added.')).toBeInTheDocument()
+    expect(db.uploads.map((u) => u.files)).toEqual([2])
   })
 
   it('lists runs newest first and opens one', async () => {

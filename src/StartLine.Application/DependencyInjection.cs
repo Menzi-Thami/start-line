@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<PlanBuilder>();
         services.AddScoped<CurrentRunner>();
         services.AddScoped<PersonalBests>();
+        services.AddScoped<ActivityImporter>();
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
         services.AddScoped(typeof(IPipelineBehaviour<,>), typeof(ValidationBehaviour<,>));
         return services;

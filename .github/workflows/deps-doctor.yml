@@ -1,0 +1,149 @@
+# Keeps Dependabot PRs from getting stuck. Two jobs, daily and on demand:
+#
+# 1. pin-vulnerable: NuGet audit fails the build when a package we only get transitively (one Dependabot doesn't
+#    bump) gets a security advisory. This finds those packages, pins each to its latest patched release in
+#    Directory.Packages.props (central transitive pinning), and opens a PR. Where branch protection requires CI, the
+#    PR auto-merges once it passes; without protection it waits for a person to merge it.
+# 2. refresh-dependabot: Dependabot PRs that failed before such a fix landed stay red, because Dependabot only
+#    rebases on conflicts. This brings each failing, out-of-date one up to date and reruns CI on it.
+#
+# PR runs started by GITHUB_TOKEN pushes wait for approval ("action_required"), so both jobs approve their own held
+# runs, and also start CI directly (workflow_dispatch) in case approval isn't allowed.
+name: Deps doctor
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: deps-doctor
+  cancel-in-progress: false
+
+env:
+  BRANCH: deps-doctor/pin-vulnerable
+  CI_WORKFLOW: ci.yml
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Shell helper, loaded with eval in each job: approve the PR runs held for a branch (waiting up to a minute for them
+  # to appear), then start CI on it directly as well.
+  RERUN_CI: |
+    rerun_ci() {
+      local branch=$1 ids=""
+      for _ in $(seq 12); do
+        ids=$(gh run list -R "$GITHUB_REPOSITORY" --branch "$branch" --event pull_request --limit 20 \
+          --json databaseId,conclusion -q '.[] | select(.conclusion == "action_required") | .databaseId')
+        [ -n "$ids" ] && break
+        sleep 5
+      done
+      for id in $ids; do
+        gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/approve" >/dev/null \
+          || echo "::warning::Couldn't approve run $id on $branch; approve it from the Actions tab."
+      done
+      gh workflow run "$CI_WORKFLOW" -R "$GITHUB_REPOSITORY" --ref "$branch"
+    }
+
+jobs:
+  pin-vulnerable:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Pin vulnerable transitive packages
+        id: pin
+        run: |
+          set -euo pipefail
+          sln=$(ls *.slnx *.sln 2>/dev/null | head -1 || true)
+          props=Directory.Packages.props
+          dotnet restore "$sln" -p:NuGetAudit=false >/dev/null
+          # --no-restore: listing would otherwise restore again with the audit on, fail, and report nothing.
+          dotnet list "$sln" package --vulnerable --include-transitive --format json --no-restore > "$RUNNER_TEMP/vulnerable.json"
+
+          # One line per package: id, then every version resolved across projects.
+          jq -r '[.projects[].frameworks[]?.transitivePackages[]? | {id, v: .resolvedVersion}]
+                 | group_by(.id)[] | "\(.[0].id) \([.[].v] | unique | join(" "))"' "$RUNNER_TEMP/vulnerable.json" > "$RUNNER_TEMP/found.txt"
+
+          : > "$RUNNER_TEMP/pinned.txt"
+          while read -r id versions; do
+            [ -z "$id" ] && continue
+            # Pin to the newest stable release of the highest major in use: it carries the fixes and satisfies every project.
+            major=$(printf '%s\n' $versions | cut -d. -f1 | sort -n | tail -1)
+            latest=$(curl -fsSL "https://api.nuget.org/v3-flatcontainer/${id,,}/index.json" \
+              | jq -r --arg m "$major" '[.versions[] | select(startswith($m + ".") and (contains("-") | not))] | last')
+            [ -z "$latest" ] || [ "$latest" = "null" ] && continue
+            if grep -q "Include=\"$id\"" "$props"; then
+              sed -i -E "s#(<PackageVersion Include=\"$id\" Version=\")[^\"]+#\1$latest#" "$props"
+            else
+              grep -q 'Label="Transitive security pins"' "$props" || \
+                sed -i 's#</Project>#  <ItemGroup Label="Transitive security pins">\n  </ItemGroup>\n</Project>#' "$props"
+              sed -i "/Label=\"Transitive security pins\"/a\\    <PackageVersion Include=\"$id\" Version=\"$latest\" />" "$props"
+            fi
+            echo "- \`$id\` $versions → $latest" >> "$RUNNER_TEMP/pinned.txt"
+          done < "$RUNNER_TEMP/found.txt"
+
+          if git diff --quiet -- Directory.Packages.props; then
+            echo "Nothing vulnerable to pin."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            cat "$RUNNER_TEMP/pinned.txt"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open or update the PR
+        if: steps.pin.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          default=$(gh repo view "$GITHUB_REPOSITORY" --json defaultBranchRef -q .defaultBranchRef.name)
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -B "$BRANCH"
+          git add Directory.Packages.props
+          git commit -qm 'fix(deps): pin patched transitive packages' -m "$(cat "$RUNNER_TEMP/pinned.txt")"
+          git push -qf origin "$BRANCH"
+
+          body="NuGet audit flagged packages that only come in transitively, so Dependabot won't bump them. Pinned to their latest patched releases:
+
+          $(cat "$RUNNER_TEMP/pinned.txt")
+
+          Opened by the Deps doctor workflow. Remove a pin once the package that pulls it in ships the fix."
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number -q '.[].number')" ]; then
+            gh pr create --base "$default" --head "$BRANCH" --title 'fix(deps): pin patched transitive packages' --body "$body"
+          fi
+          eval "$RERUN_CI"
+          rerun_ci "$BRANCH"
+          # Auto-merge waits for required checks; without branch protection it would merge straight away, so skip it there.
+          if gh api "repos/$GITHUB_REPOSITORY/branches/$default/protection" >/dev/null 2>&1; then
+            gh pr merge "$BRANCH" --auto --squash
+          fi
+
+  refresh-dependabot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Update failing, out-of-date Dependabot PRs and rerun CI
+        run: |
+          set -euo pipefail
+          eval "$RERUN_CI"
+          default=$(gh repo view "$GITHUB_REPOSITORY" --json defaultBranchRef -q .defaultBranchRef.name)
+          gh pr list -R "$GITHUB_REPOSITORY" --author app/dependabot --state open \
+            --json number,headRefName,statusCheckRollup \
+            -q '.[] | select([.statusCheckRollup[]? | .conclusion] | index("FAILURE")) | "\(.number) \(.headRefName)"' |
+          while read -r number head; do
+            behind=$(gh api "repos/$GITHUB_REPOSITORY/compare/$head...$default" -q .ahead_by)
+            if [ "$behind" -gt 0 ]; then
+              echo "#$number is $behind commit(s) behind $default: updating and rerunning CI."
+              gh pr update-branch "$number" -R "$GITHUB_REPOSITORY"
+              rerun_ci "$head"
+            else
+              echo "#$number is failing on an up-to-date branch: needs a human (often a major version)."
+            fi
+          done

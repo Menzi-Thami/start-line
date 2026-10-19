@@ -36,7 +36,7 @@ jobs:
       - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: client/.nvmrc
           cache: npm
@@ -55,6 +55,7 @@ jobs:
           VITE_AUTH_CLIENT_ID: ${{ vars.VITE_AUTH_CLIENT_ID }}
           VITE_AUTH_AUTHORITY: ${{ vars.VITE_AUTH_AUTHORITY }}
           VITE_AUTH_SCOPE: ${{ vars.VITE_AUTH_SCOPE }}
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
         run: |
           npm ci
           npm run build

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
+using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Domain.Runners;
 using ValidationException = StartLine.Application.Common.Exceptions.ValidationException;
@@ -104,12 +105,12 @@ internal sealed class GetProfileHandler(CurrentRunner current) : IRequestHandler
         RunnerDto.From(await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me"));
 }
 
-public sealed record AccountExportDto(RunnerDto Profile, IReadOnlyList<SavedPlanExportDto> Plans);
+public sealed record AccountExportDto(RunnerDto Profile, IReadOnlyList<SavedPlanExportDto> Plans, IReadOnlyList<ActivityDto> Activities);
 
 /// <summary>Everything stored about the runner, as one document (POPIA right of access).</summary>
 public sealed record ExportAccountQuery : IRequest<AccountExportDto>;
 
-internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunner current)
+internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests)
     : IRequestHandler<ExportAccountQuery, AccountExportDto>
 {
     public async Task<AccountExportDto> Handle(ExportAccountQuery request, CancellationToken cancellationToken)
@@ -119,11 +120,16 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .Where(p => p.RunnerId == runner.Id)
             .OrderBy(p => p.CreatedAt)
             .ToListAsync(cancellationToken);
-        return new AccountExportDto(RunnerDto.From(runner), [.. plans.Select(SavedPlanExportDto.From)]);
+        var activities = await db.Activities.AsNoTracking()
+            .Where(a => a.RunnerId == runner.Id)
+            .OrderBy(a => a.StartedAt)
+            .ToListAsync(cancellationToken);
+        var fastest = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
+        return new AccountExportDto(RunnerDto.From(runner), [.. plans.Select(SavedPlanExportDto.From)], [.. activities.Select(a => ActivityDto.From(a, fastest))]);
     }
 }
 
-/// <summary>Deletes the runner and everything they saved (POPIA right to erasure). Sign-in itself lives with the identity provider.</summary>
+/// <summary>Deletes the runner and everything they saved, plans and runs (POPIA right to erasure). Sign-in itself lives with the identity provider.</summary>
 public sealed record DeleteAccountCommand : IRequest<bool>;
 
 internal sealed class DeleteAccountHandler(IApplicationDbContext db, CurrentRunner current) : IRequestHandler<DeleteAccountCommand, bool>
@@ -136,7 +142,7 @@ internal sealed class DeleteAccountHandler(IApplicationDbContext db, CurrentRunn
             return false;
         }
 
-        // Saved plans go with the runner through the database's cascade delete.
+        // Saved plans and activities go with the runner through the database's cascade delete.
         db.Runners.Remove(runner);
         await db.SaveChangesAsync(cancellationToken);
         return true;

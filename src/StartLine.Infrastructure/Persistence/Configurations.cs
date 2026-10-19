@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 
@@ -22,6 +23,7 @@ internal sealed class RunnerConfiguration : IEntityTypeConfiguration<Runner>
         builder.Property(r => r.Units).HasConversion<string>().HasMaxLength(16);
         builder.Property(r => r.PrivacyNoticeVersion).HasMaxLength(32).IsRequired();
         builder.HasMany<SavedPlan>().WithOne().HasForeignKey(p => p.RunnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany<Activity>().WithOne().HasForeignKey(a => a.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -62,6 +64,58 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
             inputs.Property(i => i.Experience).HasColumnName("Experience").HasConversion<string>().HasMaxLength(16);
             inputs.Property(i => i.StrengthDays).HasColumnName("StrengthDays").HasConversion(DaysAsMask, DaysComparer);
             inputs.Property(i => i.PlanFrom).HasColumnName("PlanFrom");
+        });
+    }
+}
+
+internal sealed class ActivityConfiguration : IEntityTypeConfiguration<Activity>
+{
+    // SQL `time` stops at 24 hours and multi-day ultras don't, so durations are stored as seconds.
+    private static readonly ValueConverter<TimeSpan, double> Seconds = new(t => t.TotalSeconds, s => TimeSpan.FromSeconds(s));
+
+    public void Configure(EntityTypeBuilder<Activity> builder)
+    {
+        builder.ToTable("Activities");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        // One upload per run: the same start time from the same runner is the same file.
+        builder.HasIndex(a => new { a.RunnerId, a.StartedAt }).IsUnique();
+        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(16);
+        builder.Property(a => a.MovingTime).HasColumnName("MovingSeconds").HasConversion(Seconds);
+        builder.Property(a => a.ElapsedTime).HasColumnName("ElapsedSeconds").HasConversion(Seconds);
+
+        builder.ComplexProperty(a => a.Halves, halves =>
+        {
+            halves.Property(h => h.HalfMetres).HasColumnName("HalfMetres");
+            halves.Property(h => h.FirstHalf).HasColumnName("FirstHalfSeconds").HasConversion(Seconds);
+            halves.Property(h => h.SecondHalf).HasColumnName("SecondHalfSeconds").HasConversion(Seconds);
+        });
+
+        builder.ComplexProperty(a => a.PlannedSession, planned =>
+        {
+            planned.Property(p => p.PlanName).HasColumnName("PlannedPlanName").HasMaxLength(PlannedSessionMatch.MaxPlanNameLength);
+            planned.Property(p => p.SessionType).HasColumnName("PlannedSessionType").HasConversion<string>().HasMaxLength(32);
+            planned.Property(p => p.Title).HasColumnName("PlannedTitle").HasMaxLength(PlannedSessionMatch.MaxTitleLength);
+            planned.Property(p => p.DistanceKm).HasColumnName("PlannedDistanceKm");
+            planned.Property(p => p.FastestPaceSecondsPerKm).HasColumnName("PlannedFastestPace");
+            planned.Property(p => p.SlowestPaceSecondsPerKm).HasColumnName("PlannedSlowestPace");
+        });
+
+        builder.OwnsMany(a => a.Splits, split =>
+        {
+            split.ToTable("ActivitySplits");
+            split.WithOwner().HasForeignKey("ActivityId");
+            split.HasKey("ActivityId", nameof(Split.Number));
+            split.Property(s => s.Number).ValueGeneratedNever();
+            split.Property(s => s.MovingTime).HasColumnName("MovingSeconds").HasConversion(Seconds);
+        });
+
+        builder.OwnsMany(a => a.BestEfforts, effort =>
+        {
+            effort.ToTable("ActivityBestEfforts");
+            effort.WithOwner().HasForeignKey("ActivityId");
+            effort.HasKey("ActivityId", nameof(BestEffort.DistanceMetres));
+            effort.Property(e => e.Elapsed).HasColumnName("ElapsedSeconds").HasConversion(Seconds);
         });
     }
 }

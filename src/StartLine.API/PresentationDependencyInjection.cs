@@ -24,6 +24,7 @@ internal static class PresentationDependencyInjection
 {
     public const string SpaCorsPolicy = "spa";
     public const string PlanRateLimitPolicy = "plans";
+    public const string UploadRateLimitPolicy = "uploads";
     public const string RunnerPolicy = "runner";
     public const string DefaultScope = "Plans.ReadWrite";
 
@@ -133,6 +134,15 @@ internal static class PresentationDependencyInjection
                 {
                     PermitLimit = 30,
                     Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                }));
+
+            // Reading a file costs far more than a plan request. Enough for a runner catching up on a month of runs.
+            o.AddPolicy(UploadRateLimitPolicy, ctx =>
+                RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 60,
+                    Window = TimeSpan.FromHours(1),
                     QueueLimit = 0,
                 }));
         });

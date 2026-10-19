@@ -93,6 +93,17 @@ public sealed class GeneratePlanTests
     }
 
     [Fact]
+    public async Task Strength_sessions_carry_their_exercises_and_runs_carry_none()
+    {
+        var plan = await Handler().Handle(CustomRace() with { StrengthDays = [DayOfWeek.Monday] }, CancellationToken.None);
+
+        var sessions = plan.Weeks[0].Sessions;
+        sessions.Single(s => s.Type == SessionType.Strength).Exercises
+            .ShouldContain(e => e.Exercise == Exercise.Squat && e.Sets == 3 && e.Reps == 10 && e.Unit == RepUnit.Reps);
+        sessions.Where(s => s.Type != SessionType.Strength).ShouldAllBe(s => s.Exercises.Count == 0);
+    }
+
+    [Fact]
     public void A_catalogue_race_checks_the_goal_against_its_own_distance()
     {
         // Two hours is fine for a half marathon but impossible for Comrades.

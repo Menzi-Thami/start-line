@@ -78,6 +78,52 @@ public sealed class ExperienceAndStrengthTests
             .ShouldAllBe(s => s.Title == "Mobility + light strength");
     }
 
+    private static List<PlannedSession> StrengthSessions(TrainingPlan plan) =>
+        [.. plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Type == SessionType.Strength)];
+
+    [Fact]
+    public void Every_strength_session_lists_its_exercises_with_sets_and_reps()
+    {
+        var plan = Half(strengthDays: [DayOfWeek.Monday]);
+
+        StrengthSessions(plan).ShouldNotBeEmpty();
+        StrengthSessions(plan).ShouldAllBe(s => s.Exercises != null && s.Exercises.Count >= 4
+            && s.Exercises.All(e => e.Sets > 0 && e.Reps > 0));
+        plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Type != SessionType.Strength).ShouldAllBe(s => s.Exercises == null);
+    }
+
+    [Fact]
+    public void Build_and_peak_strength_trains_one_leg_at_a_time()
+    {
+        var plan = Half(strengthDays: [DayOfWeek.Monday]);
+
+        var hard = plan.Weeks.Where(w => w.Phase is TrainingPhase.Build or TrainingPhase.Peak && !w.IsCutback)
+            .SelectMany(w => w.Sessions).Where(s => s.Type == SessionType.Strength).ToList();
+        hard.ShouldNotBeEmpty();
+        hard.ShouldAllBe(s => s.Exercises!.Any(e => e.Exercise == Exercise.BulgarianSplitSquat)
+            && s.Exercises!.Any(e => e.Exercise == Exercise.RomanianDeadlift));
+    }
+
+    [Fact]
+    public void Easier_weeks_keep_strength_to_two_sets_and_no_jumping()
+    {
+        var plan = Half(strengthDays: [DayOfWeek.Monday]);
+
+        plan.Weeks.Where(w => w.IsCutback || w.Phase == TrainingPhase.Taper).SelectMany(w => w.Sessions)
+            .Where(s => s.Type == SessionType.Strength)
+            .ShouldAllBe(s => s.Exercises!.All(e => e.Sets <= 2 && e.Exercise != Exercise.SquatJump));
+    }
+
+    [Fact]
+    public void The_strength_detail_spells_out_every_exercise_for_calendars()
+    {
+        var session = StrengthSessions(Half(strengthDays: [DayOfWeek.Monday]))[0];
+
+        session.Detail.ShouldContain("3 × 10 squats");
+        session.Detail.ShouldContain("3 × 8 reverse lunges each leg");
+        session.Detail.ShouldContain("3 × 30 s plank");
+    }
+
     [Fact]
     public void Rejects_more_than_three_strength_days() =>
         Should.Throw<DomainException>(() => Half(strengthDays: [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Friday]));

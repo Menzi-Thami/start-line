@@ -64,7 +64,8 @@ public sealed record PlannedSession(
     string Purpose,
     double DistanceKm,
     PaceZone? Zone,
-    SessionStructure? Structure = null)
+    SessionStructure? Structure = null,
+    IReadOnlyList<StrengthExercise>? Exercises = null)
 {
     /// <summary>How the session is built. Without one, the whole run is meant to sit in <see cref="Zone"/>.</summary>
     public SessionStructure Shape => Structure ?? SessionStructure.Steady;

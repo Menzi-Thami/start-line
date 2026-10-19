@@ -55,6 +55,7 @@ jobs:
           VITE_AUTH_CLIENT_ID: ${{ vars.VITE_AUTH_CLIENT_ID }}
           VITE_AUTH_AUTHORITY: ${{ vars.VITE_AUTH_AUTHORITY }}
           VITE_AUTH_SCOPE: ${{ vars.VITE_AUTH_SCOPE }}
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
         run: |
           npm ci
           npm run build

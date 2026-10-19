@@ -113,7 +113,7 @@ with the Static Web Apps CLI. The deployment token is a secret: pass it through 
 
 ```bash
 cd client
-VITE_API_BASE_URL=<apiUrl> VITE_AUTH_CLIENT_ID=<web-client-id> VITE_AUTH_AUTHORITY=https://<subdomain>.ciamlogin.com/<tenant-id>/ VITE_AUTH_SCOPE=api://<api-client-id>/Plans.ReadWrite npm run build
+VITE_SITE_URL=<webUrl> VITE_API_BASE_URL=<apiUrl> VITE_AUTH_CLIENT_ID=<web-client-id> VITE_AUTH_AUTHORITY=https://<subdomain>.ciamlogin.com/<tenant-id>/ VITE_AUTH_SCOPE=api://<api-client-id>/Plans.ReadWrite npm run build
 export SWA_CLI_DEPLOYMENT_TOKEN=$(az staticwebapp secrets list -n <webName> -g rg-taperday --query properties.apiKey -o tsv)
 npx @azure/static-web-apps-cli deploy ./dist --env production
 ```
@@ -121,6 +121,11 @@ npx @azure/static-web-apps-cli deploy ./dist --env production
 `client/public/staticwebapp.config.json` sets the website's security headers. Its Content-Security-Policy names
 the API and sign-in hosts; **update it when either changes** (for example when taperday.run goes live), or the
 site will load but sign-in and saving will silently fail.
+
+`VITE_SITE_URL` is the address link previews (Open Graph and Twitter cards) use for their image. It defaults to
+https://taperday.run; until that domain is live, set it (or the `VITE_SITE_URL` repository variable the deploy
+workflow reads) to the website's current address, or shared links will preview without a picture. The image itself
+is `client/public/og-image.png` (1200 x 630). The CSP needs no change for it: crawlers fetch it directly.
 
 ### Checking it worked
 

@@ -2,16 +2,19 @@ import { useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { Runner } from '../../lib/types'
+import { StravaSection } from '../sync/StravaSection'
 import { ProfileForm } from './ProfileForm'
 
 interface Props {
   runner: Runner
   onSaved: (runner: Runner) => void
   onDeleted: () => void
+  /** What happened on the way back from connecting Strava, if the runner just did. */
+  stravaNotice?: string | null
 }
 
 /** Profile, a copy of everything we hold, and the way out. */
-export function AccountPage({ runner, onSaved, onDeleted }: Props) {
+export function AccountPage({ runner, onSaved, onDeleted, stravaNotice }: Props) {
   const auth = useAuth()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'error'; message: string }>({ kind: 'idle' })
@@ -57,9 +60,14 @@ export function AccountPage({ runner, onSaved, onDeleted }: Props) {
         <ProfileForm runner={runner} onSaved={onSaved} />
       </div>
 
+      <StravaSection notice={stravaNotice} />
+
       <div className="section">
         <h3>Your data</h3>
-        <p>Download a copy of everything Taperday holds about you: your profile, every saved plan and every run you’ve uploaded.</p>
+        <p>
+          Download a copy of everything Taperday holds about you: your profile, every saved plan, every run, and which services you’ve connected. Sign-in
+          keys for those services are never included.
+        </p>
         <button type="button" className="button" onClick={() => void download()} disabled={status.kind === 'busy'}>
           Download my data
         </button>
@@ -68,7 +76,7 @@ export function AccountPage({ runner, onSaved, onDeleted }: Props) {
       <div className="section danger-zone">
         <h3>Delete account</h3>
         <p>
-          This deletes your profile, every saved plan and every uploaded run straight away. It can’t be undone. Your sign-in itself is kept by
+          This deletes your profile, every saved plan and every run straight away, and ends Taperday’s access to Strava if you connected it. It can’t be undone. Your sign-in itself is kept by
           Microsoft; ask us if you want that removed too.
         </p>
         {confirmingDelete ? (

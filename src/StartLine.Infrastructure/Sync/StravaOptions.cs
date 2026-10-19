@@ -15,7 +15,7 @@ public sealed class StravaOptions
 
     public string ClientSecret { get; set; } = "";
 
-    /// <summary>The web app page Strava sends the runner back to, e.g. https://taperday.run/?strava=callback.</summary>
+    /// <summary>The web app page Strava sends the runner back to, e.g. https://taperday.run/strava/callback.</summary>
     public Uri? RedirectUri { get; set; }
 
     public string VerifyToken { get; set; } = "";

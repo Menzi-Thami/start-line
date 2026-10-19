@@ -43,7 +43,7 @@ public sealed class HttpStravaApiTests
     {
         var handler = new Canned(respond);
         var gate = new StravaRateGate(new FakeTimeProvider(Now));
-        var options = Options.Create(new StravaOptions { ClientId = "123", ClientSecret = "shh", RedirectUri = new Uri("https://taperday.test/?strava=callback") });
+        var options = Options.Create(new StravaOptions { ClientId = "123", ClientSecret = "shh", RedirectUri = new Uri("https://taperday.test/strava/callback") });
         return (new HttpStravaApi(new HttpClient(handler), options, gate), handler, gate);
     }
 
@@ -52,12 +52,12 @@ public sealed class HttpStravaApiTests
     {
         var (api, _, _) = Api(_ => Ok("{}"));
 
-        var url = api.AuthorizeUrl("st&te", new Uri("https://taperday.test/?strava=callback")).ToString();
+        var url = api.AuthorizeUrl("st&te", new Uri("https://taperday.test/strava/callback")).ToString();
 
         url.ShouldStartWith("https://www.strava.com/oauth/authorize?client_id=123&response_type=code");
         url.ShouldContain("scope=read%2Cactivity%3Aread_all");
         url.ShouldContain("state=st%26te");
-        url.ShouldContain("redirect_uri=https%3A%2F%2Ftaperday.test%2F%3Fstrava%3Dcallback");
+        url.ShouldContain("redirect_uri=https%3A%2F%2Ftaperday.test%2Fstrava%2Fcallback");
     }
 
     [Fact]

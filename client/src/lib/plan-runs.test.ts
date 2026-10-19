@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import plan5k from '../test/fixtures/plan-5k.json'
 import { dayRuns, ranKmByWeek, runsByDate, weekEnd, wellOverPlan } from './plan-runs'
+import { UPLOADED } from '../test/sources'
 import type { ActivitySummary, TrainingPlan } from './types'
 
 // A 5K plan from Monday 12 October to race day on Sunday 13 December 2026.
@@ -17,6 +18,10 @@ function run(id: string, localDate: string, distanceKm: number, time = '07:00'):
     movingSeconds: distanceKm * 360,
     paceSecondsPerKm: 360,
     plannedTitle: null,
+    plannedSessionType: null,
+    pace: null,
+    averageHeartRate: null,
+    source: UPLOADED,
   }
 }
 

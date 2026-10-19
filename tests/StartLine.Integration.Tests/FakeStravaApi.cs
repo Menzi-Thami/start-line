@@ -160,7 +160,7 @@ public sealed class StravaApiFactory : StartLineApiFactory
     {
         ["Strava:ClientId"] = "1",
         ["Strava:ClientSecret"] = "not-a-real-secret",
-        ["Strava:RedirectUri"] = "https://taperday.test/?strava=callback",
+        ["Strava:RedirectUri"] = "https://taperday.test/strava/callback",
         ["Strava:HookSecret"] = HookSecret,
         ["Strava:VerifyToken"] = VerifyToken,
         ["Strava:SubscriptionId"] = SubscriptionId.ToString(CultureInfo.InvariantCulture),

@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
+using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.MyPlans;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Runners;
 using ValidationException = StartLine.Application.Common.Exceptions.ValidationException;
 
@@ -16,12 +18,13 @@ public sealed record RunnerDto(
     string TimeZone,
     Units Units,
     bool WeeklyEmails,
-    DateTimeOffset ConsentedAt)
+    DateTimeOffset ConsentedAt,
+    int? MaxHeartRate)
 {
     public static RunnerDto From(Runner r)
     {
         ArgumentNullException.ThrowIfNull(r);
-        return new(r.Id, r.DisplayName, r.Email, r.TimeZone, r.Units, r.WeeklyEmails, r.ConsentedAt);
+        return new(r.Id, r.DisplayName, r.Email, r.TimeZone, r.Units, r.WeeklyEmails, r.ConsentedAt, r.MaxHeartRate);
     }
 }
 
@@ -37,7 +40,8 @@ public sealed record SaveProfileCommand(
     string TimeZone,
     Units Units,
     bool WeeklyEmails,
-    bool AcceptPrivacyNotice) : IRequest<RunnerDto>;
+    bool AcceptPrivacyNotice,
+    int? MaxHeartRate = null) : IRequest<RunnerDto>;
 
 internal sealed class SaveProfileValidator : AbstractValidator<SaveProfileCommand>
 {
@@ -50,6 +54,10 @@ internal sealed class SaveProfileValidator : AbstractValidator<SaveProfileComman
             .Must(tz => TimeZoneInfo.TryFindSystemTimeZoneById(tz, out _))
             .WithMessage("That isn't a time zone we recognise.");
         RuleFor(c => c.Units).IsInEnum();
+        RuleFor(c => c.MaxHeartRate)
+            .InclusiveBetween(HeartRateZones.LowestMaxHeartRate, HeartRateZones.HighestMaxHeartRate)
+            .When(c => c.MaxHeartRate is not null)
+            .WithMessage($"A max heart rate is between {HeartRateZones.LowestMaxHeartRate} and {HeartRateZones.HighestMaxHeartRate} beats a minute.");
     }
 }
 
@@ -70,7 +78,7 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
             }
 
             runner = Runner.Register(current.Subject, user.Email, request.DisplayName, request.TimeZone, request.Units,
-                request.WeeklyEmails, PrivacyNotice.CurrentVersion, time.GetUtcNow());
+                request.WeeklyEmails, PrivacyNotice.CurrentVersion, time.GetUtcNow(), request.MaxHeartRate);
             db.Runners.Add(runner);
             try
             {
@@ -90,7 +98,7 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
             }
         }
 
-        runner.UpdateProfile(user.Email ?? runner.Email, request.DisplayName, request.TimeZone, request.Units, request.WeeklyEmails);
+        runner.UpdateProfile(user.Email ?? runner.Email, request.DisplayName, request.TimeZone, request.Units, request.WeeklyEmails, request.MaxHeartRate);
         await db.SaveChangesAsync(cancellationToken);
         return RunnerDto.From(runner);
     }
@@ -104,12 +112,12 @@ internal sealed class GetProfileHandler(CurrentRunner current) : IRequestHandler
         RunnerDto.From(await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me"));
 }
 
-public sealed record AccountExportDto(RunnerDto Profile, IReadOnlyList<SavedPlanExportDto> Plans);
+public sealed record AccountExportDto(RunnerDto Profile, IReadOnlyList<SavedPlanExportDto> Plans, IReadOnlyList<ActivityDto> Activities);
 
 /// <summary>Everything stored about the runner, as one document (POPIA right of access).</summary>
 public sealed record ExportAccountQuery : IRequest<AccountExportDto>;
 
-internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunner current)
+internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests)
     : IRequestHandler<ExportAccountQuery, AccountExportDto>
 {
     public async Task<AccountExportDto> Handle(ExportAccountQuery request, CancellationToken cancellationToken)
@@ -119,11 +127,16 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .Where(p => p.RunnerId == runner.Id)
             .OrderBy(p => p.CreatedAt)
             .ToListAsync(cancellationToken);
-        return new AccountExportDto(RunnerDto.From(runner), [.. plans.Select(SavedPlanExportDto.From)]);
+        var activities = await db.Activities.AsNoTracking()
+            .Where(a => a.RunnerId == runner.Id)
+            .OrderBy(a => a.StartedAt)
+            .ToListAsync(cancellationToken);
+        var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
+        return new AccountExportDto(RunnerDto.From(runner), [.. plans.Select(SavedPlanExportDto.From)], [.. activities.Select(a => ActivityDto.From(a, bests.FromRunsOtherThan(a.Id), runner.MaxHeartRate))]);
     }
 }
 
-/// <summary>Deletes the runner and everything they saved (POPIA right to erasure). Sign-in itself lives with the identity provider.</summary>
+/// <summary>Deletes the runner and everything they saved, plans and runs (POPIA right to erasure). Sign-in itself lives with the identity provider.</summary>
 public sealed record DeleteAccountCommand : IRequest<bool>;
 
 internal sealed class DeleteAccountHandler(IApplicationDbContext db, CurrentRunner current) : IRequestHandler<DeleteAccountCommand, bool>
@@ -136,7 +149,7 @@ internal sealed class DeleteAccountHandler(IApplicationDbContext db, CurrentRunn
             return false;
         }
 
-        // Saved plans go with the runner through the database's cascade delete.
+        // Saved plans and activities go with the runner through the database's cascade delete.
         db.Runners.Remove(runner);
         await db.SaveChangesAsync(cancellationToken);
         return true;

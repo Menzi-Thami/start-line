@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 
@@ -18,6 +19,8 @@ public interface IApplicationDbContext
     DbSet<Runner> Runners { get; }
 
     DbSet<SavedPlan> SavedPlans { get; }
+
+    DbSet<Activity> Activities { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

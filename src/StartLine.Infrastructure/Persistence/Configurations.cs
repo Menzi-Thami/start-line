@@ -1,7 +1,9 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 
@@ -22,6 +24,7 @@ internal sealed class RunnerConfiguration : IEntityTypeConfiguration<Runner>
         builder.Property(r => r.Units).HasConversion<string>().HasMaxLength(16);
         builder.Property(r => r.PrivacyNoticeVersion).HasMaxLength(32).IsRequired();
         builder.HasMany<SavedPlan>().WithOne().HasForeignKey(p => p.RunnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany<Activity>().WithOne().HasForeignKey(a => a.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -64,4 +67,101 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
             inputs.Property(i => i.PlanFrom).HasColumnName("PlanFrom");
         });
     }
+}
+
+internal sealed class ActivityConfiguration : IEntityTypeConfiguration<Activity>
+{
+    // SQL `time` stops at 24 hours and multi-day ultras don't, so durations are stored as seconds.
+    private static readonly ValueConverter<TimeSpan, double> Seconds = new(t => t.TotalSeconds, s => TimeSpan.FromSeconds(s));
+
+    public void Configure(EntityTypeBuilder<Activity> builder)
+    {
+        builder.ToTable("Activities");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        // One upload per run: the same start time from the same runner is the same file.
+        builder.HasIndex(a => new { a.RunnerId, a.StartedAt }).IsUnique();
+        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(16);
+        builder.Property(a => a.MovingTime).HasColumnName("MovingSeconds").HasConversion(Seconds);
+        builder.Property(a => a.ElapsedTime).HasColumnName("ElapsedSeconds").HasConversion(Seconds);
+
+        builder.ComplexProperty(a => a.Halves, halves =>
+        {
+            halves.Property(h => h.HalfMetres).HasColumnName("HalfMetres");
+            halves.Property(h => h.FirstHalf).HasColumnName("FirstHalfSeconds").HasConversion(Seconds);
+            halves.Property(h => h.SecondHalf).HasColumnName("SecondHalfSeconds").HasConversion(Seconds);
+        });
+
+        builder.ComplexProperty(a => a.PlannedSession, planned =>
+        {
+            planned.Property(p => p.PlanName).HasColumnName("PlannedPlanName").HasMaxLength(PlannedSessionMatch.MaxPlanNameLength);
+            planned.Property(p => p.SessionType).HasColumnName("PlannedSessionType").HasConversion<string>().HasMaxLength(32);
+            planned.Property(p => p.Title).HasColumnName("PlannedTitle").HasMaxLength(PlannedSessionMatch.MaxTitleLength);
+            planned.Property(p => p.DistanceKm).HasColumnName("PlannedDistanceKm");
+            planned.Property(p => p.FastestPaceSecondsPerKm).HasColumnName("PlannedFastestPace");
+            planned.Property(p => p.SlowestPaceSecondsPerKm).HasColumnName("PlannedSlowestPace");
+            planned.Property(p => p.Zone).HasColumnName("PlannedZone").HasConversion<string>().HasMaxLength(16);
+            planned.Property(p => p.Shape).HasColumnName("PlannedShape").HasConversion<string>().HasMaxLength(16);
+            planned.Property(p => p.WorkKm).HasColumnName("PlannedWorkKm");
+            planned.Property(p => p.WorkZone).HasColumnName("PlannedWorkZone").HasConversion<string>().HasMaxLength(16);
+            planned.Property(p => p.WorkFastestPaceSecondsPerKm).HasColumnName("PlannedWorkFastestPace");
+            planned.Property(p => p.WorkSlowestPaceSecondsPerKm).HasColumnName("PlannedWorkSlowestPace");
+            planned.Property(p => p.RepMetres).HasColumnName("PlannedRepMetres");
+            planned.Property(p => p.EasyFastestPaceSecondsPerKm).HasColumnName("PlannedEasyFastestPace");
+            planned.Property(p => p.EasySlowestPaceSecondsPerKm).HasColumnName("PlannedEasySlowestPace");
+            planned.Property(p => p.GoalPaceSecondsPerKm).HasColumnName("PlannedGoalPace");
+            planned.Property(p => p.NextTitle).HasColumnName("PlannedNextTitle").HasMaxLength(PlannedSessionMatch.MaxTitleLength);
+            planned.Property(p => p.NextDate).HasColumnName("PlannedNextDate");
+        });
+
+        builder.ComplexProperty(a => a.Work, work =>
+        {
+            work.Property(w => w.StartMetres).HasColumnName("WorkStartMetres");
+            work.Property(w => w.Metres).HasColumnName("WorkMetres");
+            work.Property(w => w.Elapsed).HasColumnName("WorkSeconds").HasConversion(Seconds);
+        });
+
+        builder.Property(a => a.HeartRateTime).HasColumnName("HeartRateSeconds")
+            .HasConversion(HeartRateTimeColumn.Converter, HeartRateTimeColumn.Comparer);
+
+        builder.OwnsMany(a => a.Splits, split =>
+        {
+            split.ToTable("ActivitySplits");
+            split.WithOwner().HasForeignKey("ActivityId");
+            split.HasKey("ActivityId", nameof(Split.Number));
+            split.Property(s => s.Number).ValueGeneratedNever();
+            split.Property(s => s.MovingTime).HasColumnName("MovingSeconds").HasConversion(Seconds);
+        });
+
+        builder.OwnsMany(a => a.BestEfforts, effort =>
+        {
+            effort.ToTable("ActivityBestEfforts");
+            effort.WithOwner().HasForeignKey("ActivityId");
+            effort.HasKey("ActivityId", nameof(BestEffort.DistanceMetres));
+            effort.Property(e => e.Elapsed).HasColumnName("ElapsedSeconds").HasConversion(Seconds);
+        });
+    }
+}
+
+/// <summary>Time at each heart rate as one compact column ("142:31.5;143:40"): read whole with its run, never queried.</summary>
+internal static class HeartRateTimeColumn
+{
+    public static readonly ValueConverter<IReadOnlyList<HeartRateTime>, string> Converter = new(
+        times => Format(times),
+        text => Parse(text));
+
+    public static readonly ValueComparer<IReadOnlyList<HeartRateTime>> Comparer = new(
+        (a, b) => a != null && b != null && a.SequenceEqual(b),
+        times => times.Aggregate(0, (hash, t) => HashCode.Combine(hash, t)),
+        times => times.ToList());
+
+    private static string Format(IReadOnlyList<HeartRateTime> times) =>
+        string.Join(';', times.Select(t => string.Create(CultureInfo.InvariantCulture, $"{t.Bpm}:{t.Seconds}")));
+
+    private static List<HeartRateTime> Parse(string text) =>
+        [.. text.Split(';', StringSplitOptions.RemoveEmptyEntries).Select(pair =>
+        {
+            var parts = pair.Split(':');
+            return new HeartRateTime(int.Parse(parts[0], CultureInfo.InvariantCulture), double.Parse(parts[1], CultureInfo.InvariantCulture));
+        })];
 }

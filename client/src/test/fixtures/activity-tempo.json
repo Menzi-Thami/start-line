@@ -1,0 +1,270 @@
+{
+  "id": "f88dd9e6-1754-4c6f-a5d7-852dfe357432",
+  "startedAt": "2027-03-02T15:30:00\u002B00:00",
+  "localDate": "2027-03-02",
+  "kind": "Run",
+  "distanceKm": 8.6,
+  "movingSeconds": 3436,
+  "elapsedSeconds": 3436,
+  "paceSecondsPerKm": 399.5,
+  "elevationGainMetres": 6,
+  "averageHeartRate": 156,
+  "maxHeartRate": 175,
+  "calories": 602,
+  "plan": {
+    "planName": "Comrades Marathon",
+    "sessionType": "Tempo",
+    "title": "Tempo run",
+    "shape": "Continuous",
+    "zone": "Tempo",
+    "workZone": "Tempo",
+    "workKm": 3.19,
+    "repMetres": null,
+    "plannedKm": 6.5,
+    "actualKm": 8.6,
+    "actualPaceSecondsPerKm": 399.5,
+    "distanceDifferenceKm": 2.1,
+    "judged": "WorkBlock",
+    "judgedPaceSecondsPerKm": 370.2,
+    "targetFastestSecondsPerKm": 368,
+    "targetSlowestSecondsPerKm": 385,
+    "pace": "OnTarget",
+    "secondsPerKmOffTarget": 0,
+    "goalPaceSecondsPerKm": 420,
+    "nextTitle": "Recovery run",
+    "nextDate": "2027-03-03"
+  },
+  "review": {
+    "startedFastBySecondsPerKm": 14,
+    "fadeFromSplit": null,
+    "distance": "LongerThanPlanned",
+    "goalPaceGapSecondsPerKm": null,
+    "heartRateDriftPercent": null,
+    "heartRateDriftIsNotable": false
+  },
+  "splits": [
+    {
+      "number": 1,
+      "distanceKm": 1,
+      "movingSeconds": 425,
+      "paceSecondsPerKm": 425,
+      "elevationChangeMetres": 1,
+      "averageHeartRate": 132,
+      "isQuickest": false,
+      "isHardest": false,
+      "role": "WarmUp",
+      "zone": "Easy",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 35
+    },
+    {
+      "number": 2,
+      "distanceKm": 1,
+      "movingSeconds": 410,
+      "paceSecondsPerKm": 410,
+      "elevationChangeMetres": 0,
+      "averageHeartRate": 138,
+      "isQuickest": false,
+      "isHardest": false,
+      "role": "WarmUp",
+      "zone": "Easy",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 50
+    },
+    {
+      "number": 3,
+      "distanceKm": 1,
+      "movingSeconds": 354,
+      "paceSecondsPerKm": 354,
+      "elevationChangeMetres": 0,
+      "averageHeartRate": 160,
+      "isQuickest": true,
+      "isHardest": false,
+      "role": "Work",
+      "zone": "Tempo",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 12
+    },
+    {
+      "number": 4,
+      "distanceKm": 1,
+      "movingSeconds": 364,
+      "paceSecondsPerKm": 364,
+      "elevationChangeMetres": 2,
+      "averageHeartRate": 166,
+      "isQuickest": false,
+      "isHardest": false,
+      "role": "Work",
+      "zone": "Tempo",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 2
+    },
+    {
+      "number": 5,
+      "distanceKm": 1,
+      "movingSeconds": 387,
+      "paceSecondsPerKm": 387,
+      "elevationChangeMetres": -1,
+      "averageHeartRate": 170,
+      "isQuickest": false,
+      "isHardest": true,
+      "role": "Work",
+      "zone": "Tempo",
+      "fit": "In",
+      "secondsPerKmOffZone": 0
+    },
+    {
+      "number": 6,
+      "distanceKm": 1,
+      "movingSeconds": 399,
+      "paceSecondsPerKm": 399,
+      "elevationChangeMetres": 3,
+      "averageHeartRate": 173,
+      "isQuickest": false,
+      "isHardest": false,
+      "role": "CoolDown",
+      "zone": "Easy",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 61
+    },
+    {
+      "number": 7,
+      "distanceKm": 1,
+      "movingSeconds": 403,
+      "paceSecondsPerKm": 403,
+      "elevationChangeMetres": 0,
+      "averageHeartRate": 175,
+      "isQuickest": false,
+      "isHardest": false,
+      "role": "CoolDown",
+      "zone": "Easy",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 57
+    },
+    {
+      "number": 8,
+      "distanceKm": 1,
+      "movingSeconds": 430,
+      "paceSecondsPerKm": 430,
+      "elevationChangeMetres": 0,
+      "averageHeartRate": 150,
+      "isQuickest": false,
+      "isHardest": false,
+      "role": "CoolDown",
+      "zone": "Easy",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 30
+    },
+    {
+      "number": 9,
+      "distanceKm": 0.6,
+      "movingSeconds": 264,
+      "paceSecondsPerKm": 440,
+      "elevationChangeMetres": 0,
+      "averageHeartRate": 144,
+      "isQuickest": false,
+      "isHardest": false,
+      "role": "CoolDown",
+      "zone": "Easy",
+      "fit": "Faster",
+      "secondsPerKmOffZone": 20
+    }
+  ],
+  "halves": {
+    "firstHalfPaceSecondsPerKm": 388.2,
+    "secondHalfPaceSecondsPerKm": 410.9,
+    "secondHalfSlowerBySecondsPerKm": 22.7,
+    "verdict": "PositiveSplit"
+  },
+  "bestEfforts": [
+    {
+      "name": "400 m",
+      "distanceMetres": 400,
+      "seconds": 141.6,
+      "paceSecondsPerKm": 354,
+      "standing": "PersonalBest",
+      "previousBestSeconds": 154,
+      "isWorthShowing": true
+    },
+    {
+      "name": "\u00BD mile",
+      "distanceMetres": 804.672,
+      "seconds": 284.9,
+      "paceSecondsPerKm": 354,
+      "standing": "PersonalBest",
+      "previousBestSeconds": 309.8,
+      "isWorthShowing": true
+    },
+    {
+      "name": "1K",
+      "distanceMetres": 1000,
+      "seconds": 354,
+      "paceSecondsPerKm": 354,
+      "standing": "PersonalBest",
+      "previousBestSeconds": 385,
+      "isWorthShowing": true
+    },
+    {
+      "name": "1 mile",
+      "distanceMetres": 1609.344,
+      "seconds": 575.8,
+      "paceSecondsPerKm": 357.8,
+      "standing": "PersonalBest",
+      "previousBestSeconds": 621.2,
+      "isWorthShowing": true
+    },
+    {
+      "name": "2 mile",
+      "distanceMetres": 3218.688,
+      "seconds": 1192.3,
+      "paceSecondsPerKm": 370.4,
+      "standing": "PersonalBest",
+      "previousBestSeconds": 1242.4,
+      "isWorthShowing": true
+    },
+    {
+      "name": "5K",
+      "distanceMetres": 5000,
+      "seconds": 1907,
+      "paceSecondsPerKm": 381.4,
+      "standing": "PersonalBest",
+      "previousBestSeconds": 1930,
+      "isWorthShowing": true
+    }
+  ],
+  "heartRate": {
+    "maxHeartRateSetting": 188,
+    "zones": [
+      {
+        "zone": 1,
+        "fromBpm": 94,
+        "toBpm": 113,
+        "seconds": 0
+      },
+      {
+        "zone": 2,
+        "fromBpm": 113,
+        "toBpm": 132,
+        "seconds": 0
+      },
+      {
+        "zone": 3,
+        "fromBpm": 132,
+        "toBpm": 150,
+        "seconds": 1099
+      },
+      {
+        "zone": 4,
+        "fromBpm": 150,
+        "toBpm": 169,
+        "seconds": 1148
+      },
+      {
+        "zone": 5,
+        "fromBpm": 169,
+        "toBpm": 188,
+        "seconds": 1189
+      }
+    ]
+  }
+}

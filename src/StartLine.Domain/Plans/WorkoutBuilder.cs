@@ -79,21 +79,26 @@ internal sealed class WorkoutBuilder(
         "Builds the fatigue resistance an ultra needs without one enormous run.",
         km, PaceZone.LongRun);
 
-    public static PlannedSession Strength(DateOnly date, TrainingPhase phase, bool isCutback) => (phase, isCutback) switch
+    public static PlannedSession Strength(DateOnly date, TrainingPhase phase, bool isCutback)
     {
-        (TrainingPhase.Taper, _) or (_, true) => new(date, SessionType.Strength, "Mobility + light strength",
-            "About 20 min: hip, hamstring and ankle mobility, then two easy rounds of your strength circuit. Keep it light.",
-            "Keeps you supple and strong without adding fatigue in an easier week.",
-            0, null),
-        (TrainingPhase.Base, _) => new(date, SessionType.Strength, "Strength & mobility",
-            "About 30 min: 3 rounds of 10 squats, 10 lunges each leg, 15 calf raises, 12 glute bridges and a 30 s plank. Finish with 5 min of mobility.",
-            "Stronger legs and hips hold your form late in a race and help keep injuries away.",
-            0, null),
-        _ => new(date, SessionType.Strength, "Strength & mobility",
-            "About 35 min: 3 rounds of 8 step-ups and 8 single-leg deadlifts each leg, 15 single-leg calf raises, 6 squat jumps and a 30 s side plank each side.",
-            "Single-leg strength and a little spring: running is a series of one-legged hops.",
-            0, null),
-    };
+        var exercises = StrengthRoutine.For(phase, isCutback);
+        var routine = StrengthRoutine.Describe(exercises);
+        return (phase, isCutback) switch
+        {
+            (TrainingPhase.Taper, _) or (_, true) => new(date, SessionType.Strength, "Mobility + light strength",
+                $"About 20 min: hip, hamstring and ankle mobility, then {routine}. Keep it light.",
+                "Keeps you supple and strong without adding fatigue in an easier week.",
+                0, null, exercises),
+            (TrainingPhase.Base, _) => new(date, SessionType.Strength, "Strength & mobility",
+                $"About 30 min: {routine}. Rest about a minute between sets, then 5 min of mobility.",
+                "Stronger legs and hips hold your form late in a race and help keep injuries away.",
+                0, null, exercises),
+            _ => new(date, SessionType.Strength, "Strength & mobility",
+                $"About 35 min: {routine}. Hold a weight once the last reps stop feeling hard, and rest a minute between sets.",
+                "Single-leg strength and a little spring: running is a series of one-legged hops.",
+                0, null, exercises),
+        };
+    }
 
     public static PlannedSession Shakeout(DateOnly date, double km) => new(date, SessionType.Shakeout, "Shakeout + strides",
         "A short, easy jog with 4 × 20 s strides. Lay out your kit afterwards.",

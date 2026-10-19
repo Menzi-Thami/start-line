@@ -799,6 +799,7 @@ export interface components {
         DistanceFit: "ShorterThanPlanned" | "AsPlanned" | "LongerThanPlanned";
         /** @enum {unknown} */
         EffortStanding: "FirstTime" | "PersonalBest" | "NearBest" | "Slower";
+        /** @enum {unknown} */
         Exercise: "Squat" | "RomanianDeadlift" | "ReverseLunge" | "BulgarianSplitSquat" | "StepUp" | "GluteBridge" | "CalfRaise" | "Plank" | "SidePlank" | "SquatJump";
         /**
          * @default Regular
@@ -1064,6 +1065,7 @@ export interface components {
             /** Format: int32 */
             reps: number;
             unit: components["schemas"]["RepUnit"];
+            summary: string;
         };
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";

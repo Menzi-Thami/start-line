@@ -358,7 +358,7 @@ describe('a shared plan', () => {
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
     const tabs = screen.getByRole('tablist', { name: 'Your plan' })
-    expect(within(tabs).getAllByRole('tab').map((t) => t.textContent)).toEqual(['This week', 'All weeks', 'Paces', 'Progress'])
+    expect(within(tabs).getAllByRole('tab').map((t) => t.textContent)).toEqual(['This week', 'All weeks', 'Strength', 'Paces', 'Progress'])
     expect(within(tabs).getByRole('tab', { name: 'This week' })).toHaveAttribute('aria-selected', 'true')
     // The plan starts on Monday 12 October, after "today", so This week shows the first week.
     expect(screen.getByRole('heading', { name: 'Your first week' })).toBeInTheDocument()
@@ -371,6 +371,48 @@ describe('a shared plan', () => {
     await user.keyboard('{ArrowRight}')
     expect(within(tabs).getByRole('tab', { name: 'Progress' })).toHaveFocus()
     expect(screen.getByRole('heading', { name: 'Weekly distance' })).toBeInTheDocument()
+  })
+
+  it('shows this week’s strength with sets to tick off, and remembers them', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    const { user, unmount } = setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    await user.click(screen.getByRole('tab', { name: 'Strength' }))
+    const panel = screen.getByRole('tabpanel', { name: 'Strength' })
+    expect(within(panel).getByRole('heading', { name: /Strength & mobility/ })).toBeInTheDocument()
+    expect(within(panel).getByText('Romanian deadlift')).toBeInTheDocument()
+    expect(within(panel).getByText('3 × 8 each leg')).toBeInTheDocument()
+    expect(within(panel).getByText('0 of 18 sets done')).toBeInTheDocument()
+
+    const squats = within(panel).getByRole('group', { name: 'Squat sets' })
+    await user.click(within(squats).getByRole('checkbox', { name: 'Squat, set 1 of 3: 10' }))
+    expect(within(panel).getByText('1 of 18 sets done')).toBeInTheDocument()
+    unmount()
+
+    setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    expect(screen.getAllByRole('checkbox', { name: 'Squat, set 1 of 3: 10', hidden: true })[0]).toBeChecked()
+  })
+
+  it('ticks every set when a strength session is ticked done, and the session when every set is', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    const { user } = setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    // Monday's strength session comes first in the week.
+    const mondayDone = () => screen.getAllByRole('checkbox', { name: 'Done', hidden: true })[0]
+
+    await user.click(mondayDone()!)
+    await user.click(screen.getByRole('tab', { name: 'Strength' }))
+    const panel = screen.getByRole('tabpanel', { name: 'Strength' })
+    expect(within(panel).getByText('All sets done. Nice work.')).toBeInTheDocument()
+
+    await user.click(within(panel).getByRole('checkbox', { name: 'Plank, set 3 of 3: 30 s' }))
+    expect(within(panel).getByText('17 of 18 sets done')).toBeInTheDocument()
+    expect(mondayDone()).not.toBeChecked()
+
+    await user.click(within(panel).getByRole('checkbox', { name: 'Plank, set 3 of 3: 30 s' }))
+    expect(mondayDone()).toBeChecked()
   })
 
   it('keeps sharing in one menu', async () => {

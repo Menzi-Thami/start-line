@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
@@ -51,29 +52,36 @@ internal sealed class ImportActivityHandler(
     IApplicationDbContext db,
     CurrentRunner current,
     IActivityFileReader reader,
-    PlanBuilder builder,
-    IRaceCatalogue catalogue,
-    PersonalBests personalBests)
+    ActivityRecorder recorder,
+    PersonalBests personalBests,
+    TimeProvider time)
     : IRequestHandler<ImportActivityCommand, ActivityDto>
 {
     public async Task<ActivityDto> Handle(ImportActivityCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.RequireAsync(cancellationToken);
-        if (await db.Activities.CountAsync(a => a.RunnerId == runner.Id, cancellationToken) >= Activity.MaxPerRunner)
+        var now = time.GetUtcNow();
+        if (await db.Activities.Visible(now).CountAsync(a => a.RunnerId == runner.Id, cancellationToken) >= Activity.MaxPerRunner)
         {
             throw new ConflictException("activity_limit", $"You can keep up to {Activity.MaxPerRunner:N0} runs. Delete an old one to add another.");
         }
 
         var recording = reader.Read(request.File);
         var startedAt = recording.StartedAt.ToUniversalTime();
-        if (await db.Activities.AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
+        var existing = await db.Activities.SingleOrDefaultAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken);
+        if (existing is { Source: ActivitySource.Upload })
         {
             throw Duplicate();
         }
 
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(runner.TimeZone);
-        var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(startedAt, zone).DateTime);
-        var activity = Activity.Record(runner.Id, recording, localDate, await PlannedOnAsync(runner.Id, localDate, cancellationToken));
+        var activity = await recorder.RecordAsync(runner, recording, ActivityOrigin.Upload, cancellationToken);
+
+        // The file of a run that was synced replaces the synced copy: uploads are the runner's own and are kept,
+        // where a synced copy lapses. The two are never merged into one record.
+        if (existing is not null)
+        {
+            db.Activities.Remove(existing);
+        }
 
         db.Activities.Add(activity);
         try
@@ -85,7 +93,7 @@ internal sealed class ImportActivityHandler(
             // The same file uploaded twice at once (a double tap): the unique index let only one in.
             // Anything else is a real failure: rethrow.
             db.Activities.Entry(activity).State = EntityState.Detached;
-            if (await db.Activities.AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
+            if (await db.Activities.AsNoTracking().AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
             {
                 throw Duplicate();
             }
@@ -99,67 +107,15 @@ internal sealed class ImportActivityHandler(
 
     private static ConflictException Duplicate() =>
         new("activity_exists", "You've already uploaded this run.");
-
-    /// <summary>Every run session the runner's active plans have on that day, with the pace each one asked for.</summary>
-    private async Task<IReadOnlyList<PlannedSessionMatch>> PlannedOnAsync(Guid runnerId, DateOnly date, CancellationToken cancellationToken)
-    {
-        var saved = await db.SavedPlans.AsNoTracking()
-            .Where(p => p.RunnerId == runnerId && p.Status == SavedPlanStatus.Active && p.Inputs.PlanFrom <= date)
-            .ToListAsync(cancellationToken);
-
-        List<PlannedSessionMatch> planned = [];
-        foreach (var plan in saved)
-        {
-            // Only plans that were running that day: a finished plan, or one whose race has left the calendar, has nothing to say.
-            var raceDate = plan.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug)?.Date : plan.Inputs.RaceDate;
-            if (raceDate is null || raceDate < date)
-            {
-                continue;
-            }
-
-            var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs));
-            var sessions = built.Weeks.SelectMany(w => w.Sessions).ToList();
-            var next = sessions.FirstOrDefault(s => s.Date > date && s.Type != SessionType.Strength);
-            planned.AddRange(sessions.Where(s => s.Date == date).Select(s => Snapshot(plan.Name, s, built, next)));
-        }
-
-        return planned;
-    }
-
-    private static PlannedSessionMatch Snapshot(string planName, PlannedSession session, TrainingPlan plan, PlannedSession? next)
-    {
-        double? Fastest(PaceZone? zone) => zone is { } z && plan.Paces.TryGetValue(z, out var range) ? Math.Round(range.Fastest.SecondsPerKilometre) : null;
-        double? Slowest(PaceZone? zone) => zone is { } z && plan.Paces.TryGetValue(z, out var range) ? Math.Round(range.Slowest.SecondsPerKilometre) : null;
-
-        var shape = session.Shape;
-        return new PlannedSessionMatch(
-            planName,
-            session.Type,
-            session.Title,
-            session.DistanceKm,
-            Fastest(session.Zone),
-            Slowest(session.Zone),
-            session.Zone,
-            shape.Shape,
-            Math.Round(shape.WorkKm, 2),
-            shape.WorkZone,
-            Fastest(shape.WorkZone),
-            Slowest(shape.WorkZone),
-            shape.RepMetres,
-            Fastest(PaceZone.Easy),
-            Slowest(PaceZone.Easy),
-            Math.Round(Pace.Of(plan.RaceDistance, plan.GoalTime).SecondsPerKilometre, 1),
-            next?.Title,
-            next?.Date);
-    }
 }
 
 /// <summary>Every best effort the runner has stored, so each run can be measured against the others.</summary>
-internal sealed class PersonalBests(IApplicationDbContext db)
+internal sealed class PersonalBests(IApplicationDbContext db, TimeProvider time)
 {
     public async Task<RunnerBests> ForRunnerAsync(Guid runnerId, CancellationToken cancellationToken)
     {
         var efforts = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
             .Where(a => a.RunnerId == runnerId)
             .SelectMany(a => a.BestEfforts.Select(e => new { ActivityId = a.Id, e.DistanceMetres, e.Elapsed }))
             .ToListAsync(cancellationToken);
@@ -179,7 +135,7 @@ internal sealed class RunnerBests(IReadOnlyList<(Guid ActivityId, double Distanc
 /// <summary>The runner's runs, newest first. At most <see cref="Activity.MaxPerRunner"/>, so no paging yet.</summary>
 public sealed record ListMyActivitiesQuery : IRequest<IReadOnlyList<ActivitySummaryDto>>;
 
-internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentRunner current)
+internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentRunner current, TimeProvider time)
     : IRequestHandler<ListMyActivitiesQuery, IReadOnlyList<ActivitySummaryDto>>
 {
     public async Task<IReadOnlyList<ActivitySummaryDto>> Handle(ListMyActivitiesQuery request, CancellationToken cancellationToken)
@@ -191,6 +147,7 @@ internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentR
         }
 
         var activities = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
             .Where(a => a.RunnerId == runner.Id)
             .OrderByDescending(a => a.StartedAt)
             .Take(Activity.MaxPerRunner)
@@ -201,7 +158,7 @@ internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentR
 
 public sealed record GetMyActivityQuery(Guid Id) : IRequest<ActivityDto>;
 
-internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests)
+internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests, TimeProvider time)
     : IRequestHandler<GetMyActivityQuery, ActivityDto>
 {
     public async Task<ActivityDto> Handle(GetMyActivityQuery request, CancellationToken cancellationToken)
@@ -211,6 +168,7 @@ internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunn
         var activity = runner is null
             ? null
             : await db.Activities.AsNoTracking()
+                .Visible(time.GetUtcNow())
                 .SingleOrDefaultAsync(a => a.Id == request.Id && a.RunnerId == runner.Id, cancellationToken);
         if (activity is null)
         {
@@ -240,5 +198,41 @@ internal sealed class DeleteMyActivityHandler(IApplicationDbContext db, CurrentR
         db.Activities.Remove(activity);
         await db.SaveChangesAsync(cancellationToken);
         return true;
+    }
+}
+
+/// <summary>The runner's fastest time at each standard distance, across every run they can see (uploads and synced).</summary>
+public sealed record ListMyBestsQuery : IRequest<IReadOnlyList<PersonalBestDto>>;
+
+internal sealed class ListMyBestsHandler(IApplicationDbContext db, CurrentRunner current, TimeProvider time)
+    : IRequestHandler<ListMyBestsQuery, IReadOnlyList<PersonalBestDto>>
+{
+    public async Task<IReadOnlyList<PersonalBestDto>> Handle(ListMyBestsQuery request, CancellationToken cancellationToken)
+    {
+        var runner = await current.FindAsync(cancellationToken);
+        if (runner is null)
+        {
+            return [];
+        }
+
+        var efforts = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
+            .Where(a => a.RunnerId == runner.Id)
+            .SelectMany(a => a.BestEfforts.Select(e => new { ActivityId = a.Id, a.LocalDate, a.Source, e.DistanceMetres, e.Elapsed }))
+            .ToListAsync(cancellationToken);
+
+        // The earliest run wins a tie: that's when the best was set.
+        return [.. efforts
+            .GroupBy(e => e.DistanceMetres)
+            .Select(g => g.OrderBy(e => e.Elapsed).ThenBy(e => e.LocalDate).First())
+            .OrderBy(e => e.DistanceMetres)
+            .Select(e => new PersonalBestDto(
+                StandardDistance.Find(e.DistanceMetres)?.Name ?? string.Create(CultureInfo.InvariantCulture, $"{e.DistanceMetres:0} m"),
+                e.DistanceMetres,
+                ActivitySummaryDto.Round(e.Elapsed.TotalSeconds, 1),
+                ActivitySummaryDto.Round(e.Elapsed.TotalSeconds / (e.DistanceMetres / 1000), 1),
+                e.ActivityId,
+                e.LocalDate,
+                e.Source))];
     }
 }

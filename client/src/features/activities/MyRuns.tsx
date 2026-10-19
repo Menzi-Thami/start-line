@@ -133,6 +133,7 @@ export function MyRuns({ units, onOpen }: Props) {
             <li className="week saved-plan" key={run.id}>
               <div>
                 <span className="week-name">{run.plannedTitle ?? KIND_LABEL[run.kind]}</span>
+                {run.source.kind === 'Strava' && <span className="tag">From Strava</span>}
                 <br />
                 <span className="week-meta mono">
                   {formatDate(run.localDate, 'short')} · {formatDistance(run.distanceKm, units)} · {formatDuration(run.movingSeconds)} ·{' '}

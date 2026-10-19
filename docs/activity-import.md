@@ -2,7 +2,8 @@
 
 Runners upload a run from their watch and see it against their plan. It's free all the way: Garmin's own developer
 API is business-only (and closed to new applications), and Strava's now needs a paid subscription, so the route is
-the file Garmin Connect already gives every user.
+the file Garmin Connect already gives every user. Runners on Strava can instead connect it once and have runs
+arrive by themselves: see `strava-sync.md`. Both go through the same analysis below.
 
 ## How a runner gets the file
 

@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { Units } from '../../lib/format'
 import type { ActivitySummary, TrainingPlan } from '../../lib/types'
 import plan5k from '../../test/fixtures/plan-5k.json'
+import { UPLOADED } from '../../test/sources'
 import { PlanView } from './PlanView'
 
 // A 5K plan from Monday 12 October to race day on Sunday 13 December 2026. Week 1 plans 17.5 km of running:
@@ -11,7 +12,7 @@ import { PlanView } from './PlanView'
 const plan = plan5k as TrainingPlan
 
 function run(id: string, localDate: string, distanceKm: number, time = '07:00'): ActivitySummary {
-  return { id, startedAt: `${localDate}T${time}:00Z`, localDate, kind: 'Run', distanceKm, movingSeconds: distanceKm * 360, paceSecondsPerKm: 360, plannedTitle: null }
+  return { id, startedAt: `${localDate}T${time}:00Z`, localDate, kind: 'Run', distanceKm, movingSeconds: distanceKm * 360, paceSecondsPerKm: 360, plannedTitle: null, plannedSessionType: null, pace: null, averageHeartRate: null, source: UPLOADED }
 }
 
 const runs = [

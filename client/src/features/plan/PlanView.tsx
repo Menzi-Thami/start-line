@@ -5,7 +5,8 @@ import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange
 import { planProgress } from '../../lib/plan-day'
 import { ranKmByWeek, runsByDate } from '../../lib/plan-runs'
 import { loadDone, saveDone } from '../../lib/storage'
-import type { ActivitySummary, PlanWeek, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
+import { Overview } from '../dashboard/Overview'
 import { StrengthTab } from '../strength/StrengthTab'
 import type { DoneUpdate } from '../strength/strength-progress'
 import { FOCUS, PHASES, ZONES } from './copy'
@@ -29,17 +30,24 @@ interface Props {
   runs?: ActivitySummary[]
   /** Opens one uploaded run. Without it, runs show in the plan but don't link anywhere. */
   onOpenRun?: (id: string) => void
+  /** The runner's fastest times, for the overview. */
+  bests?: PersonalBest[]
+  /** How Strava sync stands, for the overview's sync line. */
+  strava?: StravaStatus
+  onOpenAccount?: () => void
+  onOpenRuns?: () => void
 }
 
-// "This week" first: on most days it's all a runner needs.
-const TABS = [
+// "This week" first: on most days it's all a runner needs. Signed-in runners get the overview of what they ran next to it.
+const OVERVIEW_TAB = { id: 'overview', label: 'Overview' } as const
+const PLAN_TABS = [
   { id: 'week', label: 'This week' },
   { id: 'all', label: 'All weeks' },
   { id: 'strength', label: 'Strength' },
   { id: 'paces', label: 'Paces' },
   { id: 'progress', label: 'Progress' },
 ] as const
-type TabId = (typeof TABS)[number]['id']
+type TabId = (typeof PLAN_TABS)[number]['id'] | typeof OVERVIEW_TAB.id
 
 /** Which plan week contains today, if any. */
 function weekContaining(plan: TrainingPlan, today: string): number | null {
@@ -60,7 +68,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, calendar, runs, onOpenRun }: Props) {
+export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -69,6 +77,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
   const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle')
+  const tabs: readonly { id: TabId; label: string }[] = runs ? [PLAN_TABS[0], OVERVIEW_TAB, ...PLAN_TABS.slice(1)] : PLAN_TABS
   const [tab, setTab] = useState<TabId>('week')
   const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
   const currentWeek = weekContaining(plan, today)
@@ -141,19 +150,19 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
     URL.revokeObjectURL(url)
   }
 
-  const index = TABS.findIndex((t) => t.id === tab)
+  const index = tabs.findIndex((t) => t.id === tab)
 
   const showTab = (next: number, focus = false) => {
-    const target = TABS[(next + TABS.length) % TABS.length]!
+    const target = tabs[(next + tabs.length) % tabs.length]!
     if (target.id === tab) return
     setDirection(next > index ? 'forward' : 'back')
     setTab(target.id)
-    if (focus) tabRefs.current[TABS.indexOf(target)]?.focus()
+    if (focus) tabRefs.current[tabs.indexOf(target)]?.focus()
   }
 
   // Arrow keys move between tabs, as screen-reader users expect from a tab list.
   const onTabKey = (event: KeyboardEvent) => {
-    const moves: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: TABS.length - 1 }
+    const moves: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: tabs.length - 1 }
     const next = moves[event.key]
     if (next === undefined) return
     event.preventDefault()
@@ -175,7 +184,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
     if (Math.abs(dx) < 60 || Math.abs(dx) < 2 * Math.abs(dy)) return
     const next = index + (dx < 0 ? 1 : -1)
     // Swiping stops at the ends rather than wrapping round, which would feel like a jump.
-    if (next >= 0 && next < TABS.length) showTab(next)
+    if (next >= 0 && next < tabs.length) showTab(next)
   }
 
   const panel = (id: TabId) => ({
@@ -273,7 +282,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
       </div>
 
       <div className="tabs" role="tablist" aria-label="Your plan" onKeyDown={onTabKey}>
-        {TABS.map((t, i) => (
+        {tabs.map((t, i) => (
           <button
             key={t.id}
             ref={(el) => {
@@ -294,6 +303,23 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
       </div>
 
       <div className="tab-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {runs && (
+          <div {...panel('overview')}>
+            <Overview
+              plan={plan}
+              units={units}
+              today={today}
+              currentWeek={currentWeek}
+              week={shown?.when === 'now' ? shown.week : null}
+              runs={runs}
+              bests={bests}
+              strava={strava}
+              onOpenRun={onOpenRun}
+              onOpenAccount={onOpenAccount}
+              onOpenRuns={onOpenRuns}
+            />
+          </div>
+        )}
         <div {...panel('week')}>
           {progress.kind === 'race' && (
             <div className="race-day-card">
@@ -322,7 +348,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
               <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} />
               <p className="field-help">
                 Ticks are saved on this device.{' '}
-                <button type="button" className="link-button" onClick={() => showTab(1)}>
+                <button type="button" className="link-button" onClick={() => showTab(tabs.findIndex((t) => t.id === 'all'))}>
                   See every week
                 </button>
               </p>

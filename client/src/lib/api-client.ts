@@ -3,12 +3,15 @@ import type {
   Activity,
   ActivitySummary,
   GeneratePlanRequest,
+  PersonalBest,
   Prediction,
   Race,
   Runner,
   SavedPlan,
   SavedPlanSummary,
   SaveProfileRequest,
+  StravaDisconnected,
+  StravaStatus,
   TrainingPlan,
 } from './types'
 
@@ -125,5 +128,15 @@ export const api = {
     },
     deleteActivity: (token: string, id: string) =>
       request<void>(`/api/v1/me/activities/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
+    bests: (token: string) => request<PersonalBest[]>('/api/v1/me/activities/bests', {}, token),
+    strava: {
+      status: (token: string) => request<StravaStatus>('/api/v1/me/sync/strava', {}, token),
+      /** Where to send the runner to approve Taperday on Strava. */
+      authorize: (token: string) => request<{ authorizeUrl: string }>('/api/v1/me/sync/strava/authorize', { method: 'POST' }, token),
+      connect: (token: string, body: { code: string; state: string; scope: string | null }) =>
+        request<StravaStatus>('/api/v1/me/sync/strava', { method: 'POST', body: JSON.stringify(body) }, token),
+      catchUp: (token: string) => request<StravaStatus>('/api/v1/me/sync/strava/catch-up', { method: 'POST' }, token),
+      disconnect: (token: string) => request<StravaDisconnected>('/api/v1/me/sync/strava', { method: 'DELETE' }, token),
+    },
   },
 }

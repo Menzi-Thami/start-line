@@ -41,6 +41,7 @@ var names = {
   plan: 'asp-${appName}-${suffix}'
   api: 'app-${appName}-api-${suffix}'
   web: 'swa-${appName}-${suffix}'
+  vault: 'kv-${appName}-${suffix}'
 }
 
 // ---------- Monitoring: capped so a logging bug can never run up a bill ----------
@@ -135,6 +136,44 @@ resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   properties: { reserved: true }
 }
 
+// ---------- Key Vault: one key that wraps the Data Protection key ring (which encrypts Strava tokens) ----------
+// Software keys have no monthly fee; each wrap/unwrap is a fraction of a cent, and the API only unwraps at startup.
+resource vault 'Microsoft.KeyVault/vaults@2023-07-01' = {
+  name: names.vault
+  location: location
+  properties: {
+    tenantId: subscription().tenantId
+    sku: { family: 'A', name: 'standard' }
+    enableRbacAuthorization: true
+    enableSoftDelete: true
+    softDeleteRetentionInDays: 7
+    enablePurgeProtection: true
+  }
+}
+
+resource tokenKey 'Microsoft.KeyVault/vaults/keys@2023-07-01' = {
+  parent: vault
+  name: 'data-protection'
+  properties: {
+    kty: 'RSA'
+    keySize: 2048
+    keyOps: ['wrapKey', 'unwrapKey']
+  }
+}
+
+// Key Vault Crypto User: wrap and unwrap with the key, nothing else (no reading secrets, no managing the vault).
+var keyVaultCryptoUser = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '12338af0-0e69-4776-bea7-57ae8d297424')
+
+resource apiCanUseKey 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(vault.id, api.id, keyVaultCryptoUser)
+  scope: vault
+  properties: {
+    roleDefinitionId: keyVaultCryptoUser
+    principalId: api.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 var accountsOn = !empty(externalIdApiClientId)
 var baseSettings = [
   { name: 'ASPNETCORE_ENVIRONMENT', value: 'Production' }
@@ -174,7 +213,10 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       http20Enabled: true
-      appSettings: concat(baseSettings, identitySettings)
+      appSettings: concat(baseSettings, identitySettings, [
+        // Versionless, so a rotated key is picked up. Strava sync refuses to start outside development without it.
+        { name: 'DataProtection__KeyVaultKeyUri', value: tokenKey.properties.keyUri }
+      ])
     }
   }
 }

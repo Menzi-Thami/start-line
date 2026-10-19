@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { CalendarLinks } from '../../lib/calendar-links'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
+import { ranKmByWeek, runsByDate } from '../../lib/plan-runs'
 import { loadDone, saveDone } from '../../lib/storage'
-import type { PlanWeek, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, PlanWeek, TrainingPlan } from '../../lib/types'
 import { StrengthTab } from '../strength/StrengthTab'
 import type { DoneUpdate } from '../strength/strength-progress'
 import { FOCUS, PHASES, ZONES } from './copy'
@@ -12,6 +13,7 @@ import { trainingKm } from './plan-math'
 import { PlanProgress } from './PlanProgress'
 import { VolumeChart } from './VolumeChart'
 import { WeekDays, WeekList } from './WeekList'
+import { WeekTotals } from './WeekTotals'
 
 interface Props {
   plan: TrainingPlan
@@ -23,6 +25,10 @@ interface Props {
   toolbarExtra?: ReactNode
   /** Links that subscribe Apple, Google or Outlook calendars to this plan. Without them, only the file download shows. */
   calendar?: CalendarLinks
+  /** The runner's uploaded runs. Without them (signed out, or accounts off) the plan shows on its own. */
+  runs?: ActivitySummary[]
+  /** Opens one uploaded run. Without it, runs show in the plan but don't link anywhere. */
+  onOpenRun?: (id: string) => void
 }
 
 // "This week" first: on most days it's all a runner needs.
@@ -54,7 +60,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, calendar }: Props) {
+export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, calendar, runs, onOpenRun }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -70,6 +76,8 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
   const goalSeconds = parseTimeSpan(plan.goalTime) ?? 0
   const byZone = new Map(plan.paces.map((p) => [p.zone, p]))
   const progress = planProgress(plan, today)
+  const byDate = useMemo(() => (runs ? runsByDate(runs) : undefined), [runs])
+  const ran = useMemo(() => (runs ? ranKmByWeek(plan.weeks, runs, today) : undefined), [plan.weeks, runs, today])
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -311,7 +319,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
                   {PHASES[shown.week.phase]} · {formatDistance(trainingKm(shown.week), units)}
                 </p>
               </div>
-              <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} />
+              <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} />
               <p className="field-help">
                 Ticks are saved on this device.{' '}
                 <button type="button" className="link-button" onClick={() => showTab(1)}>
@@ -324,7 +332,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
 
         <div {...panel('all')}>
           <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
-          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} />
+          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} />
         </div>
 
         <div {...panel('strength')}>
@@ -349,7 +357,13 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
           <p className="tab-intro">{FOCUS[plan.category]}</p>
           <h3>Weekly distance</h3>
           <p>It builds gradually, eases off every fourth week, and drops away before race day so you start fresh.</p>
-          <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} />
+          <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
+          {ran && ran.size > 0 && (
+            <>
+              <h3 className="week-totals-title">What you ran</h3>
+              <WeekTotals weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
+            </>
+          )}
         </div>
       </div>
     </section>

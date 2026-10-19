@@ -1,5 +1,16 @@
 import { toTimeSpan } from './format'
-import type { GeneratePlanRequest, Prediction, Race, Runner, SavedPlan, SavedPlanSummary, SaveProfileRequest, TrainingPlan } from './types'
+import type {
+  Activity,
+  ActivitySummary,
+  GeneratePlanRequest,
+  Prediction,
+  Race,
+  Runner,
+  SavedPlan,
+  SavedPlanSummary,
+  SaveProfileRequest,
+  TrainingPlan,
+} from './types'
 
 /** The one place the app talks to the network. Every failure becomes an ApiError with words a runner can act on. */
 export class ApiError extends Error {
@@ -36,7 +47,8 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
       ...init,
       headers: {
         Accept: 'application/json',
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+        // A FormData body sets its own multipart Content-Type, boundary included.
+        ...(init.body && !(init.body instanceof FormData) ? { 'Content-Type': 'application/json' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init.headers,
       },
@@ -61,7 +73,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
   if (response.status === 429) {
     const wait = Number(response.headers.get('Retry-After'))
     throw new ApiError(
-      `That's a lot of plans in a short time. Try again in ${Number.isFinite(wait) && wait > 0 ? `${wait} seconds` : 'a minute'}.`,
+      `That's a lot in a short time. Try again in ${Number.isFinite(wait) && wait > 0 ? `${wait} seconds` : 'a minute'}.`,
       429,
     )
   }
@@ -104,5 +116,14 @@ export const api = {
       request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan }) }, token),
     deletePlan: (token: string, id: string) =>
       request<void>(`/api/v1/me/plans/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
+    activities: (token: string) => request<ActivitySummary[]>('/api/v1/me/activities', {}, token),
+    activity: (token: string, id: string) => request<Activity>(`/api/v1/me/activities/${encodeURIComponent(id)}`, {}, token),
+    uploadActivity: (token: string, file: File) => {
+      const body = new FormData()
+      body.append('file', file, file.name)
+      return request<Activity>('/api/v1/me/activities', { method: 'POST', body }, token)
+    },
+    deleteActivity: (token: string, id: string) =>
+      request<void>(`/api/v1/me/activities/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
   },
 }

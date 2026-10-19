@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 
@@ -10,6 +11,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
     public DbSet<Runner> Runners => Set<Runner>();
 
     public DbSet<SavedPlan> SavedPlans => Set<SavedPlan>();
+
+    public DbSet<Activity> Activities => Set<Activity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

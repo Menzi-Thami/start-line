@@ -18,6 +18,7 @@ const thandi: Runner = {
   units: 'Kilometres',
   weeklyEmails: true,
   consentedAt: '2026-10-08T09:00:00Z',
+  maxHeartRate: null,
 }
 
 /** A tiny in-memory stand-in for the account API that insists on the bearer token. */

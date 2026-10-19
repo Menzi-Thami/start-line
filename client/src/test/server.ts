@@ -16,6 +16,8 @@ export const handlers = [
     lastPlanRequest.body = await request.json()
     return HttpResponse.json(planFixture)
   }),
+  // Signed-in views list uploaded runs; none by default. Tests that need runs override this.
+  http.get('*/api/v1/me/activities', () => HttpResponse.json([])),
   http.get('*/api/v1/predictions', ({ request }) => {
     const url = new URL(request.url)
     return HttpResponse.json({ distanceKm: Number(url.searchParams.get('toKm')), predictedTime: '01:51:20', paceSecondsPerKm: 316.6 })

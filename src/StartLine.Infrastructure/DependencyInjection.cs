@@ -3,7 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StartLine.Application.Common;
+using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.Races;
+using StartLine.Infrastructure.Activities;
 using StartLine.Infrastructure.Persistence;
 using StartLine.Infrastructure.Races;
 
@@ -33,6 +35,8 @@ public static class DependencyInjection
         services.AddSingleton<IRaceSource, ConfiguredRaceSource>();
 
         services.AddHostedService<RaceSyncWorker>();
+
+        services.AddSingleton<IActivityFileReader, FitActivityFileReader>();
 
         services.AddOptions<DatabaseOptions>()
             .Configure<IConfiguration>((o, config) => o.ConnectionString = config.GetConnectionString(DatabaseOptions.ConnectionStringName) ?? "")

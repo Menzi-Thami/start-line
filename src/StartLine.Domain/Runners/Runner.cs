@@ -1,3 +1,4 @@
+using StartLine.Domain.Activities;
 using StartLine.Domain.Common;
 
 namespace StartLine.Domain.Runners;
@@ -38,6 +39,9 @@ public sealed class Runner
 
     public bool WeeklyEmails { get; private set; }
 
+    /// <summary>Optional. With it, a run shows time in heart-rate zones; without it, Taperday doesn't guess.</summary>
+    public int? MaxHeartRate { get; private set; }
+
     /// <summary>The version of the privacy notice the runner accepted, and when.</summary>
     public string PrivacyNoticeVersion { get; private set; } = "";
 
@@ -55,7 +59,8 @@ public sealed class Runner
         Units units,
         bool weeklyEmails,
         string privacyNoticeVersion,
-        DateTimeOffset consentedAt)
+        DateTimeOffset consentedAt,
+        int? maxHeartRate = null)
     {
         if (string.IsNullOrWhiteSpace(identitySubject))
         {
@@ -74,12 +79,17 @@ public sealed class Runner
             PrivacyNoticeVersion = privacyNoticeVersion,
             ConsentedAt = consentedAt,
         };
-        runner.UpdateProfile(email, displayName, timeZone, units, weeklyEmails);
+        runner.UpdateProfile(email, displayName, timeZone, units, weeklyEmails, maxHeartRate);
         return runner;
     }
 
-    public void UpdateProfile(string? email, string displayName, string timeZone, Units units, bool weeklyEmails)
+    public void UpdateProfile(string? email, string displayName, string timeZone, Units units, bool weeklyEmails, int? maxHeartRate = null)
     {
+        if (maxHeartRate is < HeartRateZones.LowestMaxHeartRate or > HeartRateZones.HighestMaxHeartRate)
+        {
+            throw new DomainException($"A max heart rate is between {HeartRateZones.LowestMaxHeartRate} and {HeartRateZones.HighestMaxHeartRate} beats a minute.");
+        }
+
         if (string.IsNullOrWhiteSpace(displayName) || displayName.Trim().Length > MaxNameLength)
         {
             throw new DomainException($"A display name is required and can be at most {MaxNameLength} characters.");
@@ -100,5 +110,6 @@ public sealed class Runner
         TimeZone = timeZone;
         Units = units;
         WeeklyEmails = weeklyEmails;
+        MaxHeartRate = maxHeartRate;
     }
 }

@@ -6,6 +6,8 @@ import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
 import { useRunner } from '../features/account/useRunner'
+import { ActivityPage } from '../features/activities/ActivityPage'
+import { MyRuns } from '../features/activities/MyRuns'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { RaceStartIntro } from '../features/home/RaceStartIntro'
@@ -16,7 +18,7 @@ import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
-import type { GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
+import type { Activity, ActivitySummary, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
 type PlanState =
@@ -25,7 +27,10 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'build' | 'plans' | 'account' | 'sign-up'
+type View = 'build' | 'plans' | 'runs' | 'account' | 'sign-up'
+
+/** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
+type OpenRun = { id: string; uploaded?: Activity }
 
 // Server field names (from ValidationProblemDetails) to the form's fields.
 const FIELD_FOR: Record<string, keyof FieldErrors> = {
@@ -50,9 +55,15 @@ function toFieldErrors(errors: Record<string, string[]>): FieldErrors {
   return mapped
 }
 
+const runFromUrl = (): OpenRun | null => {
+  const params = new URLSearchParams(window.location.search)
+  const id = params.get('view') === 'runs' ? params.get('run') : null
+  return id ? { id } : null
+}
+
 const viewFromUrl = (): View => {
   const view = new URLSearchParams(window.location.search).get('view')
-  return view === 'plans' || view === 'account' ? view : 'build'
+  return view === 'plans' || view === 'runs' || view === 'account' ? view : 'build'
 }
 
 export function App() {
@@ -61,6 +72,9 @@ export function App() {
   const runner = useRunner()
   const [initial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
   const [view, setView] = useState<View>(viewFromUrl)
+  const [openRun, setOpenRun] = useState<OpenRun | null>(runFromUrl)
+  // The runner's uploaded runs, shown inside the plan. Fetched when the plan view opens, so a new upload appears.
+  const [runs, setRuns] = useState<ActivitySummary[] | undefined>(undefined)
   const [units, setUnits] = useState<Units>(loadUnits)
   const [races, setRaces] = useState<RacesState>({ kind: 'loading' })
   // A shared link starts building straight away, so it opens in the loading state.
@@ -158,6 +172,22 @@ export function App() {
     if (playIntro) markIntroSeen()
   }, [playIntro])
 
+  useEffect(() => {
+    if (runner.state.kind !== 'ready' || view !== 'build') return
+    let cancelled = false
+    auth
+      .getToken()
+      .then((token) => (token ? api.me.activities(token) : undefined))
+      .then((list) => {
+        if (!cancelled && list) setRuns(list)
+      })
+      // The plan is the point of this view: if runs don't load, it shows without them rather than failing.
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [auth, runner.state.kind, view])
+
   // A shared link builds its plan straight away.
   useEffect(() => {
     if (initial) fetchPlan(initial)
@@ -166,14 +196,22 @@ export function App() {
 
   const go = (next: View) => {
     setView(next)
+    setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'plans' || next === 'account'
+      next === 'plans' || next === 'runs' || next === 'account'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
           : ''
     window.history.replaceState(null, '', query || window.location.pathname)
+    window.scrollTo?.({ top: 0 })
+  }
+
+  const showRun = (id: string, uploaded?: Activity) => {
+    setView('runs')
+    setOpenRun({ id, uploaded })
+    window.history.replaceState(null, '', `?view=runs&run=${encodeURIComponent(id)}`)
     window.scrollTo?.({ top: 0 })
   }
 
@@ -267,6 +305,9 @@ export function App() {
                     <button type="button" className="nav-link" aria-current={view === 'plans' ? 'page' : undefined} onClick={() => go('plans')}>
                       My plans
                     </button>
+                    <button type="button" className="nav-link" aria-current={view === 'runs' ? 'page' : undefined} onClick={() => go('runs')}>
+                      My runs
+                    </button>
                     <button type="button" className="nav-link" aria-current={view === 'account' ? 'page' : undefined} onClick={() => go('account')}>
                       Account
                     </button>
@@ -332,6 +373,22 @@ export function App() {
 
         {view === 'plans' && state.kind === 'ready' && <MyPlans onOpen={openSaved} onBuildNew={() => go('build')} />}
 
+        {view === 'runs' &&
+          state.kind === 'ready' &&
+          (openRun ? (
+            <ActivityPage
+              key={openRun.id}
+              id={openRun.id}
+              initial={openRun.uploaded}
+              units={units}
+              onBack={() => go('runs')}
+              onDeleted={() => go('runs')}
+              onOpenAccount={() => go('account')}
+            />
+          ) : (
+            <MyRuns units={units} onOpen={showRun} />
+          ))}
+
         {view === 'account' && state.kind === 'ready' && (
           <AccountPage
             runner={state.runner}
@@ -343,9 +400,9 @@ export function App() {
           />
         )}
 
-        {(view === 'plans' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
+        {(view === 'plans' || view === 'runs' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
           <div className="empty">
-            <p>Sign in to see your saved plans and account.</p>
+            <p>Sign in to see your saved plans, runs and account.</p>
             {state.kind === 'signed-out' && (
               <button type="button" className="button" onClick={auth.signIn} style={{ marginTop: 'var(--space-3)' }}>
                 Sign in
@@ -418,6 +475,8 @@ export function App() {
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
                 calendar={calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())}
                 today={today}
+                runs={state.kind === 'ready' ? runs : undefined}
+                onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
                 toolbarExtra={
                   <>
                     <button type="button" className="button button-quiet" onClick={changeAnswers}>

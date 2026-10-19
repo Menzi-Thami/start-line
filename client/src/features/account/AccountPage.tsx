@@ -59,7 +59,7 @@ export function AccountPage({ runner, onSaved, onDeleted }: Props) {
 
       <div className="section">
         <h3>Your data</h3>
-        <p>Download a copy of everything Taperday holds about you: your profile and every saved plan.</p>
+        <p>Download a copy of everything Taperday holds about you: your profile, every saved plan and every run you’ve uploaded.</p>
         <button type="button" className="button" onClick={() => void download()} disabled={status.kind === 'busy'}>
           Download my data
         </button>
@@ -68,7 +68,7 @@ export function AccountPage({ runner, onSaved, onDeleted }: Props) {
       <div className="section danger-zone">
         <h3>Delete account</h3>
         <p>
-          This deletes your profile and every saved plan straight away. It can’t be undone. Your sign-in itself is kept by
+          This deletes your profile, every saved plan and every uploaded run straight away. It can’t be undone. Your sign-in itself is kept by
           Microsoft; ask us if you want that removed too.
         </p>
         {confirmingDelete ? (

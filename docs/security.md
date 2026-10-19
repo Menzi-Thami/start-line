@@ -11,6 +11,7 @@ arrive. What's left is abuse: scraping, flooding and malformed input.
 | Rate limiting per client IP: global token bucket, plus 30 plans/min on plan generation, 429 + `Retry-After` | `PresentationDependencyInjection.AddRateLimiter` | `RateLimitTests` |
 | Real client IP taken from `X-Forwarded-For` **only** from configured proxies, so the header can't be forged to dodge limits | `ForwardedHeaders` options + `UseForwardedHeaders()` first in the pipeline | `HardeningTests` (both directions, mutation-checked) |
 | 16 KB request body cap (Kestrel + per-endpoint) and bounded list inputs | `Program.cs`, `PlansController`, `GeneratePlanValidator` | `HardeningTests` |
+| Activity upload is the one exception: 10 MB, runners only, 60/hour, zip unpacking capped at 40 MB and 250k samples, file thrown away after reading (see `docs/activity-import.md`) | `MyActivitiesController`, `FitActivityFileReader` | `ActivityImportTests` |
 | Strict validation before any work, with ProblemDetails and stable error codes; no stack traces in responses | `ValidationBehaviour`, `ProblemDetailsExceptionHandler` | `ApiTests`, `DispatcherPipelineTests` |
 | Security headers: `nosniff`, `X-Frame-Options: DENY`, `default-src 'none'` CSP, no referrer, permissions policy; HSTS outside development | `SecurityHeadersMiddleware`, `Program.cs` | `ApiTests` |
 | CORS allow-list (GET/POST, `Content-Type` only); empty by default | `Cors:AllowedOrigins` | |

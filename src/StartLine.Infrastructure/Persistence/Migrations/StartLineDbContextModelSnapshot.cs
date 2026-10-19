@@ -23,6 +23,188 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("StartLine.Domain.Activities.Activity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("AverageHeartRate")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Calories")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double>("DistanceMetres")
+                        .HasColumnType("float");
+
+                    b.Property<double>("ElapsedTime")
+                        .HasColumnType("float")
+                        .HasColumnName("ElapsedSeconds");
+
+                    b.Property<double?>("ElevationGainMetres")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("HeartRateDriftPercent")
+                        .HasColumnType("float");
+
+                    b.Property<string>("HeartRateTime")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("HeartRateSeconds");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly>("LocalDate")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("MaxHeartRate")
+                        .HasColumnType("int");
+
+                    b.Property<double>("MovingTime")
+                        .HasColumnType("float")
+                        .HasColumnName("MovingSeconds");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Halves", "StartLine.Domain.Activities.Activity.Halves#Halves", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<double>("FirstHalf")
+                                .HasColumnType("float")
+                                .HasColumnName("FirstHalfSeconds");
+
+                            b1.Property<double>("HalfMetres")
+                                .HasColumnType("float")
+                                .HasColumnName("HalfMetres");
+
+                            b1.Property<double>("SecondHalf")
+                                .HasColumnType("float")
+                                .HasColumnName("SecondHalfSeconds");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "PlannedSession", "StartLine.Domain.Activities.Activity.PlannedSession#PlannedSessionMatch", b1 =>
+                        {
+                            b1.Property<double>("DistanceKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedDistanceKm");
+
+                            b1.Property<double?>("EasyFastestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedEasyFastestPace");
+
+                            b1.Property<double?>("EasySlowestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedEasySlowestPace");
+
+                            b1.Property<double?>("FastestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedFastestPace");
+
+                            b1.Property<double?>("GoalPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedGoalPace");
+
+                            b1.Property<DateOnly?>("NextDate")
+                                .HasColumnType("date")
+                                .HasColumnName("PlannedNextDate");
+
+                            b1.Property<string>("NextTitle")
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)")
+                                .HasColumnName("PlannedNextTitle");
+
+                            b1.Property<string>("PlanName")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)")
+                                .HasColumnName("PlannedPlanName");
+
+                            b1.Property<double?>("RepMetres")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedRepMetres");
+
+                            b1.Property<string>("SessionType")
+                                .IsRequired()
+                                .HasMaxLength(32)
+                                .HasColumnType("nvarchar(32)")
+                                .HasColumnName("PlannedSessionType");
+
+                            b1.Property<string>("Shape")
+                                .IsRequired()
+                                .HasMaxLength(16)
+                                .HasColumnType("nvarchar(16)")
+                                .HasColumnName("PlannedShape");
+
+                            b1.Property<double?>("SlowestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedSlowestPace");
+
+                            b1.Property<string>("Title")
+                                .IsRequired()
+                                .HasMaxLength(100)
+                                .HasColumnType("nvarchar(100)")
+                                .HasColumnName("PlannedTitle");
+
+                            b1.Property<double?>("WorkFastestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedWorkFastestPace");
+
+                            b1.Property<double>("WorkKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedWorkKm");
+
+                            b1.Property<double?>("WorkSlowestPaceSecondsPerKm")
+                                .HasColumnType("float")
+                                .HasColumnName("PlannedWorkSlowestPace");
+
+                            b1.Property<string>("WorkZone")
+                                .HasMaxLength(16)
+                                .HasColumnType("nvarchar(16)")
+                                .HasColumnName("PlannedWorkZone");
+
+                            b1.Property<string>("Zone")
+                                .HasMaxLength(16)
+                                .HasColumnType("nvarchar(16)")
+                                .HasColumnName("PlannedZone");
+                        });
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Work", "StartLine.Domain.Activities.Activity.Work#WorkWindow", b1 =>
+                        {
+                            b1.Property<double>("Elapsed")
+                                .HasColumnType("float")
+                                .HasColumnName("WorkSeconds");
+
+                            b1.Property<double>("Metres")
+                                .HasColumnType("float")
+                                .HasColumnName("WorkMetres");
+
+                            b1.Property<double>("StartMetres")
+                                .HasColumnType("float")
+                                .HasColumnName("WorkStartMetres");
+                        });
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId", "StartedAt")
+                        .IsUnique();
+
+                    b.ToTable("Activities", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -140,6 +322,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<int?>("MaxHeartRate")
+                        .HasColumnType("int");
+
                     b.Property<string>("PrivacyNoticeVersion")
                         .IsRequired()
                         .HasMaxLength(32)
@@ -167,6 +352,68 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Runners", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Activities.Activity", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.OwnsMany("StartLine.Domain.Activities.BestEffort", "BestEfforts", b1 =>
+                        {
+                            b1.Property<Guid>("ActivityId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<double>("DistanceMetres")
+                                .HasColumnType("float");
+
+                            b1.Property<double>("Elapsed")
+                                .HasColumnType("float")
+                                .HasColumnName("ElapsedSeconds");
+
+                            b1.HasKey("ActivityId", "DistanceMetres");
+
+                            b1.ToTable("ActivityBestEfforts", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ActivityId");
+                        });
+
+                    b.OwnsMany("StartLine.Domain.Activities.Split", "Splits", b1 =>
+                        {
+                            b1.Property<Guid>("ActivityId")
+                                .HasColumnType("uniqueidentifier");
+
+                            b1.Property<int>("Number")
+                                .HasColumnType("int");
+
+                            b1.Property<int?>("AverageHeartRate")
+                                .HasColumnType("int");
+
+                            b1.Property<double>("DistanceMetres")
+                                .HasColumnType("float");
+
+                            b1.Property<double?>("ElevationChangeMetres")
+                                .HasColumnType("float");
+
+                            b1.Property<double>("MovingTime")
+                                .HasColumnType("float")
+                                .HasColumnName("MovingSeconds");
+
+                            b1.HasKey("ActivityId", "Number");
+
+                            b1.ToTable("ActivitySplits", (string)null);
+
+                            b1.WithOwner()
+                                .HasForeignKey("ActivityId");
+                        });
+
+                    b.Navigation("BestEfforts");
+
+                    b.Navigation("Splits");
                 });
 
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>

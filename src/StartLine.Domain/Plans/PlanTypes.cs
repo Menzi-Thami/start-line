@@ -63,7 +63,8 @@ public sealed record PlannedSession(
     string Detail,
     string Purpose,
     double DistanceKm,
-    PaceZone? Zone);
+    PaceZone? Zone,
+    IReadOnlyList<StrengthExercise>? Exercises = null);
 
 public sealed record PlanWeek(
     int Number,

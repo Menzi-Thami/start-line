@@ -386,6 +386,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plans/calendar.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    RaceSlug?: string;
+                    RaceName?: string;
+                    DistanceKm?: number;
+                    RaceDate?: string;
+                    GoalTime?: string;
+                    RunDays?: components["schemas"]["DayOfWeek"][];
+                    LongRunDay?: components["schemas"]["DayOfWeek"];
+                    CurrentWeeklyKm?: number;
+                    Experience?: components["schemas"]["Experience"];
+                    StrengthDays?: components["schemas"]["DayOfWeek"][];
+                    PlanFrom?: string;
+                    units?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/calendar": string;
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/calendar": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/calendar": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/predictions": {
         parameters: {
             query?: never;
@@ -489,6 +555,8 @@ export interface components {
         DayOfWeek: "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday";
         /** @enum {unknown} */
         DistanceCategory: "FiveK" | "TenK" | "HalfMarathon" | "Marathon" | "Ultra" | "LongUltra";
+        /** @enum {unknown} */
+        Exercise: "Squat" | "RomanianDeadlift" | "ReverseLunge" | "BulgarianSplitSquat" | "StepUp" | "GluteBridge" | "CalfRaise" | "Plank" | "SidePlank" | "SquatJump";
         /**
          * @default Regular
          * @enum {unknown}
@@ -572,6 +640,8 @@ export interface components {
             /** Format: double */
             distanceKm: number;
         };
+        /** @enum {unknown} */
+        RepUnit: "Reps" | "RepsEachLeg" | "Seconds" | "SecondsEachSide";
         RunnerDto: {
             /** Format: uuid */
             id: string;
@@ -634,9 +704,18 @@ export interface components {
             /** Format: double */
             distanceKm: number;
             zone: null | components["schemas"]["PaceZone"];
+            exercises: components["schemas"]["StrengthExerciseDto"][];
         };
         /** @enum {unknown} */
         SessionType: "Easy" | "Recovery" | "EasyWithStrides" | "Hills" | "Fartlek" | "Intervals" | "Tempo" | "CruiseIntervals" | "ProgressionRun" | "RacePace" | "MediumLongRun" | "LongRun" | "LongRunFastFinish" | "LongRunRacePace" | "Shakeout" | "Race" | "Strength";
+        StrengthExerciseDto: {
+            exercise: components["schemas"]["Exercise"];
+            /** Format: int32 */
+            sets: number;
+            /** Format: int32 */
+            reps: number;
+            unit: components["schemas"]["RepUnit"];
+        };
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";
         TrainingPlanDto: {

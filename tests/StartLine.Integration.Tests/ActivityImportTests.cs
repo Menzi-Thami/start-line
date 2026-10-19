@@ -78,7 +78,7 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
         run.GetProperty("paceSecondsPerKm").GetDouble().ShouldBe(300, tolerance: 0.5);
         run.GetProperty("elevationGainMetres").GetDouble().ShouldBe(20);
         run.GetProperty("averageHeartRate").GetInt32().ShouldBe(150);
-        run.GetProperty("maxHeartRate").GetInt32().ShouldBe(160);
+        run.GetProperty("maxHeartRate").GetInt32().ShouldBe(150);
         run.GetProperty("calories").GetInt32().ShouldBe(700);
         run.GetProperty("splits").GetArrayLength().ShouldBe(10);
         run.GetProperty("halves").GetProperty("verdict").GetString().ShouldBe("Even");
@@ -87,6 +87,23 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
         efforts.Select(e => e.GetProperty("name").GetString()).ShouldBe(["400 m", "½ mile", "1K", "1 mile", "2 mile", "5K", "10K"]);
         efforts.ShouldAllBe(e => e.GetProperty("isPersonalBest").GetBoolean());
         run.GetProperty("plan").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task A_run_that_fades_marks_its_hardest_kilometre_and_its_slower_second_half()
+    {
+        Stretch[] fade = [new(4000, 300, HeartRate: 150), new(1000, 290, HeartRate: 158), new(4000, 320, HeartRate: 162), new(1000, 345, 25, 170)];
+
+        var run = await Uploaded(await SignedUp(), FitFiles.Run(Morning, fade));
+
+        var splits = run.GetProperty("splits").EnumerateArray().ToList();
+        splits.Single(s => s.GetProperty("isQuickest").GetBoolean()).GetProperty("number").GetInt32().ShouldBe(5);
+        splits.Single(s => s.GetProperty("isHardest").GetBoolean()).GetProperty("number").GetInt32().ShouldBe(10);
+        splits[9].GetProperty("averageHeartRate").GetInt32().ShouldBe(170);
+        var halves = run.GetProperty("halves");
+        halves.GetProperty("verdict").GetString().ShouldBe("PositiveSplit");
+        halves.GetProperty("secondHalfSlowerBySecondsPerKm").GetDouble().ShouldBe(27, tolerance: 0.5);
+        run.GetProperty("maxHeartRate").GetInt32().ShouldBe(170);
     }
 
     [Fact]

@@ -33,6 +33,8 @@ dotnet run --project src/StartLine.API --launch-profile http   # http://localhos
 
 ## Layout
 - `Domain/Running` — `Distance`, `Pace`, `RaceTimePredictor` (Riegel), `TrainingPaces` (zones from goal).
+- `Domain/Activities` — an uploaded run: `Track` (moving time, interpolation), `Splits`, `Halves`, `BestEfforts`,
+  `PlannedSessionMatch`. Read from Garmin .fit by `Infrastructure/Activities`; see `docs/activity-import.md`.
 - `Domain/Plans` — `TrainingPlanGenerator` (phases, volume, taper), `WeekLayout` (which run goes on which
   chosen day), `WorkoutBuilder` (concrete sessions per distance), `PlanProfile` (per-distance shape).
 - `Application/Features/{Plans,Races,Predictions}` — query + validator + handler per feature.

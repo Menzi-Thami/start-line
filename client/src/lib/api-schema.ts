@@ -144,6 +144,183 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/activities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ActivitySummaryDto"][];
+                        "application/json": components["schemas"]["ActivitySummaryDto"][];
+                        "text/json": components["schemas"]["ActivitySummaryDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "multipart/form-data": {
+                        file?: components["schemas"]["IFormFile"];
+                    };
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ActivityDto"];
+                        "application/json": components["schemas"]["ActivityDto"];
+                        "text/json": components["schemas"]["ActivityDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/activities/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ActivityDto"];
+                        "application/json": components["schemas"]["ActivityDto"];
+                        "text/json": components["schemas"]["ActivityDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans": {
         parameters: {
             query?: never;
@@ -386,6 +563,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/plans/calendar.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    RaceSlug?: string;
+                    RaceName?: string;
+                    DistanceKm?: number;
+                    RaceDate?: string;
+                    GoalTime?: string;
+                    RunDays?: components["schemas"]["DayOfWeek"][];
+                    LongRunDay?: components["schemas"]["DayOfWeek"];
+                    CurrentWeeklyKm?: number;
+                    Experience?: components["schemas"]["Experience"];
+                    StrengthDays?: components["schemas"]["DayOfWeek"][];
+                    PlanFrom?: string;
+                    units?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/calendar": string;
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/calendar": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/calendar": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/predictions": {
         parameters: {
             query?: never;
@@ -482,6 +725,64 @@ export interface components {
         AccountExportDto: {
             profile: components["schemas"]["RunnerDto"];
             plans: components["schemas"]["SavedPlanExportDto"][];
+            activities: components["schemas"]["ActivityDto"][];
+        };
+        ActivityDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date */
+            localDate: string;
+            kind: components["schemas"]["ActivityKind"];
+            /** Format: double */
+            distanceKm: number;
+            /** Format: double */
+            movingSeconds: number;
+            /** Format: double */
+            elapsedSeconds: number;
+            /** Format: double */
+            paceSecondsPerKm: number;
+            /** Format: double */
+            elevationGainMetres: null | number;
+            /** Format: int32 */
+            averageHeartRate: null | number;
+            /** Format: int32 */
+            maxHeartRate: null | number;
+            /** Format: int32 */
+            calories: null | number;
+            plan: null | components["schemas"]["PlannedVsActualDto"];
+            splits: components["schemas"]["SplitDto"][];
+            halves: components["schemas"]["HalvesDto"];
+            bestEfforts: components["schemas"]["BestEffortDto"][];
+        };
+        /** @enum {unknown} */
+        ActivityKind: "Run" | "TrailRun" | "TreadmillRun" | "Other";
+        ActivitySummaryDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date */
+            localDate: string;
+            kind: components["schemas"]["ActivityKind"];
+            /** Format: double */
+            distanceKm: number;
+            /** Format: double */
+            movingSeconds: number;
+            /** Format: double */
+            paceSecondsPerKm: number;
+            plannedTitle: null | string;
+        };
+        BestEffortDto: {
+            name: string;
+            /** Format: double */
+            distanceMetres: number;
+            /** Format: double */
+            seconds: number;
+            /** Format: double */
+            paceSecondsPerKm: number;
+            isPersonalBest: boolean;
         };
         /** @enum {unknown} */
         DateStatus: "Confirmed" | "Provisional";
@@ -511,6 +812,19 @@ export interface components {
             /** Format: date */
             planFrom?: null | string;
         };
+        HalvesDto: {
+            /** Format: double */
+            firstHalfPaceSecondsPerKm: number;
+            /** Format: double */
+            secondHalfPaceSecondsPerKm: number;
+            /** Format: double */
+            secondHalfSlowerBySecondsPerKm: number;
+            verdict: components["schemas"]["PacingVerdict"];
+        };
+        /** Format: binary */
+        IFormFile: string;
+        /** @enum {unknown} */
+        PaceVerdict: "NoTarget" | "Faster" | "OnTarget" | "Slower";
         /** @enum {unknown} */
         PaceZone: "Recovery" | "Easy" | "LongRun" | "Tempo" | "Interval" | "Race";
         PaceZoneDto: {
@@ -519,6 +833,28 @@ export interface components {
             fastestSecondsPerKm: number;
             /** Format: double */
             slowestSecondsPerKm: number;
+        };
+        /** @enum {unknown} */
+        PacingVerdict: "NegativeSplit" | "Even" | "PositiveSplit";
+        PlannedVsActualDto: {
+            planName: string;
+            sessionType: components["schemas"]["SessionType"];
+            title: string;
+            /** Format: double */
+            plannedKm: number;
+            /** Format: double */
+            fastestPaceSecondsPerKm: null | number;
+            /** Format: double */
+            slowestPaceSecondsPerKm: null | number;
+            /** Format: double */
+            actualKm: number;
+            /** Format: double */
+            actualPaceSecondsPerKm: number;
+            /** Format: double */
+            distanceDifferenceKm: number;
+            pace: components["schemas"]["PaceVerdict"];
+            /** Format: double */
+            secondsPerKmOffTarget: number;
         };
         PlanWarningDto: {
             code: string;
@@ -637,6 +973,22 @@ export interface components {
         };
         /** @enum {unknown} */
         SessionType: "Easy" | "Recovery" | "EasyWithStrides" | "Hills" | "Fartlek" | "Intervals" | "Tempo" | "CruiseIntervals" | "ProgressionRun" | "RacePace" | "MediumLongRun" | "LongRun" | "LongRunFastFinish" | "LongRunRacePace" | "Shakeout" | "Race" | "Strength";
+        SplitDto: {
+            /** Format: int32 */
+            number: number;
+            /** Format: double */
+            distanceKm: number;
+            /** Format: double */
+            movingSeconds: number;
+            /** Format: double */
+            paceSecondsPerKm: number;
+            /** Format: double */
+            elevationChangeMetres: null | number;
+            /** Format: int32 */
+            averageHeartRate: null | number;
+            isQuickest: boolean;
+            isHardest: boolean;
+        };
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";
         TrainingPlanDto: {

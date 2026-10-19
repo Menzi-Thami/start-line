@@ -2741,6 +2741,222 @@ a.menu-item {
   overflow: hidden;
 }
 
+/* ---------- Runs: uploading, and one run's numbers, splits and best efforts ---------- */
+.upload h3 {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-2);
+}
+
+.upload-steps {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-5);
+  color: var(--ink-2);
+}
+
+.upload label.button {
+  display: inline-flex;
+  align-items: center;
+}
+
+.upload label.button:focus-within {
+  box-shadow: var(--focus);
+}
+
+.upload label.is-busy {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.activity-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+}
+
+.stat {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--glass);
+  border: 1px solid var(--line);
+}
+
+.stat dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.stat dd {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.stat-lead dd {
+  font-size: var(--text-2xl);
+  color: var(--accent);
+}
+
+.plan-vs-actual h3 {
+  font-size: var(--text-lg);
+}
+
+.vs-rows {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.vs-label {
+  display: inline-block;
+  min-width: 5.5rem;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+/* The verdict's edge colour echoes the effort ramp; the words always say what it means. */
+.vs-verdict {
+  margin-top: var(--space-4);
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--line-strong);
+  color: var(--ink-2);
+}
+
+.vs-verdict[data-pace='OnTarget'] {
+  border-left-color: var(--accent);
+}
+
+.vs-verdict[data-pace='Faster'] {
+  border-left-color: var(--effort-interval);
+}
+
+.vs-verdict[data-pace='Slower'] {
+  border-left-color: var(--violet);
+}
+
+.splits {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.splits th,
+.splits td {
+  padding: var(--space-2);
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.splits thead th {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.split-bar-cell {
+  width: 38%;
+}
+
+.split-bar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--effort-easy);
+}
+
+.split-quickest .split-bar {
+  background: var(--accent);
+}
+
+.split-hardest .split-bar {
+  background: var(--coral);
+}
+
+.tag-quickest {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tag-hardest {
+  background: rgba(255, 90, 54, 0.16);
+  color: var(--danger-ink);
+}
+
+.efforts {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.effort {
+  display: grid;
+  grid-template-columns: 1fr auto auto 2.75rem;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--glass);
+  border: 1px solid var(--line);
+}
+
+.effort-name {
+  font-weight: 700;
+}
+
+.effort-time {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.effort-pace {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+.tag-pb {
+  justify-self: end;
+  margin-left: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+@media (max-width: 30rem) {
+  .split-bar-cell {
+    width: 22%;
+  }
+
+  .splits th,
+  .splits td {
+    padding-inline: var(--space-1);
+  }
+
+  .splits .tag {
+    display: table;
+    margin: var(--space-1) 0 0;
+  }
+
+  .effort {
+    grid-template-columns: 1fr auto 2.75rem;
+    gap: var(--space-3);
+  }
+
+  .effort-pace {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

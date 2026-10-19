@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StartLine.Domain.Activities;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
+using StartLine.Domain.Sync;
 
 namespace StartLine.Infrastructure.Persistence;
 
@@ -25,6 +26,8 @@ internal sealed class RunnerConfiguration : IEntityTypeConfiguration<Runner>
         builder.Property(r => r.PrivacyNoticeVersion).HasMaxLength(32).IsRequired();
         builder.HasMany<SavedPlan>().WithOne().HasForeignKey(p => p.RunnerId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany<Activity>().WithOne().HasForeignKey(a => a.RunnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany<ProviderConnection>().WithOne().HasForeignKey(c => c.RunnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany<SyncJob>().WithOne().HasForeignKey(j => j.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -79,9 +82,14 @@ internal sealed class ActivityConfiguration : IEntityTypeConfiguration<Activity>
         builder.ToTable("Activities");
         builder.HasKey(a => a.Id);
         builder.Property(a => a.Id).ValueGeneratedNever();
-        // One upload per run: the same start time from the same runner is the same file.
+        // One record per run: the same start time from the same runner is the same run, uploaded or synced.
         builder.HasIndex(a => new { a.RunnerId, a.StartedAt }).IsUnique();
         builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(16);
+        builder.Property(a => a.Source).HasConversion<string>().HasMaxLength(16).HasDefaultValue(ActivitySource.Upload).HasSentinel(ActivitySource.Upload);
+        builder.Property(a => a.ExternalId).HasMaxLength(ActivityOrigin.MaxExternalIdLength);
+        builder.HasIndex(a => new { a.RunnerId, a.Source, a.ExternalId });
+        // The sync worker looks for lapsed copies on every pass.
+        builder.HasIndex(a => a.CachedUntil).HasFilter("[CachedUntil] IS NOT NULL");
         builder.Property(a => a.MovingTime).HasColumnName("MovingSeconds").HasConversion(Seconds);
         builder.Property(a => a.ElapsedTime).HasColumnName("ElapsedSeconds").HasConversion(Seconds);
 
@@ -164,4 +172,40 @@ internal static class HeartRateTimeColumn
             var parts = pair.Split(':');
             return new HeartRateTime(int.Parse(parts[0], CultureInfo.InvariantCulture), double.Parse(parts[1], CultureInfo.InvariantCulture));
         })];
+}
+
+internal sealed class ProviderConnectionConfiguration : IEntityTypeConfiguration<ProviderConnection>
+{
+    public void Configure(EntityTypeBuilder<ProviderConnection> builder)
+    {
+        builder.ToTable("ProviderConnections");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
+        builder.Property(c => c.Provider).HasConversion<string>().HasMaxLength(16);
+        builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Property(c => c.Scopes).HasMaxLength(ProviderConnection.MaxScopesLength).IsRequired();
+        // Encrypted with Data Protection before they get here; never stored or logged in the clear.
+        builder.Property(c => c.AccessToken).HasMaxLength(ProviderConnection.MaxTokenLength).IsRequired();
+        builder.Property(c => c.RefreshToken).HasMaxLength(ProviderConnection.MaxTokenLength).IsRequired();
+        builder.Property(c => c.Version).IsRowVersion();
+        builder.HasIndex(c => new { c.RunnerId, c.Provider }).IsUnique();
+        // One Taperday account per Strava account.
+        builder.HasIndex(c => new { c.Provider, c.ExternalAthleteId }).IsUnique();
+        builder.Ignore(c => c.IncludesPrivateRuns);
+    }
+}
+
+internal sealed class SyncJobConfiguration : IEntityTypeConfiguration<SyncJob>
+{
+    public void Configure(EntityTypeBuilder<SyncJob> builder)
+    {
+        builder.ToTable("SyncJobs");
+        builder.HasKey(j => j.Id);
+        builder.Property(j => j.Id).ValueGeneratedNever();
+        builder.Property(j => j.Provider).HasConversion<string>().HasMaxLength(16);
+        builder.Property(j => j.Kind).HasConversion<string>().HasMaxLength(16);
+        builder.Property(j => j.LastError).HasMaxLength(SyncJob.MaxErrorLength);
+        builder.HasIndex(j => new { j.Failed, j.NotBefore, j.Priority });
+        builder.HasIndex(j => new { j.RunnerId, j.Kind, j.ObjectId });
+    }
 }

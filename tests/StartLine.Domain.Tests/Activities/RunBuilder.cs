@@ -65,4 +65,7 @@ internal sealed class RunBuilder
 
     public Activity Record(params PlannedSessionMatch[] planned) =>
         Activity.Record(Guid.NewGuid(), Build(), DateOnly.FromDateTime(Start.UtcDateTime), planned);
+
+    public Activity Record(ActivityOrigin origin) =>
+        Activity.Record(Guid.NewGuid(), Build(), DateOnly.FromDateTime(Start.UtcDateTime), [], origin);
 }

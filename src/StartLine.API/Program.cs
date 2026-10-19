@@ -20,8 +20,17 @@ builder.Host.UseDefaultServiceProvider(o =>
 
 builder.Services
     .AddApplication()
-    .AddInfrastructure()
+    .AddInfrastructure(builder.Configuration)
     .AddPresentation(builder.Configuration, builder.Environment);
+
+// Strava tokens are only as safe as the key ring that encrypts them. Outside development that ring must be wrapped by
+// Key Vault, or a copy of the database would be enough to read them.
+if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing")
+    && !string.IsNullOrWhiteSpace(builder.Configuration["Strava:ClientId"])
+    && string.IsNullOrWhiteSpace(builder.Configuration[StartLine.Infrastructure.DependencyInjection.KeyVaultKeySetting]))
+{
+    throw new InvalidOperationException($"Strava is configured but {StartLine.Infrastructure.DependencyInjection.KeyVaultKeySetting} isn't: set it so tokens are encrypted with a Key Vault key.");
+}
 
 var app = builder.Build();
 

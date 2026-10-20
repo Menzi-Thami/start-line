@@ -81,20 +81,20 @@ internal sealed class WorkoutBuilder(
 
     public static PlannedSession Strength(DateOnly date, TrainingPhase phase, bool isCutback)
     {
+        // The detail is the short intro; the exercises themselves travel as a list, in the order to do them.
         var exercises = StrengthRoutine.For(phase, isCutback);
-        var routine = StrengthRoutine.Describe(exercises);
         return (phase, isCutback) switch
         {
             (TrainingPhase.Taper, _) or (_, true) => new(date, SessionType.Strength, "Mobility + light strength",
-                $"About 20 min: hip, hamstring and ankle mobility, then {routine}. Keep it light.",
+                "About 20 min. Start with hip, hamstring and ankle mobility, then work down the list. Keep it light.",
                 "Keeps you supple and strong without adding fatigue in an easier week.",
                 0, null, Exercises: exercises),
             (TrainingPhase.Base, _) => new(date, SessionType.Strength, "Strength & mobility",
-                $"About 30 min: {routine}. Rest about a minute between sets, then 5 min of mobility.",
+                "About 30 min. Work down the list in order, resting about a minute between sets, then finish with 5 min of mobility.",
                 "Stronger legs and hips hold your form late in a race and help keep injuries away.",
                 0, null, Exercises: exercises),
             _ => new(date, SessionType.Strength, "Strength & mobility",
-                $"About 35 min: {routine}. Hold a weight once the last reps stop feeling hard, and rest a minute between sets.",
+                "About 35 min. Work down the list in order, resting a minute between sets. Hold a weight once the last reps stop feeling hard.",
                 "Single-leg strength and a little spring: running is a series of one-legged hops.",
                 0, null, Exercises: exercises),
         };

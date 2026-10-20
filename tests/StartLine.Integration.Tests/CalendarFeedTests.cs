@@ -30,6 +30,17 @@ public sealed class CalendarFeedTests(StartLineApiFactory factory) : IClassFixtu
     }
 
     [Fact]
+    public async Task Lists_strength_exercises_in_order_under_the_intro()
+    {
+        var ics = await (await Feed(ComradesQuery + "&strengthDays=Monday")).Content.ReadAsStringAsync();
+        var unfolded = ics.Replace("\r\n ", "", StringComparison.Ordinal);
+
+        var strength = unfolded.Split("BEGIN:VEVENT").Skip(1).First(e => e.Contains("SUMMARY:Strength", StringComparison.Ordinal));
+        strength.ShouldContain("About 30 min. Work down the list in order");
+        strength.ShouldContain(@"\n\n1. 3 × 10 squats\n2. 3 × 10 Romanian deadlifts\n3. 3 × 8 reverse lunges each leg");
+    }
+
+    [Fact]
     public async Task Puts_every_session_in_with_race_day_last()
     {
         var ics = await (await Feed(ComradesQuery)).Content.ReadAsStringAsync();

@@ -11,7 +11,9 @@ export interface Prop {
 
 export interface ExerciseInfo {
   name: string
-  /** How to do it, in the order you'd do it. */
+  /** How to do it, in a sentence or two. */
+  howTo: string
+  /** Two or three short things to keep in mind while doing it. */
   cues: string[]
   why: string
   /** Two poses the figure moves between, or one it holds (planks), breathing. */
@@ -46,12 +48,8 @@ const squatBottom: PoseSpec = {
 export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   Squat: {
     name: 'Squat',
-    cues: [
-      'Feet hip-width apart, toes turned out a little.',
-      'Sit back and down until your thighs are about level with the floor.',
-      'Keep your chest up and your knees in line with your toes.',
-      'Drive up through your whole foot.',
-    ],
+    howTo: 'Feet hip-width apart, sit back and down until your thighs are about level with the floor, then drive up through your whole foot.',
+    cues: ['Chest up', 'Knees in line with your toes', 'Weight through your heels'],
     why: 'Builds the quads and glutes that absorb every landing.',
     frames: [
       standing([
@@ -64,12 +62,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   RomanianDeadlift: {
     name: 'Romanian deadlift',
-    cues: [
-      'Stand tall holding a weight, or a loaded backpack, against your thighs.',
-      'Soften your knees, then push your hips back and let the weight slide down your legs.',
-      'Keep your back flat and stop when you feel a stretch in your hamstrings.',
-      'Squeeze your glutes to stand back up.',
-    ],
+    howTo: 'Holding a weight against your thighs, push your hips back and slide it down your legs until your hamstrings stretch, then squeeze your glutes to stand.',
+    cues: ['Flat back', 'Soft knees', 'Keep the weight close to your legs'],
     why: 'Strong hamstrings and glutes power your push-off and hold up late in a race.',
     frames: [
       standing(),
@@ -88,12 +82,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   ReverseLunge: {
     name: 'Reverse lunge',
-    cues: [
-      'Stand tall with your hands on your hips.',
-      'Step one foot back and lower until your back knee nearly touches the floor.',
-      'Keep your front knee over your ankle and your body upright.',
-      'Push through your front heel to step back up. Do every rep on one leg, then switch.',
-    ],
+    howTo: 'Step one foot back and lower until the back knee nearly touches the floor, then push through the front heel to stand. Every rep on one leg, then switch.',
+    cues: ['Front knee over the ankle', 'Body upright', 'Control the way down'],
     why: 'Single-leg strength and balance, which is what running asks for.',
     frames: [
       { hip: [58, 52], lean: 2, legs: [flat(65), flat(62)], arms: [onHips, onHips] },
@@ -108,12 +98,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   BulgarianSplitSquat: {
     name: 'Bulgarian split squat',
-    cues: [
-      'Stand a long stride in front of a bench or step and rest the laces of your back foot on it.',
-      'Lower straight down until your front thigh is about level with the floor.',
-      'Keep most of your weight on your front foot and your chest up.',
-      'Drive up through your front heel. Finish one leg, then switch.',
-    ],
+    howTo: 'With the laces of your back foot on a bench a long stride behind you, lower straight down until the front thigh is level, then drive up. One leg, then the other.',
+    cues: ['Most of your weight on the front foot', 'Chest up', 'Front knee tracks over your toes'],
     why: 'The best single-leg builder for runners: hips, quads and balance in one move.',
     frames: [
       {
@@ -134,12 +120,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   StepUp: {
     name: 'Step-up',
-    cues: [
-      'Put one whole foot on a sturdy step or bench, about knee height.',
-      'Push through that foot to stand tall on the step, bringing your other knee up.',
-      'Lower yourself slowly, with control.',
-      'Finish one leg, then switch.',
-    ],
+    howTo: 'Put one whole foot on a knee-high step, push through it to stand tall and bring the other knee up, then lower slowly. One leg, then the other.',
+    cues: ['Whole foot on the step', 'Don’t push off the back foot', 'Slow on the way down'],
     why: 'Copies the drive of running uphill, one leg at a time.',
     frames: [
       {
@@ -160,11 +142,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   GluteBridge: {
     name: 'Glute bridge',
-    cues: [
-      'Lie on your back with your knees bent and your feet flat, close to your hips.',
-      'Squeeze your glutes and lift your hips until you are in a straight line from knees to shoulders.',
-      'Pause for a second at the top, then lower slowly.',
-    ],
+    howTo: 'Lie on your back with knees bent and feet flat, lift your hips until knees, hips and shoulders line up, pause, then lower slowly.',
+    cues: ['Squeeze your glutes at the top', 'Ribs down: don’t arch your back', 'Push through your heels'],
     why: 'Wakes up the glutes, which keep your hips level when you are tired.',
     frames: [
       {
@@ -190,12 +169,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   CalfRaise: {
     name: 'Calf raise',
-    cues: [
-      'Stand tall, with a hand on a wall for balance if you need it.',
-      'Rise onto the balls of your feet as high as you can.',
-      'Lower slowly, taking about three seconds.',
-      'When it says each leg, stand on one foot and do them one leg at a time.',
-    ],
+    howTo: 'Rise onto the balls of your feet as high as you can, then lower over about three seconds. When it says each leg, stand on one foot.',
+    cues: ['A hand on a wall for balance', 'All the way up', 'Slow on the way down'],
     why: 'Your calves take several times your body weight on every stride. Strong ones keep you springy to the finish.',
     frames: [
       { hip: [57, 52], lean: 0, legs: [flat(64), flat(61)], arms: [hanging, hanging] },
@@ -213,12 +188,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   Plank: {
     name: 'Plank',
-    cues: [
-      'Forearms on the floor, elbows under your shoulders.',
-      'Lift your hips so you are in a straight line from head to heels.',
-      'Squeeze your glutes, brace your stomach and keep breathing.',
-      'Stop when your hips start to sag.',
-    ],
+    howTo: 'Forearms on the floor, elbows under your shoulders, then lift your hips so you’re in a straight line from head to heels, and hold.',
+    cues: ['Squeeze your glutes and brace', 'Keep breathing', 'Stop when your hips sag'],
     why: 'A steady trunk stops you folding over when you tire.',
     frames: [
       {
@@ -238,12 +209,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   SidePlank: {
     name: 'Side plank',
-    cues: [
-      'Lie on your side with your elbow under your shoulder and your feet stacked.',
-      'Lift your hips until your body is a straight line.',
-      'Reach your top arm to the ceiling and hold.',
-      'Then switch sides.',
-    ],
+    howTo: 'On your side with your elbow under your shoulder and feet stacked, lift your hips into a straight line and hold. Then switch sides.',
+    cues: ['Hips high and forward', 'Top arm to the ceiling', 'Keep breathing'],
     why: 'Strengthens the sides of your hips and trunk, which keep your pelvis level on every stride.',
     frames: [
       {
@@ -263,12 +230,8 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
   },
   SquatJump: {
     name: 'Squat jump',
-    cues: [
-      'Squat down with your arms back.',
-      'Swing your arms and jump straight up as high as you can.',
-      'Land softly on the balls of your feet and sink straight into the next squat.',
-      'Stop the set when the jumps start getting lower.',
-    ],
+    howTo: 'Squat down with your arms back, then swing them forward and jump straight up. Land softly and sink straight into the next one.',
+    cues: ['Land on the balls of your feet', 'Soft knees on landing', 'Stop the set when the jumps get lower'],
     why: 'Adds spring: it trains your legs to push off quickly.',
     frames: [
       {
@@ -296,7 +259,7 @@ export const EXERCISES: Record<Exercise, ExerciseInfo> = {
 }
 
 /** "3 × 10", "3 × 8 each leg", "3 × 30 s" or "2 × 30 s each side". */
-export function formatDose({ sets, reps, unit }: StrengthExercise): string {
+export function formatDose({ sets, reps, unit }: Pick<StrengthExercise, 'sets' | 'reps' | 'unit'>): string {
   return `${sets} × ${formatSet({ reps, unit })}`
 }
 

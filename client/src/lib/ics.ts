@@ -36,7 +36,9 @@ export function buildIcs(plan: TrainingPlan, units: Units, now: Date = new Date(
         pace ? formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units) : null,
       ].filter(Boolean)
       const summary = numbers.length > 0 ? `${session.title} · ${numbers.join(' at ')}` : session.title
-      const description = `${session.detail}\n\nWhy: ${session.purpose}\n\nWeek ${week.number} of ${plan.weeks.length} for ${plan.race.name}.`
+      // Strength exercises go in as a numbered list under the intro, in the order to do them (as the API feed does).
+      const exercises = session.exercises.length > 0 ? `\n\n${session.exercises.map((e, i) => `${i + 1}. ${e.summary}`).join('\n')}` : ''
+      const description = `${session.detail}${exercises}\n\nWhy: ${session.purpose}\n\nWeek ${week.number} of ${plan.weeks.length} for ${plan.race.name}.`
 
       lines.push(
         'BEGIN:VEVENT',

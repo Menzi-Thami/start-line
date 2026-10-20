@@ -1142,6 +1142,7 @@ export interface components {
             /** Format: int32 */
             reps: number;
             unit: components["schemas"]["RepUnit"];
+            summary: string;
         };
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";

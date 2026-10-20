@@ -85,6 +85,7 @@ export function ExerciseFigure({ exercise, size = 96 }: Props) {
       strokeLinecap="round"
       strokeLinejoin="round"
       className={`runner exercise-figure${animate ? '' : ' is-still'}`}
+      data-exercise={exercise}
     >
       <line className="exercise-floor" x1="4" y1={FLOOR + 4} x2={VIEW.width - 4} y2={FLOOR + 4} />
       {info.prop && (

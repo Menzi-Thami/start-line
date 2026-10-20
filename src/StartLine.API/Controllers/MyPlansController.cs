@@ -36,6 +36,13 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken) =>
         Ok(await dispatcher.Send(new GetMyPlanQuery(id), cancellationToken));
 
+    /// <summary>Makes a past plan the current one again. The plan that was current becomes a past plan.</summary>
+    [HttpPost("{id:guid}/restore")]
+    [ProducesResponseType<SavedPlanSummaryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Restore(Guid id, CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new RestoreMyPlanCommand(id), cancellationToken));
+
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

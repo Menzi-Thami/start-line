@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace StartLine.Integration.Tests;
 
@@ -219,19 +221,105 @@ public sealed class AccountTests(StartLineApiFactory factory) : IClassFixture<St
         (await Json(await client.GetAsync(Url("/api/v1/me/plans")))).GetArrayLength().ShouldBe(0);
     }
 
+    private static readonly object CapeTownPlan = new
+    {
+        raceSlug = "cape-town-marathon-2027",
+        goalTime = "03:45:00",
+        runDays = new[] { "Tuesday", "Thursday", "Saturday", "Sunday" },
+        longRunDay = "Sunday",
+        currentWeeklyKm = 35,
+    };
+
+    private static async Task<List<JsonElement>> Plans(HttpClient client) =>
+        [.. (await Json(await client.GetAsync(Url("/api/v1/me/plans")))).EnumerateArray()];
+
     [Fact]
-    public async Task Runners_can_keep_at_most_twenty_plans()
+    public async Task A_runner_has_one_current_plan_and_must_choose_to_replace_it()
     {
         var client = await SignedUp(NewRunner());
-        for (var i = 0; i < 20; i++)
+        await Save(client);
+
+        var second = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = CapeTownPlan });
+
+        second.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await Json(second)).GetProperty("code").GetString().ShouldBe("plan_active");
+        (await Plans(client)).ShouldHaveSingleItem().GetProperty("status").GetString().ShouldBe("Active");
+    }
+
+    [Fact]
+    public async Task Replacing_with_another_race_keeps_the_old_plan_as_a_past_plan()
+    {
+        var client = await SignedUp(NewRunner());
+        var comrades = await Save(client);
+
+        var response = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = CapeTownPlan, replaceCurrent = true });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var plans = await Plans(client);
+        plans.Count.ShouldBe(2);
+        plans[0].GetProperty("raceName").GetString().ShouldBe("Cape Town Marathon");
+        plans[0].GetProperty("status").GetString().ShouldBe("Active");
+        plans[1].GetProperty("id").GetGuid().ShouldBe(comrades);
+        plans[1].GetProperty("status").GetString().ShouldBe("Archived");
+        (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{comrades}")))).GetProperty("status").GetString().ShouldBe("Archived");
+    }
+
+    [Fact]
+    public async Task New_answers_for_the_same_race_update_the_current_plan_in_place()
+    {
+        var client = await SignedUp(NewRunner());
+        var id = await Save(client);
+
+        var response = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new
         {
-            await Save(client);
-        }
+            plan = new { raceSlug = "comrades-2027", goalTime = "10:00:00", runDays = new[] { "Tuesday", "Thursday", "Saturday", "Sunday" }, longRunDay = "Sunday", currentWeeklyKm = 50 },
+            replaceCurrent = true,
+        });
 
-        var response = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = ComradesPlan });
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await Json(response)).GetProperty("id").GetGuid().ShouldBe(id);
+        (await Plans(client)).ShouldHaveSingleItem();
+        var saved = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        saved.GetProperty("inputs").GetProperty("goalTime").GetString().ShouldBe("10:00:00");
+    }
 
-        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        (await Json(response)).GetProperty("code").GetString().ShouldBe("plan_limit");
+    [Fact]
+    public async Task A_past_plan_can_be_made_current_again()
+    {
+        var client = await SignedUp(NewRunner());
+        var comrades = await Save(client);
+        await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = CapeTownPlan, replaceCurrent = true });
+
+        var restored = await client.PostAsync(Url($"/api/v1/me/plans/{comrades}/restore"), null);
+
+        restored.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var plans = await Plans(client);
+        plans.Single(p => p.GetProperty("status").GetString() == "Active").GetProperty("id").GetGuid().ShouldBe(comrades);
+        plans.Count(p => p.GetProperty("status").GetString() == "Archived").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Someone_else_cannot_restore_my_plan()
+    {
+        var me = await SignedUp(NewRunner());
+        var id = await Save(me);
+
+        (await (await SignedUp(NewRunner())).PostAsync(Url($"/api/v1/me/plans/{id}/restore"), null)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Replacing_never_leaves_two_current_plans()
+    {
+        var client = await SignedUp(NewRunner());
+        await Save(client);
+        await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = CapeTownPlan, replaceCurrent = true });
+
+        // A unique index in the database backs the rule up.
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<StartLine.Infrastructure.Persistence.StartLineDbContext>();
+        var subject = client.DefaultRequestHeaders.GetValues(TestAuth.UserHeader).Single();
+        var runner = await db.Runners.SingleAsync(r => r.IdentitySubject == subject);
+        (await db.SavedPlans.CountAsync(p => p.RunnerId == runner.Id && p.Status == StartLine.Domain.Plans.SavedPlanStatus.Active)).ShouldBe(1);
     }
 
     [Fact]

@@ -3640,3 +3640,15 @@ a.menu-item {
   align-items: center;
   gap: var(--space-2);
 }
+
+/* "Checking your account…", and after a few seconds why it's slow and a way out. */
+.sign-in-wait {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  margin: var(--space-6) 0;
+}
+
+.sign-in-wait p {
+  margin: 0;
+}

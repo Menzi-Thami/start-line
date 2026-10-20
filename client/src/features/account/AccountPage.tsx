@@ -11,10 +11,12 @@ interface Props {
   onDeleted: () => void
   /** What happened on the way back from connecting Strava, if the runner just did. */
   stravaNotice?: string | null
+  /** Strava just sent the runner back and the connection is still being saved. */
+  stravaConnecting?: boolean
 }
 
 /** Profile, a copy of everything we hold, and the way out. */
-export function AccountPage({ runner, onSaved, onDeleted, stravaNotice }: Props) {
+export function AccountPage({ runner, onSaved, onDeleted, stravaNotice, stravaConnecting = false }: Props) {
   const auth = useAuth()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'error'; message: string }>({ kind: 'idle' })
@@ -60,7 +62,7 @@ export function AccountPage({ runner, onSaved, onDeleted, stravaNotice }: Props)
         <ProfileForm runner={runner} onSaved={onSaved} />
       </div>
 
-      <StravaSection notice={stravaNotice} />
+      <StravaSection notice={stravaNotice} connecting={stravaConnecting} />
 
       <div className="section">
         <h3>Your data</h3>

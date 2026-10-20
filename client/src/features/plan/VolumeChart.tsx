@@ -41,7 +41,7 @@ export function VolumeChart({ weeks, units, currentWeek, ran }: Props) {
   return (
     <figure className="volume">
       <div
-        className="volume-plot"
+        className={`volume-plot${weeks.length > LABEL_EVERY_BAR ? ' is-dense' : ''}`}
         role="img"
         aria-label={`Weekly distance over ${weeks.length} weeks, peaking at ${formatDistance(values[biggest] ?? 0, units)}`}
         style={{ ['--weeks' as string]: weeks.length } as CSSProperties}

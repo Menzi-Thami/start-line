@@ -164,14 +164,20 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
     }
 
     [Fact]
-    public async Task A_file_that_isnt_fit_is_rejected_with_a_hint()
+    public async Task A_file_that_isnt_an_activity_is_rejected_with_a_hint()
     {
-        var response = await Upload(await SignedUp(), "<gpx>not a fit file</gpx>"u8.ToArray(), "run.gpx");
+        // Not FIT and not XML: it goes to the FIT reader, which points the runner at Export Original.
+        var binary = await Upload(await SignedUp(), "this is not an activity file"u8.ToArray(), "run.dat");
 
-        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        var problem = await Json(response);
-        Code(problem).ShouldBe("validation_failed");
-        problem.GetProperty("errors").GetProperty("file")[0].GetString()!.ShouldContain("Export Original");
+        binary.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        Code(await Json(binary)).ShouldBe("validation_failed");
+        (await Json(binary)).GetProperty("errors").GetProperty("file")[0].GetString()!.ShouldContain("Export Original");
+
+        // A .gpx that has no track points gets a GPX-appropriate hint instead.
+        var emptyGpx = await Upload(await SignedUp(), "<gpx><trk><trkseg></trkseg></trk></gpx>"u8.ToArray(), "run.gpx");
+
+        emptyGpx.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await Json(emptyGpx)).GetProperty("errors").GetProperty("file")[0].GetString()!.ShouldContain("track points");
     }
 
     [Fact]

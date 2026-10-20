@@ -44,7 +44,7 @@ public static class DependencyInjection
 
         services.AddHostedService<RaceSyncWorker>();
 
-        services.AddSingleton<IActivityFileReader, FitActivityFileReader>();
+        services.AddSingleton<IActivityFileReader, ActivityFileReader>();
 
         services.AddOptions<DatabaseOptions>()
             .Configure<IConfiguration>((o, config) => o.ConnectionString = config.GetConnectionString(DatabaseOptions.ConnectionStringName) ?? "")

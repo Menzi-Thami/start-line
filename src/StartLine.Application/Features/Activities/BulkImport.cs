@@ -49,7 +49,7 @@ internal sealed class ImportActivitiesValidator : AbstractValidator<ImportActivi
     public ImportActivitiesValidator()
     {
         RuleFor(c => c.Files)
-            .NotEmpty().WithMessage("Choose at least one .fit file to upload.")
+            .NotEmpty().WithMessage("Choose at least one run file to upload.")
             .Must(f => f.Count <= BulkUpload.MaxFilesPerBatch).WithMessage($"Send at most {BulkUpload.MaxFilesPerBatch} files at a time.")
             .Must(f => f.Sum(file => file.Content.CanSeek ? file.Content.Length : 0) <= BulkUpload.MaxBatchBytes)
             .WithMessage($"Send at most {BulkUpload.MaxBatchBytes / 1024 / 1024} MB at a time.")

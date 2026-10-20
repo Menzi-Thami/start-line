@@ -52,6 +52,8 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(16);
         builder.Property(p => p.Version).IsRowVersion();
         builder.HasIndex(p => new { p.RunnerId, p.Status, p.UpdatedAt });
+        // One current plan per runner, whatever the application does.
+        builder.HasIndex(p => p.RunnerId).IsUnique().HasFilter("[Status] = 'Active'").HasDatabaseName("IX_SavedPlans_OneActivePerRunner");
 
         builder.ComplexProperty(p => p.Inputs, inputs =>
         {

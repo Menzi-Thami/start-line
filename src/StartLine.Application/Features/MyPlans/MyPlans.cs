@@ -10,9 +10,9 @@ using StartLine.Domain.Plans;
 
 namespace StartLine.Application.Features.MyPlans;
 
-public sealed record SavedPlanSummaryDto(Guid Id, string Name, string RaceName, DateOnly? RaceDate, DateTimeOffset CreatedAt);
+public sealed record SavedPlanSummaryDto(Guid Id, string Name, string RaceName, DateOnly? RaceDate, DateTimeOffset CreatedAt, SavedPlanStatus Status);
 
-public sealed record SavedPlanDto(Guid Id, string Name, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, TrainingPlanDto Plan);
+public sealed record SavedPlanDto(Guid Id, string Name, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, TrainingPlanDto Plan, SavedPlanStatus Status);
 
 public sealed record SavedPlanExportDto(Guid Id, string Name, SavedPlanStatus Status, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs)
 {
@@ -43,8 +43,12 @@ internal static class SavedPlanMapping
         i.Experience, i.StrengthDays, i.PlanFrom);
 }
 
-/// <summary>Saves the plan the runner just built. Pinning PlanFrom keeps the saved plan stable over time.</summary>
-public sealed record SavePlanCommand(string? Name, GeneratePlanQuery Plan) : IRequest<SavedPlanSummaryDto>;
+/// <summary>
+/// Saves the plan the runner just built as their current plan. Pinning PlanFrom keeps it stable over time. A runner has
+/// one plan at a time: with one already, <see cref="ReplaceCurrent"/> must be set. The same race then updates the current
+/// plan in place; a different race moves the current plan to the past plans.
+/// </summary>
+public sealed record SavePlanCommand(string? Name, GeneratePlanQuery Plan, bool ReplaceCurrent = false) : IRequest<SavedPlanSummaryDto>;
 
 internal sealed class SavePlanValidator : AbstractValidator<SavePlanCommand>
 {
@@ -55,27 +59,58 @@ internal sealed class SavePlanValidator : AbstractValidator<SavePlanCommand>
     }
 }
 
-internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time)
+internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time)
     : IRequestHandler<SavePlanCommand, SavedPlanSummaryDto>
 {
     public async Task<SavedPlanSummaryDto> Handle(SavePlanCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.RequireAsync(cancellationToken);
 
-        var active = await db.SavedPlans.CountAsync(p => p.RunnerId == runner.Id && p.Status == SavedPlanStatus.Active, cancellationToken);
-        if (active >= SavedPlan.MaxActivePerRunner)
-        {
-            throw new ConflictException("plan_limit", $"You can keep up to {SavedPlan.MaxActivePerRunner} plans. Delete one to save another.");
-        }
-
         // Build first: a plan that can't be generated must never be saved.
         var inputs = SavedPlanMapping.ToInputs(request.Plan, DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime));
         var plan = builder.Build(SavedPlanMapping.ToQuery(inputs));
+        var name = string.IsNullOrWhiteSpace(request.Name) ? plan.Race.Name : request.Name;
 
-        var saved = SavedPlan.Create(runner.Id, string.IsNullOrWhiteSpace(request.Name) ? plan.Race.Name : request.Name, inputs);
+        var active = await db.SavedPlans.SingleOrDefaultAsync(p => p.RunnerId == runner.Id && p.Status == SavedPlanStatus.Active, cancellationToken);
+        if (active is not null && !request.ReplaceCurrent)
+        {
+            throw new ConflictException("plan_active", $"Your current plan is {active.Name}. Replace it to make this your plan.");
+        }
+
+        if (active is not null && active.IsForSameRace(inputs))
+        {
+            active.Update(inputs);
+            active.Rename(name);
+            await db.SaveChangesAsync(cancellationToken);
+            return SavedPlanSummaries.Of(active, catalogue);
+        }
+
+        if (await db.SavedPlans.CountAsync(p => p.RunnerId == runner.Id, cancellationToken) >= SavedPlan.MaxKeptPerRunner)
+        {
+            throw new ConflictException("plan_limit", $"You can keep up to {SavedPlan.MaxKeptPerRunner} plans. Delete a past plan to save another.");
+        }
+
+        var saved = SavedPlan.Create(runner.Id, name, inputs);
+        if (active is not null)
+        {
+            active.Archive();
+
+            // The archive goes first, or the one-current-plan index would see two at once.
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         db.SavedPlans.Add(saved);
         await db.SaveChangesAsync(cancellationToken);
-        return new SavedPlanSummaryDto(saved.Id, saved.Name, plan.Race.Name, plan.Race.Date, saved.CreatedAt);
+        return SavedPlanSummaries.Of(saved, catalogue);
+    }
+}
+
+internal static class SavedPlanSummaries
+{
+    public static SavedPlanSummaryDto Of(SavedPlan p, IRaceCatalogue catalogue)
+    {
+        var race = p.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug) : null;
+        return new SavedPlanSummaryDto(p.Id, p.Name, race?.Name ?? p.Inputs.RaceName ?? "Your race", race?.Date ?? p.Inputs.RaceDate, p.CreatedAt, p.Status);
     }
 }
 
@@ -92,17 +127,14 @@ internal sealed class ListMyPlansHandler(IApplicationDbContext db, CurrentRunner
             return [];
         }
 
+        // The current plan first, then past plans, newest first.
         var plans = await db.SavedPlans.AsNoTracking()
-            .Where(p => p.RunnerId == runner.Id && p.Status == SavedPlanStatus.Active)
-            .OrderByDescending(p => p.UpdatedAt).ThenByDescending(p => p.Id)
-            .Take(SavedPlan.MaxActivePerRunner)
+            .Where(p => p.RunnerId == runner.Id)
+            .OrderBy(p => p.Status).ThenByDescending(p => p.UpdatedAt).ThenByDescending(p => p.Id)
+            .Take(SavedPlan.MaxKeptPerRunner)
             .ToListAsync(cancellationToken);
 
-        return [.. plans.Select(p =>
-        {
-            var race = p.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug) : null;
-            return new SavedPlanSummaryDto(p.Id, p.Name, race?.Name ?? p.Inputs.RaceName ?? "Your race", race?.Date ?? p.Inputs.RaceDate, p.CreatedAt);
-        })];
+        return [.. plans.Select(p => SavedPlanSummaries.Of(p, catalogue))];
     }
 }
 
@@ -125,7 +157,38 @@ internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner c
         }
 
         var query = SavedPlanMapping.ToQuery(saved.Inputs);
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query));
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query), saved.Status);
+    }
+}
+
+/// <summary>Makes a past plan the current one again; the plan that was current becomes a past plan.</summary>
+public sealed record RestoreMyPlanCommand(Guid Id) : IRequest<SavedPlanSummaryDto>;
+
+internal sealed class RestoreMyPlanHandler(IApplicationDbContext db, CurrentRunner current, IRaceCatalogue catalogue)
+    : IRequestHandler<RestoreMyPlanCommand, SavedPlanSummaryDto>
+{
+    public async Task<SavedPlanSummaryDto> Handle(RestoreMyPlanCommand request, CancellationToken cancellationToken)
+    {
+        var runner = await current.FindAsync(cancellationToken);
+        var plans = runner is null
+            ? []
+            : await db.SavedPlans.Where(p => p.RunnerId == runner.Id && (p.Id == request.Id || p.Status == SavedPlanStatus.Active)).ToListAsync(cancellationToken);
+        var chosen = plans.SingleOrDefault(p => p.Id == request.Id) ?? throw new NotFoundException("Saved plan", request.Id.ToString());
+        if (chosen.Status == SavedPlanStatus.Active)
+        {
+            return SavedPlanSummaries.Of(chosen, catalogue);
+        }
+
+        foreach (var other in plans.Where(p => p.Id != chosen.Id))
+        {
+            other.Archive();
+        }
+
+        // Archive first, then restore, so the one-current-plan index never sees two.
+        await db.SaveChangesAsync(cancellationToken);
+        chosen.Restore();
+        await db.SaveChangesAsync(cancellationToken);
+        return SavedPlanSummaries.Of(chosen, catalogue);
     }
 }
 

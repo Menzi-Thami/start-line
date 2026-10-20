@@ -47,110 +47,15 @@ internal sealed class ImportActivityValidator : AbstractValidator<ImportActivity
     }
 }
 
-internal sealed class ImportActivityHandler(
-    IApplicationDbContext db,
-    CurrentRunner current,
-    IActivityFileReader reader,
-    PlanBuilder builder,
-    IRaceCatalogue catalogue,
-    PersonalBests personalBests)
+internal sealed class ImportActivityHandler(CurrentRunner current, ActivityImporter importer, PersonalBests personalBests)
     : IRequestHandler<ImportActivityCommand, ActivityDto>
 {
     public async Task<ActivityDto> Handle(ImportActivityCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.RequireAsync(cancellationToken);
-        if (await db.Activities.CountAsync(a => a.RunnerId == runner.Id, cancellationToken) >= Activity.MaxPerRunner)
-        {
-            throw new ConflictException("activity_limit", $"You can keep up to {Activity.MaxPerRunner:N0} runs. Delete an old one to add another.");
-        }
-
-        var recording = reader.Read(request.File);
-        var startedAt = recording.StartedAt.ToUniversalTime();
-        if (await db.Activities.AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
-        {
-            throw Duplicate();
-        }
-
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(runner.TimeZone);
-        var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(startedAt, zone).DateTime);
-        var activity = Activity.Record(runner.Id, recording, localDate, await PlannedOnAsync(runner.Id, localDate, cancellationToken));
-
-        db.Activities.Add(activity);
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            // The same file uploaded twice at once (a double tap): the unique index let only one in.
-            // Anything else is a real failure: rethrow.
-            db.Activities.Entry(activity).State = EntityState.Detached;
-            if (await db.Activities.AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
-            {
-                throw Duplicate();
-            }
-
-            throw;
-        }
-
+        var activity = await importer.ImportAsync(runner, request.File, cancellationToken);
         var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
         return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate);
-    }
-
-    private static ConflictException Duplicate() =>
-        new("activity_exists", "You've already uploaded this run.");
-
-    /// <summary>Every run session the runner's active plans have on that day, with the pace each one asked for.</summary>
-    private async Task<IReadOnlyList<PlannedSessionMatch>> PlannedOnAsync(Guid runnerId, DateOnly date, CancellationToken cancellationToken)
-    {
-        var saved = await db.SavedPlans.AsNoTracking()
-            .Where(p => p.RunnerId == runnerId && p.Status == SavedPlanStatus.Active && p.Inputs.PlanFrom <= date)
-            .ToListAsync(cancellationToken);
-
-        List<PlannedSessionMatch> planned = [];
-        foreach (var plan in saved)
-        {
-            // Only plans that were running that day: a finished plan, or one whose race has left the calendar, has nothing to say.
-            var raceDate = plan.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug)?.Date : plan.Inputs.RaceDate;
-            if (raceDate is null || raceDate < date)
-            {
-                continue;
-            }
-
-            var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs));
-            var sessions = built.Weeks.SelectMany(w => w.Sessions).ToList();
-            var next = sessions.FirstOrDefault(s => s.Date > date && s.Type != SessionType.Strength);
-            planned.AddRange(sessions.Where(s => s.Date == date).Select(s => Snapshot(plan.Name, s, built, next)));
-        }
-
-        return planned;
-    }
-
-    private static PlannedSessionMatch Snapshot(string planName, PlannedSession session, TrainingPlan plan, PlannedSession? next)
-    {
-        double? Fastest(PaceZone? zone) => zone is { } z && plan.Paces.TryGetValue(z, out var range) ? Math.Round(range.Fastest.SecondsPerKilometre) : null;
-        double? Slowest(PaceZone? zone) => zone is { } z && plan.Paces.TryGetValue(z, out var range) ? Math.Round(range.Slowest.SecondsPerKilometre) : null;
-
-        var shape = session.Shape;
-        return new PlannedSessionMatch(
-            planName,
-            session.Type,
-            session.Title,
-            session.DistanceKm,
-            Fastest(session.Zone),
-            Slowest(session.Zone),
-            session.Zone,
-            shape.Shape,
-            Math.Round(shape.WorkKm, 2),
-            shape.WorkZone,
-            Fastest(shape.WorkZone),
-            Slowest(shape.WorkZone),
-            shape.RepMetres,
-            Fastest(PaceZone.Easy),
-            Slowest(PaceZone.Easy),
-            Math.Round(Pace.Of(plan.RaceDistance, plan.GoalTime).SecondsPerKilometre, 1),
-            next?.Title,
-            next?.Date);
     }
 }
 

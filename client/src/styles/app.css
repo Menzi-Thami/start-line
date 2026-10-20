@@ -3216,12 +3216,44 @@ a.menu-item {
   margin-bottom: var(--space-2);
 }
 
-.upload-steps {
+.upload-ways {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.upload-way {
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+}
+
+.bulk-progress,
+.bulk-summary {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.bulk-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.bulk-summary .disclosure {
+  margin-top: var(--space-3);
+}
+
+.bulk-problems {
   display: grid;
   gap: var(--space-1);
-  margin: 0 0 var(--space-4);
-  padding-left: var(--space-5);
-  color: var(--ink-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
 }
 
 .upload label.button {

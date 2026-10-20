@@ -698,7 +698,7 @@ select {
   color: var(--muted);
 }
 
-/* Four bars stepping down, then the race-day dot: the app icon's taper, filling in as you go. */
+/* Four bars stepping down, then the race-day dot: the favicon's taper, filling in as you go. */
 .wizard-bar {
   list-style: none;
   margin: 0;

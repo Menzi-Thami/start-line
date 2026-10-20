@@ -5,6 +5,7 @@ using StartLine.Domain.Running;
 
 namespace StartLine.Application.Features.Activities;
 
+/// <summary>One run in a list: enough for the plan view and the dashboard, including the verdict on its pace.</summary>
 public sealed record ActivitySummaryDto(
     Guid Id,
     DateTimeOffset StartedAt,
@@ -13,13 +14,18 @@ public sealed record ActivitySummaryDto(
     double DistanceKm,
     double MovingSeconds,
     double PaceSecondsPerKm,
-    string? PlannedTitle)
+    string? PlannedTitle,
+    SessionType? PlannedSessionType,
+    PaceVerdict? Pace,
+    int? AverageHeartRate,
+    SourceDto Source)
 {
     public static ActivitySummaryDto From(Activity a)
     {
         ArgumentNullException.ThrowIfNull(a);
         return new(a.Id, a.StartedAt, a.LocalDate, a.Kind, Round(a.DistanceKm, 2), Math.Round(a.MovingTime.TotalSeconds),
-            Round(a.PaceSecondsPerKm, 1), a.PlannedSession?.Title);
+            Round(a.PaceSecondsPerKm, 1), a.PlannedSession?.Title, a.PlannedSession?.SessionType, a.ComparedWithPlan?.Pace,
+            a.AverageHeartRate, SourceDto.From(a));
     }
 
     internal static double Round(double value, int digits) => Math.Round(value, digits, MidpointRounding.AwayFromZero);
@@ -49,7 +55,8 @@ public sealed record ActivityDto(
     IReadOnlyList<SplitDto> Splits,
     HalvesDto Halves,
     IReadOnlyList<BestEffortDto> BestEfforts,
-    HeartRateDto? HeartRate)
+    HeartRateDto? HeartRate,
+    SourceDto Source)
 {
     /// <param name="bestFromOtherRuns">The runner's fastest time per standard distance across their other runs.</param>
     /// <param name="runnerMaxHeartRate">The max heart rate the runner set, or null: no zones without it.</param>
@@ -78,9 +85,27 @@ public sealed record ActivityDto(
             [.. a.Splits.Zip(review.Splits, (s, score) => SplitDto.From(s, score, s.Number == quickest, s.Number == hardest))],
             HalvesDto.From(a.Halves),
             [.. a.BestEfforts.OrderBy(e => e.DistanceMetres).Select(e => BestEffortDto.From(e, bestFromOtherRuns, isRace))],
-            HeartRateDto.From(a, runnerMaxHeartRate));
+            HeartRateDto.From(a, runnerMaxHeartRate),
+            SourceDto.From(a));
     }
 }
+
+/// <summary>
+/// Where a run came from. A synced run links back to the original ("View on Strava", as Strava's brand rules ask) and
+/// says when the copy lapses unless it's fetched again.
+/// </summary>
+public sealed record SourceDto(ActivitySource Kind, Uri? ViewUrl, bool RecordedOnGarmin, DateTimeOffset? CachedUntil)
+{
+    public static SourceDto From(Activity a)
+    {
+        ArgumentNullException.ThrowIfNull(a);
+        var url = a is { Source: ActivitySource.Strava, ExternalId: { } id } ? new Uri($"https://www.strava.com/activities/{id}") : null;
+        return new(a.Source, url, a.RecordedOnGarmin, a.CachedUntil);
+    }
+}
+
+/// <summary>The runner's fastest time at one standard distance, and the run it came from.</summary>
+public sealed record PersonalBestDto(string Name, double DistanceMetres, double Seconds, double PaceSecondsPerKm, Guid ActivityId, DateOnly LocalDate, ActivitySource Source);
 
 public sealed record PlannedVsActualDto(
     string PlanName,

@@ -3,6 +3,7 @@ import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
 import type { Activity, BestEffort, HeartRate, Split } from '../../lib/types'
+import { PoweredByStrava, ViewOnStrava } from '../sync/StravaBrand'
 import {
   actualLine,
   distanceDifference,
@@ -116,6 +117,13 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       <h2 className="plan-title" id="activity-title">
         {title}
       </h2>
+      {run.source.kind === 'Strava' && (
+        <p className="activity-source">
+          <span>From Strava{run.source.recordedOnGarmin ? ' · recorded on Garmin' : ''}</span>
+          {run.source.viewUrl && <ViewOnStrava href={run.source.viewUrl} />}
+          <PoweredByStrava />
+        </p>
+      )}
 
       <section className="panel verdict" aria-labelledby="verdict-title" data-pace={run.plan?.pace ?? 'Unplanned'}>
         <h3 id="verdict-title" className="verdict-headline">
@@ -158,29 +166,39 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
 
       <BestEfforts efforts={run.bestEfforts} units={units} />
 
-      <section className="section danger-zone">
-        <h3>Delete this run</h3>
-        <p>Removes it and its splits from Taperday. Your watch and Garmin Connect keep their copy.</p>
-        {confirming ? (
-          <div className="submit-row">
-            <button type="button" className="button button-danger" disabled={deleting} onClick={() => void remove()}>
-              {deleting ? 'Deleting…' : 'Yes, delete this run'}
-            </button>
-            <button type="button" className="button button-quiet" onClick={() => setConfirming(false)}>
-              Keep it
-            </button>
-          </div>
-        ) : (
-          <button type="button" className="button button-quiet" onClick={() => setConfirming(true)}>
-            Delete run
-          </button>
-        )}
-        {deleteError && (
-          <p className="field-error" role="alert" style={{ marginTop: 'var(--space-3)' }}>
-            {deleteError}
+      {run.source.kind === 'Strava' ? (
+        <section className="section">
+          <h3>Removing this run</h3>
+          <p>
+            This run comes from Strava, so it follows your Strava account: delete it there and it goes from Taperday within minutes. Disconnecting
+            Strava in Account removes every run that came from it.
           </p>
-        )}
-      </section>
+        </section>
+      ) : (
+        <section className="section danger-zone">
+          <h3>Delete this run</h3>
+          <p>Removes it and its splits from Taperday. Your watch and Garmin Connect keep their copy.</p>
+          {confirming ? (
+            <div className="submit-row">
+              <button type="button" className="button button-danger" disabled={deleting} onClick={() => void remove()}>
+                {deleting ? 'Deleting…' : 'Yes, delete this run'}
+              </button>
+              <button type="button" className="button button-quiet" onClick={() => setConfirming(false)}>
+                Keep it
+              </button>
+            </div>
+          ) : (
+            <button type="button" className="button button-quiet" onClick={() => setConfirming(true)}>
+              Delete run
+            </button>
+          )}
+          {deleteError && (
+            <p className="field-error" role="alert" style={{ marginTop: 'var(--space-3)' }}>
+              {deleteError}
+            </p>
+          )}
+        </section>
+      )}
     </article>
   )
 }

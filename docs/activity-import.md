@@ -1,8 +1,9 @@
 # Activity import (Garmin .fit)
 
 Runners upload a run from their watch and see it against their plan. It's free all the way: Garmin's own developer
-API is business-only (and closed to new applications), and Strava's terms rule it out (see "Why not Strava" below), so
-the route is the file Garmin Connect already gives every user.
+API is business-only (and closed to new applications), so the route is the file Garmin Connect already gives every
+user. Runners on Strava can instead connect it once and have runs arrive by themselves, under Strava's stricter terms
+(see "Strava's terms" below and `strava-sync.md`). Both go through the same analysis below.
 
 ## How a runner gets the file
 
@@ -98,26 +99,27 @@ public app, provided:
 The grant is worded for "internal business purposes, including to use the FIT protocol in any software created by
 Licensee". A public app relies on the second half of that sentence. Worth a second opinion before any paid tier.
 
-## Why not Strava (checked 19 Oct 2026)
+## Strava's terms (checked 19 Oct 2026)
 
-Pulling runs from Strava was considered and turned down. Strava's API Agreement and API Policy (both effective
-1 June 2026) and its developer docs say:
+Pulling runs from Strava was first turned down for these terms, then built anyway in a shape that fits them: synced
+runs are a 7-day rolling cache, never merged with uploads (`strava-sync.md`). The .fit route stays for everyone else.
+Strava's API Agreement and API Policy (both effective 1 June 2026) and its developer docs say:
 
 - **Not free to run:** a Standard-tier API app needs the developer to hold a paid Strava subscription (US $11.99 a
   month or $79.99 a year; there's no separate API fee). Athletes who connect don't appear to need one.
 - **10 runners until reviewed:** new apps allow 1 athlete; the developer can raise that to 10; beyond 10 needs Strava's
   review, which "is not a guarantee". Reviewed Standard apps go up to 9,999.
 - **No keeping runs:** Policy §6.2, "You may not retain Strava Data in your cache for longer than seven (7) days";
-  §6.4 limits retention to the original purpose; §5.7 bars storing location data. Strava runs can't be permanent
-  Taperday activities with history, PBs and plan comparisons.
-- **No merging:** §5.4, "You may not combine Strava Data with other customer data". One record per run, built from a
-  `.fit` upload and a Strava copy, would break it.
+  §6.4 limits retention to the original purpose; §5.7 bars storing location data. So a Strava run is a copy fetched
+  again before its 7 days are up and dropped on disconnect, never a permanent Taperday activity.
+- **No merging:** §5.4, "You may not combine Strava Data with other customer data". So an upload and a Strava copy of
+  the same run are never merged: the upload replaces the copy.
 - **Also:** a runner's Strava data may be shown only to that runner (§2.3); no AI use of any kind, retrieval included
   (§5.3); no intermediaries or MCP servers (§5.16); deletions reflected within 48 hours (§6.3) and everything deleted
   within 30 days of a disconnect (§7.4); Garmin-sourced data needs Garmin attribution (§4.4).
 - **Rate limits:** 200 requests per 15 minutes and 2,000 a day overall (100 and 1,000 for non-upload calls); 400 and
   4,000 after raising the app to 10 athletes.
-- **Branding, if it's ever built:** the official "Connect with Strava" button, unmodified "Powered by Strava" or
+- **Branding:** the official "Connect with Strava" button, unmodified "Powered by Strava" or
   "Compatible with Strava" logos less prominent than Taperday's, links to Strava data reading exactly "View on Strava",
   and never "Strava" in the app's name.
 

@@ -27,6 +27,7 @@ internal static class PresentationDependencyInjection
     public const string PlanRateLimitPolicy = "plans";
     public const string UploadRateLimitPolicy = "uploads";
     public const string BulkUploadRateLimitPolicy = "bulk-uploads";
+    public const string WebhookRateLimitPolicy = "webhooks";
     public const string RunnerPolicy = "runner";
     public const string DefaultScope = "Plans.ReadWrite";
 
@@ -155,6 +156,15 @@ internal static class PresentationDependencyInjection
                 {
                     PermitLimit = 60,
                     Window = TimeSpan.FromHours(1),
+                    QueueLimit = 0,
+                }));
+
+            // Strava pushes one event per change and retries at most twice; this is far above that and still caps a flood.
+            o.AddPolicy(WebhookRateLimitPolicy, ctx =>
+                RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 120,
+                    Window = TimeSpan.FromMinutes(1),
                     QueueLimit = 0,
                 }));
         });

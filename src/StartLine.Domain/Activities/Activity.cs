@@ -4,8 +4,8 @@ using StartLine.Domain.Plans;
 namespace StartLine.Domain.Activities;
 
 /// <summary>
-/// A run the runner uploaded, kept as a summary only: totals, splits and best efforts. The original file and any
-/// GPS positions are thrown away after reading, so nothing here says where someone runs.
+/// A run, uploaded or synced, kept as a summary only: totals, splits and best efforts. The original file or streams
+/// and any GPS positions are thrown away after reading, so nothing here says where someone runs.
 /// </summary>
 public sealed class Activity
 {
@@ -31,6 +31,17 @@ public sealed class Activity
     public DateOnly LocalDate { get; private set; }
 
     public ActivityKind Kind { get; private set; }
+
+    public ActivitySource Source { get; private set; }
+
+    /// <summary>The run's id where it was synced from (a Strava activity id). Null for uploads.</summary>
+    public string? ExternalId { get; private set; }
+
+    /// <summary>When a synced copy lapses unless fetched again. Null for uploads, which are kept.</summary>
+    public DateTimeOffset? CachedUntil { get; private set; }
+
+    /// <summary>Synced from Strava but recorded on a Garmin device: Strava's policy asks for Garmin to be credited.</summary>
+    public bool RecordedOnGarmin { get; private set; }
 
     public double DistanceMetres { get; private set; }
 
@@ -87,9 +98,11 @@ public sealed class Activity
     /// Works out everything Taperday shows about a run from the recording, and picks the plan session it was meant
     /// to be from <paramref name="plannedThatDay"/> (sessions from the runner's plans on <paramref name="localDate"/>).
     /// </summary>
-    public static Activity Record(Guid runnerId, ActivityRecording recording, DateOnly localDate, IEnumerable<PlannedSessionMatch> plannedThatDay)
+    public static Activity Record(
+        Guid runnerId, ActivityRecording recording, DateOnly localDate, IEnumerable<PlannedSessionMatch> plannedThatDay, ActivityOrigin? origin = null)
     {
         ArgumentNullException.ThrowIfNull(recording);
+        origin ??= ActivityOrigin.Upload;
         ArgumentNullException.ThrowIfNull(plannedThatDay);
         if (runnerId == Guid.Empty)
         {
@@ -115,6 +128,10 @@ public sealed class Activity
             StartedAt = recording.StartedAt.ToUniversalTime(),
             LocalDate = localDate,
             Kind = recording.Kind,
+            Source = origin.Source,
+            ExternalId = origin.ExternalId,
+            CachedUntil = origin.CachedUntil,
+            RecordedOnGarmin = origin.RecordedOnGarmin,
             DistanceMetres = track.TotalMetres,
             MovingTime = TimeSpan.FromSeconds(track.MovingSeconds),
             ElapsedTime = TimeSpan.FromSeconds(track.ElapsedSeconds),
@@ -135,5 +152,41 @@ public sealed class Activity
         }
 
         return activity;
+    }
+
+    /// <summary>
+    /// Takes everything from a fresh copy of the same synced run (fetched again before the cache lapsed): new numbers if
+    /// the runner edited it, the plan session as it stands now, and a new <see cref="CachedUntil"/>. The id stays, so
+    /// links to the run keep working.
+    /// </summary>
+    public void RefreshFrom(Activity fresh)
+    {
+        ArgumentNullException.ThrowIfNull(fresh);
+        if (Source == ActivitySource.Upload || fresh.Source != Source || fresh.ExternalId != ExternalId || fresh.RunnerId != RunnerId)
+        {
+            throw new DomainException("Only a synced run can be refreshed, and only from the same run.");
+        }
+
+        StartedAt = fresh.StartedAt;
+        LocalDate = fresh.LocalDate;
+        Kind = fresh.Kind;
+        CachedUntil = fresh.CachedUntil;
+        RecordedOnGarmin = fresh.RecordedOnGarmin;
+        DistanceMetres = fresh.DistanceMetres;
+        MovingTime = fresh.MovingTime;
+        ElapsedTime = fresh.ElapsedTime;
+        ElevationGainMetres = fresh.ElevationGainMetres;
+        AverageHeartRate = fresh.AverageHeartRate;
+        MaxHeartRate = fresh.MaxHeartRate;
+        Calories = fresh.Calories;
+        Halves = fresh.Halves;
+        HeartRateDriftPercent = fresh.HeartRateDriftPercent;
+        HeartRateTime = fresh.HeartRateTime;
+        PlannedSession = fresh.PlannedSession;
+        Work = fresh.Work;
+        splits.Clear();
+        splits.AddRange(fresh.splits);
+        bestEfforts.Clear();
+        bestEfforts.AddRange(fresh.bestEfforts);
     }
 }

@@ -306,6 +306,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/activities/bests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PersonalBestDto"][];
+                        "application/json": components["schemas"]["PersonalBestDto"][];
+                        "text/json": components["schemas"]["PersonalBestDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/activities/{id}": {
         parameters: {
             query?: never;
@@ -563,6 +600,209 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/sync/strava": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["StravaStatusDto"];
+                        "application/json": components["schemas"]["StravaStatusDto"];
+                        "text/json": components["schemas"]["StravaStatusDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ConnectStravaCommand"];
+                    "text/json": components["schemas"]["ConnectStravaCommand"];
+                    "application/*+json": components["schemas"]["ConnectStravaCommand"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["StravaStatusDto"];
+                        "application/json": components["schemas"]["StravaStatusDto"];
+                        "text/json": components["schemas"]["StravaStatusDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["StravaDisconnectedDto"];
+                        "application/json": components["schemas"]["StravaDisconnectedDto"];
+                        "text/json": components["schemas"]["StravaDisconnectedDto"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/sync/strava/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["StravaConnectDto"];
+                        "application/json": components["schemas"]["StravaConnectDto"];
+                        "text/json": components["schemas"]["StravaConnectDto"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/sync/strava/catch-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["StravaStatusDto"];
+                        "application/json": components["schemas"]["StravaStatusDto"];
+                        "text/json": components["schemas"]["StravaStatusDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/plans": {
         parameters: {
             query?: never;
@@ -791,6 +1031,7 @@ export interface components {
             profile: components["schemas"]["RunnerDto"];
             plans: components["schemas"]["SavedPlanExportDto"][];
             activities: components["schemas"]["ActivityDto"][];
+            connections: components["schemas"]["ConnectionExportDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -822,9 +1063,12 @@ export interface components {
             halves: components["schemas"]["HalvesDto"];
             bestEfforts: components["schemas"]["BestEffortDto"][];
             heartRate: null | components["schemas"]["HeartRateDto"];
+            source: components["schemas"]["SourceDto"];
         };
         /** @enum {unknown} */
         ActivityKind: "Run" | "TrailRun" | "TreadmillRun" | "Other";
+        /** @enum {unknown} */
+        ActivitySource: "Upload" | "Strava";
         ActivitySummaryDto: {
             /** Format: uuid */
             id: string;
@@ -840,6 +1084,11 @@ export interface components {
             /** Format: double */
             paceSecondsPerKm: number;
             plannedTitle: null | string;
+            plannedSessionType: null | components["schemas"]["SessionType"];
+            pace: null | components["schemas"]["PaceVerdict"];
+            /** Format: int32 */
+            averageHeartRate: null | number;
+            source: components["schemas"]["SourceDto"];
         };
         BestEffortDto: {
             name: string;
@@ -862,6 +1111,24 @@ export interface components {
             status: components["schemas"]["ImportStatus"];
             message: null | string;
             activity: null | components["schemas"]["ActivitySummaryDto"];
+        };
+        ConnectionExportDto: {
+            provider: components["schemas"]["SyncProvider"];
+            /** Format: int64 */
+            externalAthleteId: number;
+            scopes: string;
+            status: components["schemas"]["ConnectionStatus"];
+            /** Format: date-time */
+            connectedAt: string;
+            /** Format: date-time */
+            lastSyncedAt: null | string;
+        };
+        /** @enum {unknown} */
+        ConnectionStatus: "Active" | "NeedsReconnect";
+        ConnectStravaCommand: {
+            code: string;
+            state: string;
+            scope: null | string;
         };
         /** @enum {unknown} */
         DateStatus: "Confirmed" | "Provisional";
@@ -941,6 +1208,20 @@ export interface components {
         };
         /** @enum {unknown} */
         PacingVerdict: "NegativeSplit" | "Even" | "PositiveSplit";
+        PersonalBestDto: {
+            name: string;
+            /** Format: double */
+            distanceMetres: number;
+            /** Format: double */
+            seconds: number;
+            /** Format: double */
+            paceSecondsPerKm: number;
+            /** Format: uuid */
+            activityId: string;
+            /** Format: date */
+            localDate: string;
+            source: components["schemas"]["ActivitySource"];
+        };
         PlannedVsActualDto: {
             planName: string;
             sessionType: components["schemas"]["SessionType"];
@@ -1112,6 +1393,14 @@ export interface components {
         };
         /** @enum {unknown} */
         SessionType: "Easy" | "Recovery" | "EasyWithStrides" | "Hills" | "Fartlek" | "Intervals" | "Tempo" | "CruiseIntervals" | "ProgressionRun" | "RacePace" | "MediumLongRun" | "LongRun" | "LongRunFastFinish" | "LongRunRacePace" | "Shakeout" | "Race" | "Strength";
+        SourceDto: {
+            kind: components["schemas"]["ActivitySource"];
+            /** Format: uri */
+            viewUrl: null | string;
+            recordedOnGarmin: boolean;
+            /** Format: date-time */
+            cachedUntil: null | string;
+        };
         SplitDto: {
             /** Format: int32 */
             number: number;
@@ -1135,6 +1424,30 @@ export interface components {
         };
         /** @enum {unknown} */
         SplitRole: "Steady" | "WarmUp" | "Work" | "CoolDown";
+        StravaConnectDto: {
+            /** Format: uri */
+            authorizeUrl: string;
+        };
+        StravaDisconnectedDto: {
+            /** Format: int32 */
+            deletedRuns: number;
+        };
+        StravaStatusDto: {
+            available: boolean;
+            connected: boolean;
+            status: null | components["schemas"]["ConnectionStatus"];
+            includesPrivateRuns: boolean;
+            /** Format: date-time */
+            connectedAt: null | string;
+            /** Format: date-time */
+            lastSyncedAt: null | string;
+            /** Format: int32 */
+            pending: number;
+            /** Format: int32 */
+            failed: number;
+            /** Format: int32 */
+            syncedRuns: number;
+        };
         StrengthExerciseDto: {
             exercise: components["schemas"]["Exercise"];
             /** Format: int32 */
@@ -1144,6 +1457,8 @@ export interface components {
             unit: components["schemas"]["RepUnit"];
             summary: string;
         };
+        /** @enum {unknown} */
+        SyncProvider: "Strava";
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";
         TrainingPlanDto: {

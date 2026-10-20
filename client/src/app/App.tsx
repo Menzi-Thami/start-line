@@ -12,13 +12,15 @@ import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../fe
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { RaceStartIntro } from '../features/home/RaceStartIntro'
 import { PlanView } from '../features/plan/PlanView'
+import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
+import { useSyncedRuns } from '../features/sync/useSyncedRuns'
 import { api, ApiError, apiOrigin } from '../lib/api-client'
 import { calendarLinks } from '../lib/calendar-links'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
-import type { Activity, ActivitySummary, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
+import type { Activity, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
 type PlanState =
@@ -62,6 +64,7 @@ const runFromUrl = (): OpenRun | null => {
 }
 
 const viewFromUrl = (): View => {
+  if (window.location.pathname === STRAVA_CALLBACK_PATH) return 'account'
   const view = new URLSearchParams(window.location.search).get('view')
   return view === 'plans' || view === 'runs' || view === 'account' ? view : 'build'
 }
@@ -73,8 +76,10 @@ export function App() {
   const [initial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
   const [view, setView] = useState<View>(viewFromUrl)
   const [openRun, setOpenRun] = useState<OpenRun | null>(runFromUrl)
-  // The runner's uploaded runs, shown inside the plan. Fetched when the plan view opens, so a new upload appears.
-  const [runs, setRuns] = useState<ActivitySummary[] | undefined>(undefined)
+  // Strava's answer when the runner comes back from connecting, read once and handled when they're signed in.
+  const [stravaCallback] = useState(() => readStravaCallback(window.location))
+  const stravaHandled = useRef(false)
+  const [stravaNotice, setStravaNotice] = useState<string | null>(null)
   const [units, setUnits] = useState<Units>(loadUnits)
   const [races, setRaces] = useState<RacesState>({ kind: 'loading' })
   // A shared link starts building straight away, so it opens in the loading state.
@@ -172,21 +177,25 @@ export function App() {
     if (playIntro) markIntroSeen()
   }, [playIntro])
 
+  // The runner's runs (uploaded and synced), bests and Strava status, shown inside the plan. Loaded when the plan
+  // view opens, so a new upload or a run that just arrived from Strava appears.
+  const synced = useSyncedRuns(runner.state.kind === 'ready' && view === 'build')
+  const runs = synced.runs
+
+  // Back from Strava: finish connecting, then show the account page with what happened.
   useEffect(() => {
-    if (runner.state.kind !== 'ready' || view !== 'build') return
-    let cancelled = false
-    auth
-      .getToken()
-      .then((token) => (token ? api.me.activities(token) : undefined))
-      .then((list) => {
-        if (!cancelled && list) setRuns(list)
-      })
-      // The plan is the point of this view: if runs don't load, it shows without them rather than failing.
-      .catch(() => undefined)
-    return () => {
-      cancelled = true
-    }
-  }, [auth, runner.state.kind, view])
+    if (!stravaCallback || stravaHandled.current || runner.state.kind !== 'ready') return
+    stravaHandled.current = true
+    window.history.replaceState(null, '', '/?view=account')
+    const { code, state, scope, error } = stravaCallback
+    const connecting =
+      error || !code || !state
+        ? Promise.reject(new Error('Strava wasn’t connected, and nothing was shared with Taperday.'))
+        : auth.getToken().then((token) => (token ? api.me.strava.connect(token, { code, state, scope }) : Promise.reject(new Error('Sign in again, then connect Strava.'))))
+    connecting
+      .then(() => setStravaNotice('Strava is connected. Your runs from the last six weeks are on their way, and new ones arrive by themselves.'))
+      .catch((failure: unknown) => setStravaNotice(failure instanceof Error ? failure.message : 'Connecting Strava didn’t work. Try again.'))
+  }, [stravaCallback, runner.state.kind, auth])
 
   // A shared link builds its plan straight away.
   useEffect(() => {
@@ -391,7 +400,9 @@ export function App() {
 
         {view === 'account' && state.kind === 'ready' && (
           <AccountPage
+            key={stravaNotice ?? 'account'}
             runner={state.runner}
+            stravaNotice={stravaNotice}
             onSaved={runner.setRunner}
             onDeleted={() => {
               go('build')
@@ -476,6 +487,10 @@ export function App() {
                 calendar={calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())}
                 today={today}
                 runs={state.kind === 'ready' ? runs : undefined}
+                bests={state.kind === 'ready' ? synced.bests : undefined}
+                strava={state.kind === 'ready' ? synced.strava : undefined}
+                onOpenAccount={state.kind === 'ready' ? () => go('account') : undefined}
+                onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
                 toolbarExtra={
                   <>

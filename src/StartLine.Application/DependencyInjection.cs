@@ -6,6 +6,7 @@ using StartLine.Application.Features.Account;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Races;
+using StartLine.Application.Features.Sync;
 
 namespace StartLine.Application;
 
@@ -30,6 +31,9 @@ public static class DependencyInjection
         services.AddScoped<CurrentRunner>();
         services.AddScoped<PersonalBests>();
         services.AddScoped<ActivityImporter>();
+        services.AddSingleton<StravaRateGate>();
+        services.AddScoped<StravaTokens>();
+        services.AddScoped<IStravaSync, StravaSyncRunner>();
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
         services.AddScoped(typeof(IPipelineBehaviour<,>), typeof(ValidationBehaviour<,>));
         return services;

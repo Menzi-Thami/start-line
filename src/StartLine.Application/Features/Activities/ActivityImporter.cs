@@ -13,14 +13,17 @@ using StartLine.Domain.Running;
 namespace StartLine.Application.Features.Activities;
 
 /// <summary>
-/// Reads one activity file, matches it to the plan and saves it. Shared by the single upload and the bulk import, because
-/// a handler must never dispatch another handler. Scoped: each saved plan is built at most once per request, so a batch
-/// of runs from the same weeks doesn't regenerate the same plan for every file.
+/// Reads one activity file, matches it to the plan and saves it; and records runs synced from Strava the same way, so
+/// both are judged alike. Shared by the single upload, the bulk import and the Strava sync, because a handler must never
+/// dispatch another handler. Scoped: each saved plan is built at most once per request (or sync pass), so a batch of
+/// runs from the same weeks doesn't regenerate the same plan for every file.
 /// </summary>
-internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileReader reader, PlanBuilder builder, IRaceCatalogue catalogue)
+internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileReader reader, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time)
 {
     private readonly Dictionary<Guid, TrainingPlan> builtPlans = [];
-    private List<SavedPlan>? activePlans;
+
+    // Per runner: a sync pass records runs for several runners in one scope.
+    private readonly Dictionary<Guid, List<SavedPlan>> activePlans = [];
 
     /// <summary>
     /// Throws <see cref="ValidationException"/> for a file that can't be read, <see cref="Domain.Common.DomainException"/>
@@ -28,7 +31,7 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
     /// </summary>
     public async Task<Activity> ImportAsync(Runner runner, Stream file, CancellationToken cancellationToken)
     {
-        if (await db.Activities.CountAsync(a => a.RunnerId == runner.Id, cancellationToken) >= Activity.MaxPerRunner)
+        if (await db.Activities.Visible(time.GetUtcNow()).CountAsync(a => a.RunnerId == runner.Id, cancellationToken) >= Activity.MaxPerRunner)
         {
             throw new ConflictException(LimitCode, string.Create(
                 CultureInfo.InvariantCulture, $"You can keep up to {Activity.MaxPerRunner:N0} runs. Delete an old one to add another."));
@@ -36,14 +39,20 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
 
         var recording = reader.Read(file);
         var startedAt = recording.StartedAt.ToUniversalTime();
-        if (await db.Activities.AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
+        var existing = await db.Activities.SingleOrDefaultAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken);
+        if (existing is { Source: ActivitySource.Upload })
         {
             throw Duplicate();
         }
 
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(runner.TimeZone);
-        var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(startedAt, zone).DateTime);
-        var activity = Activity.Record(runner.Id, recording, localDate, await PlannedOnAsync(runner.Id, localDate, cancellationToken));
+        var activity = await RecordAsync(runner, recording, ActivityOrigin.Upload, cancellationToken);
+
+        // The file of a run that was synced replaces the synced copy: uploads are the runner's own and are kept,
+        // where a synced copy lapses. The two are never merged into one record (Strava API Policy 5.4).
+        if (existing is not null)
+        {
+            db.Activities.Remove(existing);
+        }
 
         db.Activities.Add(activity);
         try
@@ -55,7 +64,12 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
             // The same file uploaded twice at once (a double tap): the unique index let only one in.
             // Anything else is a real failure: rethrow.
             db.Activities.Entry(activity).State = EntityState.Detached;
-            if (await db.Activities.AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
+            if (existing is not null)
+            {
+                db.Activities.Entry(existing).State = EntityState.Unchanged;
+            }
+
+            if (await db.Activities.AsNoTracking().AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
             {
                 throw Duplicate();
             }
@@ -66,6 +80,19 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
         return activity;
     }
 
+    /// <summary>
+    /// Works out the day a run was run in the runner's own time zone and the plan session it was meant to be, and
+    /// records it. Doesn't save: the Strava sync decides whether it's new, a refresh, or already uploaded.
+    /// </summary>
+    public async Task<Activity> RecordAsync(Runner runner, ActivityRecording recording, ActivityOrigin origin, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(runner);
+        ArgumentNullException.ThrowIfNull(recording);
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(runner.TimeZone);
+        var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(recording.StartedAt.ToUniversalTime(), zone).DateTime);
+        return Activity.Record(runner.Id, recording, localDate, await PlannedOnAsync(runner.Id, localDate, cancellationToken), origin);
+    }
+
     public const string DuplicateCode = "activity_exists";
     public const string LimitCode = "activity_limit";
 
@@ -74,12 +101,16 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
     /// <summary>Every run session the runner's active plans have on that day, with the pace each one asked for.</summary>
     private async Task<IReadOnlyList<PlannedSessionMatch>> PlannedOnAsync(Guid runnerId, DateOnly date, CancellationToken cancellationToken)
     {
-        activePlans ??= await db.SavedPlans.AsNoTracking()
-            .Where(p => p.RunnerId == runnerId && p.Status == SavedPlanStatus.Active)
-            .ToListAsync(cancellationToken);
+        if (!activePlans.TryGetValue(runnerId, out var plans))
+        {
+            plans = await db.SavedPlans.AsNoTracking()
+                .Where(p => p.RunnerId == runnerId && p.Status == SavedPlanStatus.Active)
+                .ToListAsync(cancellationToken);
+            activePlans[runnerId] = plans;
+        }
 
         List<PlannedSessionMatch> planned = [];
-        foreach (var plan in activePlans.Where(p => p.Inputs.PlanFrom <= date))
+        foreach (var plan in plans.Where(p => p.Inputs.PlanFrom <= date))
         {
             // Only plans that were running that day: a finished plan, or one whose race has left the calendar, has nothing to say.
             var raceDate = plan.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug)?.Date : plan.Inputs.RaceDate;

@@ -1,12 +1,15 @@
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.MyPlans;
+using StartLine.Application.Features.Sync;
 using StartLine.Domain.Activities;
 using StartLine.Domain.Runners;
+using StartLine.Domain.Sync;
 using ValidationException = StartLine.Application.Common.Exceptions.ValidationException;
 
 namespace StartLine.Application.Features.Account;
@@ -112,12 +115,29 @@ internal sealed class GetProfileHandler(CurrentRunner current) : IRequestHandler
         RunnerDto.From(await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me"));
 }
 
-public sealed record AccountExportDto(RunnerDto Profile, IReadOnlyList<SavedPlanExportDto> Plans, IReadOnlyList<ActivityDto> Activities);
+public sealed record AccountExportDto(
+    RunnerDto Profile,
+    IReadOnlyList<SavedPlanExportDto> Plans,
+    IReadOnlyList<ActivityDto> Activities,
+    IReadOnlyList<ConnectionExportDto> Connections);
+
+/// <summary>
+/// A connected service as exported: what was granted and when, but never the tokens. An export file sitting in a
+/// Downloads folder must not be a working key to someone's Strava.
+/// </summary>
+public sealed record ConnectionExportDto(SyncProvider Provider, long ExternalAthleteId, string Scopes, ConnectionStatus Status, DateTimeOffset ConnectedAt, DateTimeOffset? LastSyncedAt)
+{
+    public static ConnectionExportDto From(ProviderConnection c)
+    {
+        ArgumentNullException.ThrowIfNull(c);
+        return new(c.Provider, c.ExternalAthleteId, c.Scopes, c.Status, c.ConnectedAt, c.LastSyncedAt);
+    }
+}
 
 /// <summary>Everything stored about the runner, as one document (POPIA right of access).</summary>
 public sealed record ExportAccountQuery : IRequest<AccountExportDto>;
 
-internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests)
+internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests, TimeProvider time)
     : IRequestHandler<ExportAccountQuery, AccountExportDto>
 {
     public async Task<AccountExportDto> Handle(ExportAccountQuery request, CancellationToken cancellationToken)
@@ -128,18 +148,33 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .OrderBy(p => p.CreatedAt)
             .ToListAsync(cancellationToken);
         var activities = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
             .Where(a => a.RunnerId == runner.Id)
             .OrderBy(a => a.StartedAt)
             .ToListAsync(cancellationToken);
+        var connections = await db.ProviderConnections.AsNoTracking().Where(c => c.RunnerId == runner.Id).ToListAsync(cancellationToken);
         var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
-        return new AccountExportDto(RunnerDto.From(runner), [.. plans.Select(SavedPlanExportDto.From)], [.. activities.Select(a => ActivityDto.From(a, bests.FromRunsOtherThan(a.Id), runner.MaxHeartRate))]);
+        return new AccountExportDto(
+            RunnerDto.From(runner),
+            [.. plans.Select(SavedPlanExportDto.From)],
+            [.. activities.Select(a => ActivityDto.From(a, bests.FromRunsOtherThan(a.Id), runner.MaxHeartRate))],
+            [.. connections.Select(ConnectionExportDto.From)]);
     }
 }
 
-/// <summary>Deletes the runner and everything they saved, plans and runs (POPIA right to erasure). Sign-in itself lives with the identity provider.</summary>
+/// <summary>
+/// Deletes the runner and everything they saved, plans, runs and connections (POPIA right to erasure). Strava is asked
+/// to revoke Taperday first. Sign-in itself lives with the identity provider.
+/// </summary>
 public sealed record DeleteAccountCommand : IRequest<bool>;
 
-internal sealed class DeleteAccountHandler(IApplicationDbContext db, CurrentRunner current) : IRequestHandler<DeleteAccountCommand, bool>
+internal sealed class DeleteAccountHandler(
+    IApplicationDbContext db,
+    CurrentRunner current,
+    IStravaApi strava,
+    StravaTokens tokens,
+    ILogger<DeleteAccountHandler> logger)
+    : IRequestHandler<DeleteAccountCommand, bool>
 {
     public async Task<bool> Handle(DeleteAccountCommand request, CancellationToken cancellationToken)
     {
@@ -149,7 +184,12 @@ internal sealed class DeleteAccountHandler(IApplicationDbContext db, CurrentRunn
             return false;
         }
 
-        // Saved plans and activities go with the runner through the database's cascade delete.
+        foreach (var connection in await db.ProviderConnections.Where(c => c.RunnerId == runner.Id && c.Provider == SyncProvider.Strava).ToListAsync(cancellationToken))
+        {
+            await StravaRevoke.TryAsync(strava, tokens, connection, logger, cancellationToken);
+        }
+
+        // Saved plans, activities, connections and sync jobs go with the runner through the database's cascade delete.
         db.Runners.Remove(runner);
         await db.SaveChangesAsync(cancellationToken);
         return true;

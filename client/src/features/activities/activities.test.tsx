@@ -34,6 +34,10 @@ const summaryOf = (run: Activity): ActivitySummary => ({
   movingSeconds: run.movingSeconds,
   paceSecondsPerKm: run.paceSecondsPerKm,
   plannedTitle: run.plan?.title ?? null,
+  plannedSessionType: run.plan?.sessionType ?? null,
+  pace: run.plan?.pace ?? null,
+  averageHeartRate: run.averageHeartRate,
+  source: run.source,
 })
 
 /** The runs API, insisting on the bearer token like the real one. */

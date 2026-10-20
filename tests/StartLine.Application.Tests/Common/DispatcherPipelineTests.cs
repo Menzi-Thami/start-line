@@ -10,6 +10,7 @@ using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Predictions;
 using StartLine.Application.Features.Races;
+using StartLine.Application.Features.Sync;
 
 namespace StartLine.Application.Tests.Common;
 
@@ -25,6 +26,11 @@ public sealed class DispatcherPipelineTests
             .AddSingleton(TestRaces.Catalogue())
             .AddSingleton(Substitute.For<IRaceStore>())
             .AddSingleton(Substitute.For<IActivityFileReader>())
+            .AddSingleton(Substitute.For<IStravaApi>())
+            .AddSingleton(Substitute.For<IStravaSettings>())
+            .AddSingleton(Substitute.For<ITokenProtector>())
+            .AddSingleton(Substitute.For<IConnectState>())
+            .AddSingleton(Substitute.For<ISyncSignal>())
             .AddScoped(_ => Substitute.For<IApplicationDbContext>())
             .AddScoped(_ => Substitute.For<ICurrentUser>())
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));

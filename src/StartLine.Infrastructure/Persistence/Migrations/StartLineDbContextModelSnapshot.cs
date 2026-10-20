@@ -333,6 +333,11 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("RunnerId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_SavedPlans_OneActivePerRunner")
+                        .HasFilter("[Status] = 'Active'");
+
                     b.HasIndex("RunnerId", "Status", "UpdatedAt");
 
                     b.ToTable("SavedPlans", (string)null);

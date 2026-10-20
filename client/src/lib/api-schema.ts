@@ -600,6 +600,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SavedPlanSummaryDto"];
+                        "application/json": components["schemas"]["SavedPlanSummaryDto"];
+                        "text/json": components["schemas"]["SavedPlanSummaryDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/sync/strava": {
         parameters: {
             query?: never;
@@ -1344,6 +1394,7 @@ export interface components {
             createdAt: string;
             inputs: components["schemas"]["GeneratePlanQuery"];
             plan: components["schemas"]["TrainingPlanDto"];
+            status: components["schemas"]["SavedPlanStatus"];
         };
         SavedPlanExportDto: {
             /** Format: uuid */
@@ -1365,10 +1416,13 @@ export interface components {
             raceDate: null | string;
             /** Format: date-time */
             createdAt: string;
+            status: components["schemas"]["SavedPlanStatus"];
         };
         SavePlanCommand: {
             name: null | string;
             plan: components["schemas"]["GeneratePlanQuery"];
+            /** @default false */
+            replaceCurrent: boolean;
         };
         SaveProfileCommand: {
             displayName: string;

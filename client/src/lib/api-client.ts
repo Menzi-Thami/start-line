@@ -116,8 +116,12 @@ export const api = {
     remove: (token: string) => request<void>('/api/v1/me', { method: 'DELETE' }, token),
     plans: (token: string) => request<SavedPlanSummary[]>('/api/v1/me/plans', {}, token),
     plan: (token: string, id: string) => request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}`, {}, token),
-    savePlan: (token: string, plan: GeneratePlanRequest, name?: string) =>
-      request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan }) }, token),
+    /** Saves as the runner's current plan. With a plan already, replaceCurrent must be true (the API answers 409 plan_active otherwise). */
+    savePlan: (token: string, plan: GeneratePlanRequest, name?: string, replaceCurrent = false) =>
+      request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan, replaceCurrent }) }, token),
+    /** Makes a past plan current again; the current one becomes a past plan. */
+    restorePlan: (token: string, id: string) =>
+      request<SavedPlanSummary>(`/api/v1/me/plans/${encodeURIComponent(id)}/restore`, { method: 'POST' }, token),
     deletePlan: (token: string, id: string) =>
       request<void>(`/api/v1/me/plans/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
     activities: (token: string) => request<ActivitySummary[]>('/api/v1/me/activities', {}, token),

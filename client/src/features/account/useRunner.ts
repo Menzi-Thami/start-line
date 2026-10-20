@@ -49,5 +49,11 @@ export function useRunner() {
         ? { kind: 'signed-out' }
         : state
 
-  return { state: current, setRunner: (runner: Runner) => setState({ kind: 'ready', runner }), refresh: fetchRunner }
+  // Retrying shows the wait again, so the runner can see something is happening.
+  const refresh = () => {
+    setState({ kind: 'loading' })
+    fetchRunner()
+  }
+
+  return { state: current, setRunner: (runner: Runner) => setState({ kind: 'ready', runner }), refresh }
 }

@@ -9,12 +9,14 @@ import { StravaDeviceGuide } from './StravaDeviceGuide'
 interface Props {
   /** What just happened on the way back from Strava, to say at the top of the section. */
   notice?: string | null
+  /** Strava sent the runner back and the connection is still being saved: say so, and don't offer Connect again. */
+  connecting?: boolean
 }
 
 type State = { kind: 'loading' } | { kind: 'ready'; status: StravaStatus } | { kind: 'error'; message: string }
 
 /** Account: connect Strava so runs arrive by themselves, see how it stands, or disconnect (which deletes the copies). */
-export function StravaSection({ notice }: Props) {
+export function StravaSection({ notice, connecting = false }: Props) {
   const auth = useAuth()
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [busy, setBusy] = useState(false)
@@ -72,9 +74,14 @@ export function StravaSection({ notice }: Props) {
           {message}
         </p>
       )}
-      {state.kind === 'loading' && <div className="skeleton" aria-hidden="true" />}
+      {connecting && (
+        <p className="loading-line" role="status">
+          Finishing connecting Strava…
+        </p>
+      )}
+      {!connecting && state.kind === 'loading' && <div className="skeleton" aria-hidden="true" />}
       {state.kind === 'error' && <p className="field-error">{state.message}</p>}
-      {state.kind === 'ready' && !state.status.connected && (
+      {!connecting && state.kind === 'ready' && !state.status.connected && (
         <>
           <p>
             Save a run on Strava (from your Garmin, COROS, phone or anything else that syncs there) and it appears in your plan by itself, judged against

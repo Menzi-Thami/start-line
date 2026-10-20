@@ -11,6 +11,10 @@ import './styles/overview.css'
 import { App } from './app/App'
 import { readAuthConfig } from './app/auth-context'
 import { AuthProvider } from './app/AuthProvider'
+import { wakeApi } from './lib/api-client'
+
+// The free API sleeps when idle; start it waking now, while the page and any sign-in redirect are still loading.
+wakeApi()
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')

@@ -124,3 +124,13 @@ test('on a phone nothing scrolls sideways @phone', async ({ page }) => {
     expect(overflow, `sideways overflow on ${path}`).toBeLessThanOrEqual(0)
   }
 })
+
+test('Strava’s callback page loads the app, and the webhook stays shut without its secret @phone', async ({ page, request }) => {
+  await page.goto('/strava/callback?state=x&code=y&scope=read')
+  await expect(page.locator('main')).toBeVisible()
+  // Accounts are off here, so the account view asks to sign in rather than connecting anything.
+  await expect(page.getByText('Sign in to see your saved plans, runs and account.')).toBeVisible()
+
+  const hook = await request.post('http://localhost:5122/api/v1/webhooks/strava/not-the-secret', { data: { object_type: 'activity' } })
+  expect(hook.status()).toBe(404)
+})

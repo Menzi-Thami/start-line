@@ -82,6 +82,12 @@ public sealed class MyActivitiesController(IDispatcher dispatcher) : ControllerB
         }
     }
 
+    /// <summary>The runner's fastest time at each standard distance, across uploaded and synced runs.</summary>
+    [HttpGet("bests")]
+    [ProducesResponseType<IReadOnlyList<PersonalBestDto>>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Bests(CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new ListMyBestsQuery(), cancellationToken));
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType<ActivityDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

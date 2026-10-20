@@ -23,6 +23,25 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("FriendlyName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Xml")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("DataProtectionKeys");
+                });
+
             modelBuilder.Entity("StartLine.Domain.Activities.Activity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -30,6 +49,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
                     b.Property<int?>("AverageHeartRate")
                         .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("CachedUntil")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<int?>("Calories")
                         .HasColumnType("int");
@@ -46,6 +68,10 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
                     b.Property<double?>("ElevationGainMetres")
                         .HasColumnType("float");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.Property<double?>("HeartRateDriftPercent")
                         .HasColumnType("float");
@@ -70,8 +96,18 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasColumnType("float")
                         .HasColumnName("MovingSeconds");
 
+                    b.Property<bool>("RecordedOnGarmin")
+                        .HasColumnType("bit");
+
                     b.Property<Guid>("RunnerId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasDefaultValue("Upload");
 
                     b.Property<DateTimeOffset>("StartedAt")
                         .HasColumnType("datetimeoffset");
@@ -199,8 +235,13 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CachedUntil")
+                        .HasFilter("[CachedUntil] IS NOT NULL");
+
                     b.HasIndex("RunnerId", "StartedAt")
                         .IsUnique();
+
+                    b.HasIndex("RunnerId", "Source", "ExternalId");
 
                     b.ToTable("Activities", (string)null);
                 });
@@ -354,6 +395,120 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("Runners", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Sync.ProviderConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AccessToken")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTimeOffset>("AccessTokenExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ConnectedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long>("ExternalAthleteId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("LastCatchUpAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastSyncedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "ExternalAthleteId")
+                        .IsUnique();
+
+                    b.HasIndex("RunnerId", "Provider")
+                        .IsUnique();
+
+                    b.ToTable("ProviderConnections", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Sync.SyncJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("Failed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTimeOffset>("NotBefore")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("ObjectId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Failed", "NotBefore", "Priority");
+
+                    b.HasIndex("RunnerId", "Kind", "ObjectId");
+
+                    b.ToTable("SyncJobs", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Activities.Activity", b =>
                 {
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
@@ -417,6 +572,24 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Sync.ProviderConnection", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Sync.SyncJob", b =>
                 {
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
                         .WithMany()

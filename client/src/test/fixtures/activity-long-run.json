@@ -1,6 +1,6 @@
 {
   "id": "380c8415-5239-4f5c-a633-06a61cb15b4b",
-  "startedAt": "2027-01-03T04:12:00\u002B00:00",
+  "startedAt": "2027-01-03T04:12:00+00:00",
   "localDate": "2027-01-03",
   "kind": "Run",
   "distanceKm": 15.35,
@@ -285,7 +285,7 @@
       "isWorthShowing": true
     },
     {
-      "name": "\u00BD mile",
+      "name": "½ mile",
       "distanceMetres": 804.672,
       "seconds": 309.8,
       "paceSecondsPerKm": 385,
@@ -382,5 +382,11 @@
         "seconds": 0
       }
     ]
+  },
+  "source": {
+    "kind": "Upload",
+    "viewUrl": null,
+    "recordedOnGarmin": false,
+    "cachedUntil": null
   }
 }

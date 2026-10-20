@@ -36,6 +36,12 @@ export type HeartRateZone = Schemas['HeartRateZoneDto']
 export type BulkImport = Schemas['BulkImportDto']
 export type BulkImportFile = Schemas['BulkImportFileDto']
 export type ImportStatus = Schemas['ImportStatus']
+export type ActivitySource = Schemas['ActivitySource']
+export type RunSource = Schemas['SourceDto']
+export type PersonalBest = Schemas['PersonalBestDto']
+export type PaceVerdict = Schemas['PaceVerdict']
+export type StravaStatus = Schemas['StravaStatusDto']
+export type StravaDisconnected = Schemas['StravaDisconnectedDto']
 
 /** Monday first, the way most runners plan a week. */
 export const WEEK: readonly DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

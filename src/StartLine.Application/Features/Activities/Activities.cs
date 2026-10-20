@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
@@ -60,11 +61,12 @@ internal sealed class ImportActivityHandler(CurrentRunner current, ActivityImpor
 }
 
 /// <summary>Every best effort the runner has stored, so each run can be measured against the others.</summary>
-internal sealed class PersonalBests(IApplicationDbContext db)
+internal sealed class PersonalBests(IApplicationDbContext db, TimeProvider time)
 {
     public async Task<RunnerBests> ForRunnerAsync(Guid runnerId, CancellationToken cancellationToken)
     {
         var efforts = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
             .Where(a => a.RunnerId == runnerId)
             .SelectMany(a => a.BestEfforts.Select(e => new { ActivityId = a.Id, e.DistanceMetres, e.Elapsed }))
             .ToListAsync(cancellationToken);
@@ -84,7 +86,7 @@ internal sealed class RunnerBests(IReadOnlyList<(Guid ActivityId, double Distanc
 /// <summary>The runner's runs, newest first. At most <see cref="Activity.MaxPerRunner"/>, so no paging yet.</summary>
 public sealed record ListMyActivitiesQuery : IRequest<IReadOnlyList<ActivitySummaryDto>>;
 
-internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentRunner current)
+internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentRunner current, TimeProvider time)
     : IRequestHandler<ListMyActivitiesQuery, IReadOnlyList<ActivitySummaryDto>>
 {
     public async Task<IReadOnlyList<ActivitySummaryDto>> Handle(ListMyActivitiesQuery request, CancellationToken cancellationToken)
@@ -96,6 +98,7 @@ internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentR
         }
 
         var activities = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
             .Where(a => a.RunnerId == runner.Id)
             .OrderByDescending(a => a.StartedAt)
             .Take(Activity.MaxPerRunner)
@@ -106,7 +109,7 @@ internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentR
 
 public sealed record GetMyActivityQuery(Guid Id) : IRequest<ActivityDto>;
 
-internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests)
+internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests, TimeProvider time)
     : IRequestHandler<GetMyActivityQuery, ActivityDto>
 {
     public async Task<ActivityDto> Handle(GetMyActivityQuery request, CancellationToken cancellationToken)
@@ -116,6 +119,7 @@ internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunn
         var activity = runner is null
             ? null
             : await db.Activities.AsNoTracking()
+                .Visible(time.GetUtcNow())
                 .SingleOrDefaultAsync(a => a.Id == request.Id && a.RunnerId == runner.Id, cancellationToken);
         if (activity is null)
         {
@@ -145,5 +149,41 @@ internal sealed class DeleteMyActivityHandler(IApplicationDbContext db, CurrentR
         db.Activities.Remove(activity);
         await db.SaveChangesAsync(cancellationToken);
         return true;
+    }
+}
+
+/// <summary>The runner's fastest time at each standard distance, across every run they can see (uploads and synced).</summary>
+public sealed record ListMyBestsQuery : IRequest<IReadOnlyList<PersonalBestDto>>;
+
+internal sealed class ListMyBestsHandler(IApplicationDbContext db, CurrentRunner current, TimeProvider time)
+    : IRequestHandler<ListMyBestsQuery, IReadOnlyList<PersonalBestDto>>
+{
+    public async Task<IReadOnlyList<PersonalBestDto>> Handle(ListMyBestsQuery request, CancellationToken cancellationToken)
+    {
+        var runner = await current.FindAsync(cancellationToken);
+        if (runner is null)
+        {
+            return [];
+        }
+
+        var efforts = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
+            .Where(a => a.RunnerId == runner.Id)
+            .SelectMany(a => a.BestEfforts.Select(e => new { ActivityId = a.Id, a.LocalDate, a.Source, e.DistanceMetres, e.Elapsed }))
+            .ToListAsync(cancellationToken);
+
+        // The earliest run wins a tie: that's when the best was set.
+        return [.. efforts
+            .GroupBy(e => e.DistanceMetres)
+            .Select(g => g.OrderBy(e => e.Elapsed).ThenBy(e => e.LocalDate).First())
+            .OrderBy(e => e.DistanceMetres)
+            .Select(e => new PersonalBestDto(
+                StandardDistance.Find(e.DistanceMetres)?.Name ?? string.Create(CultureInfo.InvariantCulture, $"{e.DistanceMetres:0} m"),
+                e.DistanceMetres,
+                ActivitySummaryDto.Round(e.Elapsed.TotalSeconds, 1),
+                ActivitySummaryDto.Round(e.Elapsed.TotalSeconds / (e.DistanceMetres / 1000), 1),
+                e.ActivityId,
+                e.LocalDate,
+                e.Source))];
     }
 }

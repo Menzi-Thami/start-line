@@ -2156,13 +2156,13 @@ a.menu-item {
   white-space: nowrap;
 }
 
-/* The end bars keep their numbers inside the plot, clear of the axis labels. */
-.volume-week:first-child .volume-value {
+/* With many narrow bars, the end ones keep their numbers inside the plot, clear of the axis labels. */
+.volume-plot.is-dense .volume-week:first-child .volume-value {
   left: 0;
   transform: none;
 }
 
-.volume-week:last-child .volume-value {
+.volume-plot.is-dense .volume-week:last-child .volume-value {
   left: auto;
   right: 0;
   transform: none;

@@ -295,3 +295,25 @@
     white-space: nowrap;
   }
 }
+
+/* "How do my runs get into Strava?": closed by default, one short line per kind of device. */
+.device-guide summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.device-guide-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+}
+
+.device-guide-list dt {
+  font-weight: 700;
+}
+
+.device-guide-list dd {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}

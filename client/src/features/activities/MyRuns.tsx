@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
-import { api, ApiError } from '../../lib/api-client'
+import { api } from '../../lib/api-client'
+import { emptyProgress, uploadAll, type BulkProgress, type BulkResult } from '../../lib/bulk-upload'
 import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
 import type { Activity, ActivitySummary } from '../../lib/types'
 import { KIND_LABEL } from './activity-copy'
+import { BulkSummary } from './BulkSummary'
 
 type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] } | { kind: 'error'; message: string }
 
@@ -12,12 +14,13 @@ interface Props {
   onOpen: (id: string, uploaded?: Activity) => void
 }
 
-/** Upload a run from a Garmin watch, and every run uploaded so far, newest first. */
+/** Upload runs from a Garmin watch (one, a few, or a whole account export), and every run uploaded so far, newest first. */
 export function MyRuns({ units, onOpen }: Props) {
   const auth = useAuth()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [bulk, setBulk] = useState<{ running: boolean; progress: BulkProgress; result: BulkResult | null; error: string | null } | null>(null)
+  const [singleError, setSingleError] = useState<string | null>(null)
+  const stop = useRef<AbortController | null>(null)
   const input = useRef<HTMLInputElement>(null)
 
   // Only sets state when the request settles; callers set the loading state themselves.
@@ -35,23 +38,46 @@ export function MyRuns({ units, onOpen }: Props) {
 
   useEffect(() => fetchRuns(), [fetchRuns])
 
-  const upload = async (file: File) => {
-    setUploading(true)
-    setUploadError(null)
+  const upload = async (files: File[]) => {
+    const controller = new AbortController()
+    stop.current = controller
+    setSingleError(null)
+    setBulk({ running: true, progress: emptyProgress(), result: null, error: null })
     try {
-      const token = await auth.getToken()
-      if (!token) throw new Error('Your sign-in has expired. Sign in again to carry on.')
-      const run = await api.me.uploadActivity(token, file)
-      onOpen(run.id, run)
+      const result = await uploadAll(files, {
+        getToken: auth.getToken,
+        signal: controller.signal,
+        onProgress: (progress) => setBulk((current) => current && { ...current, progress }),
+      })
+      // One file picked and one run found: behave like a single upload, straight to the run or straight to the problem.
+      const only = result.outcomes.length === 1 ? result.outcomes[0] : undefined
+      if (files.length === 1 && only) {
+        if (only.status === 'Imported' && only.activityId) {
+          onOpen(only.activityId)
+          return
+        }
+        if (only.status !== 'AlreadyUploaded') {
+          setBulk(null)
+          setSingleError(only.message ?? 'That file couldn’t be added.')
+          return
+        }
+      }
+      setBulk((current) => ({ running: false, progress: current?.progress ?? emptyProgress(), result, error: null }))
     } catch (error) {
-      const fileProblem = error instanceof ApiError ? error.fieldErrors.file?.[0] : undefined
-      setUploadError(fileProblem ?? (error instanceof Error ? error.message : 'That upload didn’t work. Try again.'))
-      setUploading(false)
+      setBulk((current) => ({
+        running: false,
+        progress: current?.progress ?? emptyProgress(),
+        result: null,
+        error: error instanceof Error ? error.message : 'That upload didn’t work. Try again.',
+      }))
     } finally {
-      // The same file can be picked again after fixing whatever went wrong.
+      // The same files can be picked again after fixing whatever went wrong.
       if (input.current) input.current.value = ''
+      fetchRuns()
     }
   }
+
+  const running = bulk?.running ?? false
 
   return (
     <section className="section" aria-labelledby="my-runs-title" style={{ marginTop: 0 }}>
@@ -60,37 +86,47 @@ export function MyRuns({ units, onOpen }: Props) {
       </h2>
 
       <div className="panel upload">
-        <h3>Add a run from your Garmin</h3>
-        <ol className="upload-steps">
-          <li>
-            On the Garmin Connect <strong>website</strong>, open the run.
-          </li>
-          <li>
-            Click the cog at the top right and choose <strong>Export Original</strong>.
-          </li>
-          <li>Upload the .zip it downloads (or the .fit inside it) here.</li>
-        </ol>
-        <label className={uploading ? 'button button-primary is-busy' : 'button button-primary'}>
-          {uploading ? 'Reading your run…' : 'Upload a run'}
+        <h3>Add runs from your Garmin</h3>
+        <div className="upload-ways">
+          <div>
+            <p className="upload-way">One run</p>
+            <p className="field-help">
+              On the Garmin Connect <strong>website</strong>, open the run, click the cog at the top right and choose{' '}
+              <strong>Export Original</strong>. Upload the .zip it downloads, or several at once.
+            </p>
+          </div>
+          <div>
+            <p className="upload-way">Your whole history</p>
+            <p className="field-help">
+              In your Garmin account, go to <strong>Data Management</strong>, then <strong>Export Your Data</strong>. Garmin emails you a
+              link to a zip. Upload that zip as it is: your browser opens it and sends only the runs.
+            </p>
+          </div>
+        </div>
+        <label className={running ? 'button button-primary is-busy' : 'button button-primary'}>
+          {running ? 'Reading your files…' : 'Upload runs'}
           <input
             ref={input}
             className="visually-hidden"
             type="file"
             accept=".fit,.zip"
-            disabled={uploading}
+            multiple
+            disabled={running}
             onChange={(event) => {
-              const file = event.target.files?.[0]
-              if (file) void upload(file)
+              const files = [...(event.target.files ?? [])]
+              if (files.length > 0) void upload(files)
             }}
           />
         </label>
-        {uploadError && (
+        {singleError && (
           <p className="field-error" role="alert" style={{ marginTop: 'var(--space-3)' }}>
-            {uploadError}
+            {singleError}
           </p>
         )}
+        {bulk && <BulkSummary running={bulk.running} progress={bulk.progress} result={bulk.result} error={bulk.error} onStop={() => stop.current?.abort()} />}
         <p className="field-help" style={{ marginTop: 'var(--space-3)' }}>
-          We read the file and throw it away. Taperday keeps the totals, splits and best efforts, never your route.
+          We read each file and throw it away. Taperday keeps the totals, splits and best efforts, never your route. Runs you’ve
+          already added are skipped, so it’s safe to upload the same files again.
         </p>
       </div>
 

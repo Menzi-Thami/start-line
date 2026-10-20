@@ -24,7 +24,7 @@ internal sealed partial class StravaSyncRunner(
     IStravaApi strava,
     StravaRateGate gate,
     StravaTokens tokens,
-    ActivityRecorder recorder,
+    ActivityImporter importer,
     TimeProvider time,
     ILogger<StravaSyncRunner> logger) : IStravaSync
 {
@@ -138,7 +138,7 @@ internal sealed partial class StravaSyncRunner(
 
         var now = time.GetUtcNow();
         var runner = await db.Runners.SingleAsync(r => r.Id == job.RunnerId, cancellationToken);
-        var fresh = await recorder.RecordAsync(runner, recording, ActivityOrigin.Strava(id, now, StravaRecording.RecordedOnGarmin(activity)), cancellationToken);
+        var fresh = await importer.RecordAsync(runner, recording, ActivityOrigin.Strava(id, now, StravaRecording.RecordedOnGarmin(activity)), cancellationToken);
 
         var externalId = fresh.ExternalId;
         var existing = await db.Activities.SingleOrDefaultAsync(

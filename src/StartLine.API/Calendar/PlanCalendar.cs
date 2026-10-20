@@ -48,7 +48,10 @@ internal static class PlanCalendar
                     pace is null ? null : FormatPaceRange(pace.FastestSecondsPerKm, pace.SlowestSecondsPerKm, miles, unit),
                 }.OfType<string>().ToList();
                 var summary = numbers.Count > 0 ? $"{session.Title} · {string.Join(" at ", numbers)}" : session.Title;
-                var description = $"{session.Detail}\n\nWhy: {session.Purpose}\n\nWeek {week.Number} of {plan.Weeks.Count} for {plan.Race.Name}.";
+                var exercises = session.Exercises.Count == 0
+                    ? ""
+                    : "\n\n" + string.Join("\n", session.Exercises.Select((e, i) => $"{i + 1}. {e.Summary}"));
+                var description = $"{session.Detail}{exercises}\n\nWhy: {session.Purpose}\n\nWeek {week.Number} of {plan.Weeks.Count} for {plan.Race.Name}.";
 
                 lines.Add("BEGIN:VEVENT");
                 lines.Add($"UID:{Compact(session.Date)}-{index}-{session.Type}@taperday.run");

@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { formatDistance, type Units } from '../../lib/format'
 import type { PlanWeek } from '../../lib/types'
 import { PHASES } from './copy'
-import { trainingKm } from './plan-math'
+import { trainingKm, weekLabels } from './plan-math'
 
 interface Props {
   weeks: PlanWeek[]
@@ -12,128 +12,88 @@ interface Props {
   ran?: ReadonlyMap<number, number>
 }
 
-const BAR = 24
-/** What was run sits inside the planned bar as a narrow ink bar: a different shape as well as a different colour. */
-const RAN_BAR = 8
-const GAP = 4
-const BASE_HEIGHT = 160
-/** The bars never get shorter than this on screen, however narrow the column. */
-const MIN_PLOT_PX = 140
-/** On-screen size of every label, whatever the chart is scaled to. */
-const LABEL_PX = 12
-/** Room a week number needs on screen before its neighbour's can sit beside it. */
-const LABEL_SLOT_PX = 22
+/** Above this many weeks the bars get too narrow for a number on each, so only this week and the biggest keep one. */
+const LABEL_EVERY_BAR = 12
 
 function niceMax(value: number): number {
   const step = value > 80 ? 20 : value > 40 ? 10 : 5
   return Math.max(step, Math.ceil(value / step) * step)
 }
 
+const number = (km: number, units: Units) => formatDistance(km, units).replace(` ${units}`, '')
+const percent = (value: number, max: number) => `${Math.min(100, (value / max) * 100)}%`
+
 /**
- * One series, one hue: weekly distance. Cutback weeks are hatched rather than recoloured, so the
- * difference survives colour blindness and printing. The week list below doubles as the table view,
- * and a visually hidden table gives screen readers the same numbers.
+ * One series, one hue: weekly distance, as HTML bars in a plot of fixed height, so a four-week plan gets four
+ * sensible bars rather than ones that fill the screen. Cutback weeks are hatched rather than recoloured, so the
+ * difference survives colour blindness and printing; what was run sits inside its week's bar as a narrow ink bar, a
+ * different shape as well as a different colour. The week list below doubles as the table view, and a visually
+ * hidden table gives screen readers the same numbers.
  */
 export function VolumeChart({ weeks, units, currentWeek, ran }: Props) {
   const [hover, setHover] = useState<number | null>(null)
-  const [renderedWidth, setRenderedWidth] = useState<number | null>(null)
-  const figureRef = useRef<HTMLElement>(null)
   const values = weeks.map(trainingKm)
   const max = niceMax(Math.max(...values, ...(ran?.values() ?? []), 1))
-  const width = weeks.length * (BAR + GAP) - GAP
-  // The SVG shrinks to fit its column, which on a phone would shrink the labels to a few pixels. Measure the
-  // drawn width and size text in drawing units so it always lands at LABEL_PX on screen.
-  useEffect(() => {
-    const figure = figureRef.current
-    if (!figure || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(([entry]) => entry && setRenderedWidth(entry.contentRect.width))
-    observer.observe(figure)
-    return () => observer.disconnect()
-  }, [])
-
-  const pxPerUnit = (left: number) => (renderedWidth ? renderedWidth / (width + left + 4) : 1)
-  const firstGuess = LABEL_PX / pxPerUnit(36)
-  const left = Math.max(36, firstGuess * 2.4 + 6)
-  const px = pxPerUnit(left)
-  const font = LABEL_PX / px
-  const plotHeight = Math.max(BASE_HEIGHT, MIN_PLOT_PX / px)
-  const scale = (km: number) => (km / max) * plotHeight
-  const ticks = [0, max / 2, max]
-  const axis = font + 18
-  const viewWidth = width + left + 4
-  const viewHeight = plotHeight + axis + 8
-  const labelEvery = Math.max(weeks.length > 16 ? 4 : weeks.length > 8 ? 2 : 1, Math.ceil(LABEL_SLOT_PX / ((BAR + GAP) * px)))
+  const biggest = values.indexOf(Math.max(...values))
+  const labelled = weekLabels(weeks.length, currentWeek === null ? null : weeks.findIndex((w) => w.number === currentWeek) + 1)
   const hovered = hover === null ? undefined : weeks[hover]
 
   return (
-    <figure className="chart" style={{ margin: 0 }} ref={figureRef}>
-      <svg viewBox={`${-left} -8 ${viewWidth} ${viewHeight}`} role="img" aria-label="Weekly distance by week" onPointerLeave={() => setHover(null)}>
-        <defs>
-          <pattern id="cutback" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <rect width="6" height="6" fill="var(--accent-soft)" />
-            <line x1="0" y1="0" x2="0" y2="6" stroke="var(--accent)" strokeWidth="2.5" />
-          </pattern>
-        </defs>
-
-        {ticks.map((t) => (
-          <g key={t}>
-            <line x1={-4} x2={width} y1={plotHeight - scale(t)} y2={plotHeight - scale(t)} stroke="var(--line)" strokeWidth={1} />
-            <text x={-6} y={plotHeight - scale(t) + font / 3} textAnchor="end" fontSize={font} fill="var(--muted)">
-              {formatDistance(t, units).replace(` ${units}`, '')}
-            </text>
-          </g>
-        ))}
-
-        {weeks.map((week, i) => {
-          const h = Math.max(scale(values[i] ?? 0), 2)
-          const x = i * (BAR + GAP)
-          const y = plotHeight - h
-          const r = Math.min(4, h / 2)
-          // Rounded top, square base: the bar is anchored to the axis.
-          const path = `M${x},${plotHeight} V${y + r} Q${x},${y} ${x + r},${y} H${x + BAR - r} Q${x + BAR},${y} ${x + BAR},${y + r} V${plotHeight} Z`
-          const isNow = currentWeek === week.number
-          const ranKm = ran?.get(week.number)
-          const ranHeight = ranKm === undefined ? 0 : Math.max(scale(ranKm), 2)
-          return (
-            <g key={week.number} onPointerEnter={() => setHover(i)}>
-              <rect x={x - GAP / 2} y={0} width={BAR + GAP} height={plotHeight + axis} fill="transparent" />
-              <path d={path} fill={week.isCutback ? 'url(#cutback)' : 'var(--accent)'} opacity={hover === null || hover === i ? 1 : 0.55} />
-              {ranKm !== undefined && (
-                <rect
-                  className="chart-ran"
-                  x={x + (BAR - RAN_BAR) / 2}
-                  y={plotHeight - ranHeight}
-                  width={RAN_BAR}
-                  height={ranHeight}
-                  rx={1.5}
-                  fill="var(--ink)"
-                  stroke="var(--paper)"
-                  strokeWidth={1.5}
-                  opacity={hover === null || hover === i ? 1 : 0.55}
-                />
-              )}
-              {isNow && <circle cx={x + BAR / 2} cy={plotHeight + font + 10} r={3 / px} fill="var(--ink)" />}
-              {(i % labelEvery === 0 || i === weeks.length - 1) && (
-                <text x={x + BAR / 2} y={plotHeight + font + 2} textAnchor="middle" fontSize={font} fill="var(--muted)">
-                  {week.number}
-                </text>
-              )}
-            </g>
-          )
-        })}
-      </svg>
-
-      {hovered && hover !== null && (
-        <div className="chart-tooltip" style={{ left: `${((hover * (BAR + GAP) + BAR / 2 + left) / viewWidth) * 100}%`, top: `${((plotHeight - scale(values[hover] ?? 0) + 8) / viewHeight) * 100}%` }}>
-          Week {hovered.number} · {PHASES[hovered.phase]} · {formatDistance(values[hover] ?? 0, units)}
-          {hovered.isCutback ? ' · easier week' : ''}
-          {ran?.has(hovered.number) ? ` · ran ${formatDistance(ran.get(hovered.number) ?? 0, units)}` : ''}
+    <figure className="volume">
+      <div
+        className="volume-plot"
+        role="img"
+        aria-label={`Weekly distance over ${weeks.length} weeks, peaking at ${formatDistance(values[biggest] ?? 0, units)}`}
+        style={{ ['--weeks' as string]: weeks.length } as CSSProperties}
+        onPointerLeave={() => setHover(null)}
+      >
+        <div className="volume-grid" aria-hidden="true">
+          {[max, max / 2, 0].map((tick) => (
+            <span key={tick} className="volume-tick" style={{ bottom: percent(tick, max) }}>
+              <span className="volume-tick-label mono">{tick === max ? formatDistance(tick, units) : number(tick, units)}</span>
+            </span>
+          ))}
         </div>
-      )}
+
+        <ol className="volume-bars" aria-hidden="true">
+          {weeks.map((week, i) => {
+            const km = values[i] ?? 0
+            const ranKm = ran?.get(week.number)
+            const isNow = currentWeek === week.number
+            const showValue = weeks.length <= LABEL_EVERY_BAR || isNow || i === biggest
+            const showWeek = labelled.has(i)
+            return (
+              <li
+                key={week.number}
+                className={`volume-week${isNow ? ' is-now' : ''}${week.isCutback ? ' is-cutback' : ''}${hover !== null && hover !== i ? ' is-dimmed' : ''}`}
+                style={{ ['--h' as string]: percent(km, max), ['--r' as string]: percent(ranKm ?? 0, max) } as CSSProperties}
+                onPointerEnter={() => setHover(i)}
+              >
+                <span className="volume-bar" />
+                {ranKm !== undefined && ranKm > 0 && <span className="volume-ran" />}
+                {showValue && (
+                  <span className="volume-value mono">
+                    {isNow && ranKm !== undefined ? `${number(ranKm, units)} / ${number(km, units)}` : number(km, units)}
+                  </span>
+                )}
+                {showWeek && <span className="volume-label mono">{week.number}</span>}
+              </li>
+            )
+          })}
+        </ol>
+
+        {hovered && hover !== null && (
+          <div className="chart-tooltip volume-tooltip" style={{ left: `${((hover + 0.5) / weeks.length) * 100}%`, bottom: percent(values[hover] ?? 0, max) }}>
+            Week {hovered.number} · {PHASES[hovered.phase]} · {formatDistance(values[hover] ?? 0, units)}
+            {hovered.isCutback ? ' · easier week' : ''}
+            {ran?.has(hovered.number) ? ` · ran ${formatDistance(ran.get(hovered.number) ?? 0, units)}` : ''}
+          </div>
+        )}
+      </div>
 
       <figcaption className="chart-key">
         <span>
-          <span className="key-swatch" style={{ background: 'var(--accent)' }} /> Building
+          <span className="key-swatch" style={{ background: 'var(--accent)' }} /> Planned
         </span>
         <span>
           <span className="key-swatch key-swatch-hatched" /> Easier week
@@ -145,10 +105,10 @@ export function VolumeChart({ weeks, units, currentWeek, ran }: Props) {
         )}
         {currentWeek && (
           <span>
-            <span className="effort-dot" style={{ background: 'var(--ink)', width: 6, height: 6 }} /> This week
+            <span className="key-now mono">{currentWeek}</span> This week
           </span>
         )}
-        <span>Race week excludes the race itself.</span>
+        <span className="chart-note">Week numbers along the bottom. Race week leaves out the race itself.</span>
       </figcaption>
 
       <table className="visually-hidden">

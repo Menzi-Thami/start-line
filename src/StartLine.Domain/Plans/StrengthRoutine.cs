@@ -26,12 +26,17 @@ public enum RepUnit
     SecondsEachSide,
 }
 
-public sealed record StrengthExercise(Exercise Exercise, int Sets, int Reps, RepUnit Unit);
+public sealed record StrengthExercise(Exercise Exercise, int Sets, int Reps, RepUnit Unit)
+{
+    /// <summary>One line for calendars and lists: "3 × 10 squats", "3 × 8 reverse lunges each leg", "3 × 30 s plank".</summary>
+    public string Summary => StrengthRoutine.Describe(this);
+}
 
 /// <summary>
-/// The strength routine for a week. It follows the running: learn the moves with body weight in Base, add load and
-/// single-leg work in Build, fewer and heavier reps plus a little spring in Peak, and keep it light in easier weeks
-/// and the taper so strength never steals from the running.
+/// The strength routine for a week, in the order to do it: anything explosive first while the legs are fresh, then
+/// the big strength moves, then calves and the trunk. It follows the running: learn the moves with body weight in
+/// Base, add load and single-leg work in Build, fewer and heavier reps plus a little spring in Peak, and keep it light
+/// in easier weeks and the taper so strength never steals from the running.
 /// </summary>
 internal static class StrengthRoutine
 {
@@ -63,17 +68,15 @@ internal static class StrengthRoutine
         ],
         _ =>
         [
+            new(Exercise.SquatJump, 3, 6, RepUnit.Reps),
             new(Exercise.RomanianDeadlift, 3, 6, RepUnit.Reps),
             new(Exercise.BulgarianSplitSquat, 3, 6, RepUnit.RepsEachLeg),
-            new(Exercise.SquatJump, 3, 6, RepUnit.Reps),
             new(Exercise.CalfRaise, 3, 12, RepUnit.RepsEachLeg),
             new(Exercise.SidePlank, 2, 30, RepUnit.SecondsEachSide),
         ],
     };
 
-    /// <summary>The routine as one line for calendars: "3 × 10 squats, 3 × 8 reverse lunges each leg, ...".</summary>
-    public static string Describe(IEnumerable<StrengthExercise> exercises) =>
-        string.Join(", ", exercises.Select(e => string.Create(CultureInfo.InvariantCulture, $"{e.Sets} × {Dose(e)}")));
+    public static string Describe(StrengthExercise e) => string.Create(CultureInfo.InvariantCulture, $"{e.Sets} × {Dose(e)}");
 
     private static string Dose(StrengthExercise e) => e.Unit switch
     {

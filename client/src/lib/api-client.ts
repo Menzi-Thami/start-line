@@ -2,6 +2,7 @@ import { toTimeSpan } from './format'
 import type {
   Activity,
   ActivitySummary,
+  BulkImport,
   GeneratePlanRequest,
   PersonalBest,
   Prediction,
@@ -121,10 +122,11 @@ export const api = {
       request<void>(`/api/v1/me/plans/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
     activities: (token: string) => request<ActivitySummary[]>('/api/v1/me/activities', {}, token),
     activity: (token: string, id: string) => request<Activity>(`/api/v1/me/activities/${encodeURIComponent(id)}`, {}, token),
-    uploadActivity: (token: string, file: File) => {
+    // Several .fit files in one request: the browser has already unzipped them, the server reads them.
+    uploadActivities: (token: string, files: readonly File[], signal?: AbortSignal) => {
       const body = new FormData()
-      body.append('file', file, file.name)
-      return request<Activity>('/api/v1/me/activities', { method: 'POST', body }, token)
+      for (const file of files) body.append('files', file, file.name)
+      return request<BulkImport>('/api/v1/me/activities/batch', { method: 'POST', body, signal }, token)
     },
     deleteActivity: (token: string, id: string) =>
       request<void>(`/api/v1/me/activities/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),

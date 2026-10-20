@@ -48,65 +48,16 @@ internal sealed class ImportActivityValidator : AbstractValidator<ImportActivity
     }
 }
 
-internal sealed class ImportActivityHandler(
-    IApplicationDbContext db,
-    CurrentRunner current,
-    IActivityFileReader reader,
-    ActivityRecorder recorder,
-    PersonalBests personalBests,
-    TimeProvider time)
+internal sealed class ImportActivityHandler(CurrentRunner current, ActivityImporter importer, PersonalBests personalBests)
     : IRequestHandler<ImportActivityCommand, ActivityDto>
 {
     public async Task<ActivityDto> Handle(ImportActivityCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.RequireAsync(cancellationToken);
-        var now = time.GetUtcNow();
-        if (await db.Activities.Visible(now).CountAsync(a => a.RunnerId == runner.Id, cancellationToken) >= Activity.MaxPerRunner)
-        {
-            throw new ConflictException("activity_limit", $"You can keep up to {Activity.MaxPerRunner:N0} runs. Delete an old one to add another.");
-        }
-
-        var recording = reader.Read(request.File);
-        var startedAt = recording.StartedAt.ToUniversalTime();
-        var existing = await db.Activities.SingleOrDefaultAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken);
-        if (existing is { Source: ActivitySource.Upload })
-        {
-            throw Duplicate();
-        }
-
-        var activity = await recorder.RecordAsync(runner, recording, ActivityOrigin.Upload, cancellationToken);
-
-        // The file of a run that was synced replaces the synced copy: uploads are the runner's own and are kept,
-        // where a synced copy lapses. The two are never merged into one record.
-        if (existing is not null)
-        {
-            db.Activities.Remove(existing);
-        }
-
-        db.Activities.Add(activity);
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            // The same file uploaded twice at once (a double tap): the unique index let only one in.
-            // Anything else is a real failure: rethrow.
-            db.Activities.Entry(activity).State = EntityState.Detached;
-            if (await db.Activities.AsNoTracking().AnyAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken))
-            {
-                throw Duplicate();
-            }
-
-            throw;
-        }
-
+        var activity = await importer.ImportAsync(runner, request.File, cancellationToken);
         var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
         return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate);
     }
-
-    private static ConflictException Duplicate() =>
-        new("activity_exists", "You've already uploaded this run.");
 }
 
 /// <summary>Every best effort the runner has stored, so each run can be measured against the others.</summary>

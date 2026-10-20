@@ -1,14 +1,16 @@
 # Activity import (Garmin .fit)
 
 Runners upload a run from their watch and see it against their plan. It's free all the way: Garmin's own developer
-API is business-only (and closed to new applications), and Strava's now needs a paid subscription, so the route is
-the file Garmin Connect already gives every user. Runners on Strava can instead connect it once and have runs
-arrive by themselves: see `strava-sync.md`. Both go through the same analysis below.
+API is business-only (and closed to new applications), so the route is the file Garmin Connect already gives every
+user. Runners on Strava can instead connect it once and have runs arrive by themselves, under Strava's stricter terms
+(see "Strava's terms" below and `strava-sync.md`). Both go through the same analysis below.
 
 ## How a runner gets the file
 
-On the Garmin Connect **website**, open the run, click the cog at the top right and choose **Export Original**.
-That downloads a `.zip` with one `.fit` inside. Taperday takes either the zip or the bare `.fit`.
+- **One run:** on the Garmin Connect **website**, open the run, click the cog at the top right and choose **Export
+  Original**. That downloads a `.zip` with one `.fit` inside. Taperday takes either, and several at once.
+- **A whole history:** in the Garmin account, **Data Management** then **Export Your Data**. Garmin emails a link to a
+  zip (it can take a while). The runner uploads that zip as it is.
 
 ## What happens to it
 
@@ -19,6 +21,18 @@ That downloads a `.zip` with one `.fit` inside. Taperday takes either the zip or
 3. `Activity.Record` (Domain, plain C#) works out moving time, km splits, first vs second half and best efforts, and
    picks the plan session for that day.
 4. Only that summary is saved. The file itself is never stored.
+
+### Many files at once (`POST /api/v1/me/activities/batch`)
+
+A Garmin account export can be gigabytes, far beyond an upload limit, and keeps its activities in a zip inside the
+zip. So the **browser** opens it (`client/src/lib/fit-files.ts`, using `fflate` streaming, never the FIT SDK) and sends
+only the `.fit` entries, in batches of up to 20 files and 20 MB (`lib/bulk-upload.ts`). The batch endpoint gives every
+file its own result (imported, already uploaded, skipped as not a run, unreadable, or over the run limit) and one bad
+file never fails the batch. Duplicates use the same rule as single uploads (same runner, same start time), so uploading
+the same export twice is safe. Each batch gets a fresh sign-in token; the runner can stop at any time and pick the
+same files again later. Once the 1,000-run limit is reached the rest are reported and not read. Files aren't sorted by
+date first (that would mean reading the FIT format in the browser, which the SDK licence keeps server-side), so the
+runs kept are the first 1,000 in the export, not necessarily the newest.
 
 ## The numbers
 
@@ -65,7 +79,8 @@ The plan view also shows uploaded runs: a done mark (linking to the run) on days
 - **Per runner:** 1,000 runs (`Activity.MaxPerRunner`), about 5–10 MB of rows at most.
 - **Upload size:** 10 MB (`ActivityUpload.MaxFileBytes`); a zipped `.fit` may unpack to at most 40 MB, and at most
   250,000 samples are read.
-- **Rate:** 60 uploads an hour per runner (`uploads` policy).
+- **Rate:** 60 single uploads an hour per runner (`uploads` policy), and 60 batches of up to 20 files an hour
+  (`bulk-uploads` policy): 1,200 files an hour, more than the 1,000 a runner can keep.
 - **Duplicates:** the same start time from the same runner is the same run (unique index): 409 `activity_exists`.
 
 ## The FIT SDK licence
@@ -83,6 +98,34 @@ public app, provided:
 
 The grant is worded for "internal business purposes, including to use the FIT protocol in any software created by
 Licensee". A public app relies on the second half of that sentence. Worth a second opinion before any paid tier.
+
+## Strava's terms (checked 19 Oct 2026)
+
+Pulling runs from Strava was first turned down for these terms, then built anyway in a shape that fits them: synced
+runs are a 7-day rolling cache, never merged with uploads (`strava-sync.md`). The .fit route stays for everyone else.
+Strava's API Agreement and API Policy (both effective 1 June 2026) and its developer docs say:
+
+- **Not free to run:** a Standard-tier API app needs the developer to hold a paid Strava subscription (US $11.99 a
+  month or $79.99 a year; there's no separate API fee). Athletes who connect don't appear to need one.
+- **10 runners until reviewed:** new apps allow 1 athlete; the developer can raise that to 10; beyond 10 needs Strava's
+  review, which "is not a guarantee". Reviewed Standard apps go up to 9,999.
+- **No keeping runs:** Policy §6.2, "You may not retain Strava Data in your cache for longer than seven (7) days";
+  §6.4 limits retention to the original purpose; §5.7 bars storing location data. So a Strava run is a copy fetched
+  again before its 7 days are up and dropped on disconnect, never a permanent Taperday activity.
+- **No merging:** §5.4, "You may not combine Strava Data with other customer data". So an upload and a Strava copy of
+  the same run are never merged: the upload replaces the copy.
+- **Also:** a runner's Strava data may be shown only to that runner (§2.3); no AI use of any kind, retrieval included
+  (§5.3); no intermediaries or MCP servers (§5.16); deletions reflected within 48 hours (§6.3) and everything deleted
+  within 30 days of a disconnect (§7.4); Garmin-sourced data needs Garmin attribution (§4.4).
+- **Rate limits:** 200 requests per 15 minutes and 2,000 a day overall (100 and 1,000 for non-upload calls); 400 and
+  4,000 after raising the app to 10 athletes.
+- **Branding:** the official "Connect with Strava" button, unmodified "Powered by Strava" or
+  "Compatible with Strava" logos less prominent than Taperday's, links to Strava data reading exactly "View on Strava",
+  and never "Strava" in the app's name.
+
+Sources: https://www.strava.com/legal/api, https://www.strava.com/legal/api_policy,
+https://developers.strava.com/docs/rate-limits/, https://developers.strava.com/guidelines/,
+https://communityhub.strava.com/developers-knowledge-base-14/strava-api-faq-12906. Re-check them before revisiting.
 
 ## Not done yet
 

@@ -26,6 +26,7 @@ internal static class PresentationDependencyInjection
     public const string SpaCorsPolicy = "spa";
     public const string PlanRateLimitPolicy = "plans";
     public const string UploadRateLimitPolicy = "uploads";
+    public const string BulkUploadRateLimitPolicy = "bulk-uploads";
     public const string WebhookRateLimitPolicy = "webhooks";
     public const string RunnerPolicy = "runner";
     public const string DefaultScope = "Plans.ReadWrite";
@@ -142,6 +143,15 @@ internal static class PresentationDependencyInjection
 
             // Reading a file costs far more than a plan request. Enough for a runner catching up on a month of runs.
             o.AddPolicy(UploadRateLimitPolicy, ctx =>
+                RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 60,
+                    Window = TimeSpan.FromHours(1),
+                    QueueLimit = 0,
+                }));
+
+            // A backfill: 60 batches of up to 20 files is 1,200 runs an hour, more than the 1,000 a runner can keep.
+            o.AddPolicy(BulkUploadRateLimitPolicy, ctx =>
                 RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = 60,

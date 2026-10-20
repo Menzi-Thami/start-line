@@ -58,9 +58,13 @@ describe('the strength figures', () => {
     expect(back[0]).toBeLessThan(50)
   })
 
-  it('every move has cues and a reason', () => {
+  it('every move has a short how-to, a few short cues and a reason', () => {
     for (const info of Object.values(EXERCISES)) {
-      expect(info.cues.length).toBeGreaterThanOrEqual(3)
+      expect(info.howTo.length).toBeGreaterThan(40)
+      expect(info.howTo.length).toBeLessThan(200)
+      expect(info.cues.length).toBeGreaterThanOrEqual(2)
+      expect(info.cues.length).toBeLessThanOrEqual(3)
+      info.cues.forEach((cue) => expect(cue.length).toBeLessThan(45))
       expect(info.why).not.toBe('')
     }
   })
@@ -68,10 +72,10 @@ describe('the strength figures', () => {
 
 describe('sets and reps', () => {
   it('reads like a runner would write it', () => {
-    expect(formatDose({ exercise: 'Squat', sets: 3, reps: 10, unit: 'Reps' })).toBe('3 × 10')
-    expect(formatDose({ exercise: 'ReverseLunge', sets: 3, reps: 8, unit: 'RepsEachLeg' })).toBe('3 × 8 each leg')
-    expect(formatDose({ exercise: 'Plank', sets: 3, reps: 30, unit: 'Seconds' })).toBe('3 × 30 s')
-    expect(formatDose({ exercise: 'SidePlank', sets: 2, reps: 30, unit: 'SecondsEachSide' })).toBe('2 × 30 s each side')
+    expect(formatDose({ sets: 3, reps: 10, unit: 'Reps' })).toBe('3 × 10')
+    expect(formatDose({ sets: 3, reps: 8, unit: 'RepsEachLeg' })).toBe('3 × 8 each leg')
+    expect(formatDose({ sets: 3, reps: 30, unit: 'Seconds' })).toBe('3 × 30 s')
+    expect(formatDose({ sets: 2, reps: 30, unit: 'SecondsEachSide' })).toBe('2 × 30 s each side')
   })
 })
 
@@ -85,8 +89,8 @@ describe('ticking off strength', () => {
     distanceKm: 0,
     zone: null,
     exercises: [
-      { exercise: 'Squat', sets: 2, reps: 10, unit: 'Reps' },
-      { exercise: 'Plank', sets: 1, reps: 30, unit: 'Seconds' },
+      { exercise: 'Squat', sets: 2, reps: 10, unit: 'Reps', summary: '2 × 10 squats' },
+      { exercise: 'Plank', sets: 1, reps: 30, unit: 'Seconds', summary: '1 × 30 s plank' },
     ],
   }
 

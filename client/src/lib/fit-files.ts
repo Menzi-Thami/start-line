@@ -3,6 +3,12 @@ import { Unzip, UnzipInflate } from 'fflate'
 /** The API reads activity files up to this size; anything bigger is turned away here, before it's sent. */
 export const MAX_FIT_BYTES = 10 * 1024 * 1024
 
+/** Total decompressed bytes allowed out of one uploaded zip: a Garmin year is well under this. Stops a zip bomb filling the tab's memory. */
+export const MAX_UNZIPPED_BYTES = 2 * 1024 * 1024 * 1024
+
+/** A zip inside a zip inside a zip is a Garmin export; deeper than this is only ever an attack. */
+export const MAX_ZIP_DEPTH = 4
+
 /** A .fit file found in what the runner picked, ready to send. */
 export interface FitEntry {
   kind: 'fit'
@@ -20,7 +26,9 @@ export interface SkippedEntry {
 export type FoundEntry = FitEntry | SkippedEntry
 
 const baseName = (path: string) => path.split(/[\\/]/).pop() ?? path
-const isFit = (name: string) => name.toLowerCase().endsWith('.fit')
+/** The activity formats Taperday reads server-side: Garmin .fit, and the .gpx/.tcx most other apps export. */
+const ACTIVITY_EXTENSIONS = ['.fit', '.gpx', '.tcx']
+const isActivity = (name: string) => ACTIVITY_EXTENSIONS.some((ext) => name.toLowerCase().endsWith(ext))
 const isZip = (name: string) => name.toLowerCase().endsWith('.zip')
 
 /** Reads a file in chunks so a multi-gigabyte account export never sits in memory whole. */
@@ -53,7 +61,12 @@ function join(parts: Uint8Array[], size: number): Uint8Array<ArrayBuffer> {
  * zip). Unzipping happens here in the browser: the export can be gigabytes, far more than an upload should carry,
  * and only the .fit files are ever sent. Nothing here reads the FIT format itself; that stays on the server.
  */
-async function* readZip(name: string, source: AsyncIterable<Uint8Array>): AsyncGenerator<FoundEntry> {
+async function* readZip(name: string, source: AsyncIterable<Uint8Array>, budget = { bytes: MAX_UNZIPPED_BYTES }, depth = 0): AsyncGenerator<FoundEntry> {
+  if (depth > MAX_ZIP_DEPTH) {
+    yield { kind: 'skipped', name, reason: 'bad-zip' }
+    return
+  }
+
   const found: FoundEntry[] = []
   const nested: { name: string; bytes: Uint8Array }[] = []
   let broken = false
@@ -62,8 +75,8 @@ async function* readZip(name: string, source: AsyncIterable<Uint8Array>): AsyncG
 
   const unzip = new Unzip((entry) => {
     const entryName = baseName(entry.name)
-    const fit = isFit(entry.name)
-    if (!fit && !isZip(entry.name)) return // not started, so never decompressed
+    const activity = isActivity(entry.name)
+    if (!activity && !isZip(entry.name)) return // not started, so never decompressed
     const parts: Uint8Array[] = []
     let size = 0
     let tooBig = false
@@ -74,11 +87,12 @@ async function* readZip(name: string, source: AsyncIterable<Uint8Array>): AsyncG
         return
       }
       size += data.length
-      if (fit && size > MAX_FIT_BYTES) tooBig = true
+      budget.bytes -= data.length
+      if ((activity && size > MAX_FIT_BYTES) || budget.bytes < 0) tooBig = true
       else if (!tooBig) parts.push(data)
       if (!final) return
       unfinished -= 1
-      if (fit) {
+      if (activity) {
         found.push(tooBig ? { kind: 'skipped', name: entryName, reason: 'too-big' } : { kind: 'fit', name: entryName, file: new File([join(parts, size)], entryName) })
       } else {
         nested.push({ name: entryName, bytes: join(parts, size) })
@@ -93,7 +107,7 @@ async function* readZip(name: string, source: AsyncIterable<Uint8Array>): AsyncG
     for (const inner of nested.splice(0)) {
       yield* readZip(inner.name, (async function* () {
         yield inner.bytes
-      })())
+      })(), budget, depth + 1)
     }
   }
 
@@ -107,7 +121,7 @@ async function* readZip(name: string, source: AsyncIterable<Uint8Array>): AsyncG
     broken = true
   }
   yield* drain()
-  if (broken || unfinished > 0) yield { kind: 'skipped', name, reason: 'bad-zip' }
+  if (broken || unfinished > 0 || budget.bytes < 0) yield { kind: 'skipped', name, reason: 'bad-zip' }
 }
 
 /** Walks what the runner picked: .fit files as they are, zips opened, anything else noted and left out. */
@@ -115,7 +129,7 @@ export async function* findFitFiles(files: readonly File[]): AsyncGenerator<Foun
   for (const file of files) {
     if (isZip(file.name)) {
       yield* readZip(file.name, chunks(file))
-    } else if (!isFit(file.name)) {
+    } else if (!isActivity(file.name)) {
       yield { kind: 'skipped', name: file.name, reason: 'not-fit' }
     } else if (file.size > MAX_FIT_BYTES) {
       yield { kind: 'skipped', name: file.name, reason: 'too-big' }

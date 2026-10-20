@@ -13,7 +13,7 @@ namespace StartLine.Infrastructure.Activities;
 /// the SDK to third parties, so it never goes near the client). Accepts the bare .fit or the .zip that Garmin
 /// Connect's "Export Original" downloads. Positions are never read: only time, distance, altitude and heart rate.
 /// </summary>
-internal sealed class FitActivityFileReader : IActivityFileReader
+internal sealed class FitActivityFileReader
 {
     /// <summary>About three days at one sample a second: longer than any race Taperday plans for.</summary>
     public const int MaxSamples = 250_000;
@@ -23,7 +23,7 @@ internal sealed class FitActivityFileReader : IActivityFileReader
 
     private static readonly byte[] ZipSignature = "PK\u0003\u0004"u8.ToArray();
 
-    public ActivityRecording Read(Stream file)
+    public static ActivityRecording Read(Stream file)
     {
         ArgumentNullException.ThrowIfNull(file);
         using var fit = IsZip(file) ? Unzip(file) : null;

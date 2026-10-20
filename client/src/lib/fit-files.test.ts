@@ -13,10 +13,16 @@ async function all(files: File[]): Promise<FoundEntry[]> {
 const summary = (found: FoundEntry[]) => found.map((e) => (e.kind === 'fit' ? `fit:${e.name}:${e.file.size}` : `skipped:${e.name}:${e.reason}`))
 
 describe('finding .fit files in what the runner picked', () => {
-  it('sends .fit files as they are and notes anything else', async () => {
-    const found = await all([new File([bytes(100)], 'run.fit'), new File(['<gpx/>'], 'run.gpx'), new File([bytes(MAX_FIT_BYTES + 1)], 'huge.fit')])
+  it('sends .fit, .gpx and .tcx files as they are and notes anything else', async () => {
+    const found = await all([
+      new File([bytes(100)], 'run.fit'),
+      new File(['<gpx/>'], 'run.gpx'),
+      new File(['<tcx/>'], 'run.tcx'),
+      new File(['hi'], 'notes.txt'),
+      new File([bytes(MAX_FIT_BYTES + 1)], 'huge.fit'),
+    ])
 
-    expect(summary(found)).toEqual(['fit:run.fit:100', 'skipped:run.gpx:not-fit', 'skipped:huge.fit:too-big'])
+    expect(summary(found)).toEqual(['fit:run.fit:100', 'fit:run.gpx:6', 'fit:run.tcx:6', 'skipped:notes.txt:not-fit', 'skipped:huge.fit:too-big'])
   })
 
   it('opens a Garmin account export, including the zip inside the zip, and keeps only the .fit files', async () => {

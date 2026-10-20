@@ -4,7 +4,7 @@ const REASON: Partial<Record<FileOutcome['status'], string>> = {
   Skipped: 'Not a run',
   Unreadable: 'Couldn’t be read',
   TooBig: 'Too big (over 10 MB)',
-  NotFit: 'Not a .fit or .zip file',
+  NotFit: 'Not a run file (.fit, .gpx, .tcx or .zip)',
   BadZip: 'Damaged zip',
   LimitReached: 'Over the run limit',
   NotSent: 'Not sent',
@@ -21,7 +21,7 @@ function parts(progress: BulkProgress): string[] {
     progress.Skipped > 0 && `${plural(progress.Skipped, 'file')} that ${progress.Skipped === 1 ? 'wasn’t a run' : 'weren’t runs'}`,
     progress.Unreadable + progress.BadZip > 0 && `${plural(progress.Unreadable + progress.BadZip, 'file')} that couldn’t be read`,
     progress.TooBig > 0 && `${plural(progress.TooBig, 'file')} too big`,
-    progress.NotFit > 0 && `${plural(progress.NotFit, 'file')} that ${progress.NotFit === 1 ? 'wasn’t' : 'weren’t'} .fit or .zip`,
+    progress.NotFit > 0 && `${plural(progress.NotFit, 'file')} that ${progress.NotFit === 1 ? 'wasn’t' : 'weren’t'} a run file`,
   ].filter((part): part is string => Boolean(part))
 }
 
@@ -65,7 +65,7 @@ export function BulkSummary({ running, progress, result, error, onStop }: Props)
           {error}
         </p>
       ) : found === 0 ? (
-        <p>No .fit files in that. For your whole history, upload the zip from Garmin’s Export Your Data as it is.</p>
+        <p>No runs in that. Taperday reads .fit, .gpx and .tcx files, and the zips they come in.</p>
       ) : (
         <p>
           <strong>{progress.Imported === 0 ? 'No new runs added.' : `${plural(progress.Imported, 'run')} added.`}</strong>

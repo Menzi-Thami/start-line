@@ -41,7 +41,7 @@ internal sealed class ImportActivityValidator : AbstractValidator<ImportActivity
     {
         RuleFor(c => c.File)
             .NotNull()
-            .Must(f => f is { CanRead: true, CanSeek: true, Length: > 0 }).WithMessage("Choose a .fit file to upload.")
+            .Must(f => f is { CanRead: true, CanSeek: true, Length: > 0 }).WithMessage("Choose a run file to upload (.fit, .gpx or .tcx).")
             .Must(f => f is { CanSeek: true } && f.Length <= ActivityUpload.MaxFileBytes)
             .WithMessage($"That file is too big. Activity files are up to {ActivityUpload.MaxFileBytes / 1024 / 1024} MB.")
             .OverridePropertyName("file");

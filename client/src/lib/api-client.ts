@@ -44,11 +44,48 @@ interface Problem {
   errors?: Record<string, string[]>
 }
 
+/** A read that hasn't answered in this long won't: the free server wakes within a minute. */
+export const READ_TIMEOUT_MS = 60_000
+
+/** Before the one retry of a read that met a sleeping or restarting server. */
+export const RETRY_AFTER_MS = import.meta.env.MODE === 'test' ? 0 : 2_000
+
+/**
+ * Starts waking the API the moment the page loads, so it's warming up while the runner signs in. Fire and forget: the
+ * answer isn't read (no-cors), and a failure changes nothing.
+ */
+export function wakeApi(): void {
+  if (!BASE_URL) return
+  fetch(`${BASE_URL}/health/live`, { mode: 'no-cors', cache: 'no-store' }).catch(() => undefined)
+}
+
+const isRead = (init: RequestInit) => !init.method || init.method === 'GET'
+
+function withTimeout(init: RequestInit): AbortSignal | undefined {
+  if (!isRead(init) || typeof AbortSignal.timeout !== 'function') return init.signal ?? undefined
+  const timeout = AbortSignal.timeout(READ_TIMEOUT_MS)
+  if (!init.signal) return timeout
+  return typeof AbortSignal.any === 'function' ? AbortSignal.any([init.signal, timeout]) : init.signal
+}
+
 async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
+  try {
+    return await attempt<T>(path, init, token)
+  } catch (error) {
+    // A sleeping or restarting server answers reads with a dropped connection or a 502/503/504: try once more.
+    const retryable = error instanceof ApiError && (error.status === 0 || error.status === 502 || error.status === 503 || error.status === 504)
+    if (!retryable || !isRead(init) || init.signal?.aborted) throw error
+    await new Promise((resolve) => setTimeout(resolve, RETRY_AFTER_MS))
+    return attempt<T>(path, init, token)
+  }
+}
+
+async function attempt<T>(path: string, init: RequestInit, token?: string): Promise<T> {
   let response: Response
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       ...init,
+      signal: withTimeout(init),
       headers: {
         Accept: 'application/json',
         // A FormData body sets its own multipart Content-Type, boundary included.
@@ -59,7 +96,7 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
     })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new ApiError("We couldn't reach Taperday. Check your connection and try again.", 0)
+    throw new ApiError("We couldn't reach Taperday. It may still be waking up: try again in a moment, or check your connection.", 0)
   }
 
   if (response.status === 204) {

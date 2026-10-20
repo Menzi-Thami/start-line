@@ -46,6 +46,8 @@ export function SavePlanButton({ runner, request, onOpenMyPlans, onFinishSignUp,
       setStatus({ kind: 'saved' })
       onSaved?.()
     } catch (error) {
+      // The app didn't know about the runner's plan yet (it couldn't load): reload it, so the button offers to replace it.
+      if (error instanceof ApiError && error.code === 'plan_active') onSaved?.()
       setStatus({ kind: 'error', message: error instanceof Error ? error.message : 'That didn’t save. Try again.' })
     }
   }

@@ -5,6 +5,7 @@ import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
+import { useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { ActivityPage } from '../features/activities/ActivityPage'
 import { MyRuns } from '../features/activities/MyRuns'
@@ -180,6 +181,11 @@ export function App() {
   // The runner's runs (uploaded and synced), bests and Strava status, shown inside the plan. Loaded when the plan
   // view opens, so a new upload or a run that just arrived from Strava appears.
   const synced = useSyncedRuns(runner.state.kind === 'ready' && view === 'build')
+  const currentPlan = useCurrentPlan(runner.state.kind === 'ready')
+  const landing = useRef(false)
+  const [landed, setLanded] = useState(false)
+  // Someone who has just signed up has no plan to open, so the builder never waits for one.
+  const [justSignedUp, setJustSignedUp] = useState(false)
   const runs = synced.runs
 
   // Back from Strava: finish connecting, then show the account page with what happened.
@@ -196,6 +202,21 @@ export function App() {
       .then(() => setStravaNotice('Strava is connected. Your runs from the last six weeks are on their way, and new ones arrive by themselves.'))
       .catch((failure: unknown) => setStravaNotice(failure instanceof Error ? failure.message : 'Connecting Strava didn’t work. Try again.'))
   }, [stravaCallback, runner.state.kind, auth])
+
+  // Signed in with a plan: open on it, not on the builder. Once per visit, and never over a plan link they opened.
+  const found = currentPlan.current
+  useEffect(() => {
+    if (landing.current || !found || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
+    landing.current = true
+    const inputs = fromRequest(found.inputs)
+    // After this render, not inside it: the plan view takes over from the "opening" placeholder.
+    void Promise.resolve().then(() => {
+      setLanded(true)
+      if (!inputs) return
+      setPlan({ kind: 'loading' })
+      fetchPlan(inputs)
+    })
+  }, [found, initial, view, plan.kind, editing, fetchPlan])
 
   // A shared link builds its plan straight away.
   useEffect(() => {
@@ -241,12 +262,15 @@ export function App() {
 
   const state = runner.state
   const signedUp = (saved: Runner) => {
+    setJustSignedUp(true)
     runner.setRunner(saved)
     if (prefersMotion()) setCelebrating(saved.displayName)
   }
   const builderInitial = plan.kind === 'ready' || plan.kind === 'error' ? plan.inputs : initial
   const showBuilder = view === 'build' && (editing || plan.kind === 'idle')
   const showPlan = view === 'build' && plan.kind === 'ready' && !editing
+  // Signed in, on the builder with nothing open: wait to learn whether there's a plan to open instead.
+  const opening = showBuilder && !editing && !initial && !landed && !justSignedUp && state.kind === 'ready' && currentPlan.current !== null
 
   // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
   const gate: Gate | undefined =
@@ -380,7 +404,7 @@ export function App() {
           </section>
         )}
 
-        {view === 'plans' && state.kind === 'ready' && <MyPlans onOpen={openSaved} onBuildNew={() => go('build')} />}
+        {view === 'plans' && state.kind === 'ready' && <MyPlans onOpen={openSaved} onBuildNew={() => go('build')} onChanged={currentPlan.refresh} />}
 
         {view === 'runs' &&
           state.kind === 'ready' &&
@@ -425,9 +449,11 @@ export function App() {
         {(view === 'build' || view === 'sign-up') && (
           <>
             {/* Wait to hear who the runner is, so a returning runner never sees the sign-up screen flash past. */}
-            {showBuilder && state.kind === 'loading' && <p className="loading-line">Checking your account…</p>}
+            {showBuilder && (state.kind === 'loading' || opening) && (
+              <p className="loading-line">{opening ? 'Opening your plan…' : 'Checking your account…'}</p>
+            )}
 
-            {showBuilder && state.kind !== 'loading' && (
+            {showBuilder && state.kind !== 'loading' && !opening && (
               <BuilderForm
                 key={builderKey}
                 races={races}
@@ -504,6 +530,8 @@ export function App() {
                       onOpenMyPlans={() => go('plans')}
                       onFinishSignUp={() => go('sign-up')}
                       autoSave={freshBuild}
+                      current={currentPlan.current}
+                      onSaved={currentPlan.refresh}
                     />
                   </>
                 }

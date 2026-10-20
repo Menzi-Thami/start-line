@@ -4,7 +4,10 @@ namespace StartLine.Domain.Plans;
 
 public enum SavedPlanStatus
 {
+    /// <summary>The runner's current plan. At most one per runner (a unique index in the database enforces it).</summary>
     Active,
+
+    /// <summary>A past plan: replaced by a newer one. Kept read-only, with the runs that were matched to it.</summary>
     Archived,
 }
 
@@ -29,7 +32,11 @@ public sealed record SavedPlanInputs(
 public sealed class SavedPlan
 {
     public const int MaxNameLength = 100;
-    public const int MaxActivePerRunner = 20;
+    /// <summary>One plan at a time: Overview, run matching and the dashboard all have a single answer.</summary>
+    public const int MaxActivePerRunner = 1;
+
+    /// <summary>Current plus past plans. A runner past this deletes an old past plan to make room.</summary>
+    public const int MaxKeptPerRunner = 50;
 
     private SavedPlan()
     {
@@ -70,6 +77,35 @@ public sealed class SavedPlan
         plan.Rename(name);
         return plan;
     }
+
+    /// <summary>Same race, new answers (a goal time, the days): the plan changes in place, keeping its id.</summary>
+    public void Update(SavedPlanInputs inputs)
+    {
+        ArgumentNullException.ThrowIfNull(inputs);
+        if (Status != SavedPlanStatus.Active)
+        {
+            throw new DomainException("Only the current plan can be changed. Make a past plan current first.");
+        }
+
+        Inputs = inputs;
+    }
+
+    /// <summary>Is this the same race as <paramref name="inputs"/>: the same catalogue race, or the same named race on the same date.</summary>
+    public bool IsForSameRace(SavedPlanInputs inputs)
+    {
+        ArgumentNullException.ThrowIfNull(inputs);
+        return Inputs.RaceSlug is { } slug
+            ? string.Equals(slug, inputs.RaceSlug, StringComparison.OrdinalIgnoreCase)
+            : inputs.RaceSlug is null
+                && string.Equals(Inputs.RaceName?.Trim(), inputs.RaceName?.Trim(), StringComparison.OrdinalIgnoreCase)
+                && Inputs.RaceDate == inputs.RaceDate;
+    }
+
+    /// <summary>Replaced by a newer plan: it becomes a past plan.</summary>
+    public void Archive() => Status = SavedPlanStatus.Archived;
+
+    /// <summary>A past plan made current again. The caller archives whichever plan was current.</summary>
+    public void Restore() => Status = SavedPlanStatus.Active;
 
     public void Rename(string name)
     {

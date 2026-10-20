@@ -23,7 +23,7 @@ const thandi: Runner = {
 
 /** A tiny in-memory stand-in for the account API that insists on the bearer token. */
 function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }) {
-  const db = { runner: start.runner, plans: [...(start.plans ?? [])], saved: [] as unknown[], profiles: [] as unknown[] }
+  const db = { runner: start.runner, plans: [...(start.plans ?? [])], saved: [] as unknown[], profiles: [] as unknown[], restored: [] as string[] }
   const authorised = (request: Request) => request.headers.get('Authorization') === `Bearer ${TOKEN}`
   const unauthorised = () => HttpResponse.json({ title: 'Unauthorized' }, { status: 401 })
 
@@ -48,7 +48,13 @@ function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }
     http.post('*/api/v1/me/plans', async ({ request }) => {
       if (!authorised(request)) return unauthorised()
       db.saved.push(await request.json())
-      return HttpResponse.json({ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z' }, { status: 201 })
+      return HttpResponse.json({ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' }, { status: 201 })
+    }),
+    http.post('*/api/v1/me/plans/:id/restore', ({ request, params }) => {
+      if (!authorised(request)) return unauthorised()
+      db.restored.push(String(params.id))
+      db.plans = db.plans.map((p) => ({ ...p, status: p.id === params.id ? 'Active' : 'Archived' }))
+      return HttpResponse.json(db.plans.find((p) => p.id === params.id))
     }),
     http.delete('*/api/v1/me/plans/:id', ({ request, params }) => {
       if (!authorised(request)) return unauthorised()
@@ -75,6 +81,7 @@ function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }
               planFrom: '2026-10-08',
             },
             plan: {},
+            status: 'Active',
           })
         : unauthorised(),
     ),
@@ -219,7 +226,7 @@ describe('a signed-up runner', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Save to My plans' }))
 
-    expect(await screen.findByRole('button', { name: 'Saved. Open My plans' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Saved as your plan. Open My plans' })).toBeInTheDocument()
     expect(db.saved[0]).toMatchObject({ plan: { distanceKm: 5, raceDate: '2026-12-13', goalTime: '00:24:30', planFrom: '2026-10-08' } })
   })
 
@@ -237,7 +244,7 @@ describe('a signed-up runner', () => {
     await next()
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
-    expect(await screen.findByRole('button', { name: 'Saved. Open My plans' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Saved as your plan. Open My plans' })).toBeInTheDocument()
     expect(db.saved).toHaveLength(1)
 
     await user.click(screen.getByRole('button', { name: 'Change answers' }))
@@ -261,7 +268,7 @@ describe('a signed-up runner', () => {
   it('opens a saved plan', async () => {
     accountApi({
       runner: thandi,
-      plans: [{ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z' }],
+      plans: [{ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' }],
     })
     const user = renderWith(signedIn())
     await user.click(await screen.findByRole('button', { name: 'My plans' }))
@@ -275,7 +282,7 @@ describe('a signed-up runner', () => {
   it('asks before deleting a saved plan', async () => {
     const db = accountApi({
       runner: thandi,
-      plans: [{ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z' }],
+      plans: [{ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' }],
     })
     const user = renderWith(signedIn())
     await user.click(await screen.findByRole('button', { name: 'My plans' }))
@@ -286,6 +293,48 @@ describe('a signed-up runner', () => {
 
     expect(await screen.findByText(/No saved plans yet/)).toBeInTheDocument()
     expect(db.plans).toHaveLength(0)
+  })
+
+  const current = { id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' } as const
+
+  it('opens on their plan after signing in, not on the builder', async () => {
+    accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/')
+    renderWith(signedIn())
+
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Your current plan' })).toBeInTheDocument()
+    expect(window.location.search).toContain('goal=1470')
+  })
+
+  it('asks before a plan for another race replaces theirs', async () => {
+    const db = accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/?km=10&date=2027-01-10&name=Spring+10K&goal=3000&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08')
+    const user = renderWith(signedIn())
+
+    // The plan shows first; the button changes once the current plan has loaded.
+    await user.click(await screen.findByRole('button', { name: 'Make this my plan' }, { timeout: 3000 }))
+    expect(screen.getByText('Replace Parkrun PB? It moves to Past plans, with its runs.')).toBeInTheDocument()
+    expect(db.saved).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: 'Yes, replace it' }))
+
+    await waitFor(() => expect(db.saved).toHaveLength(1))
+    expect(db.saved[0]).toMatchObject({ replaceCurrent: true })
+  })
+
+  it('keeps past plans, and can make one current again', async () => {
+    const db = accountApi({
+      runner: thandi,
+      plans: [current, { id: 'plan-0', name: 'Spring 10K', raceName: 'Spring 10K', raceDate: '2026-09-20', createdAt: '2026-06-01T09:00:00Z', status: 'Archived' }],
+    })
+    const user = renderWith(signedIn())
+    await user.click(await screen.findByRole('button', { name: 'My plans' }))
+
+    expect(await screen.findByRole('heading', { name: 'Your plan' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Past plans' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Make this my plan again' }))
+
+    await waitFor(() => expect(db.restored).toEqual(['plan-0']))
   })
 
   it('can delete their account after confirming, which signs them out', async () => {

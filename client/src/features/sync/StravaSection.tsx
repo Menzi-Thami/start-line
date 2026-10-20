@@ -4,6 +4,7 @@ import { api } from '../../lib/api-client'
 import { formatDate } from '../../lib/format'
 import type { StravaStatus } from '../../lib/types'
 import { ConnectWithStrava, PoweredByStrava } from './StravaBrand'
+import { StravaDeviceGuide } from './StravaDeviceGuide'
 
 interface Props {
   /** What just happened on the way back from Strava, to say at the top of the section. */
@@ -116,6 +117,7 @@ export function StravaSection({ notice }: Props) {
           )}
         </>
       )}
+      {state.kind === 'ready' && <StravaDeviceGuide />}
       <p className="field-help">
         Taperday reads each run’s time, distance, elevation and heart rate, never where you ran. Strava’s rules allow a copy for seven days at a time, so
         Taperday fetches your runs again while you stay connected. Disconnect, here or in Strava’s settings, and the copies are deleted straight away.

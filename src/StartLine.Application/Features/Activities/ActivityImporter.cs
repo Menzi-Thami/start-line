@@ -88,7 +88,10 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
     {
         ArgumentNullException.ThrowIfNull(runner);
         ArgumentNullException.ThrowIfNull(recording);
-        var zone = TimeZoneInfo.FindSystemTimeZoneById(runner.TimeZone);
+        // The time zone is validated when the profile is saved, so it almost always resolves. If a time-zone database
+        // ever drops an id, fall back to UTC for this one run rather than throwing: on the sync path an uncaught throw
+        // would stall every runner's sync, not just this one.
+        var zone = TimeZoneInfo.TryFindSystemTimeZoneById(runner.TimeZone, out var found) ? found : TimeZoneInfo.Utc;
         var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(recording.StartedAt.ToUniversalTime(), zone).DateTime);
         return Activity.Record(runner.Id, recording, localDate, await PlannedOnAsync(runner.Id, localDate, cancellationToken), origin);
     }

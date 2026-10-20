@@ -86,20 +86,21 @@ export function MyRuns({ units, onOpen }: Props) {
       </h2>
 
       <div className="panel upload">
-        <h3>Add runs from your Garmin</h3>
+        <h3>Add runs from a file</h3>
+        <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Most watches and apps export one of these.</p>
         <div className="upload-ways">
           <div>
-            <p className="upload-way">One run</p>
+            <p className="upload-way">Garmin</p>
             <p className="field-help">
-              On the Garmin Connect <strong>website</strong>, open the run, click the cog at the top right and choose{' '}
-              <strong>Export Original</strong>. Upload the .zip it downloads, or several at once.
+              On the Garmin Connect <strong>website</strong>, open the run and choose <strong>Export Original</strong> (one run), or, for your whole
+              history, <strong>Data Management → Export Your Data</strong> and upload the zip Garmin emails you.
             </p>
           </div>
           <div>
-            <p className="upload-way">Your whole history</p>
+            <p className="upload-way">Strava, COROS, Suunto, Polar, Apple</p>
             <p className="field-help">
-              In your Garmin account, go to <strong>Data Management</strong>, then <strong>Export Your Data</strong>. Garmin emails you a
-              link to a zip. Upload that zip as it is: your browser opens it and sends only the runs.
+              Export the run from its app or site and upload the file. Strava gives a .gpx (open a run, then “Export GPX”); most others give a .fit
+              or .tcx. Your browser sends only the run, never where you went.
             </p>
           </div>
         </div>
@@ -109,7 +110,7 @@ export function MyRuns({ units, onOpen }: Props) {
             ref={input}
             className="visually-hidden"
             type="file"
-            accept=".fit,.zip"
+            accept=".fit,.gpx,.tcx,.zip"
             multiple
             disabled={running}
             onChange={(event) => {

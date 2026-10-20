@@ -5,6 +5,10 @@ API is business-only (and closed to new applications), so the route is the file 
 user. Runners on Strava can instead connect it once and have runs arrive by themselves, under Strava's stricter terms
 (see "Strava's terms" below and `strava-sync.md`). Both go through the same analysis below.
 
+Taperday reads **`.fit`, `.gpx` and `.tcx`** files, and the zips they come in. Nearly every watch and app exports one of
+these: Garmin gives .fit, Strava gives .gpx ("Export GPX" on a run), and COROS, Suunto, Polar, Wahoo and others give .fit
+or .tcx. So a runner on any device can get their runs in, with or without Strava.
+
 ## How a runner gets the file
 
 - **One run:** on the Garmin Connect **website**, open the run, click the cog at the top right and choose **Export
@@ -15,9 +19,14 @@ user. Runners on Strava can instead connect it once and have runs arrive by them
 ## What happens to it
 
 1. `POST /api/v1/me/activities` (multipart, field `file`), signed-in and signed-up runners only.
-2. `FitActivityFileReader` (Infrastructure) unzips if needed, checks it's a FIT file with a valid CRC, and reads only
-   time, distance, altitude and heart rate from the records, plus the watch's own totals (ascent, calories, average
-   and max heart rate) from the session. **GPS positions are never read.**
+2. `ActivityFileReader` (Infrastructure) looks at what's in the file, not its name, and picks a reader:
+   - **`.fit`** (Garmin, and the .zip around it): `FitActivityFileReader` checks the CRC and reads time, distance,
+     altitude and heart rate from the records, plus the watch's own totals.
+   - **`.gpx` and `.tcx`** (Strava, Apple Health apps, COROS, Suunto, Polar, Wahoo): `XmlActivityFileReader`. GPX has
+     no distance of its own, so distance is worked out from the track's positions as they're read; TCX carries its own
+     distance. XML is read with DTDs prohibited and no external resolver, so a malicious file can't read the server's
+     files or blow up memory (XXE and entity-expansion attacks).
+   In every case **GPS positions are never kept**: they live only long enough to measure the next step, then they're gone.
 3. `Activity.Record` (Domain, plain C#) works out moving time, km splits, first vs second half and best efforts, and
    picks the plan session for that day.
 4. Only that summary is saved. The file itself is never stored.
@@ -133,4 +142,4 @@ https://communityhub.strava.com/developers-knowledge-base-14/strava-api-faq-1290
   are stored once this ships, and bumping `PrivacyNotice.CurrentVersion` would ask existing runners to accept again.
 - Re-matching old runs when a plan is saved later.
 - Laps: Garmin records them (auto-lap or workout steps), and they would judge repeats rep by rep instead of by the fastest stretch.
-- Other files: `.gpx` and `.tcx` (Strava and Apple exports) would need their own readers behind the same interface.
+- Reading laps from TCX/FIT, to judge repeats rep by rep.

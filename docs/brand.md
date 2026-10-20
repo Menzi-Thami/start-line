@@ -34,16 +34,35 @@ so dark mode follows automatically. Don't hard-code them in components.
   | Opacity | 1 | 0.85 | 0.70 | 0.58 | 0.48 | 1 |
 
 - **Clear space:** at least the height of the "t" all round.
-- **Smallest size:** "day" at least 20px tall. Below that the small letters turn to mush, so use the
-  app icon instead.
+- **Smallest size:** "day" at least 20px tall. Below that the small letters turn to mush, so use one of the
+  icons instead.
 - Screen readers get the plain word "Taperday"; the stepped letters are hidden from them.
 
-## App icon (small sizes only)
+## Icons
 
-The wordmark can't shrink to a browser tab, so tiny places use a mark with the same idea: three
-bars stepping down and a race-day dot, near-black on a volt rounded square
-(`client/public/favicon.svg`). Use it for the favicon, the home-screen icon and social avatars,
-never next to the wordmark.
+The wordmark can't shrink to a square, so square places use one of two marks. Never put either next to the wordmark.
+
+### Favicon (the taper)
+
+Three bars stepping down and a race-day dot, near-black on a volt rounded square (`client/public/favicon.svg`).
+It carries the idea at the tiniest sizes: the browser tab, the home-screen icon and social avatars.
+
+### App icon (td)
+
+The initials in the wordmark's own colours: **t** in ink `#f2f2f2` for "taper", **d** in volt `#d7ff3e` for "day", on
+near-black `#0a0a0b`. Use it wherever another service lists Taperday as an app beside others, such as Strava's
+connected apps, where a square picture of the name reads better than a chart.
+
+| File | Use |
+|---|---|
+| `client/public/app-icon.svg` | Source. Letters are outlined paths, so it needs no font installed |
+| `client/public/app-icon-512.png` | Uploads that want a picture (Strava's API app icon) |
+| `client/public/app-icon-1024.png` | Listings that ask for a larger image |
+
+- **Type:** Bricolage Grotesque, weight 700, optical size 96, set at 300 on a 512 square and centred on the ink.
+  The letters sit a hair apart (+2 units) rather than at the wordmark's −0.03em, so they stay distinct when small.
+- **Square, full bleed:** the services round the corners themselves, so the file doesn't.
+- Same rules as the wordmark: never swap the colours, never make the "t" volt, and nothing but near-black behind it.
 
 ## Please don't
 
@@ -51,7 +70,7 @@ never next to the wordmark.
 - Put text on volt in anything but the near-black ground colour: white on volt is unreadable.
 - Stretch the logo, or add shadows, gradients or outlines.
 - Write the name with separators (`taper.day`, `taper|day`): `taper.day` is someone else's domain.
-- Put the full logo on a busy photo. Use a solid background, or the app icon.
+- Put the full logo on a busy photo. Use a solid background, or one of the icons.
 
 ## Voice
 

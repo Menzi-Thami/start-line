@@ -123,8 +123,7 @@ the API and sign-in hosts; **update it when either changes** (for example when t
 site will load but sign-in and saving will silently fail.
 
 `VITE_SITE_URL` is the address link previews (Open Graph and Twitter cards) use for their image. It defaults to
-https://taperday.run; until that domain is live, set it (or the `VITE_SITE_URL` repository variable the deploy
-workflow reads) to the website's current address, or shared links will preview without a picture. The image itself
+https://taperday.run, which is live (registered at Spaceship, 20 Oct 2026), so it needn't be set. The image itself
 is `client/public/og-image.png` (1200 x 630). The CSP needs no change for it: crawlers fetch it directly.
 
 ### Checking it worked

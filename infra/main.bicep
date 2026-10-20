@@ -9,6 +9,9 @@ param location string = 'southafricanorth'
 @description('Static Web Apps only runs in a few regions; content is served worldwide either way. West Europe was refusing new customers (Oct 2026).')
 param staticWebAppLocation string = 'eastus2'
 
+@description('Domain the website runs on (added to the Static Web App by hand, DNS at the registrar). Empty if none.')
+param webDomain string = 'taperday.run'
+
 @description('Short name used in every resource name.')
 @maxLength(12)
 param appName string = 'taperday'
@@ -187,6 +190,13 @@ var baseSettings = [
   { name: 'Cors__AllowedOrigins__0', value: 'https://${web.properties.defaultHostname}' }
   { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: insights.properties.ConnectionString }
 ]
+// The website answers on its own domain and its www too; the API has to accept calls from all of them.
+var domainCorsSettings = empty(webDomain)
+  ? []
+  : [
+      { name: 'Cors__AllowedOrigins__1', value: 'https://${webDomain}' }
+      { name: 'Cors__AllowedOrigins__2', value: 'https://www.${webDomain}' }
+    ]
 var identitySettings = accountsOn
   ? [
       { name: 'AzureAd__Instance', value: externalIdInstance }
@@ -213,7 +223,7 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
       ftpsState: 'Disabled'
       minTlsVersion: '1.2'
       http20Enabled: true
-      appSettings: concat(baseSettings, identitySettings, [
+      appSettings: concat(baseSettings, domainCorsSettings, identitySettings, [
         // Versionless, so a rotated key is picked up. Strava sync refuses to start outside development without it.
         { name: 'DataProtection__KeyVaultKeyUri', value: tokenKey.properties.keyUri }
       ])

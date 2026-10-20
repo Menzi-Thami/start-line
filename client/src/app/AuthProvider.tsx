@@ -5,6 +5,10 @@ import { describeSignInError, type SignInProblem } from './sign-in-errors'
 
 const toAccount = (info: AccountInfo) => ({ name: info.name || info.username, email: info.username || null })
 
+// Several parts of a page can ask for a token at once. Only the first may start the sign-in redirect: a second one
+// would fail with interaction_in_progress and its raw text would reach the runner.
+let redirecting = false
+
 /**
  * Signs runners in with the External ID tenant. Tokens are cached in sessionStorage (never localStorage,
  * which any injected script could read) and requested per call, so they're always fresh.
@@ -71,8 +75,14 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         try {
           return (await msal.acquireTokenSilent({ scopes: [config.scope], account: info })).accessToken
         } catch (error) {
-          if (error instanceof InteractionRequiredAuthError) {
-            await msal.acquireTokenRedirect({ scopes: [config.scope], account: info, redirectStartPage: window.location.href })
+          if (error instanceof InteractionRequiredAuthError && !redirecting) {
+            redirecting = true
+            // The page is about to leave for Microsoft; nothing useful can be done with a failure to start that here.
+            await msal
+              .acquireTokenRedirect({ scopes: [config.scope], account: info, redirectStartPage: window.location.href })
+              .catch(() => {
+                redirecting = false
+              })
           }
           return null
         }

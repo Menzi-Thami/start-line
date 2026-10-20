@@ -7,6 +7,7 @@ import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
 import { useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
+import { SignInWait } from '../features/account/SignInWait'
 import { ActivityPage } from '../features/activities/ActivityPage'
 import { MyRuns } from '../features/activities/MyRuns'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
@@ -81,6 +82,8 @@ export function App() {
   const [stravaCallback] = useState(() => readStravaCallback(window.location))
   const stravaHandled = useRef(false)
   const [stravaNotice, setStravaNotice] = useState<string | null>(null)
+  // True from the moment Strava sends the runner back until the connection is saved, so Account says so meanwhile.
+  const [stravaConnecting, setStravaConnecting] = useState(() => stravaCallback !== null && !stravaCallback.error && !!stravaCallback.code)
   const [units, setUnits] = useState<Units>(loadUnits)
   const [races, setRaces] = useState<RacesState>({ kind: 'loading' })
   // A shared link starts building straight away, so it opens in the loading state.
@@ -199,6 +202,7 @@ export function App() {
         ? Promise.reject(new Error('Strava wasn’t connected, and nothing was shared with Taperday.'))
         : auth.getToken().then((token) => (token ? api.me.strava.connect(token, { code, state, scope }) : Promise.reject(new Error('Sign in again, then connect Strava.'))))
     connecting
+      .finally(() => setStravaConnecting(false))
       .then(() => setStravaNotice('Strava is connected. Your runs from the last six weeks are on their way, and new ones arrive by themselves.'))
       .catch((failure: unknown) => setStravaNotice(failure instanceof Error ? failure.message : 'Connecting Strava didn’t work. Try again.'))
   }, [stravaCallback, runner.state.kind, auth])
@@ -225,6 +229,9 @@ export function App() {
   }, [initial, fetchPlan])
 
   const go = (next: View) => {
+    // Going somewhere on purpose means the app no longer opens the current plan by itself.
+    landing.current = true
+    setLanded(true)
     setView(next)
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
@@ -331,7 +338,8 @@ export function App() {
                 Sign in
               </button>
             )}
-            {(state.kind === 'ready' || state.kind === 'needs-sign-up' || state.kind === 'error') && (
+            {/* Signed in but still waiting on the account: Sign out stays reachable, so a slow server never traps anyone. */}
+            {(state.kind === 'ready' || state.kind === 'needs-sign-up' || state.kind === 'error' || (state.kind === 'loading' && auth.account !== null)) && (
               <>
                 {state.kind === 'ready' && (
                   <>
@@ -404,6 +412,10 @@ export function App() {
           </section>
         )}
 
+        {(view === 'plans' || view === 'runs' || view === 'account') && state.kind === 'loading' && (
+          <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
+        )}
+
         {view === 'plans' && state.kind === 'ready' && <MyPlans onOpen={openSaved} onBuildNew={() => go('build')} onChanged={currentPlan.refresh} />}
 
         {view === 'runs' &&
@@ -427,6 +439,7 @@ export function App() {
             key={stravaNotice ?? 'account'}
             runner={state.runner}
             stravaNotice={stravaNotice}
+            stravaConnecting={stravaConnecting}
             onSaved={runner.setRunner}
             onDeleted={() => {
               go('build')
@@ -449,8 +462,10 @@ export function App() {
         {(view === 'build' || view === 'sign-up') && (
           <>
             {/* Wait to hear who the runner is, so a returning runner never sees the sign-up screen flash past. */}
-            {showBuilder && (state.kind === 'loading' || opening) && (
-              <p className="loading-line">{opening ? 'Opening your plan…' : 'Checking your account…'}</p>
+            {showBuilder && state.kind === 'loading' && <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />}
+            {showBuilder && state.kind !== 'loading' && opening && (
+              // "Opening" only once a plan is known to exist; until then it's still the account being checked.
+              <p className="loading-line">{currentPlan.current ? 'Opening your plan…' : 'Checking your account…'}</p>
             )}
 
             {showBuilder && state.kind !== 'loading' && !opening && (
@@ -491,14 +506,23 @@ export function App() {
                 <div className="error-panel" style={{ marginTop: 'var(--space-7)' }} role="alert">
                   <strong>We couldn’t build that plan.</strong>
                   <p>{plan.message}</p>
-                  <button
-                    type="button"
-                    className="button button-quiet"
-                    style={{ marginTop: 'var(--space-3)' }}
-                    onClick={() => build(plan.inputs)}
-                  >
-                    Try again
-                  </button>
+                  <div className="submit-row" style={{ marginTop: 'var(--space-3)' }}>
+                    <button type="button" className="button button-quiet" onClick={() => build(plan.inputs)}>
+                      Try again
+                    </button>
+                    {/* The race may have gone from the calendar: never leave the runner without a way to build something. */}
+                    <button
+                      type="button"
+                      className="button button-quiet"
+                      onClick={() => {
+                        setPlan({ kind: 'idle' })
+                        setBuilderKey((k) => k + 1)
+                        window.history.replaceState(null, '', window.location.pathname)
+                      }}
+                    >
+                      Build a different plan
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -73,15 +73,15 @@ function SessionItem({ session, pace, units, done, onDoneChange }: {
       <p className="session-detail">{session.detail}</p>
       <p className="session-why">Why: {session.purpose}</p>
       {session.exercises.length > 0 && (
-        <details className="disclosure strength-moves">
-          <summary>
-            How to do each exercise
-            <span className="strength-moves-count mono">
+        <div className="strength-moves">
+          <p className="strength-moves-head">
+            <span>In this order</span>
+            <span className="strength-moves-count mono" aria-live="polite">
               {sets.done}/{sets.total} sets
             </span>
-          </summary>
+          </p>
           <ExerciseList session={session} done={done} onDoneChange={onDoneChange} />
-        </details>
+        </div>
       )}
       {session.type !== 'Race' && (
         <label className="session-done">

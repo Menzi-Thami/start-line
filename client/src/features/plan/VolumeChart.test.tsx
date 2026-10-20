@@ -45,6 +45,15 @@ describe('the weekly distance chart', () => {
     expect(bars[1]!.querySelector('.volume-value')?.textContent).toBe('0 / 35')
   })
 
+  it('centres every number over its bar in short plans, and only pulls the end ones in when bars are narrow', () => {
+    const { container } = render(<VolumeChart weeks={short} units="km" currentWeek={1} />)
+    expect(container.querySelector('.volume-plot')).not.toHaveClass('is-dense')
+
+    const long = Array.from({ length: 13 }, (_, i) => week(i + 1, 20 + i))
+    const { container: dense } = render(<VolumeChart weeks={long} units="km" currentWeek={1} />)
+    expect(dense.querySelector('.volume-plot')).toHaveClass('is-dense')
+  })
+
   it('keeps week numbers apart in long plans', () => {
     for (const [count, current] of [[20, 1], [20, 2], [20, 19], [30, 7], [8, 3]] as const) {
       const shown = [...weekLabels(count, current)].sort((a, b) => a - b)

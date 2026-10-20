@@ -70,6 +70,17 @@ describe('connecting Strava from Account', () => {
     expect(screen.getByRole('img', { name: 'Powered by Strava' })).toBeInTheDocument()
   })
 
+  it('explains how each kind of watch or phone gets runs into Strava', async () => {
+    section(available)
+    const user = userEvent.setup()
+
+    await user.click(await screen.findByText('How do my runs get into Strava?'))
+
+    for (const device of ['Garmin', 'Apple Watch or iPhone', 'Android, Samsung, Pixel or Fitbit', 'COROS, Polar, Suunto or Wahoo', 'Just a phone']) {
+      expect(screen.getByText(device)).toBeVisible()
+    }
+  })
+
   it('shows how a connection stands', async () => {
     section(connected)
 

@@ -34,7 +34,7 @@ public sealed record TrainingPlanDto(
                 w.IsCutback,
                 w.PlannedKm,
                 [.. w.Sessions.Select(s => new SessionDto(s.Date, s.Type, s.Title, s.Detail, s.Purpose, s.DistanceKm, s.Zone,
-                    [.. (s.Exercises ?? []).Select(e => new StrengthExerciseDto(e.Exercise, e.Sets, e.Reps, e.Unit))]))]))],
+                    [.. (s.Exercises ?? []).Select(e => new StrengthExerciseDto(e.Exercise, e.Sets, e.Reps, e.Unit, e.Summary))]))]))],
             [.. plan.Warnings.Select(w => new PlanWarningDto(w.Code, w.Message))]);
     }
 }
@@ -61,7 +61,10 @@ public sealed record SessionDto(
     PaceZone? Zone,
     IReadOnlyList<StrengthExerciseDto> Exercises);
 
-/// <summary>One move in a strength session; <c>Reps</c> counts seconds when the unit is a hold.</summary>
-public sealed record StrengthExerciseDto(Exercise Exercise, int Sets, int Reps, RepUnit Unit);
+/// <summary>
+/// One move in a strength session, listed in the order to do them; <c>Reps</c> counts seconds when the unit is a hold.
+/// <c>Summary</c> is the same in words ("3 × 8 reverse lunges each leg"), for calendars.
+/// </summary>
+public sealed record StrengthExerciseDto(Exercise Exercise, int Sets, int Reps, RepUnit Unit, string Summary);
 
 public sealed record PlanWarningDto(string Code, string Message);

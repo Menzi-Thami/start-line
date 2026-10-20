@@ -30,7 +30,7 @@ public static class DependencyInjection
         services.AddScoped<PlanBuilder>();
         services.AddScoped<CurrentRunner>();
         services.AddScoped<PersonalBests>();
-        services.AddScoped<ActivityRecorder>();
+        services.AddScoped<ActivityImporter>();
         services.AddSingleton<StravaRateGate>();
         services.AddScoped<StravaTokens>();
         services.AddScoped<IStravaSync, StravaSyncRunner>();

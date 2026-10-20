@@ -131,6 +131,28 @@ public sealed class StravaSyncTests(StravaApiFactory factory) : IClassFixture<St
     }
 
     [Fact]
+    public async Task One_sync_pass_matches_each_runner_against_their_own_plan()
+    {
+        // The worker records runs for several runners in one pass; each must be judged against their own plans.
+        var (first, firstAthlete) = await Connected();
+        var (second, secondAthlete) = await Connected();
+        await factory.SyncAsync();
+        var saved = await Json(await first.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = ComradesPlan }));
+        var plan = await Json(await first.GetAsync(Url($"/api/v1/me/plans/{saved.GetProperty("id").GetGuid()}")));
+        var session = plan.GetProperty("plan").GetProperty("weeks").EnumerateArray()
+            .SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .First(s => s.GetProperty("type").GetString() != "Strength");
+        var start = new DateTimeOffset(DateOnly.Parse(session.GetProperty("date").GetString()!, CultureInfo.InvariantCulture).ToDateTime(new TimeOnly(3, 0)), TimeSpan.Zero);
+
+        await Push(firstAthlete, "activity", factory.Strava.AddRun(firstAthlete, start), "create");
+        await Push(secondAthlete, "activity", factory.Strava.AddRun(secondAthlete, start), "create");
+        await factory.SyncAsync();
+
+        (await Runs(first))[0].GetProperty("plannedTitle").GetString().ShouldBe(session.GetProperty("title").GetString());
+        (await Runs(second))[0].GetProperty("plannedTitle").ValueKind.ShouldBe(JsonValueKind.Null);
+    }
+
+    [Fact]
     public async Task The_same_event_twice_is_fetched_once()
     {
         var (client, athlete) = await Connected();

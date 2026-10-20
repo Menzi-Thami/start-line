@@ -115,14 +115,40 @@ public sealed class ExperienceAndStrengthTests
     }
 
     [Fact]
-    public void The_strength_detail_spells_out_every_exercise_for_calendars()
+    public void The_strength_detail_is_a_short_intro_and_each_exercise_says_what_to_do_in_words()
     {
         var session = StrengthSessions(Half(strengthDays: [DayOfWeek.Monday]))[0];
 
-        session.Detail.ShouldContain("3 × 10 squats");
-        session.Detail.ShouldContain("3 × 8 reverse lunges each leg");
-        session.Detail.ShouldContain("3 × 30 s plank");
+        // The list is shown as a list; the detail mustn't repeat it as a paragraph.
+        session.Detail.ShouldStartWith("About 30 min.");
+        session.Detail.ShouldNotContain("squats");
+        session.Exercises!.Select(e => e.Summary).ShouldBe(
+        [
+            "3 × 10 squats", "3 × 10 Romanian deadlifts", "3 × 8 reverse lunges each leg",
+            "3 × 12 glute bridges", "3 × 15 calf raises", "3 × 30 s plank",
+        ]);
     }
+
+    [Fact]
+    public void Explosive_work_comes_first_while_the_legs_are_fresh()
+    {
+        var plan = Half(strengthDays: [DayOfWeek.Monday]);
+
+        plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Exercises?.Any(e => e.Exercise == Exercise.SquatJump) == true)
+            .ShouldAllBe(s => s.Exercises![0].Exercise == Exercise.SquatJump);
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryExercise))]
+    public void Every_exercise_has_words_for_every_kind_of_set(Exercise exercise)
+    {
+        foreach (var unit in Enum.GetValues<RepUnit>())
+        {
+            new StrengthExercise(exercise, 3, 8, unit).Summary.ShouldStartWith("3 × 8");
+        }
+    }
+
+    public static TheoryData<Exercise> EveryExercise() => [.. Enum.GetValues<Exercise>()];
 
     [Fact]
     public void Rejects_more_than_three_strength_days() =>

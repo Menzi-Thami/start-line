@@ -45,6 +45,43 @@ public sealed class MyActivitiesController(IDispatcher dispatcher) : ControllerB
         return CreatedAtAction(nameof(Get), new { id = activity.Id, version = "1" }, activity);
     }
 
+    /// <summary>
+    /// Uploads up to <see cref="BulkUpload.MaxFilesPerBatch"/> .fit files at once, such as the ones in a Garmin account export (the
+    /// browser unzips the export and sends the .fit files in batches). Every file gets its own result; a bad file never
+    /// fails the batch.
+    /// </summary>
+    [HttpPost("batch")]
+    [EnableRateLimiting(PresentationDependencyInjection.BulkUploadRateLimitPolicy)]
+    [RequestSizeLimit(BulkUpload.MaxRequestBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = BulkUpload.MaxRequestBytes)]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType<BulkImportDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UploadBatch(IFormFileCollection files, CancellationToken cancellationToken)
+    {
+        List<ActivityFile> contents = [];
+        try
+        {
+            foreach (var file in files.Take(BulkUpload.MaxFilesPerBatch + 1))
+            {
+                var content = new MemoryStream();
+                contents.Add(new ActivityFile(Path.GetFileName(file.FileName), content));
+                await file.CopyToAsync(content, cancellationToken);
+                content.Position = 0;
+            }
+
+            return Ok(await dispatcher.Send(new ImportActivitiesCommand(contents), cancellationToken));
+        }
+        finally
+        {
+            foreach (var file in contents)
+            {
+                await file.Content.DisposeAsync();
+            }
+        }
+    }
+
     [HttpGet("{id:guid}")]
     [ProducesResponseType<ActivityDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

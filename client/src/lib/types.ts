@@ -33,6 +33,9 @@ export type Halves = Schemas['HalvesDto']
 export type Review = Schemas['ReviewDto']
 export type HeartRate = Schemas['HeartRateDto']
 export type HeartRateZone = Schemas['HeartRateZoneDto']
+export type BulkImport = Schemas['BulkImportDto']
+export type BulkImportFile = Schemas['BulkImportFileDto']
+export type ImportStatus = Schemas['ImportStatus']
 
 /** Monday first, the way most runners plan a week. */
 export const WEEK: readonly DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

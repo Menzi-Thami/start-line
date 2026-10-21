@@ -5,7 +5,7 @@ import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
-import { useCurrentPlan } from '../features/account/useCurrentPlan'
+import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { SignInWait } from '../features/account/SignInWait'
 import { ActivityPage } from '../features/activities/ActivityPage'
@@ -14,12 +14,13 @@ import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../fe
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { RaceStartIntro } from '../features/home/RaceStartIntro'
 import { PlanView } from '../features/plan/PlanView'
+import { Replan } from '../features/plan/Replan'
 import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
 import { useSyncedRuns } from '../features/sync/useSyncedRuns'
 import { api, ApiError, apiOrigin } from '../lib/api-client'
 import { calendarLinks } from '../lib/calendar-links'
 import { localToday, type Units } from '../lib/format'
-import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs } from '../lib/plan-url'
+import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
 import type { Activity, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
@@ -260,6 +261,26 @@ export function App() {
     setBuilderKey((k) => k + 1)
     setEditing(false)
     build(inputs)
+  }
+
+  // "Replan from here". A shared plan is rebuilt from its link alone; the runner's saved plan is rebuilt in their account
+  // too, so it opens rebuilt on every device. Failures go back to the replan form, never to the builder.
+  const replanWith = async (replan: ReplanInputs | undefined) => {
+    if (plan.kind !== 'ready') return
+    const next: PlanInputs = { ...plan.inputs, replan }
+    const saved = currentPlan.current
+    const token = saved && samePlan(toRequest(plan.inputs), saved.inputs) ? await auth.getToken() : null
+    const rebuilt =
+      saved && token
+        ? (replan
+            ? await api.me.replanPlan(token, saved.id, { replanFrom: replan.from, setback: replan.setback, recentWeeklyKm: replan.recentWeeklyKm ?? null })
+            : await api.me.undoReplan(token, saved.id)
+          ).plan
+        : await api.plan(toRequest(next))
+    window.history.replaceState(null, '', `?${toSearchParams(next)}`)
+    setPlan({ kind: 'ready', plan: rebuilt, inputs: next })
+    if (saved && token) currentPlan.refresh()
+    window.scrollTo?.({ top: 0 })
   }
 
   const changeUnits = (next: Units) => {
@@ -542,6 +563,15 @@ export function App() {
                 onOpenAccount={state.kind === 'ready' ? () => go('account') : undefined}
                 onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
+                replan={
+                  <Replan
+                    plan={plan.plan}
+                    today={today}
+                    units={units}
+                    onReplan={replanWith}
+                    onUseGoal={(goalSeconds) => build({ ...plan.inputs, goalSeconds })}
+                  />
+                }
                 toolbarExtra={
                   <>
                     <button type="button" className="button button-quiet" onClick={changeAnswers}>

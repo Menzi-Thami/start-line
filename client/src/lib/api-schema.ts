@@ -650,6 +650,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/replan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReplanRequest"];
+                    "text/json": components["schemas"]["ReplanRequest"];
+                    "application/*+json": components["schemas"]["ReplanRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SavedPlanDto"];
+                        "application/json": components["schemas"]["SavedPlanDto"];
+                        "text/json": components["schemas"]["SavedPlanDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SavedPlanDto"];
+                        "application/json": components["schemas"]["SavedPlanDto"];
+                        "text/json": components["schemas"]["SavedPlanDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/sync/strava": {
         parameters: {
             query?: never;
@@ -939,6 +1040,9 @@ export interface paths {
                     Experience?: components["schemas"]["Experience"];
                     StrengthDays?: components["schemas"]["DayOfWeek"][];
                     PlanFrom?: string;
+                    ReplanFrom?: string;
+                    Setback?: components["schemas"]["Setback"];
+                    RecentWeeklyKm?: number;
                     units?: string;
                 };
                 header?: never;
@@ -1213,6 +1317,11 @@ export interface components {
             strengthDays?: null | components["schemas"]["DayOfWeek"][];
             /** Format: date */
             planFrom?: null | string;
+            /** Format: date */
+            replanFrom?: null | string;
+            setback?: null | components["schemas"]["Setback"];
+            /** Format: double */
+            recentWeeklyKm?: null | number;
         };
         HalvesDto: {
             /** Format: double */
@@ -1321,6 +1430,8 @@ export interface components {
             /** Format: double */
             plannedKm: number;
             sessions: components["schemas"]["SessionDto"][];
+            /** @default false */
+            isReplanned: boolean;
         };
         PredictionDto: {
             /** Format: double */
@@ -1358,6 +1469,20 @@ export interface components {
             date: string;
             /** Format: double */
             distanceKm: number;
+        };
+        ReplanDto: {
+            /** Format: date */
+            from: string;
+            setback: components["schemas"]["Setback"];
+            /** Format: double */
+            recentWeeklyKm: null | number;
+        };
+        ReplanRequest: {
+            /** Format: date */
+            replanFrom: string;
+            setback: components["schemas"]["Setback"];
+            /** Format: double */
+            recentWeeklyKm: null | number;
         };
         /** @enum {unknown} */
         RepUnit: "Reps" | "RepsEachLeg" | "Seconds" | "SecondsEachSide";
@@ -1417,6 +1542,8 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             status: components["schemas"]["SavedPlanStatus"];
+            /** Format: date */
+            replannedFrom?: null | string;
         };
         SavePlanCommand: {
             name: null | string;
@@ -1447,6 +1574,8 @@ export interface components {
         };
         /** @enum {unknown} */
         SessionType: "Easy" | "Recovery" | "EasyWithStrides" | "Hills" | "Fartlek" | "Intervals" | "Tempo" | "CruiseIntervals" | "ProgressionRun" | "RacePace" | "MediumLongRun" | "LongRun" | "LongRunFastFinish" | "LongRunRacePace" | "Shakeout" | "Race" | "Strength";
+        /** @enum {unknown} */
+        Setback: "MissedTraining" | "Illness" | "Injury" | "Behind";
         SourceDto: {
             kind: components["schemas"]["ActivitySource"];
             /** Format: uri */
@@ -1526,6 +1655,8 @@ export interface components {
             paces: components["schemas"]["PaceZoneDto"][];
             weeks: components["schemas"]["PlanWeekDto"][];
             warnings: components["schemas"]["PlanWarningDto"][];
+            replan?: null | components["schemas"]["ReplanDto"];
+            suggestedGoal?: null | string;
         };
         /** @enum {unknown} */
         Units: "Kilometres" | "Miles";

@@ -6,6 +6,7 @@ import { planProgress } from '../../lib/plan-day'
 import { ranKmByWeek, runsByDate } from '../../lib/plan-runs'
 import { loadDone, saveDone } from '../../lib/storage'
 import type { ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
+import type { SessionCoach } from '../coaching/useCheckIns'
 import { Overview } from '../dashboard/Overview'
 import { StrengthTab } from '../strength/StrengthTab'
 import type { DoneUpdate } from '../strength/strength-progress'
@@ -36,6 +37,8 @@ interface Props {
   strava?: StravaStatus
   onOpenAccount?: () => void
   onOpenRuns?: () => void
+  /** Check-ins, when this is the runner's saved plan: "How did it go?" on each run that's come round. */
+  coach?: SessionCoach
 }
 
 // "This week" first: on most days it's all a runner needs. Signed-in runners get the overview of what they ran next to it.
@@ -68,7 +71,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns }: Props) {
+export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -345,7 +348,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
                   {PHASES[shown.week.phase]} · {formatDistance(trainingKm(shown.week), units)}
                 </p>
               </div>
-              <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} />
+              <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
               <p className="field-help">
                 Ticks are saved on this device.{' '}
                 <button type="button" className="link-button" onClick={() => showTab(tabs.findIndex((t) => t.id === 'all'))}>
@@ -358,7 +361,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
 
         <div {...panel('all')}>
           <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
-          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} />
+          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
         </div>
 
         <div {...panel('strength')}>

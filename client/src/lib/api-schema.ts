@@ -423,6 +423,168 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{planId}/check-ins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CheckInDto"][];
+                        "application/json": components["schemas"]["CheckInDto"][];
+                        "text/json": components["schemas"]["CheckInDto"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{planId}/check-ins/{date}/{sessionType}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                    date: string;
+                    sessionType: components["schemas"]["SessionType"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CheckInRequest"];
+                    "text/json": components["schemas"]["CheckInRequest"];
+                    "application/*+json": components["schemas"]["CheckInRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CheckInDto"];
+                        "application/json": components["schemas"]["CheckInDto"];
+                        "text/json": components["schemas"]["CheckInDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                    date: string;
+                    sessionType: components["schemas"]["SessionType"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans": {
         parameters: {
             query?: never;
@@ -1082,6 +1244,7 @@ export interface components {
             plans: components["schemas"]["SavedPlanExportDto"][];
             activities: components["schemas"]["ActivityDto"][];
             connections: components["schemas"]["ConnectionExportDto"][];
+            checkIns: components["schemas"]["CheckInExportDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -1153,6 +1316,8 @@ export interface components {
             previousBestSeconds: null | number;
             isWorthShowing: boolean;
         };
+        /** @enum {unknown} */
+        BodyArea: "Foot" | "Ankle" | "Achilles" | "Calf" | "Shin" | "Knee" | "Hamstring" | "Quad" | "Hip" | "Glute" | "LowerBack" | "Other";
         BulkImportDto: {
             files: components["schemas"]["BulkImportFileDto"][];
         };
@@ -1162,6 +1327,40 @@ export interface components {
             message: null | string;
             activity: null | components["schemas"]["ActivitySummaryDto"];
         };
+        CheckInDto: {
+            /** Format: date */
+            date: string;
+            sessionType: components["schemas"]["SessionType"];
+            status: components["schemas"]["CheckInStatus"];
+            /** Format: int32 */
+            effort: null | number;
+            pain: components["schemas"]["PainLevel"];
+            painArea: null | components["schemas"]["BodyArea"];
+            /** Format: double */
+            distanceKm: null | number;
+            duration: null | string;
+            note: null | string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        CheckInExportDto: {
+            /** Format: uuid */
+            planId: string;
+            checkIn: components["schemas"]["CheckInDto"];
+        };
+        CheckInRequest: {
+            status: components["schemas"]["CheckInStatus"];
+            /** Format: int32 */
+            effort: null | number;
+            pain?: components["schemas"]["PainLevel"];
+            painArea?: null | components["schemas"]["BodyArea"];
+            /** Format: double */
+            distanceKm?: null | number;
+            duration?: null | string;
+            note?: null | string;
+        };
+        /** @enum {unknown} */
+        CheckInStatus: "Done" | "CutShort" | "SwappedForEasy" | "Skipped";
         ConnectionExportDto: {
             provider: components["schemas"]["SyncProvider"];
             /** Format: int64 */
@@ -1258,6 +1457,8 @@ export interface components {
         };
         /** @enum {unknown} */
         PacingVerdict: "NegativeSplit" | "Even" | "PositiveSplit";
+        /** @enum {unknown} */
+        PainLevel: "None" | "Niggle" | "ChangedRunning";
         PersonalBestDto: {
             name: string;
             /** Format: double */

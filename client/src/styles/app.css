@@ -1945,6 +1945,56 @@ a.menu-item {
   padding-left: var(--space-5);
 }
 
+/* ---------- Replan from here: the rebuilt plan's banner, and the form that rebuilds it ---------- */
+.replan {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  margin-top: var(--space-4);
+}
+
+.replan-banner,
+.replan-form {
+  justify-self: stretch;
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+  border: 1px solid var(--line);
+}
+
+.replan-banner {
+  border-color: var(--accent);
+}
+
+.replan-banner p {
+  margin: 0 0 var(--space-3);
+}
+
+.replan-form h3 {
+  margin: 0 0 var(--space-2);
+}
+
+.replan-form fieldset {
+  border: 0;
+  margin: var(--space-4) 0;
+  padding: 0;
+}
+
+.replan-form .field-label {
+  margin-bottom: var(--space-2);
+}
+
+.replan-form .input {
+  max-width: 10rem;
+}
+
+@media print {
+  .replan-open,
+  .replan-form {
+    display: none;
+  }
+}
+
 .section {
   margin-top: var(--space-7);
 }

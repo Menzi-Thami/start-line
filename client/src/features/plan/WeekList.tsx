@@ -193,6 +193,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
                 <span className="week-name">Week {week.number}</span>
                 {week.number === currentWeek && <span className="tag tag-now">This week</span>}
                 {week.isCutback && <span className="tag">Easier week</span>}
+                {week.isReplanned && <span className="tag">Rebuilt</span>}
                 <br />
                 <span className="week-meta">
                   {PHASES[week.phase]} · from {formatDate(week.startDate)}

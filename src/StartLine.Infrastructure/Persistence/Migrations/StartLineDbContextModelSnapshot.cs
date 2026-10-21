@@ -246,6 +246,63 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("Activities", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Coaching.SessionCheckIn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<double?>("DistanceKm")
+                        .HasColumnType("float");
+
+                    b.Property<long?>("Duration")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("Effort")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(280)
+                        .HasColumnType("nvarchar(280)");
+
+                    b.Property<string>("Pain")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("PainArea")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("SavedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SessionType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SavedPlanId", "Date", "SessionType")
+                        .IsUnique();
+
+                    b.ToTable("SessionCheckIns", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -574,6 +631,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Navigation("BestEfforts");
 
                     b.Navigation("Splits");
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Coaching.SessionCheckIn", b =>
+                {
+                    b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>

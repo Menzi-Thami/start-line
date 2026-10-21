@@ -11,6 +11,7 @@ import type {
   SavedPlan,
   SavedPlanSummary,
   SaveProfileRequest,
+  Setback,
   StravaDisconnected,
   StravaStatus,
   TrainingPlan,
@@ -156,6 +157,12 @@ export const api = {
     /** Saves as the runner's current plan. With a plan already, replaceCurrent must be true (the API answers 409 plan_active otherwise). */
     savePlan: (token: string, plan: GeneratePlanRequest, name?: string, replaceCurrent = false) =>
       request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan, replaceCurrent }) }, token),
+    /** "Replan from here" for a saved plan: rebuilt from replanFrom after a setback. A second replan replaces the first. */
+    replanPlan: (token: string, id: string, replan: { replanFrom: string; setback: Setback; recentWeeklyKm: number | null }) =>
+      request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}/replan`, { method: 'POST', body: JSON.stringify(replan) }, token),
+    /** Undoes the replan: the saved plan is back as first built. */
+    undoReplan: (token: string, id: string) =>
+      request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}/replan`, { method: 'DELETE' }, token),
     /** Makes a past plan current again; the current one becomes a past plan. */
     restorePlan: (token: string, id: string) =>
       request<SavedPlanSummary>(`/api/v1/me/plans/${encodeURIComponent(id)}/restore`, { method: 'POST' }, token),

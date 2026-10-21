@@ -25,6 +25,8 @@ interface Props {
   today: string
   /** Extra actions beside Share, such as changing the answers or saving the plan to an account. */
   toolbarExtra?: ReactNode
+  /** "Replan from here", under the progress ring: the banner of a rebuilt plan and the way to rebuild it. */
+  replan?: ReactNode
   /** Links that subscribe Apple, Google or Outlook calendars to this plan. Without them, only the file download shows. */
   calendar?: CalendarLinks
   /** The runner's uploaded runs. Without them (signed out, or accounts off) the plan shows on its own. */
@@ -71,7 +73,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach }: Props) {
+export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -219,6 +221,8 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
 
       <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
 
+      {replan}
+
       {plan.warnings.length > 0 && (
         <div className="callout" role="note">
           <ul>
@@ -342,6 +346,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
                 <h3>
                   {shown.when === 'now' ? `Week ${shown.week.number} of ${plan.weeks.length}` : shown.when === 'soon' ? 'Your first week' : 'Race week'}
                   {shown.week.isCutback && <span className="tag">Easier week</span>}
+                  {shown.week.isReplanned && <span className="tag">Rebuilt</span>}
                 </h3>
                 <p className="week-meta">
                   {shown.when === 'soon' ? `Starts ${formatDate(shown.week.startDate, 'long')}` : `From ${formatDate(shown.week.startDate)}`} ·{' '}

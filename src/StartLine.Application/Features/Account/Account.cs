@@ -22,19 +22,27 @@ public sealed record RunnerDto(
     Units Units,
     bool WeeklyEmails,
     DateTimeOffset ConsentedAt,
-    int? MaxHeartRate)
+    int? MaxHeartRate,
+    string PrivacyNoticeVersion,
+    bool NeedsPrivacyConsent,
+    bool HeartRateConsent)
 {
     public static RunnerDto From(Runner r)
     {
         ArgumentNullException.ThrowIfNull(r);
-        return new(r.Id, r.DisplayName, r.Email, r.TimeZone, r.Units, r.WeeklyEmails, r.ConsentedAt, r.MaxHeartRate);
+        return new(r.Id, r.DisplayName, r.Email, r.TimeZone, r.Units, r.WeeklyEmails, r.ConsentedAt, r.MaxHeartRate,
+            r.PrivacyNoticeVersion, !r.HasAccepted(PrivacyNotice.CurrentVersion), r.HeartRateConsent);
     }
 }
 
-/// <summary>The privacy notice the app currently shows. Bump it when the notice changes.</summary>
+/// <summary>
+/// The privacy notice the app currently shows. Bump it when the notice changes: runners who accepted an older version
+/// are asked to accept again before they save, upload or connect anything (<see cref="CurrentRunner.RequireConsentedAsync"/>).
+/// </summary>
 public static class PrivacyNotice
 {
-    public const string CurrentVersion = "2026-10-09";
+    /// <summary>2026-10-21: names uploaded and synced runs, heart rate (asked for separately), Strava, and the contact.</summary>
+    public const string CurrentVersion = "2026-10-21";
 }
 
 /// <summary>Signs up on first call, updates the profile after. Email comes from the token, never the body.</summary>
@@ -44,7 +52,8 @@ public sealed record SaveProfileCommand(
     Units Units,
     bool WeeklyEmails,
     bool AcceptPrivacyNotice,
-    int? MaxHeartRate = null) : IRequest<RunnerDto>;
+    int? MaxHeartRate = null,
+    bool? HeartRateConsent = null) : IRequest<RunnerDto>;
 
 internal sealed class SaveProfileValidator : AbstractValidator<SaveProfileCommand>
 {
@@ -64,7 +73,7 @@ internal sealed class SaveProfileValidator : AbstractValidator<SaveProfileComman
     }
 }
 
-internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner current, ICurrentUser user, TimeProvider time)
+internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner current, ICurrentUser user, TimeProvider time, HeartRateData heartRate)
     : IRequestHandler<SaveProfileCommand, RunnerDto>
 {
     public async Task<RunnerDto> Handle(SaveProfileCommand request, CancellationToken cancellationToken)
@@ -81,7 +90,7 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
             }
 
             runner = Runner.Register(current.Subject, user.Email, request.DisplayName, request.TimeZone, request.Units,
-                request.WeeklyEmails, PrivacyNotice.CurrentVersion, time.GetUtcNow(), request.MaxHeartRate);
+                request.WeeklyEmails, PrivacyNotice.CurrentVersion, time.GetUtcNow(), request.MaxHeartRate, request.HeartRateConsent ?? false);
             db.Runners.Add(runner);
             try
             {
@@ -102,8 +111,52 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
         }
 
         runner.UpdateProfile(user.Email ?? runner.Email, request.DisplayName, request.TimeZone, request.Units, request.WeeklyEmails, request.MaxHeartRate);
+        if (request.HeartRateConsent is { } consent && runner.SetHeartRateConsent(consent, time.GetUtcNow()))
+        {
+            await heartRate.ForgetAsync(runner.Id, cancellationToken);
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         return RunnerDto.From(runner);
+    }
+}
+
+/// <summary>
+/// Accepts the current privacy notice, for a runner who signed up under an older one, with their heart-rate choice.
+/// Saying no to heart rate deletes any already stored.
+/// </summary>
+public sealed record AcceptPrivacyNoticeCommand(bool HeartRateConsent) : IRequest<RunnerDto>;
+
+internal sealed class AcceptPrivacyNoticeHandler(IApplicationDbContext db, CurrentRunner current, TimeProvider time, HeartRateData heartRate)
+    : IRequestHandler<AcceptPrivacyNoticeCommand, RunnerDto>
+{
+    public async Task<RunnerDto> Handle(AcceptPrivacyNoticeCommand request, CancellationToken cancellationToken)
+    {
+        var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
+        var now = time.GetUtcNow();
+        runner.AcceptPrivacyNotice(PrivacyNotice.CurrentVersion, now);
+        if (runner.SetHeartRateConsent(request.HeartRateConsent, now) || !request.HeartRateConsent)
+        {
+            // Also when consent was never given: heart rate kept from before consent was asked for goes too.
+            await heartRate.ForgetAsync(runner.Id, cancellationToken);
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return RunnerDto.From(runner);
+    }
+}
+
+/// <summary>Removes stored heart rate from every run of a runner, when they withdraw (or don't give) consent.</summary>
+internal sealed class HeartRateData(IApplicationDbContext db)
+{
+    /// <summary>Loads and scrubs the runner's runs; the caller saves.</summary>
+    public async Task ForgetAsync(Guid runnerId, CancellationToken cancellationToken)
+    {
+        var runs = await db.Activities.Where(a => a.RunnerId == runnerId).ToListAsync(cancellationToken);
+        foreach (var run in runs)
+        {
+            run.ForgetHeartRate();
+        }
     }
 }
 

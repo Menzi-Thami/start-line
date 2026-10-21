@@ -18,6 +18,9 @@ const thandi: Runner = {
   weeklyEmails: false,
   consentedAt: '2026-10-08T09:00:00Z',
   maxHeartRate: null,
+  privacyNoticeVersion: '2026-10-21',
+  needsPrivacyConsent: false,
+  heartRateConsent: true,
 }
 
 const signedIn = (overrides: Partial<Auth> = {}): Auth => ({

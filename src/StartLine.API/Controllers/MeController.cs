@@ -26,6 +26,16 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
     public async Task<IActionResult> Save([FromBody] SaveProfileCommand request, CancellationToken cancellationToken) =>
         Ok(await dispatcher.Send(request, cancellationToken));
 
+    /// <summary>
+    /// Accepts the current privacy notice (for a runner who signed up under an older one) with their separate,
+    /// optional heart-rate choice. Saying no to heart rate deletes any already stored.
+    /// </summary>
+    [HttpPut("privacy")]
+    [ProducesResponseType<RunnerDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AcceptPrivacy([FromBody] AcceptPrivacyNoticeCommand request, CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(request, cancellationToken));
+
     /// <summary>Everything stored about the runner, as a downloadable file.</summary>
     [HttpGet("export")]
     [ProducesResponseType<AccountExportDto>(StatusCodes.Status200OK)]

@@ -70,7 +70,7 @@ internal sealed class ImportActivitiesHandler(CurrentRunner current, ActivityImp
 {
     public async Task<BulkImportDto> Handle(ImportActivitiesCommand request, CancellationToken cancellationToken)
     {
-        var runner = await current.RequireAsync(cancellationToken);
+        var runner = await current.RequireConsentedAsync(cancellationToken);
         List<BulkImportFileDto> results = [];
         var full = false;
         foreach (var file in request.Files)

@@ -19,4 +19,16 @@ internal sealed class CurrentRunner(IApplicationDbContext db, ICurrentUser user)
     public async Task<Runner> RequireAsync(CancellationToken cancellationToken) =>
         await FindAsync(cancellationToken)
         ?? throw new ForbiddenException("registration_required", "Finish signing up before saving plans.");
+
+    /// <summary>
+    /// A signed-up runner who has accepted the current privacy notice. For anything that adds data (saving a plan,
+    /// uploading, connecting Strava); reading, exporting, disconnecting and deleting never wait on the notice.
+    /// </summary>
+    public async Task<Runner> RequireConsentedAsync(CancellationToken cancellationToken)
+    {
+        var runner = await RequireAsync(cancellationToken);
+        return runner.HasAccepted(PrivacyNotice.CurrentVersion)
+            ? runner
+            : throw new ForbiddenException("privacy_notice_outdated", "Taperday's privacy notice has changed. Read and accept it to carry on.");
+    }
 }

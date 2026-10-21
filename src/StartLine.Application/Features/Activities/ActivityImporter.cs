@@ -93,6 +93,13 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
         // would stall every runner's sync, not just this one.
         var zone = TimeZoneInfo.TryFindSystemTimeZoneById(runner.TimeZone, out var found) ? found : TimeZoneInfo.Utc;
         var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(recording.StartedAt.ToUniversalTime(), zone).DateTime);
+        // Heart rate is kept only with the runner's separate consent (POPIA special personal information); without it
+        // every reading is dropped here, before anything is worked out or stored, for uploads and synced runs alike.
+        if (!runner.HeartRateConsent)
+        {
+            recording = recording.WithoutHeartRate();
+        }
+
         return Activity.Record(runner.Id, recording, localDate, await PlannedOnAsync(runner.Id, localDate, cancellationToken), origin);
     }
 

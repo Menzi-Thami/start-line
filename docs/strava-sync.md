@@ -28,6 +28,8 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
 - **5.4: no combining Strava Data with other customer data.** Uploads and synced runs are never merged: an upload
   of a synced run replaces the copy, and a synced copy of an uploaded run is skipped.
 - **5.7: location.** Streams are requested as `time,distance,altitude,heartrate`; `latlng` is never asked for.
+  Heart rate from Strava is kept only for runners who gave Taperday's separate heart-rate consent; for everyone else
+  it's dropped before the run is recorded, like any upload.
 - **6.3 / 7.4 / 2.5: deletion.** Activity deletions and revocations are queued at `Delete` priority and need no API
   call, so they never wait for the rate limit. Disconnecting revokes at Strava, deletes every synced run and says so
   on screen (the written confirmation).
@@ -109,7 +111,7 @@ What Strava's Developer Program asks for, and where Taperday meets it. This is t
 | Webhooks, not polling, for updates and deauthorisations | One push subscription (id 377962); the worker reacts to events, with a catch-up only when the app is opened. |
 | Works for up to 10 athletes before review; submit to go further | Capacity is at 10. Submit the review form once there's real usage: https://share.hsforms.com/1VXSwPUYqSH6IxK0y51FjHwcnkd8 |
 | Within rate limits (200/15 min, 2,000/day; 400/4,000 after upgrade) | `StravaRateGate` reads Strava's usage headers and stops background work at 90%, leaving room for runners connecting. |
-| A lawful privacy policy (Policy 7.3) | **Action: publish a privacy policy and update the in-app notice to name synced runs and heart rate.** |
+| A lawful privacy policy (Policy 7.3) | Published at `/?view=privacy` (linked from every page's footer). It names synced runs, the 7-day cache, heart rate and the contact, and runners accept it (version `2026-10-21`) before connecting. |
 
 Open actions are in `security-posture.md` → To do.
 

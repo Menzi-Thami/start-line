@@ -5,6 +5,7 @@ using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Activities;
+using StartLine.Application.Features.CheckIns;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Sync;
 using StartLine.Domain.Activities;
@@ -119,7 +120,8 @@ public sealed record AccountExportDto(
     RunnerDto Profile,
     IReadOnlyList<SavedPlanExportDto> Plans,
     IReadOnlyList<ActivityDto> Activities,
-    IReadOnlyList<ConnectionExportDto> Connections);
+    IReadOnlyList<ConnectionExportDto> Connections,
+    IReadOnlyList<CheckInExportDto> CheckIns);
 
 /// <summary>
 /// A connected service as exported: what was granted and when, but never the tokens. An export file sitting in a
@@ -154,11 +156,17 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .ToListAsync(cancellationToken);
         var connections = await db.ProviderConnections.AsNoTracking().Where(c => c.RunnerId == runner.Id).ToListAsync(cancellationToken);
         var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
+        var planIds = plans.Select(p => p.Id).ToList();
+        var checkIns = await db.SessionCheckIns.AsNoTracking()
+            .Where(c => planIds.Contains(c.SavedPlanId))
+            .OrderBy(c => c.Date)
+            .ToListAsync(cancellationToken);
         return new AccountExportDto(
             RunnerDto.From(runner),
             [.. plans.Select(SavedPlanExportDto.From)],
             [.. activities.Select(a => ActivityDto.From(a, bests.FromRunsOtherThan(a.Id), runner.MaxHeartRate))],
-            [.. connections.Select(ConnectionExportDto.From)]);
+            [.. connections.Select(ConnectionExportDto.From)],
+            [.. checkIns.Select(c => new CheckInExportDto(c.SavedPlanId, CheckInDto.From(c)))]);
     }
 }
 

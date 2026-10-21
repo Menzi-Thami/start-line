@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
 using StartLine.Domain.Activities;
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 using StartLine.Domain.Sync;
@@ -19,6 +20,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
     public DbSet<ProviderConnection> ProviderConnections => Set<ProviderConnection>();
 
     public DbSet<SyncJob> SyncJobs => Set<SyncJob>();
+
+    public DbSet<SessionCheckIn> SessionCheckIns => Set<SessionCheckIn>();
 
     /// <summary>The Data Protection key ring that encrypts Strava tokens. Wrapped by Key Vault in Azure.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();

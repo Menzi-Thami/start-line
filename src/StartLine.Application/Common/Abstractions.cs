@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StartLine.Domain.Activities;
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 using StartLine.Domain.Sync;
@@ -26,6 +27,8 @@ public interface IApplicationDbContext
     DbSet<ProviderConnection> ProviderConnections { get; }
 
     DbSet<SyncJob> SyncJobs { get; }
+
+    DbSet<SessionCheckIn> SessionCheckIns { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

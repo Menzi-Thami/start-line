@@ -56,6 +56,8 @@ public sealed record RunEvidence(
 /// The coach's call for one week, made once on or after its Monday from how the week before went, then kept: the
 /// same decisions always give the same plan, even after the runs behind them have gone from a 7-day Strava cache.
 /// <see cref="DoseStep"/> is -1 (one hard session, and a smaller one), 0 or +1 (a bigger hard session).
+/// <see cref="Fitness"/> is the race time recorded runs pointed to that week; <see cref="PaceFactor"/> the nudge to
+/// the paces from how hard sessions felt, for a runner without them (1 is no nudge).
 /// </summary>
 public sealed record CoachDecision(
     DateOnly WeekStart,
@@ -63,12 +65,17 @@ public sealed record CoachDecision(
     bool HoldVolume,
     int DoseStep,
     bool CutbackNow,
-    IReadOnlyList<CoachReason> Reasons)
+    IReadOnlyList<CoachReason> Reasons,
+    TimeSpan? Fitness = null,
+    double PaceFactor = 1)
 {
     public static CoachDecision AsPlanned(DateOnly weekStart, CoachVerdict verdict, params CoachReason[] reasons) =>
         new(weekStart, verdict, HoldVolume: false, DoseStep: 0, CutbackNow: false, reasons);
 
     public bool ChangesThePlan => HoldVolume || DoseStep != 0 || CutbackNow;
+
+    /// <summary>Whether the call says anything about the runner's paces: a fitness estimate, or a nudge.</summary>
+    public bool SetsPaces => Fitness is not null || Math.Abs(PaceFactor - 1) > 0.0001;
 }
 
 /// <summary>

@@ -73,7 +73,7 @@ public static partial class TrainingPlanGenerator
     }
 
     private static TrainingPlan Replanned(
-        PlanParameters p, PlanReplan replan, TrainingPlan original, PlanProfile profile, WorkoutBuilder workouts, WeekLayout layout)
+        PlanParameters p, PlanReplan replan, TrainingPlan original, PlanProfile profile, Func<DateOnly, WorkoutBuilder> workoutsFor, WeekLayout layout)
     {
         var replanWeek = MondayOf(replan.From);
         var restart = FirstMondayOnOrAfter(replan.From);
@@ -109,7 +109,7 @@ public static partial class TrainingPlanGenerator
             // The coach's calls still apply on top of the rebuild, and every rebuilt week is held to the 10% limit.
             var call = CallFor(p, week.StartDate);
             context = Coached(context, call, lastFullWeekKm);
-            var sessions = FittedWeek(p, profile, workouts, layout, ref context, lastFullWeekKm, call?.HoldVolume == true);
+            var sessions = FittedWeek(p, profile, workoutsFor(week.StartDate), layout, ref context, lastFullWeekKm, call?.HoldVolume == true);
 
             if (!context.IsCutback)
             {
@@ -121,7 +121,7 @@ public static partial class TrainingPlanGenerator
 
         var raceWeek = ahead[^1];
         weeks.Add(new PlanWeek(raceWeek.Number, raceWeek.StartDate, TrainingPhase.RaceWeek, false,
-            RaceWeek(p, profile, workouts, layout, raceWeek.StartDate, peakKm * profile.RaceWeekFactor), IsReplanned: true));
+            RaceWeek(p, profile, workoutsFor(raceWeek.StartDate), layout, raceWeek.StartDate, peakKm * profile.RaceWeekFactor), IsReplanned: true));
 
         // The other warnings describe the plan as first built, not the rebuild.
         var warnings = original.Warnings.Where(w => w.Code == "back-to-back").ToList();

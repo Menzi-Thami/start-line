@@ -118,8 +118,8 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
         {
             // Paces carry on as they were: the replan already starts from where the runner is.
             var previous = calls.LastOrDefault(c => c.WeekStart < week.StartDate);
-            return CoachDecision.AsPlanned(week.StartDate, CoachVerdict.OnTrack, CoachReason.JustReplanned)
-                with { Fitness = previous?.Fitness, PaceFactor = previous?.PaceFactor ?? 1 };
+            var asPlanned = CoachDecision.AsPlanned(week.StartDate, CoachVerdict.OnTrack, CoachReason.JustReplanned);
+            return asPlanned with { Fitness = previous?.Fitness, PaceFactor = previous?.PaceFactor ?? 1 };
         }
 
         var from = lastWeek.StartDate;

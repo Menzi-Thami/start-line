@@ -1,3 +1,4 @@
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Running;
 
 namespace StartLine.Domain.Plans;
@@ -106,7 +107,8 @@ public sealed record PlanParameters(
     double? CurrentWeeklyKm,
     Experience Experience = Experience.Regular,
     IReadOnlyCollection<DayOfWeek>? StrengthDays = null,
-    PlanReplan? Replan = null)
+    PlanReplan? Replan = null,
+    IReadOnlyList<CoachDecision>? Coaching = null)
 {
     public int RunsPerWeek => RunDays.Where(Enum.IsDefined).Distinct().Count();
 }

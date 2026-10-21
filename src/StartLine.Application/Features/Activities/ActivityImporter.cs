@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Exceptions;
+using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Races;
@@ -124,7 +125,7 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
 
             if (!builtPlans.TryGetValue(plan.Id, out var built))
             {
-                built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs));
+                built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), await CoachCalls.ForAsync(db, plan.Id, cancellationToken));
                 builtPlans[plan.Id] = built;
             }
 

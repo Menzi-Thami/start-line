@@ -4,6 +4,7 @@ using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Races;
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Races;
 using StartLine.Domain.Running;
@@ -17,17 +18,19 @@ namespace StartLine.Application.Features.Plans;
 /// </summary>
 internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timeProvider)
 {
-    public TrainingPlanDto Build(GeneratePlanQuery request)
+    /// <param name="coaching">The coach's calls, for a saved plan. A plan from a link has none.</param>
+    public TrainingPlanDto Build(GeneratePlanQuery request, IReadOnlyList<CoachDecision>? coaching = null)
     {
-        var (plan, race) = Generate(request);
+        var (plan, race) = Generate(request, coaching);
         var dto = TrainingPlanDto.From(plan, race.Summary);
         return race.Caveats.Count == 0 ? dto : dto with { Warnings = [.. race.Caveats, .. dto.Warnings] };
     }
 
     /// <summary>The plan itself, for features that need more than the public shape of it (such as each session's structure).</summary>
-    public TrainingPlan BuildPlan(GeneratePlanQuery request) => Generate(request).Plan;
+    public TrainingPlan BuildPlan(GeneratePlanQuery request, IReadOnlyList<CoachDecision>? coaching = null) => Generate(request, coaching).Plan;
 
-    private (TrainingPlan Plan, (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) Race) Generate(GeneratePlanQuery request)
+    private (TrainingPlan Plan, (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) Race) Generate(
+        GeneratePlanQuery request, IReadOnlyList<CoachDecision>? coaching)
     {
         var race = ResolveRace(request);
         var plan = TrainingPlanGenerator.Generate(new PlanParameters(
@@ -40,7 +43,8 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
             request.CurrentWeeklyKm,
             request.Experience,
             request.StrengthDays,
-            request is { ReplanFrom: { } from, Setback: { } setback } ? new PlanReplan(from, setback, request.RecentWeeklyKm) : null));
+            request is { ReplanFrom: { } from, Setback: { } setback } ? new PlanReplan(from, setback, request.RecentWeeklyKm) : null,
+            coaching));
         return (plan, race);
     }
 

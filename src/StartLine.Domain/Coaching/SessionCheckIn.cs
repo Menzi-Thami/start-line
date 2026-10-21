@@ -97,6 +97,8 @@ public sealed class SessionCheckIn
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    public CheckInAnswers Answers => new(Status, Effort, Pain, PainArea, DistanceKm, Duration, Note);
+
     /// <summary>Whether a session can be checked in on at all: runs can, strength and the race itself can't.</summary>
     public static bool IsCheckable(SessionType type) => type is not (SessionType.Strength or SessionType.Race);
 

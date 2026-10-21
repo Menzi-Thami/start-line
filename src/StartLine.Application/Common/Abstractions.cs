@@ -30,6 +30,8 @@ public interface IApplicationDbContext
 
     DbSet<SessionCheckIn> SessionCheckIns { get; }
 
+    DbSet<CoachWeek> CoachWeeks { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
 

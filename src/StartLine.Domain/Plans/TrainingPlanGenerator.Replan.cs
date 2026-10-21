@@ -106,17 +106,10 @@ public static partial class TrainingPlanGenerator
                     IsCutback: false, IsFirstWeek: i == 0, EasyOnly: i < easyOnly, FitToVolume: true)
                 : new WeekContext(week.StartDate, volumes[i], week.Phase, index, length <= 1 ? 1 : index / (double)(length - 1),
                     IsCutback(i, building), IsFirstWeek: i == 0, EasyOnly: i < easyOnly, FitToVolume: true);
-            var sessions = TrainingWeek(p, profile, workouts, layout, context);
-
-            // Runs are rounded to the half kilometre, which at a rebuild's low volumes can tip a week past 10% more than
-            // the last full week. Trim the target a little at a time until it fits: small steps lose as little of the
-            // week as possible, because the next week's limit is measured from this one.
-            var limitKm = Math.Max(lastFullWeekKm * MaxWeeklyIncrease, SmallestWeekKm(p));
-            for (var tries = 0; tries < 80 && Kilometres(sessions) > limitKm; tries++)
-            {
-                context = context with { TargetKm = context.TargetKm - 0.25 };
-                sessions = TrainingWeek(p, profile, workouts, layout, context);
-            }
+            // The coach's calls still apply on top of the rebuild, and every rebuilt week is held to the 10% limit.
+            var call = CallFor(p, week.StartDate);
+            context = Coached(context, call, lastFullWeekKm);
+            var sessions = FittedWeek(p, profile, workouts, layout, ref context, lastFullWeekKm, call?.HoldVolume == true);
 
             if (!context.IsCutback)
             {

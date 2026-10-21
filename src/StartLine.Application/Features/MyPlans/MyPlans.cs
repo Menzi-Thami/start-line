@@ -4,6 +4,7 @@ using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Account;
+using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Races;
 using StartLine.Domain.Plans;
@@ -14,7 +15,10 @@ namespace StartLine.Application.Features.MyPlans;
 public sealed record SavedPlanSummaryDto(
     Guid Id, string Name, string RaceName, DateOnly? RaceDate, DateTimeOffset CreatedAt, SavedPlanStatus Status, DateOnly? ReplannedFrom = null);
 
-public sealed record SavedPlanDto(Guid Id, string Name, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, TrainingPlanDto Plan, SavedPlanStatus Status);
+/// <param name="Coaching">The coach's call for each week it has decided, oldest first.</param>
+public sealed record SavedPlanDto(
+    Guid Id, string Name, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, TrainingPlanDto Plan, SavedPlanStatus Status,
+    IReadOnlyList<CoachNoteDto>? Coaching = null);
 
 public sealed record SavedPlanExportDto(Guid Id, string Name, SavedPlanStatus Status, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs)
 {
@@ -163,7 +167,8 @@ internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner c
         }
 
         var query = SavedPlanMapping.ToQuery(saved.Inputs);
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query), saved.Status);
+        var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls), saved.Status, [.. calls.Select(CoachNoteDto.From)]);
     }
 }
 
@@ -239,9 +244,10 @@ internal sealed class ReplanMyPlanHandler(IApplicationDbContext db, CurrentRunne
 
         // Build first: a replan that can't be generated (the race too close, say) must never be saved.
         var query = SavedPlanMapping.ToQuery(saved.Inputs);
-        var plan = builder.Build(query);
+        var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
+        var plan = builder.Build(query, calls);
         await db.SaveChangesAsync(cancellationToken);
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, plan, saved.Status);
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, plan, saved.Status, [.. calls.Select(CoachNoteDto.From)]);
     }
 }
 

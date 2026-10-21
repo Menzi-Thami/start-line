@@ -174,7 +174,9 @@ internal static class PresentationDependencyInjection
 
         var otel = services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(environment.ApplicationName))
-            .WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation())
+            .WithTracing(t => t
+                .AddAspNetCoreInstrumentation(o => o.EnrichWithHttpRequest = RedactWebhookSecret)
+                .AddHttpClientInstrumentation())
             .WithMetrics(m => m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation())
             .WithLogging();
         if (!string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
@@ -183,6 +185,17 @@ internal static class PresentationDependencyInjection
         }
 
         return services;
+    }
+
+    // The Strava webhook authenticates by an unguessable path segment. Keep it out of traces: the raw url.path would
+    // otherwise record the secret, and a trace backend is one more place it could leak from.
+    private static void RedactWebhookSecret(System.Diagnostics.Activity activity, HttpRequest request)
+    {
+        if (request.Path.HasValue && request.Path.Value.Contains("/webhooks/strava/", StringComparison.Ordinal))
+        {
+            activity.SetTag("url.path", "/api/v1/webhooks/strava/{secret}");
+            activity.SetTag("url.full", null);
+        }
     }
 
     private static string ClientKey(HttpContext context) =>

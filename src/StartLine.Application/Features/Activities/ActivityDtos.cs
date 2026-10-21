@@ -60,14 +60,18 @@ public sealed record ActivityDto(
 {
     /// <param name="bestFromOtherRuns">The runner's fastest time per standard distance across their other runs.</param>
     /// <param name="runnerMaxHeartRate">The max heart rate the runner set, or null: no zones without it.</param>
-    public static ActivityDto From(Activity a, IReadOnlyDictionary<double, TimeSpan> bestFromOtherRuns, int? runnerMaxHeartRate)
+    /// <param name="showHeartRate">
+    /// False when the runner hasn't agreed to Taperday keeping heart rate: anything stored from before they were asked
+    /// isn't shown. The account export passes true, because it lists everything held.
+    /// </param>
+    public static ActivityDto From(Activity a, IReadOnlyDictionary<double, TimeSpan> bestFromOtherRuns, int? runnerMaxHeartRate, bool showHeartRate = true)
     {
         ArgumentNullException.ThrowIfNull(a);
         var review = a.Review();
         var quickest = review.QuickestSplit;
         var hardest = review.HardestSplit;
         var isRace = a.PlannedSession?.SessionType == SessionType.Race;
-        return new(
+        var dto = new ActivityDto(
             a.Id,
             a.StartedAt,
             a.LocalDate,
@@ -87,6 +91,16 @@ public sealed record ActivityDto(
             [.. a.BestEfforts.OrderBy(e => e.DistanceMetres).Select(e => BestEffortDto.From(e, bestFromOtherRuns, isRace))],
             HeartRateDto.From(a, runnerMaxHeartRate),
             SourceDto.From(a));
+        return showHeartRate
+            ? dto
+            : dto with
+            {
+                AverageHeartRate = null,
+                MaxHeartRate = null,
+                HeartRate = null,
+                Splits = [.. dto.Splits.Select(s => s with { AverageHeartRate = null })],
+                Review = dto.Review with { HeartRateDriftPercent = null, HeartRateDriftIsNotable = false },
+            };
     }
 }
 

@@ -189,4 +189,19 @@ public sealed class Activity
         bestEfforts.Clear();
         bestEfforts.AddRange(fresh.bestEfforts);
     }
+
+    /// <summary>
+    /// Removes every heart-rate reading from the run (averages, per km, time at each heart rate, drift), keeping the
+    /// rest. Used when a runner withdraws consent to Taperday keeping heart rate.
+    /// </summary>
+    public void ForgetHeartRate()
+    {
+        AverageHeartRate = null;
+        MaxHeartRate = null;
+        HeartRateDriftPercent = null;
+        HeartRateTime = [];
+        var withoutHeartRate = splits.Select(s => s with { AverageHeartRate = null }).ToList();
+        splits.Clear();
+        splits.AddRange(withoutHeartRate);
+    }
 }

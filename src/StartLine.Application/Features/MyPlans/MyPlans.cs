@@ -73,7 +73,7 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
 {
     public async Task<SavedPlanSummaryDto> Handle(SavePlanCommand request, CancellationToken cancellationToken)
     {
-        var runner = await current.RequireAsync(cancellationToken);
+        var runner = await current.RequireConsentedAsync(cancellationToken);
 
         // Build first: a plan that can't be generated must never be saved.
         var inputs = SavedPlanMapping.ToInputs(request.Plan, DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime));

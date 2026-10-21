@@ -1,5 +1,6 @@
 import { toTimeSpan } from './format'
 import type {
+  AcceptPrivacyRequest,
   Activity,
   ActivitySummary,
   BulkImport,
@@ -152,6 +153,8 @@ export const api = {
     get: (token: string) => request<Runner>('/api/v1/me', {}, token),
     save: (token: string, body: SaveProfileRequest) =>
       request<Runner>('/api/v1/me', { method: 'PUT', body: JSON.stringify(body) }, token),
+    acceptPrivacy: (token: string, body: AcceptPrivacyRequest) =>
+      request<Runner>('/api/v1/me/privacy', { method: 'PUT', body: JSON.stringify(body) }, token),
     exportData: (token: string) => request<unknown>('/api/v1/me/export', {}, token),
     remove: (token: string) => request<void>('/api/v1/me', { method: 'DELETE' }, token),
     plans: (token: string) => request<SavedPlanSummary[]>('/api/v1/me/plans', {}, token),

@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddSingleton<RaceCalendarSync>();
         services.AddScoped<PlanBuilder>();
         services.AddScoped<CurrentRunner>();
+        services.AddScoped<HeartRateData>();
         services.AddScoped<PersonalBests>();
         services.AddScoped<ActivityImporter>();
         services.AddSingleton<StravaRateGate>();

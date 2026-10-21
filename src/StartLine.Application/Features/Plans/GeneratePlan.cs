@@ -16,6 +16,8 @@ namespace StartLine.Application.Features.Plans;
 /// run, and <see cref="LongRunDay"/> must be one of them. <see cref="PlanFrom"/> is the runner's local
 /// date when the plan was first built: the client sends it so the plan starts on the right day in the
 /// runner's time zone, and a shared link reproduces the same plan later. It defaults to today (UTC).
+/// <see cref="ReplanFrom"/> and <see cref="Setback"/> together rebuild the plan from that date after missed training,
+/// illness, injury or a lean spell; <see cref="RecentWeeklyKm"/> is what the runner ran last week, needed when behind.
 /// </summary>
 public sealed record GeneratePlanQuery(
     string? RaceSlug,
@@ -28,7 +30,10 @@ public sealed record GeneratePlanQuery(
     double? CurrentWeeklyKm,
     Experience Experience = Experience.Regular,
     IReadOnlyList<DayOfWeek>? StrengthDays = null,
-    DateOnly? PlanFrom = null) : IRequest<TrainingPlanDto>;
+    DateOnly? PlanFrom = null,
+    DateOnly? ReplanFrom = null,
+    Setback? Setback = null,
+    double? RecentWeeklyKm = null) : IRequest<TrainingPlanDto>;
 
 internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuery>
 {
@@ -90,7 +95,29 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
         RuleForEach(q => q.StrengthDays).IsInEnum();
         RuleFor(q => q.Experience).IsInEnum();
         RuleFor(q => q.CurrentWeeklyKm).InclusiveBetween(0, 300).When(q => q.CurrentWeeklyKm is not null);
+
+        // A replan is a day and a reason, always together.
+        RuleFor(q => q.Setback).NotNull().When(q => q.ReplanFrom is not null).WithMessage("Say why you're replanning.");
+        RuleFor(q => q.Setback).IsInEnum();
+        RuleFor(q => q.ReplanFrom).NotNull().When(q => q.Setback is not null).WithMessage("Say which day to replan from.");
+        RuleFor(q => q.ReplanFrom).Cascade(CascadeMode.Stop)
+            .Must((q, d) => d >= From(q) && d <= timeProvider.Today().AddDays(1))
+            .When(q => q.ReplanFrom is not null)
+            .WithMessage("A plan is replanned from today, on or after the day it was built.")
+            .Must((q, d) => RaceDateFor(q, catalogue) is not { } race || race >= d!.Value.AddDays(MinDaysUntilRace))
+            .When(q => q.ReplanFrom is not null)
+            .WithMessage($"Your race is less than {MinDaysUntilRace} days away, too close to rebuild the plan. Rest if you need to, then follow your taper.");
+        RuleFor(q => q.RecentWeeklyKm).InclusiveBetween(0, 300).When(q => q.RecentWeeklyKm is not null);
+        RuleFor(q => q.RecentWeeklyKm)
+            .Must(km => km is > 0)
+            .When(q => q.Setback == Setback.Behind)
+            .WithMessage("Say how far you ran last week, so the plan can pick up from there.");
     }
+
+    private static DateOnly? RaceDateFor(GeneratePlanQuery q, IRaceCatalogue catalogue) =>
+        string.IsNullOrWhiteSpace(q.RaceSlug)
+            ? q.RaceDate
+            : catalogue.FindBySlug(q.RaceSlug)?.Date;
 
     private static double? DistanceFor(GeneratePlanQuery q, IRaceCatalogue catalogue) =>
         string.IsNullOrWhiteSpace(q.RaceSlug)

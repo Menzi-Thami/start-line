@@ -11,7 +11,9 @@ public sealed record TrainingPlanDto(
     DateOnly StartDate,
     IReadOnlyList<PaceZoneDto> Paces,
     IReadOnlyList<PlanWeekDto> Weeks,
-    IReadOnlyList<PlanWarningDto> Warnings)
+    IReadOnlyList<PlanWarningDto> Warnings,
+    ReplanDto? Replan = null,
+    TimeSpan? SuggestedGoal = null)
 {
     public static TrainingPlanDto From(TrainingPlan plan, RaceSummaryDto race)
     {
@@ -34,8 +36,11 @@ public sealed record TrainingPlanDto(
                 w.IsCutback,
                 w.PlannedKm,
                 [.. w.Sessions.Select(s => new SessionDto(s.Date, s.Type, s.Title, s.Detail, s.Purpose, s.DistanceKm, s.Zone,
-                    [.. (s.Exercises ?? []).Select(e => new StrengthExerciseDto(e.Exercise, e.Sets, e.Reps, e.Unit, e.Summary))]))]))],
-            [.. plan.Warnings.Select(w => new PlanWarningDto(w.Code, w.Message))]);
+                    [.. (s.Exercises ?? []).Select(e => new StrengthExerciseDto(e.Exercise, e.Sets, e.Reps, e.Unit, e.Summary))]))],
+                w.IsReplanned))],
+            [.. plan.Warnings.Select(w => new PlanWarningDto(w.Code, w.Message))],
+            plan.Replan is { } replan ? new ReplanDto(replan.From, replan.Setback, replan.RecentWeeklyKm) : null,
+            plan.SuggestedGoal);
     }
 }
 
@@ -49,7 +54,11 @@ public sealed record PlanWeekDto(
     TrainingPhase Phase,
     bool IsCutback,
     double PlannedKm,
-    IReadOnlyList<SessionDto> Sessions);
+    IReadOnlyList<SessionDto> Sessions,
+    bool IsReplanned = false);
+
+/// <summary>The plan was rebuilt from <c>From</c> after a setback; weeks before then are as first planned.</summary>
+public sealed record ReplanDto(DateOnly From, Setback Setback, double? RecentWeeklyKm);
 
 public sealed record SessionDto(
     DateOnly Date,

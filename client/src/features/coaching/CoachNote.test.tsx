@@ -11,6 +11,8 @@ const note = (overrides: Partial<Note>): Note => ({
   doseStep: 0,
   cutbackNow: false,
   reasons: ['RanAsPlanned'],
+  fitness: null,
+  paceFactor: 1,
   ...overrides,
 })
 

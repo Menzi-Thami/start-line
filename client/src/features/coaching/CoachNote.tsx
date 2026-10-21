@@ -1,10 +1,14 @@
 import { useState } from 'react'
+import { formatDuration } from '../../lib/format'
 import type { CoachNote as Note, CoachReason, CoachVerdict } from '../../lib/types'
 
 interface Props {
   note: Note
   /** Rebuilds the plan from today after an injury. Offered, never done for the runner. */
   onInjuryReplan?: () => Promise<void>
+  /** A faster goal the coach suggests after strong weeks, in seconds. */
+  fasterGoal?: number
+  onUseGoal?: (goalSeconds: number) => void
 }
 
 const TITLES: Record<CoachVerdict, string> = {
@@ -45,7 +49,7 @@ function change(note: Note): string | null {
  * The coach's note for a week: what it saw last week and what it changed. Small changes are made for the runner; a
  * replan after an injury is only ever offered.
  */
-export function CoachNote({ note, onInjuryReplan }: Props) {
+export function CoachNote({ note, onInjuryReplan, fasterGoal, onUseGoal }: Props) {
   const changed = change(note)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,6 +75,16 @@ export function CoachNote({ note, onInjuryReplan }: Props) {
         <p key={reason}>{WHY[reason]}</p>
       ))}
       {changed && <p className="coach-note-change">{changed}</p>}
+      {note.verdict === 'Thriving' && fasterGoal !== undefined && (
+        <>
+          <p>Your recent runs say {formatDuration(fasterGoal)} is within reach. Aim for it if you’d like the plan to ask more of you.</p>
+          {onUseGoal && (
+            <button type="button" className="button" onClick={() => onUseGoal(fasterGoal)}>
+              Use {formatDuration(fasterGoal)} as my goal
+            </button>
+          )}
+        </>
+      )}
       {note.verdict === 'Hurting' && (
         <>
           <p>Rest until it settles. If it’s an injury, rebuild your plan from here so you come back gently.</p>

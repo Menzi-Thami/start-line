@@ -1530,6 +1530,12 @@ export interface components {
             doseStep: number;
             cutbackNow: boolean;
             reasons: components["schemas"]["CoachReason"][];
+            fitness?: null | string;
+            /**
+             * Format: double
+             * @default 1
+             */
+            paceFactor: number;
         };
         /** @enum {unknown} */
         CoachReason: "FewCheckIns" | "RanAsPlanned" | "FeltHarderThanPlanned" | "MissedVolume" | "HighHeartRateDrift" | "Niggles" | "Pain" | "FeltEasierThanPlanned" | "FasterThanPlanned" | "StrugglingTwice" | "ThrivingTwice" | "JustReplanned";

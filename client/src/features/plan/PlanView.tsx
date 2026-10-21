@@ -7,6 +7,8 @@ import { ranKmByWeek, runsByDate } from '../../lib/plan-runs'
 import { loadDone, saveDone } from '../../lib/storage'
 import type { CoachNote as CoachNoteType, ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
 import { CoachNote } from '../coaching/CoachNote'
+import { latestPaced } from '../coaching/fitness'
+import { PacesIntro, PredictedTimes } from '../coaching/FitnessNotes'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { Overview } from '../dashboard/Overview'
 import { StrengthTab } from '../strength/StrengthTab'
@@ -46,6 +48,8 @@ interface Props {
   coachNotes?: CoachNoteType[]
   /** Offered from a note about pain: rebuilds the plan after an injury. */
   onInjuryReplan?: () => Promise<void>
+  /** Takes a goal the coach suggested. */
+  onUseGoal?: (goalSeconds: number) => void
 }
 
 // "This week" first: on most days it's all a runner needs. Signed-in runners get the overview of what they ran next to it.
@@ -78,7 +82,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan }: Props) {
+export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -359,7 +363,12 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
                 </p>
               </div>
               {shown.when === 'now' && coachNotes?.find((n) => n.weekStart === shown.week.startDate) && (
-                <CoachNote note={coachNotes.find((n) => n.weekStart === shown.week.startDate)!} onInjuryReplan={onInjuryReplan} />
+                <CoachNote
+                  note={coachNotes.find((n) => n.weekStart === shown.week.startDate)!}
+                  onInjuryReplan={onInjuryReplan}
+                  fasterGoal={plan.suggestedGoal && (parseTimeSpan(plan.suggestedGoal) ?? goalSeconds) < goalSeconds ? (parseTimeSpan(plan.suggestedGoal) ?? undefined) : undefined}
+                  onUseGoal={onUseGoal}
+                />
               )}
               <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
               <p className="field-help">
@@ -382,7 +391,11 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
         </div>
 
         <div {...panel('paces')}>
-          <p className="tab-intro">Every pace comes from your goal time, so easy days stay easy and hard days hit the right effort.</p>
+          {latestPaced(coachNotes) ? (
+            <PacesIntro notes={coachNotes} goalSeconds={goalSeconds} />
+          ) : (
+            <p className="tab-intro">Every pace comes from your goal time, so easy days stay easy and hard days hit the right effort.</p>
+          )}
           <ul className="zones">
             {plan.paces.map((p) => (
               <li className="zone" key={p.zone}>
@@ -400,6 +413,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
           <h3>Weekly distance</h3>
           <p>It builds gradually, eases off every fourth week, and drops away before race day so you start fresh.</p>
           <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
+          <PredictedTimes notes={coachNotes} goalSeconds={goalSeconds} />
           {ran && ran.size > 0 && (
             <>
               <h3 className="week-totals-title">What you ran</h3>

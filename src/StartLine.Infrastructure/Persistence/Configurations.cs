@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StartLine.Domain.Activities;
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 using StartLine.Domain.Sync;
@@ -212,5 +213,26 @@ internal sealed class SyncJobConfiguration : IEntityTypeConfiguration<SyncJob>
         builder.Property(j => j.LastError).HasMaxLength(SyncJob.MaxErrorLength);
         builder.HasIndex(j => new { j.Failed, j.NotBefore, j.Priority });
         builder.HasIndex(j => new { j.RunnerId, j.Kind, j.ObjectId });
+    }
+}
+
+internal sealed class SessionCheckInConfiguration : IEntityTypeConfiguration<SessionCheckIn>
+{
+    public void Configure(EntityTypeBuilder<SessionCheckIn> builder)
+    {
+        builder.ToTable("SessionCheckIns");
+        builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
+        builder.Property(c => c.SessionType).HasConversion<string>().HasMaxLength(24);
+        builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Property(c => c.Pain).HasConversion<string>().HasMaxLength(16);
+        builder.Property(c => c.PainArea).HasConversion<string>().HasMaxLength(16);
+        // SQL `time` stops at 24 hours; an ultra doesn't, so durations are stored as seconds.
+        builder.Property(c => c.Duration).HasConversion(t => t.HasValue ? (long?)t.Value.TotalSeconds : null, s => s.HasValue ? TimeSpan.FromSeconds(s.Value) : null);
+        builder.Property(c => c.Note).HasMaxLength(SessionCheckIn.MaxNoteLength);
+
+        // One check-in per session. Through the plan to the runner, so deleting either deletes these too.
+        builder.HasIndex(c => new { c.SavedPlanId, c.Date, c.SessionType }).IsUnique();
+        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(c => c.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
     }
 }

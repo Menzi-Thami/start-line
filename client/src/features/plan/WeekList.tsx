@@ -4,6 +4,8 @@ import { dayRuns, type RunsByDate } from '../../lib/plan-runs'
 import type { ActivitySummary, PaceZone, PaceZoneRange, PlanWeek, Session } from '../../lib/types'
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
+import { CheckInCard } from '../coaching/CheckInCard'
+import type { SessionCoach } from '../coaching/useCheckIns'
 import { ExerciseList } from '../strength/ExerciseList'
 import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey, trainingKm } from './plan-math'
@@ -18,6 +20,8 @@ interface Props {
   /** Uploaded runs by date. Without them, the weeks show the plan alone. */
   runs?: RunsByDate
   onOpenRun?: (id: string) => void
+  /** Check-ins on the runner's saved plan. Without it (a shared link, or signed out), runs only tick off. */
+  coach?: SessionCoach
 }
 
 /**
@@ -46,12 +50,13 @@ function RunMark({ run, units, unplanned, onOpenRun }: { run: ActivitySummary; u
   )
 }
 
-function SessionItem({ session, pace, units, done, onDoneChange }: {
+function SessionItem({ session, pace, units, done, onDoneChange, coach }: {
   session: Session
   pace: PaceZoneRange | undefined
   units: Units
   done: Set<string>
   onDoneChange: (update: DoneUpdate) => void
+  coach?: SessionCoach
 }) {
   // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
   const [bursts, setBursts] = useState(0)
@@ -106,6 +111,10 @@ function SessionItem({ session, pace, units, done, onDoneChange }: {
           Done
         </label>
       )}
+      {coach && session.type !== 'Strength' && session.type !== 'Race' && (
+        // A check-in that says the run happened ticks it off too, and a skipped one unticks it.
+        <CheckInCard session={session} coach={coach} onDone={(ran) => onDoneChange((current) => withSessionDone(current, session, ran))} />
+      )}
     </div>
   )
 }
@@ -118,10 +127,11 @@ interface WeekDaysProps {
   onDoneChange: (update: DoneUpdate) => void
   runs?: RunsByDate
   onOpenRun?: (id: string) => void
+  coach?: SessionCoach
 }
 
 /** One week, every day listed, rest days included, so the shape of the week is obvious. */
-export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpenRun }: WeekDaysProps) {
+export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpenRun, coach }: WeekDaysProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
     <ol className="days">
@@ -157,6 +167,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
                     units={units}
                     done={done}
                     onDoneChange={onDoneChange}
+                    coach={coach}
                   />
                 ))}
                 {marks.length > 0 && (
@@ -178,7 +189,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
 }
 
 /** Every week as a disclosure, every day of the week listed, rest days included, so the shape of the week is obvious. */
-export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange, runs, onOpenRun }: Props) {
+export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange, runs, onOpenRun, coach }: Props) {
   const byZone = new Map(paces.map((p) => [p.zone, p]))
   const openWeek = currentWeek ?? weeks[0]?.number
 
@@ -202,7 +213,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
               </span>
               <span className="week-km">{formatDistance(trainingKm(week), units)}</span>
             </summary>
-            <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} />
+            <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} coach={coach} />
           </details>
         )
       })}

@@ -3,6 +3,8 @@ import type {
   Activity,
   ActivitySummary,
   BulkImport,
+  CheckIn,
+  CheckInRequest,
   GeneratePlanRequest,
   PersonalBest,
   Prediction,
@@ -157,6 +159,21 @@ export const api = {
     /** Saves as the runner's current plan. With a plan already, replaceCurrent must be true (the API answers 409 plan_active otherwise). */
     savePlan: (token: string, plan: GeneratePlanRequest, name?: string, replaceCurrent = false) =>
       request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan, replaceCurrent }) }, token),
+    /** The runner's check-ins on one saved plan: how each run went. */
+    checkIns: (token: string, planId: string) => request<CheckIn[]>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins`, {}, token),
+    /** Saves (or replaces) the check-in for the run planned on that day. */
+    saveCheckIn: (token: string, planId: string, date: string, sessionType: string, body: CheckInRequest) =>
+      request<CheckIn>(
+        `/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/${encodeURIComponent(date)}/${encodeURIComponent(sessionType)}`,
+        { method: 'PUT', body: JSON.stringify(body) },
+        token,
+      ),
+    deleteCheckIn: (token: string, planId: string, date: string, sessionType: string) =>
+      request<void>(
+        `/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/${encodeURIComponent(date)}/${encodeURIComponent(sessionType)}`,
+        { method: 'DELETE' },
+        token,
+      ),
     /** "Replan from here" for a saved plan: rebuilt from replanFrom after a setback. A second replan replaces the first. */
     replanPlan: (token: string, id: string, replan: { replanFrom: string; setback: Setback; recentWeeklyKm: number | null }) =>
       request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}/replan`, { method: 'POST', body: JSON.stringify(replan) }, token),

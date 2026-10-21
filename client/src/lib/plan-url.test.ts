@@ -59,3 +59,29 @@ describe('plan links', () => {
     expect(request).toMatchObject({ raceSlug: 'comrades-2027', distanceKm: null, raceDate: null, goalTime: '10:30:00' })
   })
 })
+
+describe('replanned plan links', () => {
+  const replanned: PlanInputs = { ...custom, replan: { from: '2026-11-19', setback: 'Illness', recentWeeklyKm: 12 } }
+
+  it('carry the replan as three short parameters', () => {
+    expect(toSearchParams(replanned).toString()).toContain('from=2026-10-08&re=2026-11-19&why=ill&last=12')
+    expect(fromSearchParams(toSearchParams(replanned))?.replan).toEqual(replanned.replan)
+  })
+
+  it('reach the API as a replan date, a setback and last week’s distance', () => {
+    expect(toRequest(replanned)).toMatchObject({ planFrom: '2026-10-08', replanFrom: '2026-11-19', setback: 'Illness', recentWeeklyKm: 12 })
+    expect(toRequest(custom)).toMatchObject({ replanFrom: null, setback: null, recentWeeklyKm: null })
+  })
+
+  it.each([
+    ['an unknown reason', 're=2026-11-19&why=tired'],
+    ['no date', 'why=ill'],
+    ['a garbled date', 're=soon&why=ill'],
+    ['behind without last week’s distance', 're=2026-11-19&why=behind'],
+  ])('drop a replan with %s, but keep the plan', (_, replan) => {
+    const inputs = fromSearchParams(new URLSearchParams(`${toSearchParams(custom)}&${replan}`))
+
+    expect(inputs).not.toBeNull()
+    expect(inputs?.replan).toBeUndefined()
+  })
+})

@@ -204,4 +204,47 @@ public sealed class GeneratePlanTests
     [Fact]
     public async Task An_unknown_race_is_not_found() =>
         await Should.ThrowAsync<NotFoundException>(() => Handler().Handle(CatalogueRace("no-such-race"), CancellationToken.None));
+
+    private static GeneratePlanQuery Replanned(DateOnly? from, Setback? setback, double? lastWeekKm = null, DateOnly? raceDate = null) =>
+        CustomRace(raceDate: raceDate) with { PlanFrom = new DateOnly(2026, 10, 8), ReplanFrom = from, Setback = setback, RecentWeeklyKm = lastWeekKm };
+
+    [Fact]
+    public void A_replan_from_today_is_valid() =>
+        Validator().Validate(Replanned(new DateOnly(2026, 10, 8), Setback.Illness)).IsValid.ShouldBeTrue();
+
+    [Fact]
+    public void A_replan_needs_both_a_day_and_a_reason()
+    {
+        Validator().Validate(Replanned(null, Setback.Illness)).Errors.Select(e => e.PropertyName).ShouldContain("ReplanFrom");
+        Validator().Validate(Replanned(new DateOnly(2026, 10, 8), null)).Errors.Select(e => e.PropertyName).ShouldContain("Setback");
+    }
+
+    [Theory]
+    [InlineData(-1)] // before the plan was built
+    [InlineData(2)]  // a day still to come
+    public void A_replan_is_from_today_and_never_before_the_plan(int daysFromToday) =>
+        Validator().Validate(Replanned(new DateOnly(2026, 10, 8).AddDays(daysFromToday), Setback.MissedTraining))
+            .Errors.Select(e => e.PropertyName).ShouldContain("ReplanFrom");
+
+    [Fact]
+    public void A_replan_needs_two_weeks_before_the_race() =>
+        Validator().Validate(Replanned(new DateOnly(2026, 10, 9), Setback.Illness, raceDate: new DateOnly(2026, 10, 22)))
+            .Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("ReplanFrom");
+
+    [Fact]
+    public void Running_behind_needs_last_weeks_distance()
+    {
+        Validator().Validate(Replanned(new DateOnly(2026, 10, 8), Setback.Behind)).Errors.Select(e => e.PropertyName).ShouldContain("RecentWeeklyKm");
+        Validator().Validate(Replanned(new DateOnly(2026, 10, 8), Setback.Behind, 20)).IsValid.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_replan_reaches_the_plan()
+    {
+        var plan = await Handler().Handle(Replanned(new DateOnly(2026, 10, 8), Setback.Injury), CancellationToken.None);
+
+        plan.Replan.ShouldBe(new ReplanDto(new DateOnly(2026, 10, 8), Setback.Injury, null));
+        plan.Weeks.ShouldAllBe(w => w.IsReplanned);
+        plan.Warnings.ShouldContain(w => w.Code == "injury");
+    }
 }

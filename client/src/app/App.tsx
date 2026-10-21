@@ -5,10 +5,11 @@ import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
-import { useCurrentPlan } from '../features/account/useCurrentPlan'
+import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { SignInWait } from '../features/account/SignInWait'
 import { ActivityPage } from '../features/activities/ActivityPage'
+import { useCheckIns } from '../features/coaching/useCheckIns'
 import { MyRuns } from '../features/activities/MyRuns'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { Hero, RaceTicker } from '../features/home/Hero'
@@ -190,6 +191,11 @@ export function App() {
   // Someone who has just signed up has no plan to open, so the builder never waits for one.
   const [justSignedUp, setJustSignedUp] = useState(false)
   const runs = synced.runs
+
+  // Check-ins live on the runner's saved plan, so they're offered only when that's the plan on screen.
+  const savedOnScreen =
+    plan.kind === 'ready' && currentPlan.current && samePlan(toRequest(plan.inputs), currentPlan.current.inputs) ? currentPlan.current.id : null
+  const checkIns = useCheckIns(savedOnScreen)
 
   // Back from Strava: finish connecting, then show the account page with what happened.
   useEffect(() => {
@@ -542,6 +548,7 @@ export function App() {
                 onOpenAccount={state.kind === 'ready' ? () => go('account') : undefined}
                 onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
+                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, save: checkIns.save, remove: checkIns.remove } : undefined}
                 toolbarExtra={
                   <>
                     <button type="button" className="button button-quiet" onClick={changeAnswers}>

@@ -322,9 +322,22 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                                 .HasColumnType("nvarchar(100)")
                                 .HasColumnName("RaceSlug");
 
+                            b1.Property<double?>("RecentWeeklyKm")
+                                .HasColumnType("float")
+                                .HasColumnName("RecentWeeklyKm");
+
+                            b1.Property<DateOnly?>("ReplanFrom")
+                                .HasColumnType("date")
+                                .HasColumnName("ReplanFrom");
+
                             b1.Property<int>("RunDays")
                                 .HasColumnType("int")
                                 .HasColumnName("RunDays");
+
+                            b1.Property<string>("Setback")
+                                .HasMaxLength(16)
+                                .HasColumnType("nvarchar(16)")
+                                .HasColumnName("Setback");
 
                             b1.Property<int>("StrengthDays")
                                 .HasColumnType("int")

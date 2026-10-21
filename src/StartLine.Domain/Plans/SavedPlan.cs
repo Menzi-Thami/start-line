@@ -14,7 +14,8 @@ public enum SavedPlanStatus
 /// <summary>
 /// What the runner asked for, exactly as they asked for it. The race is stored by slug, not by date,
 /// so when the race calendar learns a new date the saved plan follows it. Sessions are generated
-/// from these inputs on read; nothing about the schedule is frozen here yet.
+/// from these inputs on read; nothing about the schedule is frozen here yet. A replan is stored the same way: as the
+/// answers that rebuild the plan from a date, never as the rebuilt sessions.
 /// </summary>
 public sealed record SavedPlanInputs(
     string? RaceSlug,
@@ -27,7 +28,14 @@ public sealed record SavedPlanInputs(
     double? CurrentWeeklyKm,
     Experience Experience,
     IReadOnlyList<DayOfWeek> StrengthDays,
-    DateOnly PlanFrom);
+    DateOnly PlanFrom,
+    DateOnly? ReplanFrom = null,
+    Setback? Setback = null,
+    double? RecentWeeklyKm = null)
+{
+    /// <summary>The latest replan, if the runner has rebuilt the plan after a setback.</summary>
+    public PlanReplan? Replan => ReplanFrom is { } from && Setback is { } setback ? new PlanReplan(from, setback, RecentWeeklyKm) : null;
+}
 
 public sealed class SavedPlan
 {
@@ -89,6 +97,13 @@ public sealed class SavedPlan
 
         Inputs = inputs;
     }
+
+    /// <summary>
+    /// Rebuilds the current plan from a setback onwards. A plan keeps one replan: a second one replaces the first, and
+    /// null undoes it, so the plan is back as first built.
+    /// </summary>
+    public void Replan(PlanReplan? replan) =>
+        Update(Inputs with { ReplanFrom = replan?.From, Setback = replan?.Setback, RecentWeeklyKm = replan?.RecentWeeklyKm });
 
     /// <summary>Is this the same race as <paramref name="inputs"/>: the same catalogue race, or the same named race on the same date.</summary>
     public bool IsForSameRace(SavedPlanInputs inputs)

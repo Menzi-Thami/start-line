@@ -56,3 +56,8 @@ branch per concern, merge `main` into feature branches. Commits: `feat(scope): â
 Training rules worth knowing before changing the generator: weekly volume grows â‰¤ 10%, every 4th
 week is a cutback, hard days are never back to back when the chosen days allow it, long runs are capped by
 distance *and* time, and race week is light with one sharpener and a shakeout. Each rule has a test.
+
+"Replan from here" (`PlanReplan`, `TrainingPlanGenerator.Replan.cs`) keeps the weeks already run and rebuilds the
+rest from a share of what the runner had built (missed 80%, ill 60%, injured 50%, behind: last week's km), with the
+same rules plus easy-only return weeks (ill 1, injured 2). Rebuilt weeks keep their phase, restart the cutback count
+and are held to the 10% limit on their real (rounded) distance. A plan keeps one replan; the latest wins.

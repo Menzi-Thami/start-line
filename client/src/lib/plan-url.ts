@@ -1,4 +1,4 @@
-import { WEEK, type DayOfWeek, type Experience, type GeneratePlanRequest } from './types'
+import { WEEK, type DayOfWeek, type Experience, type GeneratePlanRequest, type Setback } from './types'
 import { parseTimeSpan, toTimeSpan } from './format'
 
 /** Everything needed to rebuild a plan. It lives in the URL, so a plan is shared by sharing the link. */
@@ -14,6 +14,23 @@ export interface PlanInputs {
   experience: Experience
   strengthDays: DayOfWeek[]
   planFrom?: string
+  /** "Replan from here": the plan is rebuilt from this day, after this setback. Both or neither. */
+  replan?: ReplanInputs
+}
+
+export interface ReplanInputs {
+  from: string
+  setback: Setback
+  /** What the runner ran last week. Needed when they're behind; optional otherwise. */
+  recentWeeklyKm?: number
+}
+
+// Short and readable in a shared link: ?re=2026-12-03&why=ill&last=18
+const SETBACK_CODES: Record<Setback, string> = {
+  MissedTraining: 'missed',
+  Illness: 'ill',
+  Injury: 'injured',
+  Behind: 'behind',
 }
 
 const DAY_CODES: Record<DayOfWeek, string> = {
@@ -56,7 +73,22 @@ export function toSearchParams(inputs: PlanInputs): URLSearchParams {
   if (inputs.currentWeeklyKm) p.set('now', String(inputs.currentWeeklyKm))
   if (inputs.strengthDays.length > 0) p.set('gym', encodeDays(inputs.strengthDays))
   if (inputs.planFrom) p.set('from', inputs.planFrom)
+  if (inputs.replan) {
+    p.set('re', inputs.replan.from)
+    p.set('why', SETBACK_CODES[inputs.replan.setback])
+    if (inputs.replan.recentWeeklyKm) p.set('last', String(inputs.replan.recentWeeklyKm))
+  }
   return p
+}
+
+function replanFrom(params: URLSearchParams): ReplanInputs | undefined {
+  const from = params.get('re')
+  const setback = (Object.keys(SETBACK_CODES) as Setback[]).find((s) => SETBACK_CODES[s] === params.get('why'))
+  if (!from || !ISO_DATE.test(from) || !setback) return undefined
+  const recentWeeklyKm = positive(params.get('last'))
+  // Behind means "pick up from what I ran", so without that distance the replan is dropped, not guessed at.
+  if (setback === 'Behind' && recentWeeklyKm === undefined) return undefined
+  return { from, setback, recentWeeklyKm }
 }
 
 /** Returns null unless the link describes a complete plan. Anything malformed is dropped, not guessed at. */
@@ -88,6 +120,7 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
     experience,
     strengthDays: decodeDays(params.get('gym')).slice(0, 3),
     planFrom: planFrom && ISO_DATE.test(planFrom) ? planFrom : undefined,
+    replan: replanFrom(params),
   }
 }
 
@@ -107,6 +140,10 @@ export function fromRequest(request: GeneratePlanRequest): PlanInputs | null {
     experience: request.experience ?? 'Regular',
     strengthDays: WEEK.filter((d) => (request.strengthDays ?? []).includes(d)),
     planFrom: request.planFrom ?? undefined,
+    replan:
+      request.replanFrom && request.setback
+        ? { from: request.replanFrom, setback: request.setback, recentWeeklyKm: request.recentWeeklyKm ?? undefined }
+        : undefined,
   }
 }
 
@@ -123,5 +160,8 @@ export function toRequest(inputs: PlanInputs): GeneratePlanRequest {
     experience: inputs.experience,
     strengthDays: inputs.strengthDays,
     planFrom: inputs.planFrom ?? null,
+    replanFrom: inputs.replan?.from ?? null,
+    setback: inputs.replan?.setback ?? null,
+    recentWeeklyKm: inputs.replan?.recentWeeklyKm ?? null,
   }
 }

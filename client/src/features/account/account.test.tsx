@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../../app/App'
 import { AuthContext, type Auth } from '../../app/auth-context'
 import type { Runner, SavedPlanSummary } from '../../lib/types'
-import { server } from '../../test/server'
+import { planFixture, server } from '../../test/server'
 
 const TOKEN = 'test-token'
 const link = '?km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08'
@@ -320,6 +320,38 @@ describe('a signed-up runner', () => {
 
     await waitFor(() => expect(db.saved).toHaveLength(1))
     expect(db.saved[0]).toMatchObject({ replaceCurrent: true })
+  })
+
+  it('replans their saved plan in their account, so it opens rebuilt everywhere', async () => {
+    vi.setSystemTime(new Date(2026, 9, 21, 9, 0))
+    accountApi({ runner: thandi, plans: [current] })
+    const replans: unknown[] = []
+    server.use(
+      http.post('*/api/v1/me/plans/:id/replan', async ({ request, params }) => {
+        replans.push({ id: params.id, body: await request.json() })
+        const replan = { from: '2026-10-21', setback: 'Illness', recentWeeklyKm: null }
+        return HttpResponse.json({ id: 'plan-1', name: 'Parkrun PB', createdAt: '2026-10-08T09:00:00Z', inputs: {}, plan: { ...planFixture, replan }, status: 'Active' })
+      }),
+    )
+    window.history.replaceState(null, '', '/')
+    const user = renderWith(signedIn())
+
+    await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
+    await user.click(screen.getByRole('radio', { name: /I was ill/ }))
+    await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
+
+    expect(await screen.findByText(/Rebuilt from Wed 21 Oct/)).toBeInTheDocument()
+    expect(replans).toEqual([{ id: 'plan-1', body: { replanFrom: '2026-10-21', setback: 'Illness', recentWeeklyKm: null } }])
+    expect(window.location.search).toContain('re=2026-10-21&why=ill')
+  })
+
+  it('sees in My plans when a plan was replanned', async () => {
+    accountApi({ runner: thandi, plans: [{ ...current, replannedFrom: '2026-10-21' }] })
+    const user = renderWith(signedIn())
+
+    await user.click(await screen.findByRole('button', { name: 'My plans' }))
+
+    expect(await screen.findByText('Replanned 21 Oct')).toBeInTheDocument()
   })
 
   it('keeps past plans, and can make one current again', async () => {

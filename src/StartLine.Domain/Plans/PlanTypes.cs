@@ -76,7 +76,8 @@ public sealed record PlanWeek(
     DateOnly StartDate,
     TrainingPhase Phase,
     bool IsCutback,
-    IReadOnlyList<PlannedSession> Sessions)
+    IReadOnlyList<PlannedSession> Sessions,
+    bool IsReplanned = false)
 {
     public double PlannedKm => Math.Round(Sessions.Sum(s => s.DistanceKm), 1);
 }
@@ -91,7 +92,9 @@ public sealed record TrainingPlan(
     DateOnly StartDate,
     IReadOnlyDictionary<PaceZone, PaceRange> Paces,
     IReadOnlyList<PlanWeek> Weeks,
-    IReadOnlyList<PlanWarning> Warnings);
+    IReadOnlyList<PlanWarning> Warnings,
+    PlanReplan? Replan = null,
+    TimeSpan? SuggestedGoal = null);
 
 public sealed record PlanParameters(
     Distance RaceDistance,
@@ -102,7 +105,26 @@ public sealed record PlanParameters(
     DayOfWeek LongRunDay,
     double? CurrentWeeklyKm,
     Experience Experience = Experience.Regular,
-    IReadOnlyCollection<DayOfWeek>? StrengthDays = null)
+    IReadOnlyCollection<DayOfWeek>? StrengthDays = null,
+    PlanReplan? Replan = null)
 {
     public int RunsPerWeek => RunDays.Where(Enum.IsDefined).Distinct().Count();
 }
+
+/// <summary>Why a runner is rebuilding the rest of their plan.</summary>
+public enum Setback
+{
+    /// <summary>A healthy break: a holiday, work, life. Up to about two weeks.</summary>
+    MissedTraining,
+    Illness,
+    Injury,
+
+    /// <summary>Still running, just less than the plan asked for.</summary>
+    Behind,
+}
+
+/// <summary>
+/// "Replan from here": the plan up to <see cref="From"/> stays as it was, and the weeks after it are rebuilt from a
+/// volume the runner can manage now. <see cref="RecentWeeklyKm"/> is what they ran last week, if they said.
+/// </summary>
+public sealed record PlanReplan(DateOnly From, Setback Setback, double? RecentWeeklyKm = null);

@@ -32,17 +32,19 @@ public static partial class TrainingPlanGenerator
         var layout = WeekLayout.For(parameters.RunDays, parameters.LongRunDay);
 
         // A replan rebuilds on top of the plan as first built, so that plan is always generated first.
-        var original = Fresh(parameters, profile, paces, workouts, layout);
-        return parameters.Replan is { } replan
-            ? Replanned(parameters, replan, original, profile, workouts, layout)
+        var workoutsFor = WorkoutsByWeek(parameters, profile, workouts);
+        var original = Fresh(parameters, profile, paces, workoutsFor, layout);
+        var plan = parameters.Replan is { } replan
+            ? Replanned(parameters, replan, original, profile, workoutsFor, layout)
             : original;
+        return WithFitness(parameters, profile, plan);
     }
 
     private static TrainingPlan Fresh(
         PlanParameters parameters,
         PlanProfile profile,
         IReadOnlyDictionary<PaceZone, PaceRange> paces,
-        WorkoutBuilder workouts,
+        Func<DateOnly, WorkoutBuilder> workoutsFor,
         WeekLayout layout)
     {
         var warnings = new List<PlanWarning>();
@@ -92,11 +94,11 @@ public static partial class TrainingPlanGenerator
             {
                 var call = CallFor(parameters, week.Start);
                 week = Coached(week, call, lastFullWeekKm);
-                sessions = FittedWeek(parameters, profile, workouts, layout, ref week, lastFullWeekKm, call?.HoldVolume == true);
+                sessions = FittedWeek(parameters, profile, workoutsFor(week.Start), layout, ref week, lastFullWeekKm, call?.HoldVolume == true);
             }
             else
             {
-                sessions = TrainingWeek(parameters, profile, workouts, layout, week);
+                sessions = TrainingWeek(parameters, profile, workoutsFor(week.Start), layout, week);
             }
 
             if (!week.IsCutback)
@@ -129,7 +131,7 @@ public static partial class TrainingPlanGenerator
         }
 
         weeks.Add(new PlanWeek(weekCount, raceWeekStart, TrainingPhase.RaceWeek, false,
-            RaceWeek(parameters, profile, workouts, layout, raceWeekStart, peakKm * profile.RaceWeekFactor)));
+            RaceWeek(parameters, profile, workoutsFor(raceWeekStart), layout, raceWeekStart, peakKm * profile.RaceWeekFactor)));
 
         return new TrainingPlan(parameters.RaceDistance, profile.Category, parameters.RaceDate, parameters.GoalTime,
             startDate, paces, weeks, warnings);

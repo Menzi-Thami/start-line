@@ -762,6 +762,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/coach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SavedPlanDto"];
+                        "application/json": components["schemas"]["SavedPlanDto"];
+                        "text/json": components["schemas"]["SavedPlanDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans/{id}/restore": {
         parameters: {
             query?: never;
@@ -1349,6 +1399,7 @@ export interface components {
             activities: components["schemas"]["ActivityDto"][];
             connections: components["schemas"]["ConnectionExportDto"][];
             checkIns: components["schemas"]["CheckInExportDto"][];
+            coaching: components["schemas"]["CoachExportDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -1465,6 +1516,25 @@ export interface components {
         };
         /** @enum {unknown} */
         CheckInStatus: "Done" | "CutShort" | "SwappedForEasy" | "Skipped";
+        CoachExportDto: {
+            /** Format: uuid */
+            planId: string;
+            call: components["schemas"]["CoachNoteDto"];
+        };
+        CoachNoteDto: {
+            /** Format: date */
+            weekStart: string;
+            verdict: components["schemas"]["CoachVerdict"];
+            holdVolume: boolean;
+            /** Format: int32 */
+            doseStep: number;
+            cutbackNow: boolean;
+            reasons: components["schemas"]["CoachReason"][];
+        };
+        /** @enum {unknown} */
+        CoachReason: "FewCheckIns" | "RanAsPlanned" | "FeltHarderThanPlanned" | "MissedVolume" | "HighHeartRateDrift" | "Niggles" | "Pain" | "FeltEasierThanPlanned" | "FasterThanPlanned" | "StrugglingTwice" | "ThrivingTwice" | "JustReplanned";
+        /** @enum {unknown} */
+        CoachVerdict: "NotEnoughToGoOn" | "OnTrack" | "Struggling" | "Hurting" | "Thriving";
         ConnectionExportDto: {
             provider: components["schemas"]["SyncProvider"];
             /** Format: int64 */
@@ -1721,6 +1791,7 @@ export interface components {
             inputs: components["schemas"]["GeneratePlanQuery"];
             plan: components["schemas"]["TrainingPlanDto"];
             status: components["schemas"]["SavedPlanStatus"];
+            coaching?: null | components["schemas"]["CoachNoteDto"][];
         };
         SavedPlanExportDto: {
             /** Format: uuid */

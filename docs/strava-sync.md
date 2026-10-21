@@ -94,6 +94,25 @@ on Strava's page is refused with an explanation.
 Tests never call Strava: `tests/StartLine.Integration.Tests/FakeStravaApi.cs` stands in for it, and
 `HttpStravaApiTests` checks the real client against canned responses.
 
+## Developer Program compliance (for the app review)
+
+What Strava's Developer Program asks for, and where Taperday meets it. This is the checklist to point the review at.
+
+| Requirement | Status |
+|---|---|
+| A Strava subscription on the developer account | Done (the account that owns Client ID 289205). |
+| OAuth 2.0 auth-code exchange; 6-hour access tokens refreshed with refresh tokens | `HttpStravaApi` + `StravaTokens`: exchange, refresh 5 min before expiry, rotated refresh token re-encrypted. |
+| **No AI use of Strava data** (no AI coaching or plan generation on Strava data) | Taperday has **no AI**. Plans and run analysis are deterministic code. If AI is ever added, it must not touch Strava data. |
+| A complementary experience, not a clone of Strava's features | Taperday builds training plans and judges each run against its planned session, goal pace and zones. It doesn't replicate Strava's feed, leaderboards or segments. |
+| Official "Connect with Strava" button; brand orange only where allowed | The official button SVG, unmodified; "Powered by Strava" near synced data; "View on Strava" on each run. |
+| Never expose tokens, refresh tokens or the client secret | Tokens are encrypted at rest and never logged, exported or returned. The webhook secret is kept out of traces. **Action: the client secret was shown in a chat and must be rotated.** |
+| Webhooks, not polling, for updates and deauthorisations | One push subscription (id 377962); the worker reacts to events, with a catch-up only when the app is opened. |
+| Works for up to 10 athletes before review; submit to go further | Capacity is at 10. Submit the review form once there's real usage: https://share.hsforms.com/1VXSwPUYqSH6IxK0y51FjHwcnkd8 |
+| Within rate limits (200/15 min, 2,000/day; 400/4,000 after upgrade) | `StravaRateGate` reads Strava's usage headers and stops background work at 90%, leaving room for runners connecting. |
+| A lawful privacy policy (Policy 7.3) | **Action: publish a privacy policy and update the in-app notice to name synced runs and heart rate.** |
+
+Open actions are in `security-posture.md` → To do.
+
 ## Switching it on (Thami's steps)
 
 1. Subscribe to Strava on the account that will own the API app.

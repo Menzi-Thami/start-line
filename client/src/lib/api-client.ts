@@ -159,6 +159,12 @@ export const api = {
     /** Saves as the runner's current plan. With a plan already, replaceCurrent must be true (the API answers 409 plan_active otherwise). */
     savePlan: (token: string, plan: GeneratePlanRequest, name?: string, replaceCurrent = false) =>
       request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan, replaceCurrent }) }, token),
+    /**
+     * Opens the saved plan as the coach has it. On or after Monday the coach makes this week's call from how last week
+     * went, so this is what a runner's own plan is loaded with.
+     */
+    coachPlan: (token: string, id: string) =>
+      request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach`, { method: 'POST' }, token),
     /** The runner's check-ins on one saved plan: how each run went. */
     checkIns: (token: string, planId: string) => request<CheckIn[]>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins`, {}, token),
     /** Saves (or replaces) the check-in for the run planned on that day. */

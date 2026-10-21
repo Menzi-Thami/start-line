@@ -24,7 +24,7 @@ import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
-import type { Activity, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
+import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
 type PlanState =
@@ -198,6 +198,29 @@ export function App() {
     plan.kind === 'ready' && currentPlan.current && samePlan(toRequest(plan.inputs), currentPlan.current.inputs) ? currentPlan.current.id : null
   const checkIns = useCheckIns(savedOnScreen)
 
+  // The runner's own plan opens as the coach has it: on or after Monday the coach makes this week's call, and its note
+  // shows on "This week". A plan from a link, or anyone else's, is the plan as written.
+  const [coachNotes, setCoachNotes] = useState<{ planId: string; notes: CoachNote[] } | null>(null)
+  const coachRequested = useRef<TrainingPlan | null>(null)
+  const shownPlan = plan.kind === 'ready' ? plan.plan : null
+  useEffect(() => {
+    if (!savedOnScreen || !shownPlan || coachRequested.current === shownPlan) return
+    coachRequested.current = shownPlan
+    auth
+      .getToken()
+      .then((token) => (token ? api.me.coachPlan(token, savedOnScreen) : null))
+      .then((coached) => {
+        if (!coached) return
+        // Marked before it's shown, so the coached plan isn't sent to the coach again.
+        coachRequested.current = coached.plan
+        setPlan((current) => (current.kind === 'ready' && current.plan === shownPlan ? { ...current, plan: coached.plan } : current))
+        setCoachNotes({ planId: savedOnScreen, notes: coached.coaching ?? [] })
+      })
+      // Without the coach, the plan on screen is the plan as written: nothing the runner needs is lost.
+      .catch(() => undefined)
+  }, [savedOnScreen, shownPlan, auth])
+  const notes = coachNotes && coachNotes.planId === savedOnScreen ? coachNotes.notes : undefined
+
   // Back from Strava: finish connecting, then show the account page with what happened.
   useEffect(() => {
     if (!stravaCallback || stravaHandled.current || runner.state.kind !== 'ready') return
@@ -276,14 +299,19 @@ export function App() {
     const next: PlanInputs = { ...plan.inputs, replan }
     const saved = currentPlan.current
     const token = saved && samePlan(toRequest(plan.inputs), saved.inputs) ? await auth.getToken() : null
-    const rebuilt =
+    const savedResult =
       saved && token
-        ? (replan
-            ? await api.me.replanPlan(token, saved.id, { replanFrom: replan.from, setback: replan.setback, recentWeeklyKm: replan.recentWeeklyKm ?? null })
-            : await api.me.undoReplan(token, saved.id)
-          ).plan
-        : await api.plan(toRequest(next))
+        ? replan
+          ? await api.me.replanPlan(token, saved.id, { replanFrom: replan.from, setback: replan.setback, recentWeeklyKm: replan.recentWeeklyKm ?? null })
+          : await api.me.undoReplan(token, saved.id)
+        : null
+    const rebuilt = savedResult ? savedResult.plan : await api.plan(toRequest(next))
     window.history.replaceState(null, '', `?${toSearchParams(next)}`)
+    if (savedResult && saved) {
+      // The saved plan comes back coached already.
+      coachRequested.current = rebuilt
+      setCoachNotes({ planId: saved.id, notes: savedResult.coaching ?? [] })
+    }
     setPlan({ kind: 'ready', plan: rebuilt, inputs: next })
     if (saved && token) currentPlan.refresh()
     window.scrollTo?.({ top: 0 })
@@ -570,6 +598,8 @@ export function App() {
                 onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
                 coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, save: checkIns.save, remove: checkIns.remove } : undefined}
+                coachNotes={notes}
+                onInjuryReplan={() => replanWith({ from: today, setback: 'Injury' })}
                 replan={
                   <Replan
                     plan={plan.plan}

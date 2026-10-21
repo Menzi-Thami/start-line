@@ -236,3 +236,19 @@ internal sealed class SessionCheckInConfiguration : IEntityTypeConfiguration<Ses
         builder.HasOne<SavedPlan>().WithMany().HasForeignKey(c => c.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class CoachWeekConfiguration : IEntityTypeConfiguration<CoachWeek>
+{
+    public void Configure(EntityTypeBuilder<CoachWeek> builder)
+    {
+        builder.ToTable("CoachWeeks");
+        builder.HasKey(w => w.Id);
+        builder.Property(w => w.Id).ValueGeneratedNever();
+        builder.Property(w => w.Verdict).HasConversion<string>().HasMaxLength(16);
+        builder.Property(w => w.Reasons).HasMaxLength(400).IsRequired();
+
+        // One call per week of a plan; the plan going takes its calls with it.
+        builder.HasIndex(w => new { w.SavedPlanId, w.WeekStart }).IsUnique();
+        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(w => w.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

@@ -4,6 +4,7 @@ using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Account;
+using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Plans;
 using StartLine.Domain.Coaching;
@@ -109,7 +110,9 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
             throw new ConflictException("plan_archived", "This is a past plan. Make it your plan again to check in on its runs.");
         }
 
-        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs)).Weeks.SelectMany(w => w.Sessions);
+        // The plan as the coach has it: a step down turns a hard session into an easy run, and that's what was run.
+        var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
+        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls).Weeks.SelectMany(w => w.Sessions);
         if (!sessions.Any(s => s.Date == request.Date && s.Type == request.SessionType))
         {
             throw new DomainException("That run isn't in your plan on that day. Your plan may have changed: reload it and try again.");

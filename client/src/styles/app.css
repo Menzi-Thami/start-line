@@ -3652,3 +3652,81 @@ a.menu-item {
 .sign-in-wait p {
   margin: 0;
 }
+
+/* The waiting runner: sprinting on the spot while a dashed track scrolls past, in the Night run volt. */
+.sign-in-track {
+  position: relative;
+  width: 100%;
+  max-width: 22rem;
+  height: 72px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunk);
+}
+
+.sign-in-ground {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  height: 3px;
+  background-image: repeating-linear-gradient(90deg, var(--accent) 0 18px, transparent 18px 46px);
+  background-size: 46px 100%;
+  opacity: 0.55;
+  animation: sign-in-ground 0.5s linear infinite;
+}
+
+@keyframes sign-in-ground {
+  to {
+    background-position: -46px 0;
+  }
+}
+
+.sign-in-runner {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  color: var(--accent);
+  animation: sign-in-bob 0.42s ease-in-out infinite;
+}
+
+@keyframes sign-in-bob {
+  50% {
+    transform: translateX(-50%) translateY(-3px);
+  }
+}
+
+/* Three dots filling in after the text, in time with the stride. */
+.loading-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 4px;
+}
+
+.loading-dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+  animation: loading-dots 1.2s ease-in-out infinite;
+}
+
+.loading-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes loading-dots {
+  30% {
+    opacity: 1;
+  }
+}
+
+.sign-in-wait-note {
+  max-width: 28rem;
+}

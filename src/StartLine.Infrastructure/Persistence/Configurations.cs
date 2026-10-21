@@ -70,6 +70,9 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
             inputs.Property(i => i.Experience).HasColumnName("Experience").HasConversion<string>().HasMaxLength(16);
             inputs.Property(i => i.StrengthDays).HasColumnName("StrengthDays").HasConversion(DaysAsMask, DaysComparer);
             inputs.Property(i => i.PlanFrom).HasColumnName("PlanFrom");
+            inputs.Property(i => i.ReplanFrom).HasColumnName("ReplanFrom");
+            inputs.Property(i => i.Setback).HasColumnName("Setback").HasConversion<string>().HasMaxLength(16);
+            inputs.Property(i => i.RecentWeeklyKm).HasColumnName("RecentWeeklyKm");
         });
     }
 }

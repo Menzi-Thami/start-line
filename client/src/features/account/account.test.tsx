@@ -19,6 +19,9 @@ const thandi: Runner = {
   weeklyEmails: true,
   consentedAt: '2026-10-08T09:00:00Z',
   maxHeartRate: null,
+  privacyNoticeVersion: '2026-10-21',
+  needsPrivacyConsent: false,
+  heartRateConsent: true,
 }
 
 /** A tiny in-memory stand-in for the account API that insists on the bearer token. */

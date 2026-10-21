@@ -87,7 +87,11 @@ dotnet ef migrations bundle --project src/StartLine.Infrastructure --startup-pro
 
 ## Privacy (POPIA)
 
-- Runners must accept the privacy notice to sign up; the version and time are stored.
+- Runners must accept the privacy notice to sign up; the version and time are stored. When `PrivacyNotice.CurrentVersion`
+  changes, runners on an older version see "We've updated what we keep" and accept again (`PUT /api/v1/me/privacy`)
+  before they can save, upload or connect anything. Reading, exporting, disconnecting and deleting never wait.
+- Heart rate has its own, optional consent (at sign-up, on the update screen and in Account). Without it runs are kept
+  with no heart rate; withdrawing deletes what's held. The full policy is the public page `/?view=privacy`.
 - `GET /api/v1/me/export` returns everything stored about the runner.
 - `DELETE /api/v1/me` deletes the runner and every plan. Their sign-in itself lives in External ID: delete
   the user there too if they ask for full erasure.

@@ -23,6 +23,7 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
         units = "Kilometres",
         weeklyEmails = false,
         acceptPrivacyNotice = true,
+        heartRateConsent = true,
     };
 
     private static readonly object ComradesPlan = new
@@ -275,9 +276,9 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
         (await Json(await client.GetAsync(Url($"/api/v1/me/activities/{id}")))).GetProperty("heartRate").GetProperty("zones").ValueKind
             .ShouldBe(JsonValueKind.Null);
 
-        var tooHigh = await client.PutAsJsonAsync(Url("/api/v1/me"), new { displayName = "Thandi", timeZone = "Africa/Johannesburg", units = "Kilometres", weeklyEmails = false, acceptPrivacyNotice = true, maxHeartRate = 260 });
+        var tooHigh = await client.PutAsJsonAsync(Url("/api/v1/me"), new { displayName = "Thandi", timeZone = "Africa/Johannesburg", units = "Kilometres", weeklyEmails = false, acceptPrivacyNotice = true, heartRateConsent = true, maxHeartRate = 260 });
         tooHigh.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        (await client.PutAsJsonAsync(Url("/api/v1/me"), new { displayName = "Thandi", timeZone = "Africa/Johannesburg", units = "Kilometres", weeklyEmails = false, acceptPrivacyNotice = true, maxHeartRate = 190 })).EnsureSuccessStatusCode();
+        (await client.PutAsJsonAsync(Url("/api/v1/me"), new { displayName = "Thandi", timeZone = "Africa/Johannesburg", units = "Kilometres", weeklyEmails = false, acceptPrivacyNotice = true, heartRateConsent = true, maxHeartRate = 190 })).EnsureSuccessStatusCode();
 
         var zones = (await Json(await client.GetAsync(Url($"/api/v1/me/activities/{id}")))).GetProperty("heartRate").GetProperty("zones");
         zones.GetArrayLength().ShouldBe(5);

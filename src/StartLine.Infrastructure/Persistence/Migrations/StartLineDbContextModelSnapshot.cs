@@ -363,6 +363,12 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasMaxLength(254)
                         .HasColumnType("nvarchar(254)");
 
+                    b.Property<bool>("HeartRateConsent")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("HeartRateConsentChangedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("IdentitySubject")
                         .IsRequired()
                         .HasMaxLength(128)

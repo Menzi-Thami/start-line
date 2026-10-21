@@ -136,10 +136,17 @@ Sources: https://www.strava.com/legal/api, https://www.strava.com/legal/api_poli
 https://developers.strava.com/docs/rate-limits/, https://developers.strava.com/guidelines/,
 https://communityhub.strava.com/developers-knowledge-base-14/strava-api-faq-12906. Re-check them before revisiting.
 
+## Heart rate and consent
+
+Heart rate is health information (POPIA special personal information), so it has its own, optional consent
+(`Runner.HeartRateConsent`), asked at sign-up, on the "We've updated what we keep" screen, and in Account. Without it,
+`ActivityImporter.RecordAsync` drops every reading (`ActivityRecording.WithoutHeartRate`) before a run is worked out, for
+uploads and synced runs alike; heart rate held from before consent was asked for is hidden on the run page, and
+withdrawing (or saying no on the update screen) deletes it (`Activity.ForgetHeartRate`). The account export still lists
+anything held, so it's never hidden from the runner's own copy.
+
 ## Not done yet
 
-- Heart rate is health data (POPIA "special personal information"). The privacy notice should say runs and heart rate
-  are stored once this ships, and bumping `PrivacyNotice.CurrentVersion` would ask existing runners to accept again.
 - Re-matching old runs when a plan is saved later.
 - Laps: Garmin records them (auto-lap or workout steps), and they would judge repeats rep by rep instead of by the fastest stretch.
 - Reading laps from TCX/FIT, to judge repeats rep by rep.

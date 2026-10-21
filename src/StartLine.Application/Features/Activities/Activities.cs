@@ -53,10 +53,10 @@ internal sealed class ImportActivityHandler(CurrentRunner current, ActivityImpor
 {
     public async Task<ActivityDto> Handle(ImportActivityCommand request, CancellationToken cancellationToken)
     {
-        var runner = await current.RequireAsync(cancellationToken);
+        var runner = await current.RequireConsentedAsync(cancellationToken);
         var activity = await importer.ImportAsync(runner, request.File, cancellationToken);
         var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
-        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate);
+        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent);
     }
 }
 
@@ -127,7 +127,7 @@ internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunn
         }
 
         var bests = await personalBests.ForRunnerAsync(runner!.Id, cancellationToken);
-        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate);
+        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent);
     }
 }
 

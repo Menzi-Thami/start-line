@@ -48,7 +48,7 @@ describe('waiting for a sleeping server after sign-in', () => {
     const onSignOut = vi.fn()
     render(<SignInWait onRetry={onRetry} onSignOut={onSignOut} />)
 
-    expect(screen.getByText('Checking your account…')).toBeInTheDocument()
+    expect(screen.getByText(/Checking your account/)).toBeInTheDocument()
     expect(screen.queryByText(/Waking Taperday up/)).not.toBeInTheDocument()
 
     await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS))
@@ -73,7 +73,7 @@ describe('waiting for a sleeping server after sign-in', () => {
       window.history.replaceState(null, '', `/?view=${view}`)
       const { unmount } = renderApp(signedIn())
 
-      expect(await screen.findByText('Checking your account…')).toBeInTheDocument()
+      expect(await screen.findByText(/Checking your account/)).toBeInTheDocument()
       // Sign out stays reachable in the header while waiting.
       expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
       unmount()

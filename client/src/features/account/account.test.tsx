@@ -23,7 +23,14 @@ const thandi: Runner = {
 
 /** A tiny in-memory stand-in for the account API that insists on the bearer token. */
 function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }) {
-  const db = { runner: start.runner, plans: [...(start.plans ?? [])], saved: [] as unknown[], profiles: [] as unknown[], restored: [] as string[] }
+  const db = {
+    runner: start.runner,
+    plans: [...(start.plans ?? [])],
+    saved: [] as unknown[],
+    profiles: [] as unknown[],
+    restored: [] as string[],
+    checkIns: [] as { path: string; body: Record<string, unknown> }[],
+  }
   const authorised = (request: Request) => request.headers.get('Authorization') === `Bearer ${TOKEN}`
   const unauthorised = () => HttpResponse.json({ title: 'Unauthorized' }, { status: 401 })
 
@@ -49,6 +56,13 @@ function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }
       if (!authorised(request)) return unauthorised()
       db.saved.push(await request.json())
       return HttpResponse.json({ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' }, { status: 201 })
+    }),
+    http.get('*/api/v1/me/plans/:id/check-ins', ({ request }) => (authorised(request) ? HttpResponse.json([]) : unauthorised())),
+    http.put('*/api/v1/me/plans/:id/check-ins/:date/:type', async ({ request, params }) => {
+      if (!authorised(request)) return unauthorised()
+      const body = (await request.json()) as Record<string, unknown>
+      db.checkIns.push({ path: `${String(params.id)}/${String(params.date)}/${String(params.type)}`, body })
+      return HttpResponse.json({ ...body, date: params.date, sessionType: params.type, updatedAt: '2026-10-14T18:00:00Z' })
     }),
     http.post('*/api/v1/me/plans/:id/restore', ({ request, params }) => {
       if (!authorised(request)) return unauthorised()
@@ -305,6 +319,36 @@ describe('a signed-up runner', () => {
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Your current plan' })).toBeInTheDocument()
     expect(window.location.search).toContain('goal=1470')
+  })
+
+  it('checks in on a run of their plan: how it felt, and it’s ticked off', async () => {
+    vi.setSystemTime(new Date(2026, 9, 14, 19, 0))
+    const db = accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/')
+    const user = renderWith(signedIn())
+
+    // Tuesday's hills are the first run that's come round; later runs don't ask yet.
+    const askers = await screen.findAllByRole('button', { name: 'How did it go?' }, { timeout: 3000 })
+    expect(askers).toHaveLength(1)
+    await user.click(askers[0]!)
+    await user.click(screen.getByRole('radio', { name: '7, Hard' }))
+    await user.click(screen.getByRole('button', { name: 'Save check-in' }))
+
+    // Shown on This week and in All weeks alike.
+    expect((await screen.findAllByText('Done · felt 7/10, hard')).length).toBeGreaterThan(0)
+    expect(db.checkIns).toEqual([{ path: 'plan-1/2026-10-13/Hills', body: expect.objectContaining({ status: 'Done', effort: 7 }) }])
+    // Only the hills, of this week's runs, are ticked off.
+    expect(screen.getAllByRole('checkbox', { name: 'Done' }).filter((box) => (box as HTMLInputElement).checked)).toHaveLength(1)
+  })
+
+  it('isn’t asked about runs on a plan that isn’t theirs', async () => {
+    vi.setSystemTime(new Date(2026, 9, 14, 19, 0))
+    accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/?km=10&date=2027-01-10&name=Spring+10K&goal=3000&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08')
+    renderWith(signedIn())
+
+    expect(await screen.findByRole('button', { name: 'Make this my plan' }, { timeout: 3000 })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'How did it go?' })).not.toBeInTheDocument()
   })
 
   it('asks before a plan for another race replaces theirs', async () => {

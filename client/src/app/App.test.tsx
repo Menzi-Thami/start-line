@@ -321,6 +321,19 @@ describe('a shared plan', () => {
     expect(lastPlanRequest.body).toMatchObject({ planFrom: '2026-10-08', strengthDays: ['Monday'] })
   })
 
+  it('replans from today and keeps the replan in the link', async () => {
+    vi.setSystemTime(new Date(2026, 9, 21, 9, 0))
+    window.history.replaceState(null, '', `/${link}`)
+    const { user } = setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
+    await user.click(screen.getByRole('radio', { name: /I missed some training/ }))
+    await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
+
+    await waitFor(() => expect(window.location.search).toContain('from=2026-10-08&re=2026-10-21&why=missed'))
+    expect(lastPlanRequest.body).toMatchObject({ planFrom: '2026-10-08', replanFrom: '2026-10-21', setback: 'MissedTraining' })
+  })
+
   it('switches every distance and pace to miles', async () => {
     window.history.replaceState(null, '', `/${link}`)
     const { user } = setup()

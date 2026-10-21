@@ -10,7 +10,9 @@ using StartLine.Domain.Plans;
 
 namespace StartLine.Application.Features.MyPlans;
 
-public sealed record SavedPlanSummaryDto(Guid Id, string Name, string RaceName, DateOnly? RaceDate, DateTimeOffset CreatedAt, SavedPlanStatus Status);
+/// <param name="ReplannedFrom">When the runner last rebuilt the plan after a setback, if they have.</param>
+public sealed record SavedPlanSummaryDto(
+    Guid Id, string Name, string RaceName, DateOnly? RaceDate, DateTimeOffset CreatedAt, SavedPlanStatus Status, DateOnly? ReplannedFrom = null);
 
 public sealed record SavedPlanDto(Guid Id, string Name, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, TrainingPlanDto Plan, SavedPlanStatus Status);
 
@@ -36,11 +38,14 @@ internal static class SavedPlanMapping
         q.CurrentWeeklyKm,
         q.Experience,
         [.. (q.StrengthDays ?? []).Distinct()],
-        q.PlanFrom ?? planFrom);
+        q.PlanFrom ?? planFrom,
+        q.Setback is null ? null : q.ReplanFrom,
+        q.ReplanFrom is null ? null : q.Setback,
+        q.ReplanFrom is null || q.Setback is null ? null : q.RecentWeeklyKm);
 
     public static GeneratePlanQuery ToQuery(SavedPlanInputs i) => new(
         i.RaceSlug, i.RaceName, i.DistanceKm, i.RaceDate, i.GoalTime, i.RunDays, i.LongRunDay, i.CurrentWeeklyKm,
-        i.Experience, i.StrengthDays, i.PlanFrom);
+        i.Experience, i.StrengthDays, i.PlanFrom, i.ReplanFrom, i.Setback, i.RecentWeeklyKm);
 }
 
 /// <summary>
@@ -110,7 +115,8 @@ internal static class SavedPlanSummaries
     public static SavedPlanSummaryDto Of(SavedPlan p, IRaceCatalogue catalogue)
     {
         var race = p.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug) : null;
-        return new SavedPlanSummaryDto(p.Id, p.Name, race?.Name ?? p.Inputs.RaceName ?? "Your race", race?.Date ?? p.Inputs.RaceDate, p.CreatedAt, p.Status);
+        return new SavedPlanSummaryDto(p.Id, p.Name, race?.Name ?? p.Inputs.RaceName ?? "Your race", race?.Date ?? p.Inputs.RaceDate, p.CreatedAt, p.Status,
+            p.Inputs.Replan?.From);
     }
 }
 
@@ -189,6 +195,53 @@ internal sealed class RestoreMyPlanHandler(IApplicationDbContext db, CurrentRunn
         chosen.Restore();
         await db.SaveChangesAsync(cancellationToken);
         return SavedPlanSummaries.Of(chosen, catalogue);
+    }
+}
+
+/// <summary>
+/// "Replan from here" for the current saved plan: the plan up to <see cref="ReplanFrom"/> stays and the rest is rebuilt
+/// after <see cref="Setback"/>. Without a setback it undoes the replan. A plan keeps one replan; the latest wins.
+/// </summary>
+public sealed record ReplanMyPlanCommand(Guid Id, DateOnly? ReplanFrom, Setback? Setback, double? RecentWeeklyKm) : IRequest<SavedPlanDto>;
+
+internal sealed class ReplanMyPlanValidator : AbstractValidator<ReplanMyPlanCommand>
+{
+    public ReplanMyPlanValidator(TimeProvider timeProvider)
+    {
+        RuleFor(c => c.Setback).IsInEnum();
+        RuleFor(c => c.ReplanFrom).NotNull().When(c => c.Setback is not null).WithMessage("Say which day to replan from.");
+        RuleFor(c => c.ReplanFrom)
+            .Must(d => d <= timeProvider.Today().AddDays(1)).When(c => c.ReplanFrom is not null)
+            .WithMessage("A plan is replanned from today, not from a day still to come.");
+        RuleFor(c => c.RecentWeeklyKm).InclusiveBetween(0, 300).When(c => c.RecentWeeklyKm is not null);
+        RuleFor(c => c.RecentWeeklyKm)
+            .Must(km => km is > 0)
+            .When(c => c.Setback == Setback.Behind)
+            .WithMessage("Say how far you ran last week, so the plan can pick up from there.");
+    }
+}
+
+internal sealed class ReplanMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder)
+    : IRequestHandler<ReplanMyPlanCommand, SavedPlanDto>
+{
+    public async Task<SavedPlanDto> Handle(ReplanMyPlanCommand request, CancellationToken cancellationToken)
+    {
+        var runner = await current.FindAsync(cancellationToken);
+        var saved = runner is null
+            ? null
+            : await db.SavedPlans.SingleOrDefaultAsync(p => p.Id == request.Id && p.RunnerId == runner.Id, cancellationToken);
+        if (saved is null)
+        {
+            throw new NotFoundException("Saved plan", request.Id.ToString());
+        }
+
+        saved.Replan(request is { ReplanFrom: { } from, Setback: { } setback } ? new PlanReplan(from, setback, request.RecentWeeklyKm) : null);
+
+        // Build first: a replan that can't be generated (the race too close, say) must never be saved.
+        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var plan = builder.Build(query);
+        await db.SaveChangesAsync(cancellationToken);
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, plan, saved.Status);
     }
 }
 

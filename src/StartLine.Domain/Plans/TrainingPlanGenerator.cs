@@ -4,7 +4,7 @@ using StartLine.Domain.Running;
 
 namespace StartLine.Domain.Plans;
 
-public static class TrainingPlanGenerator
+public static partial class TrainingPlanGenerator
 {
     public const int MinRunsPerWeek = 3;
     public const int MaxRunsPerWeek = 7;
@@ -18,6 +18,9 @@ public static class TrainingPlanGenerator
     private const double MinLongRunKm = 5;
     private const double MaxEasyRunKm = 16;
 
+    // Below this share of the volume a race usually needs, the plan warns that the build is thin.
+    private const double LowVolumeShare = 0.75;
+
     public static TrainingPlan Generate(PlanParameters parameters)
     {
         ArgumentNullException.ThrowIfNull(parameters);
@@ -27,6 +30,21 @@ public static class TrainingPlanGenerator
         var paces = TrainingPaces.FromGoal(parameters.RaceDistance, parameters.GoalTime);
         var workouts = new WorkoutBuilder(profile.Category, paces, parameters.RaceDistance);
         var layout = WeekLayout.For(parameters.RunDays, parameters.LongRunDay);
+
+        // A replan rebuilds on top of the plan as first built, so that plan is always generated first.
+        var original = Fresh(parameters, profile, paces, workouts, layout);
+        return parameters.Replan is { } replan
+            ? Replanned(parameters, replan, original, profile, workouts, layout)
+            : original;
+    }
+
+    private static TrainingPlan Fresh(
+        PlanParameters parameters,
+        PlanProfile profile,
+        IReadOnlyDictionary<PaceZone, PaceRange> paces,
+        WorkoutBuilder workouts,
+        WeekLayout layout)
+    {
         var warnings = new List<PlanWarning>();
 
         var raceWeekStart = MondayOf(parameters.RaceDate);
@@ -81,12 +99,7 @@ public static class TrainingPlanGenerator
         }
 
         var peakKm = volumes.Max();
-        double[] taperFactors = (taperWeeks - 1) switch
-        {
-            >= 2 => [0.75, 0.6],
-            1 => [0.7],
-            _ => [],
-        };
+        var taperFactors = TaperFactors(taperWeeks - 1);
         for (var t = 0; t < taperFactors.Length; t++)
         {
             var week = new WeekContext(startDate.AddDays(7 * (trainingWeeks + t)), peakKm * taperFactors[t],
@@ -102,6 +115,16 @@ public static class TrainingPlanGenerator
             startDate, paces, weeks, warnings);
     }
 
+    // The taper weeks before race week, as shares of the peak.
+    private static double[] TaperFactors(int taperWeeksBeforeRaceWeek) => taperWeeksBeforeRaceWeek switch
+    {
+        >= 2 => [0.75, 0.6],
+        1 => [0.7],
+        _ => [],
+    };
+
+    /// <param name="EasyOnly">A return week after illness or injury: no hard sessions and a plain long run.</param>
+    /// <param name="FitToVolume">A rebuilt week: it keeps only the hard sessions its volume has room for.</param>
     private sealed record WeekContext(
         DateOnly Start,
         double TargetKm,
@@ -109,7 +132,13 @@ public static class TrainingPlanGenerator
         int IndexInPhase,
         double Progress,
         bool IsCutback,
-        bool IsFirstWeek);
+        bool IsFirstWeek,
+        bool EasyOnly = false,
+        bool FitToVolume = false)
+    {
+        /// <summary>Lighter than usual: a cutback or a return week. Either way, no hard sessions.</summary>
+        public bool IsEasier => IsCutback || EasyOnly;
+    }
 
     private static void Validate(PlanParameters p)
     {
@@ -158,6 +187,11 @@ public static class TrainingPlanGenerator
         {
             throw new DomainException("The race date must be in the future.");
         }
+
+        if (p.Replan is { } replan)
+        {
+            ValidateReplan(p, replan);
+        }
     }
 
     private static (TrainingPhase Phase, int IndexInPhase, int PhaseLength)[] AllocatePhases(int trainingWeeks, Experience experience)
@@ -186,33 +220,52 @@ public static class TrainingPlanGenerator
         (TrainingPhase, int, int)[] phases,
         List<PlanWarning> warnings)
     {
-        var experienceFactor = p.Experience switch
-        {
-            Experience.New => 0.8,
-            Experience.Experienced => 1.15,
-            _ => 1.0,
-        };
-        var usualPeak = profile.PeakKmAtFiveRuns * PlanProfile.RunsFactor(p.RunsPerWeek) * experienceFactor;
+        var usualPeak = UsualPeakKm(p, profile);
         var startKm = p.CurrentWeeklyKm is > 0 ? p.CurrentWeeklyKm.Value : usualPeak * (p.Experience == Experience.New ? 0.45 : 0.6);
         startKm = Math.Max(startKm, p.RunsPerWeek * MinRunKm);
 
-        var progressionWeeks = Enumerable.Range(0, phases.Length).Count(i => !IsCutback(i, phases.Length));
-        var reachable = startKm * Math.Pow(MaxWeeklyIncrease, Math.Max(0, progressionWeeks - 1));
-        var peakKm = Math.Max(startKm, Math.Min(usualPeak, reachable));
-
-        if (reachable < usualPeak * 0.75)
+        var reachable = ReachableKm(startKm, phases.Length);
+        if (reachable < usualPeak * LowVolumeShare)
         {
             warnings.Add(new("low-volume",
                 "Building safely from your current weekly distance won't reach the volume this race usually needs " +
                 "in the time available. More weeks or a more conservative goal would help."));
         }
 
-        var volumes = new double[phases.Length];
+        return Ramp(startKm, Math.Max(startKm, Math.Min(usualPeak, reachable)), phases.Length);
+    }
+
+    /// <summary>The peak week this race usually needs, for this many runs a week and this much experience.</summary>
+    private static double UsualPeakKm(PlanParameters p, PlanProfile profile)
+    {
+        var experienceFactor = p.Experience switch
+        {
+            Experience.New => 0.8,
+            Experience.Experienced => 1.15,
+            _ => 1.0,
+        };
+        return profile.PeakKmAtFiveRuns * PlanProfile.RunsFactor(p.RunsPerWeek) * experienceFactor;
+    }
+
+    private static int ProgressionWeeks(int weeks) => Enumerable.Range(0, weeks).Count(i => !IsCutback(i, weeks));
+
+    /// <summary>The most a build of this many weeks can reach from <paramref name="startKm"/> at 10% a week.</summary>
+    private static double ReachableKm(double startKm, int weeks) =>
+        startKm * Math.Pow(MaxWeeklyIncrease, Math.Max(0, ProgressionWeeks(weeks) - 1));
+
+    /// <summary>
+    /// Weekly volumes from <paramref name="startKm"/> to <paramref name="peakKm"/>, growing evenly between cutbacks.
+    /// The peak must be reachable (see <see cref="ReachableKm"/>), which keeps every step within 10%.
+    /// </summary>
+    private static double[] Ramp(double startKm, double peakKm, int weeks)
+    {
+        var progressionWeeks = ProgressionWeeks(weeks);
+        var volumes = new double[weeks];
         var step = 0;
         var lastProgression = startKm;
-        for (var i = 0; i < phases.Length; i++)
+        for (var i = 0; i < weeks; i++)
         {
-            if (IsCutback(i, phases.Length))
+            if (IsCutback(i, weeks))
             {
                 volumes[i] = lastProgression * CutbackFactor;
                 continue;
@@ -242,10 +295,11 @@ public static class TrainingPlanGenerator
         var longKm = LongRunKm(p, profile, workouts, week.TargetKm);
         var sessions = new List<PlannedSession>(layout.Days.Count);
         var easyDays = new List<(DateOnly Date, SessionType Type)>();
+        var hardSessions = new List<(PlannedSession Session, bool IsSecond)>(2);
 
         // Ultra back-to-back weekends: the run before the long run becomes a medium-long run.
         var longDay = layout.Days.Single(d => d.Role == DayRole.Long).DayIndex;
-        var backToBackDay = IsUltra(profile.Category) && !week.IsCutback && week.Phase is TrainingPhase.Build or TrainingPhase.Peak
+        var backToBackDay = IsUltra(profile.Category) && !week.IsEasier && week.Phase is TrainingPhase.Build or TrainingPhase.Peak
             ? layout.Days.Where(d => d.DayIndex == (longDay + 6) % 7 && d.Role is DayRole.Easy or DayRole.Strides)
                 .Select(d => (int?)d.DayIndex).FirstOrDefault()
             : null;
@@ -262,14 +316,16 @@ public static class TrainingPlanGenerator
             switch (role)
             {
                 case DayRole.Long:
-                    var longType = LongRunType(week.Phase, profile.Category, p.RunsPerWeek, week.IndexInPhase, week.IsCutback);
+                    var longType = LongRunType(week.Phase, profile.Category, p.RunsPerWeek, week.IndexInPhase, week.IsEasier);
                     sessions.Add(workouts.Long(date, longType, longKm));
                     break;
-                case DayRole.Quality when !week.IsCutback:
-                    sessions.Add(workouts.Quality(date, first, week.Phase, week.Progress));
+                case DayRole.Quality when !week.IsEasier:
+                    hardSessions.Add((workouts.Quality(date, first, week.Phase, week.Progress), false));
+                    sessions.Add(hardSessions[^1].Session);
                     break;
-                case DayRole.SecondQuality when !week.IsCutback && second is { } secondType:
-                    sessions.Add(workouts.Quality(date, secondType, week.Phase, week.Progress));
+                case DayRole.SecondQuality when !week.IsEasier && second is { } secondType:
+                    hardSessions.Add((workouts.Quality(date, secondType, week.Phase, week.Progress), true));
+                    sessions.Add(hardSessions[^1].Session);
                     break;
                 case DayRole.Recovery:
                     // A Monday recovery follows the previous week's hard day, which week one doesn't have.
@@ -279,9 +335,26 @@ public static class TrainingPlanGenerator
                     easyDays.Add((date, SessionType.Easy));
                     break;
                 default:
-                    // Strides days, and quality days in a cutback week (or with no second session this phase).
-                    easyDays.Add((date, role == DayRole.SecondQuality && week.IsCutback ? SessionType.Easy : SessionType.EasyWithStrides));
+                    // Strides days, and quality days in a cutback week (or with no second session this phase). A return
+                    // week after illness or injury is easy running only, strides included.
+                    easyDays.Add((date, week.EasyOnly || (role == DayRole.SecondQuality && week.IsCutback) ? SessionType.Easy : SessionType.EasyWithStrides));
                     break;
+            }
+        }
+
+        // Hard sessions have a set length, so in a low-volume week they can push it past its target. A rebuilt week
+        // can't afford that: the second hard session (then the first) becomes easy running until the easy days fit.
+        if (week.FitToVolume)
+        {
+            foreach (var (hard, _) in hardSessions.OrderByDescending(h => h.IsSecond))
+            {
+                if (week.TargetKm - sessions.Sum(s => s.DistanceKm) >= easyDays.Count * MinRunKm)
+                {
+                    break;
+                }
+
+                sessions.Remove(hard);
+                easyDays.Add((hard.Date, SessionType.EasyWithStrides));
             }
         }
 
@@ -296,7 +369,7 @@ public static class TrainingPlanGenerator
         // Strength goes on any chosen day except the long run's: that day is long enough already.
         foreach (var day in (p.StrengthDays ?? []).Select(WeekLayout.MondayIndex).Distinct().Where(d => d != longDay))
         {
-            sessions.Add(WorkoutBuilder.Strength(week.Start.AddDays(day), week.Phase, week.IsCutback));
+            sessions.Add(WorkoutBuilder.Strength(week.Start.AddDays(day), week.Phase, week.IsEasier));
         }
 
         return [.. sessions.OrderBy(s => s.Date).ThenBy(s => s.Type == SessionType.Strength)];

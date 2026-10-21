@@ -92,6 +92,7 @@ export function MyPlans({ onOpen, onBuildNew, onChanged }: Props) {
     <li className="week saved-plan" key={plan.id}>
       <div>
         <span className="week-name">{plan.name}</span>
+        {plan.replannedFrom && <span className="tag">Replanned {formatDate(plan.replannedFrom, 'dayMonth')}</span>}
         <br />
         <span className="week-meta">
           {plan.raceName}

@@ -260,8 +260,16 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<int>("DoseStep")
                         .HasColumnType("int");
 
+                    b.Property<double?>("FitnessSeconds")
+                        .HasColumnType("float");
+
                     b.Property<bool>("HoldVolume")
                         .HasColumnType("bit");
+
+                    b.Property<double>("PaceFactor")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("float")
+                        .HasDefaultValue(1.0);
 
                     b.Property<string>("Reasons")
                         .IsRequired()

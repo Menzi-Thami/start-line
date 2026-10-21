@@ -11,19 +11,24 @@ using StartLine.Domain.Runners;
 
 namespace StartLine.Application.Features.Coaching;
 
-/// <summary>The coach's call for one week, as the client shows it. Reasons are codes; the client words them.</summary>
+/// <summary>
+/// The coach's call for one week, as the client shows it. Reasons are codes; the client words them. <c>Fitness</c> is the
+/// race time recorded runs pointed to that week, <c>PaceFactor</c> the nudge to the paces without them (1 is none).
+/// </summary>
 public sealed record CoachNoteDto(
     DateOnly WeekStart,
     CoachVerdict Verdict,
     bool HoldVolume,
     int DoseStep,
     bool CutbackNow,
-    IReadOnlyList<CoachReason> Reasons)
+    IReadOnlyList<CoachReason> Reasons,
+    TimeSpan? Fitness = null,
+    double PaceFactor = 1)
 {
     public static CoachNoteDto From(CoachDecision d)
     {
         ArgumentNullException.ThrowIfNull(d);
-        return new(d.WeekStart, d.Verdict, d.HoldVolume, d.DoseStep, d.CutbackNow, d.Reasons);
+        return new(d.WeekStart, d.Verdict, d.HoldVolume, d.DoseStep, d.CutbackNow, d.Reasons, d.Fitness, d.PaceFactor);
     }
 }
 
@@ -111,7 +116,10 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
         // again would count the same setback twice.
         if (saved.Inputs.Replan is { } replan && replan.From >= lastWeek.StartDate)
         {
-            return CoachDecision.AsPlanned(week.StartDate, CoachVerdict.OnTrack, CoachReason.JustReplanned);
+            // Paces carry on as they were: the replan already starts from where the runner is.
+            var previous = calls.LastOrDefault(c => c.WeekStart < week.StartDate);
+            return CoachDecision.AsPlanned(week.StartDate, CoachVerdict.OnTrack, CoachReason.JustReplanned)
+                with { Fitness = previous?.Fitness, PaceFactor = previous?.PaceFactor ?? 1 };
         }
 
         var from = lastWeek.StartDate;
@@ -134,6 +142,31 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
             })
             .ToList();
 
-        return WeeklyCoach.Decide(week.StartDate, evidence, calls.FirstOrDefault(c => c.WeekStart == lastWeek.StartDate));
+        var call = WeeklyCoach.Decide(week.StartDate, evidence, calls.FirstOrDefault(c => c.WeekStart == lastWeek.StartDate));
+        return await WithFitnessAsync(call, runner, plan, evidence, calls, cancellationToken);
+    }
+
+    /// <summary>
+    /// What the runner could race this week, from the best efforts in their recent runs. Without any, how last week's
+    /// hard sessions felt nudges the paces instead. Kept with the call, because a Strava run only stays seven days.
+    /// </summary>
+    private async Task<CoachDecision> WithFitnessAsync(
+        CoachDecision call, Runner runner, TrainingPlan plan, IReadOnlyList<RunEvidence> lastWeek, IReadOnlyList<CoachDecision> calls, CancellationToken cancellationToken)
+    {
+        var since = call.WeekStart.AddDays(-Fitness.WindowDays);
+        var runs = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
+            .Where(a => a.RunnerId == runner.Id && a.LocalDate >= since && a.LocalDate < call.WeekStart)
+            .ToListAsync(cancellationToken);
+        var fitness = Fitness.Estimate(
+            plan.RaceDistance,
+            call.WeekStart,
+            runs.SelectMany(a => a.BestEfforts.Select(e => new Effort(a.LocalDate, e.DistanceMetres, e.Elapsed))));
+        var previousFactor = calls.LastOrDefault(c => c.WeekStart < call.WeekStart)?.PaceFactor ?? 1;
+        return call with
+        {
+            Fitness = fitness,
+            PaceFactor = fitness is null ? Fitness.PaceFactor(previousFactor, lastWeek) : 1,
+        };
     }
 }

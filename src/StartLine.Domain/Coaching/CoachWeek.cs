@@ -29,6 +29,12 @@ public sealed class CoachWeek
     /// <summary>The reasons as their names, comma separated: a short list that's only ever read whole.</summary>
     public string Reasons { get; private set; } = "";
 
+    /// <summary>The race time recorded runs pointed to that week, in seconds; null without any.</summary>
+    public double? FitnessSeconds { get; private set; }
+
+    /// <summary>The nudge to the paces from how hard sessions felt; 1 is none.</summary>
+    public double PaceFactor { get; private set; } = 1;
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public static CoachWeek From(Guid savedPlanId, CoachDecision decision)
@@ -49,6 +55,8 @@ public sealed class CoachWeek
             DoseStep = Math.Clamp(decision.DoseStep, -1, 1),
             CutbackNow = decision.CutbackNow,
             Reasons = string.Join(',', decision.Reasons),
+            FitnessSeconds = decision.Fitness?.TotalSeconds,
+            PaceFactor = decision.PaceFactor,
         };
     }
 
@@ -60,5 +68,7 @@ public sealed class CoachWeek
         CutbackNow,
         [.. Reasons.Split(',', StringSplitOptions.RemoveEmptyEntries)
             .Select(r => Enum.TryParse<CoachReason>(r, out var reason) ? reason : (CoachReason?)null)
-            .OfType<CoachReason>()]);
+            .OfType<CoachReason>()],
+        FitnessSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null,
+        PaceFactor);
 }

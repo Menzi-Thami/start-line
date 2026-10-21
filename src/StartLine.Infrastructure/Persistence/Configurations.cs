@@ -246,6 +246,8 @@ internal sealed class CoachWeekConfiguration : IEntityTypeConfiguration<CoachWee
         builder.Property(w => w.Id).ValueGeneratedNever();
         builder.Property(w => w.Verdict).HasConversion<string>().HasMaxLength(16);
         builder.Property(w => w.Reasons).HasMaxLength(400).IsRequired();
+        // Calls made before paces followed fitness had no nudge.
+        builder.Property(w => w.PaceFactor).HasDefaultValue(1.0);
 
         // One call per week of a plan; the plan going takes its calls with it.
         builder.HasIndex(w => new { w.SavedPlanId, w.WeekStart }).IsUnique();

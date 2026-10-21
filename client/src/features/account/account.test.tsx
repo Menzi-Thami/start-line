@@ -357,7 +357,9 @@ describe('a signed-up runner', () => {
     accountApi({
       runner: thandi,
       plans: [current],
-      coaching: [{ weekStart: '2026-10-19', verdict: 'Struggling', holdVolume: true, doseStep: -1, cutbackNow: false, reasons: ['FeltHarderThanPlanned'] }],
+      coaching: [
+        { weekStart: '2026-10-19', verdict: 'Struggling', holdVolume: true, doseStep: -1, cutbackNow: false, reasons: ['FeltHarderThanPlanned'], fitness: null, paceFactor: 1 },
+      ],
     })
     window.history.replaceState(null, '', '/')
     renderWith(signedIn())

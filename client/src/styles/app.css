@@ -2574,6 +2574,27 @@ a.menu-item {
   font-weight: 700;
 }
 
+/* Predicted race time, week by week, on the Progress tab. */
+.predicted-times {
+  list-style: none;
+  margin: var(--space-3) 0 var(--space-5);
+  padding: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.predicted-times li {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+}
+
+.predicted-times li.is-at-goal .mono {
+  color: var(--accent);
+}
+
 @media print {
   .check-in-open,
   .check-in-form {

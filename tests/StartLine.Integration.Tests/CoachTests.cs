@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -141,6 +142,42 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
         var export = await Json(await client.GetAsync(Url("/api/v1/me/export")));
 
         export.GetProperty("coaching")[0].GetProperty("planId").GetGuid().ShouldBe(plan);
+    }
+
+    private static double PaceOf(JsonElement plan, string zone) =>
+        plan.GetProperty("paces").EnumerateArray().Single(p => p.GetProperty("zone").GetString() == zone).GetProperty("slowestSecondsPerKm").GetDouble();
+
+    [Fact]
+    public async Task A_recorded_run_slower_than_the_goal_sets_this_weeks_paces()
+    {
+        var (client, plan, original) = await SavedTenK();
+
+        // A steady 6 km at 5:50/km last Wednesday: about a 59-minute 10K today, slower than the 52-minute goal.
+        var content = new MultipartFormDataContent();
+        var file = new ByteArrayContent(FitFiles.Run(new DateTime(2026, 10, 14, 5, 0, 0, DateTimeKind.Utc), 6000, 350));
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+        content.Add(file, "file", "run.fit");
+        (await client.PostAsync(Url("/api/v1/me/activities"), content)).StatusCode.ShouldBe(HttpStatusCode.Created);
+
+        var coached = await Json(await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null));
+
+        var fitness = TimeSpan.Parse(coached.GetProperty("coaching")[0].GetProperty("fitness").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
+        fitness.TotalMinutes.ShouldBeInRange(55, 62);
+        var paced = coached.GetProperty("plan");
+        PaceOf(paced, "Easy").ShouldBeGreaterThan(PaceOf(original, "Easy"));
+        PaceOf(paced, "Race").ShouldBe(PaceOf(original, "Race"));
+    }
+
+    [Fact]
+    public async Task Without_a_watch_hard_sessions_that_felt_too_hard_ease_the_paces()
+    {
+        var (client, plan, original) = await SavedTenK();
+        await CheckInWeekOne(client, plan, original, effort: 10);
+
+        var coached = await Json(await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null));
+
+        coached.GetProperty("coaching")[0].GetProperty("paceFactor").GetDouble().ShouldBe(1.02);
+        PaceOf(coached.GetProperty("plan"), "Tempo").ShouldBeGreaterThan(PaceOf(original, "Tempo"));
     }
 
     [Fact]

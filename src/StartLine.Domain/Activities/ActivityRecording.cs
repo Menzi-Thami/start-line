@@ -27,4 +27,12 @@ public sealed record ActivityRecording(
     DateTimeOffset StartedAt,
     ActivityKind Kind,
     IReadOnlyList<ActivitySample> Samples,
-    DeviceTotals Device);
+    DeviceTotals Device)
+{
+    /// <summary>The same run with every heart-rate reading taken out, for a runner who hasn't agreed to Taperday keeping it.</summary>
+    public ActivityRecording WithoutHeartRate() => this with
+    {
+        Samples = [.. Samples.Select(s => s with { HeartRate = null })],
+        Device = Device with { AverageHeartRate = null, MaxHeartRate = null },
+    };
+}

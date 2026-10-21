@@ -199,3 +199,49 @@ public sealed class ActivityTests
         run.LocalDate.ShouldBe(new DateOnly(2026, 10, 18));
     }
 }
+
+public sealed class HeartRateRemovalTests
+{
+    [Fact]
+    public void A_recording_without_heart_rate_keeps_everything_else()
+    {
+        var recording = new RunBuilder().Run(3000, 300, climbMetres: 20, heartRate: 150)
+            .Device(new DeviceTotals(AscentMetres: 21, Calories: 200, AverageHeartRate: 150, MaxHeartRate: 160)).Build();
+
+        var without = recording.WithoutHeartRate();
+
+        without.Samples.ShouldAllBe(s => s.HeartRate == null);
+        without.Samples.Select(s => s.DistanceMetres).ShouldBe(recording.Samples.Select(s => s.DistanceMetres));
+        without.Device.ShouldBe(new DeviceTotals(AscentMetres: 21, Calories: 200));
+    }
+
+    [Fact]
+    public void A_run_recorded_without_heart_rate_has_none_anywhere()
+    {
+        var run = Activity.Record(Guid.NewGuid(), new RunBuilder().Run(5000, 300, heartRate: 150).Build().WithoutHeartRate(),
+            new DateOnly(2026, 10, 18), []);
+
+        run.AverageHeartRate.ShouldBeNull();
+        run.MaxHeartRate.ShouldBeNull();
+        run.HeartRateDriftPercent.ShouldBeNull();
+        run.HeartRateTime.ShouldBeEmpty();
+        run.Splits.ShouldAllBe(s => s.AverageHeartRate == null);
+        run.DistanceMetres.ShouldBe(5000, tolerance: 0.01);
+    }
+
+    [Fact]
+    public void Forgetting_heart_rate_clears_it_from_a_stored_run_and_keeps_the_splits()
+    {
+        var run = new RunBuilder().Run(3000, 300, heartRate: 140).Run(3000, 300, heartRate: 160).Record();
+        run.Splits.ShouldAllBe(s => s.AverageHeartRate != null);
+
+        run.ForgetHeartRate();
+
+        run.AverageHeartRate.ShouldBeNull();
+        run.MaxHeartRate.ShouldBeNull();
+        run.HeartRateDriftPercent.ShouldBeNull();
+        run.HeartRateTime.ShouldBeEmpty();
+        run.Splits.Count.ShouldBe(6);
+        run.Splits.ShouldAllBe(s => s.AverageHeartRate == null && s.MovingTime.TotalSeconds > 0);
+    }
+}

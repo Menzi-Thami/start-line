@@ -47,6 +47,16 @@ public sealed class Runner
 
     public DateTimeOffset ConsentedAt { get; private set; }
 
+    /// <summary>
+    /// Whether the runner agreed to Taperday keeping heart rate from their runs. Heart rate is health information
+    /// (special personal information under POPIA), so it's asked for separately and is optional: without it, runs are
+    /// kept with no heart rate at all.
+    /// </summary>
+    public bool HeartRateConsent { get; private set; }
+
+    /// <summary>When the runner last gave or withdrew heart-rate consent.</summary>
+    public DateTimeOffset? HeartRateConsentChangedAt { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -60,7 +70,8 @@ public sealed class Runner
         bool weeklyEmails,
         string privacyNoticeVersion,
         DateTimeOffset consentedAt,
-        int? maxHeartRate = null)
+        int? maxHeartRate = null,
+        bool heartRateConsent = false)
     {
         if (string.IsNullOrWhiteSpace(identitySubject))
         {
@@ -80,7 +91,36 @@ public sealed class Runner
             ConsentedAt = consentedAt,
         };
         runner.UpdateProfile(email, displayName, timeZone, units, weeklyEmails, maxHeartRate);
+        runner.SetHeartRateConsent(heartRateConsent, consentedAt);
         return runner;
+    }
+
+    public bool HasAccepted(string privacyNoticeVersion) =>
+        string.Equals(PrivacyNoticeVersion, privacyNoticeVersion, StringComparison.Ordinal);
+
+    /// <summary>Records that the runner read and accepted this version of the privacy notice.</summary>
+    public void AcceptPrivacyNotice(string privacyNoticeVersion, DateTimeOffset at)
+    {
+        if (string.IsNullOrWhiteSpace(privacyNoticeVersion))
+        {
+            throw new DomainException("A privacy notice needs a version.");
+        }
+
+        PrivacyNoticeVersion = privacyNoticeVersion;
+        ConsentedAt = at;
+    }
+
+    /// <summary>Gives or withdraws heart-rate consent. True when this withdrew it, so stored heart rate must go.</summary>
+    public bool SetHeartRateConsent(bool consent, DateTimeOffset at)
+    {
+        var withdrawn = HeartRateConsent && !consent;
+        if (consent != HeartRateConsent || HeartRateConsentChangedAt is null)
+        {
+            HeartRateConsent = consent;
+            HeartRateConsentChangedAt = at;
+        }
+
+        return withdrawn;
     }
 
     public void UpdateProfile(string? email, string displayName, string timeZone, Units units, bool weeklyEmails, int? maxHeartRate = null)

@@ -2,6 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api, ApiError } from '../../lib/api-client'
 import type { Runner, Units } from '../../lib/types'
+import { HeartRateConsentField, PrivacyNoticeSummary } from '../privacy/Privacy'
 import { RaceBib } from './RaceBib'
 
 const detectedTimeZone = () => {
@@ -39,6 +40,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
   const [weeklyEmails, setWeeklyEmails] = useState(runner?.weeklyEmails ?? true)
   const [maxHeartRate, setMaxHeartRate] = useState(runner?.maxHeartRate == null ? '' : String(runner.maxHeartRate))
   const [accepted, setAccepted] = useState(false)
+  const [heartRateConsent, setHeartRateConsent] = useState(runner?.heartRateConsent ?? false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'error'; message: string }>({ kind: 'idle' })
 
   const submit = async (event: FormEvent) => {
@@ -63,6 +65,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
         weeklyEmails,
         acceptPrivacyNotice: accepted,
         maxHeartRate: Number.isInteger(bpm) ? bpm : null,
+        heartRateConsent,
       })
       setStatus({ kind: 'saved' })
       onSaved(saved)
@@ -120,7 +123,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
             pattern="[0-9]*"
             maxLength={3}
             value={maxHeartRate}
-            onChange={(e) => setMaxHeartRate(e.target.value.replace(/D/g, ''))}
+            onChange={(e) => setMaxHeartRate(e.target.value.replace(/\D/g, ''))}
           />
           <p className="field-help">
             With it, your runs show time in heart-rate zones. Use the highest you’ve seen on your watch in a hard race or test. Leave it
@@ -128,6 +131,8 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
           </p>
         </div>
       )}
+
+      {!signingUp && <HeartRateConsentField checked={heartRateConsent} onChange={setHeartRateConsent} editing />}
 
       <label className="session-done" style={{ color: 'var(--ink)' }}>
         <input type="checkbox" checked={weeklyEmails} onChange={(e) => setWeeklyEmails(e.target.checked)} />
@@ -137,16 +142,12 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
       {signingUp && (
         <div className="notice">
           <h3>What we keep, and why</h3>
-          <ul>
-            <li>Your name, email, time zone, units and the plans you save, so we can show your plans and send your weekly email.</li>
-            <li>Sign-in is handled by Microsoft. We never see or store a password.</li>
-            <li>We don’t sell your data or use it for advertising.</li>
-            <li>You can download everything we hold, or delete your account and all of it, from Account at any time.</li>
-          </ul>
+          <PrivacyNoticeSummary />
           <label className="session-done" style={{ color: 'var(--ink)' }}>
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
             I’ve read this and I’m happy for Taperday to keep this information.
           </label>
+          <HeartRateConsentField checked={heartRateConsent} onChange={setHeartRateConsent} />
         </div>
       )}
 

@@ -87,12 +87,12 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 
 | # | Topic | Status | Where / note |
 |---|---|---|---|
-| 232–233 | GDPR / PII handling | Covered | Data export (profile, plans, runs, connections — never tokens) and full account delete. Consent to the privacy notice is required before anything is stored. |
+| 232–233 | GDPR / PII handling | Covered | Data export (profile, plans, runs, connections — never tokens) and full account delete. Consent to the privacy notice is required before anything is stored. The published policy is at `/?view=privacy`; a new notice version (`PrivacyNotice.CurrentVersion`) must be accepted before anything new is saved, uploaded or connected. |
 | 234 | Audit logs | Gap | There's no dedicated, tamper-evident log of security events (sign-ins, deletes, connects). See [To do](#to-do). |
 | 235 | Data residency | Covered | API and database are in South Africa North. |
 | 238 | Cookie consent | N/A | Taperday sets no tracking cookies; it uses `sessionStorage` for the sign-in token only. |
 | Location data | Covered | GPS positions are never stored, from any source: FIT, GPX, TCX or Strava. They're used only to measure distance, then discarded. |
-| Heart rate | Partial | Stored as training info with no medical claims. The privacy notice should name heart rate and synced runs explicitly; see [To do](#to-do). |
+| Heart rate | Covered | Health information (POPIA special personal information), so kept only with its own, optional consent (`Runner.HeartRateConsent`). Without it every reading is dropped before a run is recorded, from any source, and anything held from before is hidden; withdrawing deletes what's stored. No medical claims. |
 | 240–241 | SPF/DKIM/DMARC, bounce handling | N/A | No outbound email yet (the weekly email is "coming soon"). Revisit when it ships. |
 
 ## AI
@@ -107,11 +107,10 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 Small, specific follow-ups, none urgent:
 
 1. **Rotate the Strava client secret.** It was exposed in a chat transcript. Reset it on strava.com/settings/api and update `Strava__ClientSecret` in App Service.
-2. **Update the privacy notice** to name heart rate and runs synced from Strava, then bump `PrivacyNotice.CurrentVersion` so existing runners re-accept. Strava's policy also requires a published privacy policy.
-3. **Rehearse a database restore** from Azure SQL's point-in-time backup, and check the free offer's retention is enough (raise the tier if not).
-4. **Add an audit log** of security-relevant events (sign-up, account delete, Strava connect/disconnect), write-only, for incident response.
-5. **A required-review branch rule** on `main`, and a billing budget alert on the resource group, for belt and braces.
-6. **Confirm MFA** is on (or deliberately off) in the Entra External ID tenant.
+2. **Rehearse a database restore** from Azure SQL's point-in-time backup, and check the free offer's retention is enough (raise the tier if not).
+3. **Add an audit log** of security-relevant events (sign-up, account delete, Strava connect/disconnect), write-only, for incident response.
+4. **A required-review branch rule** on `main`, and a billing budget alert on the resource group, for belt and braces.
+5. **Confirm MFA** is on (or deliberately off) in the Entra External ID tenant.
 
 ## Verified by
 

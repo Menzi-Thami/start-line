@@ -103,7 +103,7 @@ internal sealed class StartStravaConnectHandler(CurrentRunner current, IStravaSe
             throw new ConflictException("strava_unavailable", "Strava sync isn't switched on yet.");
         }
 
-        var runner = await current.RequireAsync(cancellationToken);
+        var runner = await current.RequireConsentedAsync(cancellationToken);
         return new StravaConnectDto(strava.AuthorizeUrl(state.Issue(runner.Id), settings.RedirectUri));
     }
 }
@@ -142,7 +142,7 @@ internal sealed class ConnectStravaHandler(
             throw new ConflictException("strava_unavailable", "Strava sync isn't switched on yet.");
         }
 
-        var runner = await current.RequireAsync(cancellationToken);
+        var runner = await current.RequireConsentedAsync(cancellationToken);
         if (state.Read(request.State) != runner.Id)
         {
             throw new Common.Exceptions.ValidationException(new Dictionary<string, string[]> { ["state"] = ["That link was started from another account. Connect again from here."] });

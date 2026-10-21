@@ -7,6 +7,7 @@ import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
 import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
+import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { SignInWait } from '../features/account/SignInWait'
 import { ActivityPage } from '../features/activities/ActivityPage'
 import { useCheckIns } from '../features/coaching/useCheckIns'
@@ -33,7 +34,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'build' | 'plans' | 'runs' | 'account' | 'sign-up'
+type View = 'build' | 'plans' | 'runs' | 'account' | 'privacy' | 'sign-up'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -70,7 +71,7 @@ const runFromUrl = (): OpenRun | null => {
 const viewFromUrl = (): View => {
   if (window.location.pathname === STRAVA_CALLBACK_PATH) return 'account'
   const view = new URLSearchParams(window.location.search).get('view')
-  return view === 'plans' || view === 'runs' || view === 'account' ? view : 'build'
+  return view === 'plans' || view === 'runs' || view === 'account' || view === 'privacy' ? view : 'build'
 }
 
 export function App() {
@@ -266,7 +267,7 @@ export function App() {
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'plans' || next === 'runs' || next === 'account'
+      next === 'plans' || next === 'runs' || next === 'account' || next === 'privacy'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
@@ -368,6 +369,10 @@ export function App() {
             }
           : undefined
 
+  // A runner who agreed to an older privacy notice reads the new one before anything else. The policy itself and Account
+  // (to download or delete instead) stay open.
+  const gated = state.kind === 'ready' && state.runner.needsPrivacyConsent && view !== 'privacy' && view !== 'account'
+
   return (
     <div className="page">
       {playIntro && <RaceStartIntro onDone={finishIntro} />}
@@ -430,6 +435,15 @@ export function App() {
             {auth.error.code && <p className="field-help">Error code {auth.error.code}, if you contact us.</p>}
           </div>
         )}
+
+        {gated && state.kind === 'ready' && (
+          <PrivacyUpdate runner={state.runner} onAccepted={runner.setRunner} onOpenAccount={() => go('account')} />
+        )}
+
+        {view === 'privacy' && <PrivacyPolicy />}
+
+        {!gated && (
+          <>
         {state.kind === 'needs-sign-up' && view !== 'sign-up' && !showBuilder && (
           <div className="callout" role="note">
             <p>
@@ -630,12 +644,19 @@ export function App() {
             )}
           </>
         )}
+          </>
+        )}
       </main>
 
       <footer className="footer">
         <p>
           Plans are a guide, not medical advice. If something hurts in a way that isn’t normal tiredness, rest and get it checked.
           Race dates come from organisers and can change, so confirm on the race’s own site before you enter.
+        </p>
+        <p className="footer-links">
+          <button type="button" className="link-button" onClick={() => go('privacy')}>
+            Privacy policy
+          </button>
         </p>
       </footer>
     </div>

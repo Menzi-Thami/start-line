@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../../app/App'
 import { AuthContext, type Auth } from '../../app/auth-context'
-import type { Runner, SavedPlanSummary } from '../../lib/types'
+import type { CoachNote, Runner, SavedPlanSummary } from '../../lib/types'
 import { planFixture, server } from '../../test/server'
 
 const TOKEN = 'test-token'
@@ -21,8 +21,29 @@ const thandi: Runner = {
   maxHeartRate: null,
 }
 
+/** The runner's saved plan as the account API returns it, without the plan itself. */
+const savedPlanBody = {
+  id: 'plan-1',
+  name: 'Parkrun PB',
+  createdAt: '2026-10-08T09:00:00Z',
+  inputs: {
+    raceSlug: null,
+    raceName: 'Parkrun PB',
+    distanceKm: 5,
+    raceDate: '2026-12-13',
+    goalTime: '00:24:30',
+    runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'],
+    longRunDay: 'Sunday',
+    currentWeeklyKm: null,
+    experience: 'Regular',
+    strengthDays: [],
+    planFrom: '2026-10-08',
+  },
+  status: 'Active',
+}
+
 /** A tiny in-memory stand-in for the account API that insists on the bearer token. */
-function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }) {
+function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[]; coaching?: CoachNote[] }) {
   const db = {
     runner: start.runner,
     plans: [...(start.plans ?? [])],
@@ -30,6 +51,7 @@ function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }
     profiles: [] as unknown[],
     restored: [] as string[],
     checkIns: [] as { path: string; body: Record<string, unknown> }[],
+    coaching: [...(start.coaching ?? [])],
   }
   const authorised = (request: Request) => request.headers.get('Authorization') === `Bearer ${TOKEN}`
   const unauthorised = () => HttpResponse.json({ title: 'Unauthorized' }, { status: 401 })
@@ -57,6 +79,10 @@ function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }
       db.saved.push(await request.json())
       return HttpResponse.json({ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' }, { status: 201 })
     }),
+    // The runner's own plan opens through the coach: by default it has made no calls.
+    http.post('*/api/v1/me/plans/:id/coach', ({ request }) =>
+      authorised(request) ? HttpResponse.json({ ...savedPlanBody, plan: planFixture, coaching: db.coaching }) : unauthorised(),
+    ),
     http.get('*/api/v1/me/plans/:id/check-ins', ({ request }) => (authorised(request) ? HttpResponse.json([]) : unauthorised())),
     http.put('*/api/v1/me/plans/:id/check-ins/:date/:type', async ({ request, params }) => {
       if (!authorised(request)) return unauthorised()
@@ -77,26 +103,7 @@ function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[] }
     }),
     http.get('*/api/v1/me/plans/:id', ({ request }) =>
       authorised(request)
-        ? HttpResponse.json({
-            id: 'plan-1',
-            name: 'Parkrun PB',
-            createdAt: '2026-10-08T09:00:00Z',
-            inputs: {
-              raceSlug: null,
-              raceName: 'Parkrun PB',
-              distanceKm: 5,
-              raceDate: '2026-12-13',
-              goalTime: '00:24:30',
-              runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'],
-              longRunDay: 'Sunday',
-              currentWeeklyKm: null,
-              experience: 'Regular',
-              strengthDays: [],
-              planFrom: '2026-10-08',
-            },
-            plan: {},
-            status: 'Active',
-          })
+        ? HttpResponse.json({ ...savedPlanBody, plan: {} })
         : unauthorised(),
     ),
   )
@@ -339,6 +346,22 @@ describe('a signed-up runner', () => {
     expect(db.checkIns).toEqual([{ path: 'plan-1/2026-10-13/Hills', body: expect.objectContaining({ status: 'Done', effort: 7 }) }])
     // Only the hills, of this week's runs, are ticked off.
     expect(screen.getAllByRole('checkbox', { name: 'Done' }).filter((box) => (box as HTMLInputElement).checked)).toHaveLength(1)
+  })
+
+  it('opens on this week’s coach’s note', async () => {
+    // Tuesday of week 2, which the coach eased after week 1 felt too hard.
+    vi.setSystemTime(new Date(2026, 9, 20, 7, 0))
+    accountApi({
+      runner: thandi,
+      plans: [current],
+      coaching: [{ weekStart: '2026-10-19', verdict: 'Struggling', holdVolume: true, doseStep: -1, cutbackNow: false, reasons: ['FeltHarderThanPlanned'] }],
+    })
+    window.history.replaceState(null, '', '/')
+    renderWith(signedIn())
+
+    const note = await screen.findByRole('region', { name: 'Coach’s note' }, { timeout: 3000 })
+    expect(within(note).getByRole('heading', { name: 'An easier week' })).toBeInTheDocument()
+    expect(within(note).getByText('Several runs last week felt harder than they should.')).toBeInTheDocument()
   })
 
   it('isn’t asked about runs on a plan that isn’t theirs', async () => {

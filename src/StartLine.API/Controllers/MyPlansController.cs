@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using StartLine.Application.Common.Dispatcher;
+using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Domain.Plans;
 
@@ -36,6 +37,17 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id, CancellationToken cancellationToken) =>
         Ok(await dispatcher.Send(new GetMyPlanQuery(id), cancellationToken));
+
+    /// <summary>
+    /// Opens the plan with the coach's calls applied. On or after Monday, the coach makes this week's call from how last
+    /// week went (check-ins and recorded runs) and keeps it: hold, ease off, step up or run as written.
+    /// </summary>
+    [HttpPost("{id:guid}/coach")]
+    [EnableRateLimiting(PresentationDependencyInjection.PlanRateLimitPolicy)]
+    [ProducesResponseType<SavedPlanDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Coach(Guid id, CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new CoachMyPlanCommand(id), cancellationToken));
 
     /// <summary>Makes a past plan the current one again. The plan that was current becomes a past plan.</summary>
     [HttpPost("{id:guid}/restore")]

@@ -5,7 +5,8 @@ import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange
 import { planProgress } from '../../lib/plan-day'
 import { ranKmByWeek, runsByDate } from '../../lib/plan-runs'
 import { loadDone, saveDone } from '../../lib/storage'
-import type { ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
+import type { CoachNote as CoachNoteType, ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
+import { CoachNote } from '../coaching/CoachNote'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { Overview } from '../dashboard/Overview'
 import { StrengthTab } from '../strength/StrengthTab'
@@ -41,6 +42,10 @@ interface Props {
   onOpenRuns?: () => void
   /** Check-ins, when this is the runner's saved plan: "How did it go?" on each run that's come round. */
   coach?: SessionCoach
+  /** The coach's calls on the runner's saved plan; this week's shows on "This week". */
+  coachNotes?: CoachNoteType[]
+  /** Offered from a note about pain: rebuilds the plan after an injury. */
+  onInjuryReplan?: () => Promise<void>
 }
 
 // "This week" first: on most days it's all a runner needs. Signed-in runners get the overview of what they ran next to it.
@@ -73,7 +78,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach }: Props) {
+export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -353,6 +358,9 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
                   {PHASES[shown.week.phase]} · {formatDistance(trainingKm(shown.week), units)}
                 </p>
               </div>
+              {shown.when === 'now' && coachNotes?.find((n) => n.weekStart === shown.week.startDate) && (
+                <CoachNote note={coachNotes.find((n) => n.weekStart === shown.week.startDate)!} onInjuryReplan={onInjuryReplan} />
+              )}
               <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
               <p className="field-help">
                 Ticks are saved on this device.{' '}

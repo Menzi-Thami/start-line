@@ -246,6 +246,47 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("Activities", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("CutbackNow")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("DoseStep")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("HoldVolume")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Reasons")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<Guid>("SavedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Verdict")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly>("WeekStart")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SavedPlanId", "WeekStart")
+                        .IsUnique();
+
+                    b.ToTable("CoachWeeks", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Coaching.SessionCheckIn", b =>
                 {
                     b.Property<Guid>("Id")
@@ -644,6 +685,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Navigation("BestEfforts");
 
                     b.Navigation("Splits");
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
+                {
+                    b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("StartLine.Domain.Coaching.SessionCheckIn", b =>

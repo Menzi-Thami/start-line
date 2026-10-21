@@ -2538,6 +2538,42 @@ a.menu-item {
   max-width: 10rem;
 }
 
+/* ---------- The coach's note on "This week" ---------- */
+.coach-note {
+  margin: var(--space-3) 0 var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--accent);
+}
+
+.coach-note.is-struggling,
+.coach-note.is-hurting {
+  border-left-color: var(--warn-ink);
+}
+
+.coach-note-kicker {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.coach-note h3 {
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+.coach-note p {
+  margin: 0 0 var(--space-2);
+}
+
+.coach-note-change {
+  font-weight: 700;
+}
+
 @media print {
   .check-in-open,
   .check-in-form {

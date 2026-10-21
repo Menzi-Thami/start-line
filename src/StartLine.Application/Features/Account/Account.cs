@@ -6,6 +6,7 @@ using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.CheckIns;
+using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Sync;
 using StartLine.Domain.Activities;
@@ -121,7 +122,11 @@ public sealed record AccountExportDto(
     IReadOnlyList<SavedPlanExportDto> Plans,
     IReadOnlyList<ActivityDto> Activities,
     IReadOnlyList<ConnectionExportDto> Connections,
-    IReadOnlyList<CheckInExportDto> CheckIns);
+    IReadOnlyList<CheckInExportDto> CheckIns,
+    IReadOnlyList<CoachExportDto> Coaching);
+
+/// <summary>A coach's call as exported with the account: which plan and week it was for, then the call.</summary>
+public sealed record CoachExportDto(Guid PlanId, CoachNoteDto Call);
 
 /// <summary>
 /// A connected service as exported: what was granted and when, but never the tokens. An export file sitting in a
@@ -161,12 +166,17 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .Where(c => planIds.Contains(c.SavedPlanId))
             .OrderBy(c => c.Date)
             .ToListAsync(cancellationToken);
+        var coachWeeks = await db.CoachWeeks.AsNoTracking()
+            .Where(w => planIds.Contains(w.SavedPlanId))
+            .OrderBy(w => w.WeekStart)
+            .ToListAsync(cancellationToken);
         return new AccountExportDto(
             RunnerDto.From(runner),
             [.. plans.Select(SavedPlanExportDto.From)],
             [.. activities.Select(a => ActivityDto.From(a, bests.FromRunsOtherThan(a.Id), runner.MaxHeartRate))],
             [.. connections.Select(ConnectionExportDto.From)],
-            [.. checkIns.Select(c => new CheckInExportDto(c.SavedPlanId, CheckInDto.From(c)))]);
+            [.. checkIns.Select(c => new CheckInExportDto(c.SavedPlanId, CheckInDto.From(c)))],
+            [.. coachWeeks.Select(w => new CoachExportDto(w.SavedPlanId, CoachNoteDto.From(w.ToDecision())))]);
     }
 }
 

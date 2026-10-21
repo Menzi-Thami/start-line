@@ -84,28 +84,48 @@ public static partial class TrainingPlanGenerator
         var volumes = PlanVolumes(parameters, profile, phases, warnings);
 
         var weeks = new List<PlanWeek>(weekCount);
+        var lastFullWeekKm = double.MaxValue;
+        PlanWeek Built(int number, WeekContext week)
+        {
+            List<PlannedSession> sessions;
+            if (IsCoachedFrom(parameters, week.Start))
+            {
+                var call = CallFor(parameters, week.Start);
+                week = Coached(week, call, lastFullWeekKm);
+                sessions = FittedWeek(parameters, profile, workouts, layout, ref week, lastFullWeekKm, call?.HoldVolume == true);
+            }
+            else
+            {
+                sessions = TrainingWeek(parameters, profile, workouts, layout, week);
+            }
+
+            if (!week.IsCutback)
+            {
+                lastFullWeekKm = Kilometres(sessions);
+            }
+
+            return new PlanWeek(number, week.Start, week.Phase, week.IsCutback, sessions);
+        }
+
         for (var i = 0; i < trainingWeeks; i++)
         {
             var (phase, indexInPhase, phaseLength) = phases[i];
-            var week = new WeekContext(
+            weeks.Add(Built(i + 1, new WeekContext(
                 startDate.AddDays(7 * i),
                 volumes[i],
                 phase,
                 indexInPhase,
                 phaseLength <= 1 ? 1 : indexInPhase / (double)(phaseLength - 1),
                 IsCutback(i, trainingWeeks),
-                IsFirstWeek: i == 0);
-            weeks.Add(new PlanWeek(i + 1, week.Start, phase, week.IsCutback, TrainingWeek(parameters, profile, workouts, layout, week)));
+                IsFirstWeek: i == 0)));
         }
 
         var peakKm = volumes.Max();
         var taperFactors = TaperFactors(taperWeeks - 1);
         for (var t = 0; t < taperFactors.Length; t++)
         {
-            var week = new WeekContext(startDate.AddDays(7 * (trainingWeeks + t)), peakKm * taperFactors[t],
-                TrainingPhase.Taper, t, 0, IsCutback: false, IsFirstWeek: false);
-            weeks.Add(new PlanWeek(trainingWeeks + t + 1, week.Start, TrainingPhase.Taper, false,
-                TrainingWeek(parameters, profile, workouts, layout, week)));
+            weeks.Add(Built(trainingWeeks + t + 1, new WeekContext(startDate.AddDays(7 * (trainingWeeks + t)), peakKm * taperFactors[t],
+                TrainingPhase.Taper, t, 0, IsCutback: false, IsFirstWeek: false)));
         }
 
         weeks.Add(new PlanWeek(weekCount, raceWeekStart, TrainingPhase.RaceWeek, false,
@@ -124,7 +144,8 @@ public static partial class TrainingPlanGenerator
     };
 
     /// <param name="EasyOnly">A return week after illness or injury: no hard sessions and a plain long run.</param>
-    /// <param name="FitToVolume">A rebuilt week: it keeps only the hard sessions its volume has room for.</param>
+    /// <param name="FitToVolume">A rebuilt or coached week: it keeps only the hard sessions its volume has room for.</param>
+    /// <param name="DoseStep">The coach's call on the hard sessions: -1 one smaller hard session, +1 a bigger one.</param>
     private sealed record WeekContext(
         DateOnly Start,
         double TargetKm,
@@ -134,7 +155,8 @@ public static partial class TrainingPlanGenerator
         bool IsCutback,
         bool IsFirstWeek,
         bool EasyOnly = false,
-        bool FitToVolume = false)
+        bool FitToVolume = false,
+        int DoseStep = 0)
     {
         /// <summary>Lighter than usual: a cutback or a return week. Either way, no hard sessions.</summary>
         public bool IsEasier => IsCutback || EasyOnly;
@@ -293,6 +315,7 @@ public static partial class TrainingPlanGenerator
         }
 
         var longKm = LongRunKm(p, profile, workouts, week.TargetKm);
+        var progress = Math.Clamp(week.Progress + week.DoseStep * DoseStepProgress, 0, 1);
         var sessions = new List<PlannedSession>(layout.Days.Count);
         var easyDays = new List<(DateOnly Date, SessionType Type)>();
         var hardSessions = new List<(PlannedSession Session, bool IsSecond)>(2);
@@ -320,11 +343,11 @@ public static partial class TrainingPlanGenerator
                     sessions.Add(workouts.Long(date, longType, longKm));
                     break;
                 case DayRole.Quality when !week.IsEasier:
-                    hardSessions.Add((workouts.Quality(date, first, week.Phase, week.Progress), false));
+                    hardSessions.Add((workouts.Quality(date, first, week.Phase, progress), false));
                     sessions.Add(hardSessions[^1].Session);
                     break;
-                case DayRole.SecondQuality when !week.IsEasier && second is { } secondType:
-                    hardSessions.Add((workouts.Quality(date, secondType, week.Phase, week.Progress), true));
+                case DayRole.SecondQuality when !week.IsEasier && week.DoseStep >= 0 && second is { } secondType:
+                    hardSessions.Add((workouts.Quality(date, secondType, week.Phase, progress), true));
                     sessions.Add(hardSessions[^1].Session);
                     break;
                 case DayRole.Recovery:

@@ -600,6 +600,7 @@ export function App() {
                 coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, save: checkIns.save, remove: checkIns.remove } : undefined}
                 coachNotes={notes}
                 onInjuryReplan={() => replanWith({ from: today, setback: 'Injury' })}
+                onUseGoal={(goalSeconds) => build({ ...plan.inputs, goalSeconds })}
                 replan={
                   <Replan
                     plan={plan.plan}

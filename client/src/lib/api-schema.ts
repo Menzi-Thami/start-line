@@ -1309,6 +1309,7 @@ export interface paths {
                     ReplanFrom?: string;
                     Setback?: components["schemas"]["Setback"];
                     RecentWeeklyKm?: number;
+                    Version?: number;
                     units?: string;
                 };
                 header?: never;
@@ -1654,6 +1655,8 @@ export interface components {
             setback?: null | components["schemas"]["Setback"];
             /** Format: double */
             recentWeeklyKm?: null | number;
+            /** Format: int32 */
+            version?: null | number;
         };
         HalvesDto: {
             /** Format: double */

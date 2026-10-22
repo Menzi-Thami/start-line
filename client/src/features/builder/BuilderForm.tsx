@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { formatDate, formatDistance, formatDuration, formatPace, toKilometres, type Units } from '../../lib/format'
-import type { PlanInputs } from '../../lib/plan-url'
+import { LATEST_PLAN_VERSION, type PlanInputs } from '../../lib/plan-url'
 import { SHORT_DAY, WEEK, type DayOfWeek, type Experience, type Race } from '../../lib/types'
 import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
 import { durationSeconds, toDuration, type Duration } from './duration'
@@ -222,6 +222,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       experience: draft.experience,
       strengthDays: draft.strengthDays,
       planFrom: today,
+      // A new plan: built with the newest generator, and stamped with it so its link keeps that shape.
+      version: LATEST_PLAN_VERSION,
     })
   }
 

@@ -61,3 +61,11 @@ distance *and* time, and race week is light with one sharpener and a shakeout. E
 rest from a share of what the runner had built (missed 80%, ill 60%, injured 50%, behind: last week's km), with the
 same rules plus easy-only return weeks (ill 1, injured 2). Rebuilt weeks keep their phase, restart the cutback count
 and are held to the 10% limit on their real (rounded) distance. A plan keeps one replan; the latest wins.
+
+Plans carry a generator version (`PlanParameters.GeneratorVersion`, `v=` in the link, `GeneratePlanQuery.Version`, a
+`GeneratorVersion` column on saved plans), so a plan keeps the shape it was built with. No version means 1: every plan
+made before per-distance shapes. **Version 1 must never change**; `GeneratorV1SnapshotTests` hashes a set of v1 plans.
+New plans are version 2 (`PlanShape`, `TrainingPlanGenerator.Shapes.cs`): front-loaded volume growth, 5K/10K volume
+levelling off about three-fifths through the build, a stepped long-run track for half, marathon and ultra, a cutback
+every 3rd week for new runners, and the 10% limit held on each week's real distance. Every generator rule test runs for
+both versions (the `…V2Tests` subclasses). A shape change after this needs version 3, never an edit to version 2.

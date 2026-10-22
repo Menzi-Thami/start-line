@@ -14,6 +14,11 @@ export interface PlanInputs {
   experience: Experience
   strengthDays: DayOfWeek[]
   planFrom?: string
+  /**
+   * The plan generator version the plan was first built with. Undefined is version 1: every link made before plans were
+   * shaped per distance, which keeps its shape. New plans get LATEST_PLAN_VERSION.
+   */
+  version?: number
   /** "Replan from here": the plan is rebuilt from this day, after this setback. Both or neither. */
   replan?: ReplanInputs
 }
@@ -24,6 +29,9 @@ export interface ReplanInputs {
   /** What the runner ran last week. Needed when they're behind; optional otherwise. */
   recentWeeklyKm?: number
 }
+
+/** The generator version a new plan is built with. Older links and saved plans keep theirs. */
+export const LATEST_PLAN_VERSION = 2
 
 // Short and readable in a shared link: ?re=2026-12-03&why=ill&last=18
 const SETBACK_CODES: Record<Setback, string> = {
@@ -73,6 +81,7 @@ export function toSearchParams(inputs: PlanInputs): URLSearchParams {
   if (inputs.currentWeeklyKm) p.set('now', String(inputs.currentWeeklyKm))
   if (inputs.strengthDays.length > 0) p.set('gym', encodeDays(inputs.strengthDays))
   if (inputs.planFrom) p.set('from', inputs.planFrom)
+  if (inputs.version && inputs.version > 1) p.set('v', String(inputs.version))
   if (inputs.replan) {
     p.set('re', inputs.replan.from)
     p.set('why', SETBACK_CODES[inputs.replan.setback])
@@ -89,6 +98,13 @@ function replanFrom(params: URLSearchParams): ReplanInputs | undefined {
   // Behind means "pick up from what I ran", so without that distance the replan is dropped, not guessed at.
   if (setback === 'Behind' && recentWeeklyKm === undefined) return undefined
   return { from, setback, recentWeeklyKm }
+}
+
+// Version 1 is the default, so it never shows in a link. A version this app doesn't know yet is kept: the API then says
+// the link is from a newer Taperday, rather than the plan quietly changing shape.
+const generatorVersion = (value: string | null): number | undefined => {
+  const n = positive(value)
+  return n !== undefined && Number.isInteger(n) && n > 1 ? n : undefined
 }
 
 /** Returns null unless the link describes a complete plan. Anything malformed is dropped, not guessed at. */
@@ -120,6 +136,7 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
     experience,
     strengthDays: decodeDays(params.get('gym')).slice(0, 3),
     planFrom: planFrom && ISO_DATE.test(planFrom) ? planFrom : undefined,
+    version: generatorVersion(params.get('v')),
     replan: replanFrom(params),
   }
 }
@@ -140,6 +157,7 @@ export function fromRequest(request: GeneratePlanRequest): PlanInputs | null {
     experience: request.experience ?? 'Regular',
     strengthDays: WEEK.filter((d) => (request.strengthDays ?? []).includes(d)),
     planFrom: request.planFrom ?? undefined,
+    version: generatorVersion(request.version?.toString() ?? null),
     replan:
       request.replanFrom && request.setback
         ? { from: request.replanFrom, setback: request.setback, recentWeeklyKm: request.recentWeeklyKm ?? undefined }
@@ -160,6 +178,7 @@ export function toRequest(inputs: PlanInputs): GeneratePlanRequest {
     experience: inputs.experience,
     strengthDays: inputs.strengthDays,
     planFrom: inputs.planFrom ?? null,
+    version: inputs.version ?? null,
     replanFrom: inputs.replan?.from ?? null,
     setback: inputs.replan?.setback ?? null,
     recentWeeklyKm: inputs.replan?.recentWeeklyKm ?? null,

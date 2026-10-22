@@ -5,8 +5,8 @@ using System.Text.Json;
 namespace StartLine.Integration.Tests;
 
 /// <summary>
-/// "Replan from here", through the API: stateless for shared links, stored for saved plans. Its own factory, because
-/// these tests move the clock on to the day of the setback.
+/// "Replan from here", through the API: stateless for shared links, stored for saved plans, and always with the plan's
+/// own generator version. Its own factory, because these tests move the clock on to the day of the setback.
 /// </summary>
 public sealed class ReplanTests : IClassFixture<ReplanClockFactory>
 {
@@ -164,6 +164,53 @@ public sealed class ReplanTests : IClassFixture<ReplanClockFactory>
         var response = await someoneElse.PostAsJsonAsync(Url($"/api/v1/me/plans/{id}/replan"), new { replanFrom = "2026-12-03", setback = "Illness" });
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    private static List<double> WeeklyKm(JsonElement plan) =>
+        [.. plan.GetProperty("weeks").EnumerateArray().Select(w => w.GetProperty("plannedKm").GetDouble())];
+
+    [Fact]
+    public async Task A_saved_plan_keeps_its_generator_version_and_replans_with_it()
+    {
+        var client = _factory.CreateClient().As(Guid.NewGuid().ToString());
+        (await client.PutAsJsonAsync(Url("/api/v1/me"), Profile)).EnsureSuccessStatusCode();
+        var saved = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = With(("version", 2)) });
+        saved.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var id = (await Json(saved)).GetProperty("id").GetGuid();
+
+        var reopened = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        reopened.GetProperty("inputs").GetProperty("version").GetInt32().ShouldBe(2);
+        var shared = await Json(await _factory.CreateClient().PostAsJsonAsync(Url("/api/v1/plans"), With(("version", 2))));
+        WeeklyKm(reopened.GetProperty("plan")).ShouldBe(WeeklyKm(shared));
+
+        // The rebuild is the version 2 plan's rebuild, exactly as its shared link would give it.
+        var replanned = await Json(await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{id}/replan"), new { replanFrom = "2026-12-03", setback = "Illness" }));
+        var sharedReplan = await Json(await _factory.CreateClient().PostAsJsonAsync(Url("/api/v1/plans"),
+            With(("version", 2), ("replanFrom", "2026-12-03"), ("setback", "Illness"))));
+        WeeklyKm(replanned.GetProperty("plan")).ShouldBe(WeeklyKm(sharedReplan));
+        replanned.GetProperty("inputs").GetProperty("version").GetInt32().ShouldBe(2);
+    }
+
+    [Fact]
+    public async Task A_plan_saved_without_a_version_stays_version_1()
+    {
+        var (client, id) = await SavedHalf();
+
+        var reopened = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        reopened.GetProperty("inputs").GetProperty("version").GetInt32().ShouldBe(1);
+        var v1 = await Json(await _factory.CreateClient().PostAsJsonAsync(Url("/api/v1/plans"), With(("version", 1))));
+        var v2 = await Json(await _factory.CreateClient().PostAsJsonAsync(Url("/api/v1/plans"), With(("version", 2))));
+        WeeklyKm(reopened.GetProperty("plan")).ShouldBe(WeeklyKm(v1));
+        WeeklyKm(v2).ShouldNotBe(WeeklyKm(v1));
+    }
+
+    [Fact]
+    public async Task A_link_from_an_unknown_generator_version_is_rejected()
+    {
+        var response = await _factory.CreateClient().PostAsJsonAsync(Url("/api/v1/plans"), With(("version", 3)));
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await Json(response)).GetProperty("errors").TryGetProperty("Version", out _).ShouldBeTrue();
     }
 }
 

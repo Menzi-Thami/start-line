@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fromSearchParams, toRequest, toSearchParams, type PlanInputs } from './plan-url'
+import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs } from './plan-url'
 
 const custom: PlanInputs = {
   raceName: 'Parkrun PB',
@@ -83,5 +83,35 @@ describe('replanned plan links', () => {
 
     expect(inputs).not.toBeNull()
     expect(inputs?.replan).toBeUndefined()
+  })
+})
+
+describe('plan generator versions', () => {
+  const v2: PlanInputs = { ...custom, version: 2 }
+
+  it('a new plan carries its version as v; a plan from before versions has none, and stays version 1', () => {
+    expect(toSearchParams(v2).toString()).toContain('from=2026-10-08&v=2')
+    expect(fromSearchParams(toSearchParams(v2))?.version).toBe(2)
+    expect(toSearchParams(custom).has('v')).toBe(false)
+    expect(toSearchParams({ ...custom, version: 1 }).has('v')).toBe(false)
+    expect(fromSearchParams(toSearchParams(custom))?.version).toBeUndefined()
+  })
+
+  it('reaches the API as the version, or none for version 1', () => {
+    expect(toRequest(v2).version).toBe(2)
+    expect(toRequest(custom).version).toBeNull()
+  })
+
+  it('keeps a saved plan’s version, and leaves version 1 out of its link', () => {
+    expect(fromRequest({ ...toRequest(custom), version: 2 })?.version).toBe(2)
+    expect(fromRequest({ ...toRequest(custom), version: 1 })?.version).toBeUndefined()
+  })
+
+  it('keeps a version this app doesn’t know yet, so the API can say the link is newer', () => {
+    expect(fromSearchParams(new URLSearchParams(`${toSearchParams(custom)}&v=3`))?.version).toBe(3)
+  })
+
+  it.each(['two', '1.5', '-2', '0'])('drops a garbled version: %s', (value) => {
+    expect(fromSearchParams(new URLSearchParams(`${toSearchParams(custom)}&v=${value}`))?.version).toBeUndefined()
   })
 })

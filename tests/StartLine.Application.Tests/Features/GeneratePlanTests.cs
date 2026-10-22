@@ -247,4 +247,28 @@ public sealed class GeneratePlanTests
         plan.Weeks.ShouldAllBe(w => w.IsReplanned);
         plan.Warnings.ShouldContain(w => w.Code == "injury");
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void A_known_generator_version_or_none_is_valid(int? version) =>
+        Validator().Validate(CustomRace() with { Version = version }).IsValid.ShouldBeTrue();
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(3)]
+    public void An_unknown_generator_version_is_rejected(int version) =>
+        Validator().Validate(CustomRace() with { Version = version }).Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("Version");
+
+    [Fact]
+    public async Task A_plan_without_a_version_is_built_with_version_1()
+    {
+        var unversioned = await Handler().Handle(CustomRace(), CancellationToken.None);
+        var first = await Handler().Handle(CustomRace() with { Version = 1 }, CancellationToken.None);
+        var second = await Handler().Handle(CustomRace() with { Version = 2 }, CancellationToken.None);
+
+        unversioned.Weeks.Select(w => w.PlannedKm).ShouldBe(first.Weeks.Select(w => w.PlannedKm));
+        second.Weeks.Select(w => w.PlannedKm).ShouldNotBe(first.Weeks.Select(w => w.PlannedKm));
+    }
 }

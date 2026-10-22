@@ -44,7 +44,8 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
             request.Experience,
             request.StrengthDays,
             request is { ReplanFrom: { } from, Setback: { } setback } ? new PlanReplan(from, setback, request.RecentWeeklyKm) : null,
-            coaching));
+            coaching,
+            request.Version ?? TrainingPlanGenerator.OriginalVersion));
         return (plan, race);
     }
 

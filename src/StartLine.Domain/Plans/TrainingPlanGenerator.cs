@@ -357,11 +357,12 @@ public static partial class TrainingPlanGenerator
             first = alternate;
         }
 
+        // The track was built from the goal's paces; the coach can move them later, so the caps are met at this week's own.
         var longKm = week.LongRunKm switch
         {
             null => LongRunKm(p, profile, workouts, week.TargetKm),
-            { } track when week.LongRunFitsWeek => WorkoutBuilder.Round(Math.Max(MinLongRunKm, Math.Min(track, week.TargetKm * LongRunMaxShareOfWeek))),
-            { } track => track,
+            { } track when week.LongRunFitsWeek => WorkoutBuilder.Round(Math.Max(MinLongRunKm, Math.Min(Math.Min(track, LongRunCapKm(profile, workouts)), week.TargetKm * LongRunMaxShareOfWeek))),
+            { } track => WorkoutBuilder.Round(Math.Min(track, LongRunCapKm(profile, workouts))),
         };
         var progress = Math.Clamp(week.Progress + week.DoseStep * DoseStepProgress, 0, 1);
         var sessions = new List<PlannedSession>(layout.Days.Count);
@@ -515,10 +516,15 @@ public static partial class TrainingPlanGenerator
             share += 0.05;
         }
 
-        // Slower runners hit the time cap before the distance cap, so a long run never becomes an all-day effort.
-        var cap = Math.Min(profile.LongRunCapKm, workouts.KmIn(PaceZone.LongRun, profile.LongRunCapTime));
-        return WorkoutBuilder.Round(Math.Clamp(weeklyKm * share, MinLongRunKm, Math.Max(MinLongRunKm, cap)));
+        return WorkoutBuilder.Round(Math.Clamp(weeklyKm * share, MinLongRunKm, LongRunCapKm(profile, workouts)));
     }
+
+    /// <summary>
+    /// The longest a long run may be. Slower runners hit the time cap before the distance cap, so a long run never becomes
+    /// an all-day effort.
+    /// </summary>
+    private static double LongRunCapKm(PlanProfile profile, WorkoutBuilder workouts) =>
+        Math.Max(MinLongRunKm, Math.Min(profile.LongRunCapKm, workouts.KmIn(PaceZone.LongRun, profile.LongRunCapTime)));
 
     // Short and light, with one brief touch of race pace early on and a shakeout close to the start.
     private static List<PlannedSession> RaceWeek(

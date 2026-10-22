@@ -400,6 +400,12 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                                 .HasColumnType("nvarchar(16)")
                                 .HasColumnName("Experience");
 
+                            b1.Property<int>("GeneratorVersion")
+                                .ValueGeneratedOnAdd()
+                                .HasColumnType("int")
+                                .HasDefaultValue(1)
+                                .HasColumnName("GeneratorVersion");
+
                             b1.Property<long>("GoalTime")
                                 .HasColumnType("bigint")
                                 .HasColumnName("GoalSeconds");

@@ -5,8 +5,13 @@ using StartLine.Domain.Running;
 namespace StartLine.Domain.Tests.Plans;
 
 /// <summary>"Replan from here": every rule of a fresh plan still holds after a setback, and each new rule is named here.</summary>
-public sealed class ReplanTests
+public class ReplanTests
 {
+    // Every rule here holds for both generator versions: the subclass at the end runs them all again for version 2.
+    protected virtual int Version => TrainingPlanGenerator.OriginalVersion;
+
+    private TrainingPlan Generate(PlanParameters parameters) => TrainingPlanGenerator.Generate(parameters with { GeneratorVersion = Version });
+
     // Built on a Thursday: the plan runs 20 weeks from Monday 12 October to a marathon on Sunday 28 February.
     private static readonly DateOnly Built = new(2026, 10, 8);
     private static readonly DateOnly RaceDate = new(2027, 2, 28);
@@ -35,11 +40,11 @@ public sealed class ReplanTests
             currentWeeklyKm,
             Replan: replan);
 
-    private static TrainingPlan Original(PlanParameters parameters) =>
-        TrainingPlanGenerator.Generate(parameters with { Replan = null });
+    private TrainingPlan Original(PlanParameters parameters) =>
+        Generate(parameters with { Replan = null });
 
-    private static TrainingPlan Replan(Setback setback, DateOnly? from = null, double? lastWeekKm = null, PlanParameters? parameters = null) =>
-        TrainingPlanGenerator.Generate((parameters ?? Marathon()) with { Replan = new PlanReplan(from ?? ReplanDay, setback, lastWeekKm) });
+    private TrainingPlan Replan(Setback setback, DateOnly? from = null, double? lastWeekKm = null, PlanParameters? parameters = null) =>
+        Generate((parameters ?? Marathon()) with { Replan = new PlanReplan(from ?? ReplanDay, setback, lastWeekKm) });
 
     private static List<PlanWeek> Rebuilt(TrainingPlan plan) => [.. plan.Weeks.Where(w => w.StartDate >= RestartMonday)];
 
@@ -371,4 +376,9 @@ public sealed class ReplanTests
         week.Sessions.ShouldNotContain(s => s.Type == SessionType.EasyWithStrides || s.Type == SessionType.MediumLongRun);
         week.Sessions.Where(s => s.Zone == PaceZone.LongRun).ShouldAllBe(s => s.Type == SessionType.LongRun);
     }
+}
+
+public sealed class ReplanV2Tests : ReplanTests
+{
+    protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

@@ -73,7 +73,7 @@ public static partial class TrainingPlanGenerator
     }
 
     private static TrainingPlan Replanned(
-        PlanParameters p, PlanReplan replan, TrainingPlan original, PlanProfile profile, Func<DateOnly, WorkoutBuilder> workoutsFor, WeekLayout layout)
+        PlanParameters p, PlanReplan replan, TrainingPlan original, PlanProfile profile, PlanShape shape, Func<DateOnly, WorkoutBuilder> workoutsFor, WeekLayout layout)
     {
         var replanWeek = MondayOf(replan.From);
         var restart = FirstMondayOnOrAfter(replan.From);
@@ -91,8 +91,9 @@ public static partial class TrainingPlanGenerator
         var ahead = original.Weeks.Where(w => w.StartDate >= restart).ToList();
         var building = ahead.Count(w => w.Phase is TrainingPhase.Base or TrainingPhase.Build or TrainingPhase.Peak);
         var originalPeakKm = original.Weeks.Where(w => w.Phase is TrainingPhase.Base or TrainingPhase.Build or TrainingPhase.Peak).Max(w => w.PlannedKm);
-        var peakKm = building == 0 ? restartKm : Math.Max(restartKm, Math.Min(originalPeakKm, ReachableKm(restartKm, building)));
-        var volumes = Ramp(restartKm, peakKm, building);
+        var peakKm = building == 0 ? restartKm : Math.Max(restartKm, Math.Min(originalPeakKm, ReachableKm(restartKm, building, shape)));
+        var volumes = Ramp(restartKm, peakKm, building, shape);
+        var longRuns = LongRunTrack(p, profile, workoutsFor(restart), shape, volumes, i => IsCutback(i, building, shape));
         var taperFactors = TaperFactors(original.Weeks.Count(w => w.Phase == TrainingPhase.Taper));
         var easyOnly = EasyOnlyWeeks(replan.Setback);
         var lastFullWeekKm = restartKm;
@@ -105,11 +106,13 @@ public static partial class TrainingPlanGenerator
                 ? new WeekContext(week.StartDate, peakKm * taperFactors[index], TrainingPhase.Taper, index, 0,
                     IsCutback: false, IsFirstWeek: i == 0, EasyOnly: i < easyOnly, FitToVolume: true)
                 : new WeekContext(week.StartDate, volumes[i], week.Phase, index, length <= 1 ? 1 : index / (double)(length - 1),
-                    IsCutback(i, building), IsFirstWeek: i == 0, EasyOnly: i < easyOnly, FitToVolume: true);
-            // The coach's calls still apply on top of the rebuild, and every rebuilt week is held to the 10% limit.
+                    IsCutback(i, building, shape), IsFirstWeek: i == 0, EasyOnly: i < easyOnly, FitToVolume: true, LongRunKm: longRuns?[i]);
+            // The coach's calls still apply on top of the rebuild, and every rebuilt week is held to the 10% limit. A
+            // version 2 rebuild that still can't fit lets the long run's track give way to the week as a last resort.
             var call = CallFor(p, week.StartDate);
             context = Coached(context, call, lastFullWeekKm);
-            var sessions = FittedWeek(p, profile, workoutsFor(week.StartDate), layout, ref context, lastFullWeekKm, call?.HoldVolume == true);
+            (context, var sessions) = FirstFittedWeek(p, profile, workoutsFor(week.StartDate), layout, lastFullWeekKm, call?.HoldVolume == true,
+                shape.LimitsRealGrowth ? new[] { context, context with { LongRunFitsWeek = true } } : new[] { context });
 
             if (!context.IsCutback)
             {
@@ -191,6 +194,34 @@ public static partial class TrainingPlanGenerator
     }
 
     private static double Kilometres(List<PlannedSession> sessions) => Math.Round(sessions.Sum(s => s.DistanceKm), 1);
+
+    /// <summary>
+    /// The first of these ways of building the week that <see cref="FittedWeek"/> can hold to 10% over the last full week,
+    /// each giving up more than the one before; the last if none of them fit. One way is just <see cref="FittedWeek"/>.
+    /// Used by every rebuilt or coached week and by every training week of a version 2 plan.
+    /// </summary>
+    private static (WeekContext Context, List<PlannedSession> Sessions) FirstFittedWeek(
+        PlanParameters p, PlanProfile profile, WorkoutBuilder workouts, WeekLayout layout, double lastFullWeekKm, bool hold, params WeekContext[] ways)
+    {
+        var context = ways[0];
+        var sessions = FittedWeek(p, profile, workouts, layout, ref context, lastFullWeekKm, hold);
+        foreach (var way in ways.Skip(1))
+        {
+            if (Kilometres(sessions) <= TenPercentLimitKm(p, lastFullWeekKm, hold))
+            {
+                break;
+            }
+
+            context = way;
+            sessions = FittedWeek(p, profile, workouts, layout, ref context, lastFullWeekKm, hold);
+        }
+
+        return (context, sessions);
+    }
+
+    /// <summary>The most a week may add up to: 10% over the last full week (the same as it, on a hold), never below the smallest week.</summary>
+    private static double TenPercentLimitKm(PlanParameters p, double lastFullWeekKm, bool hold = false) =>
+        Math.Max(lastFullWeekKm * (hold ? 1 : MaxWeeklyIncrease), SmallestWeekKm(p));
 
     /// <summary>Where a week sits in its phase, so a rebuilt week keeps the sessions its phase rotation gave it.</summary>
     private static (int Index, int Length) PhasePosition(TrainingPlan plan, PlanWeek week)

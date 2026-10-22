@@ -97,6 +97,10 @@ public sealed record TrainingPlan(
     PlanReplan? Replan = null,
     TimeSpan? SuggestedGoal = null);
 
+/// <param name="GeneratorVersion">
+/// Which shape of plan to build: 1 for plans made before the per-distance shapes, 2 since. A plan keeps the version it
+/// was first built with, so a shared link or a saved plan never changes shape part-way through.
+/// </param>
 public sealed record PlanParameters(
     Distance RaceDistance,
     TimeSpan GoalTime,
@@ -108,7 +112,8 @@ public sealed record PlanParameters(
     Experience Experience = Experience.Regular,
     IReadOnlyCollection<DayOfWeek>? StrengthDays = null,
     PlanReplan? Replan = null,
-    IReadOnlyList<CoachDecision>? Coaching = null)
+    IReadOnlyList<CoachDecision>? Coaching = null,
+    int GeneratorVersion = TrainingPlanGenerator.OriginalVersion)
 {
     public int RunsPerWeek => RunDays.Where(Enum.IsDefined).Distinct().Count();
 }

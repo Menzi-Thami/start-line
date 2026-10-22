@@ -137,7 +137,7 @@ public static partial class TrainingPlanGenerator
         PlanParameters p, PlanProfile profile, WorkoutBuilder workouts, WeekLayout layout, ref WeekContext context, double lastFullWeekKm, bool hold = false)
     {
         var sessions = TrainingWeek(p, profile, workouts, layout, context);
-        var limitKm = Math.Max(lastFullWeekKm * (hold ? 1 : MaxWeeklyIncrease), SmallestWeekKm(p));
+        var limitKm = TenPercentLimitKm(p, lastFullWeekKm, hold);
         for (var tries = 0; tries < 80 && Kilometres(sessions) > limitKm; tries++)
         {
             context = context with { TargetKm = context.TargetKm - 0.25 };

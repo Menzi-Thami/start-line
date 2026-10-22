@@ -4,15 +4,20 @@ using StartLine.Domain.Running;
 namespace StartLine.Domain.Tests.Plans;
 
 /// <summary>Each race distance trains differently, not just with different mileage.</summary>
-public sealed class DistanceSpecificTrainingTests
+public class DistanceSpecificTrainingTests
 {
+    // Every rule here holds for both generator versions: the subclass at the end runs them all again for version 2.
+    protected virtual int Version => TrainingPlanGenerator.OriginalVersion;
+
+    private TrainingPlan Generate(PlanParameters parameters) => TrainingPlanGenerator.Generate(parameters with { GeneratorVersion = Version });
+
     private static readonly DateOnly Today = new(2026, 10, 8);
 
     private static readonly DayOfWeek[] FiveDays =
         [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday];
 
-    private static TrainingPlan PlanFor(double km, TimeSpan goal, DateOnly? raceDate = null) =>
-        TrainingPlanGenerator.Generate(new PlanParameters(
+    private TrainingPlan PlanFor(double km, TimeSpan goal, DateOnly? raceDate = null) =>
+        Generate(new PlanParameters(
             Distance.FromKilometres(km), goal, raceDate ?? new DateOnly(2027, 3, 28), Today, FiveDays, DayOfWeek.Sunday, 40));
 
     private static List<PlannedSession> Sessions(TrainingPlan plan) =>
@@ -109,4 +114,9 @@ public sealed class DistanceSpecificTrainingTests
         Sessions(plan).Where(s => s.Type == SessionType.LongRun).ShouldAllBe(s => s.Detail.Contains("eat", StringComparison.Ordinal));
         plan.Weeks[^1].Sessions[^1].Detail.ShouldContain("walk the climbs");
     }
+}
+
+public sealed class DistanceSpecificTrainingV2Tests : DistanceSpecificTrainingTests
+{
+    protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

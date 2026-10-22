@@ -18,6 +18,8 @@ namespace StartLine.Application.Features.Plans;
 /// runner's time zone, and a shared link reproduces the same plan later. It defaults to today (UTC).
 /// <see cref="ReplanFrom"/> and <see cref="Setback"/> together rebuild the plan from that date after missed training,
 /// illness, injury or a lean spell; <see cref="RecentWeeklyKm"/> is what the runner ran last week, needed when behind.
+/// <see cref="Version"/> is the generator version the plan was first built with: none or 1 for plans made before the
+/// per-distance shapes, so their links and saved plans keep their shape; new plans send the latest (2).
 /// </summary>
 public sealed record GeneratePlanQuery(
     string? RaceSlug,
@@ -33,7 +35,8 @@ public sealed record GeneratePlanQuery(
     DateOnly? PlanFrom = null,
     DateOnly? ReplanFrom = null,
     Setback? Setback = null,
-    double? RecentWeeklyKm = null) : IRequest<TrainingPlanDto>;
+    double? RecentWeeklyKm = null,
+    int? Version = null) : IRequest<TrainingPlanDto>;
 
 internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuery>
 {
@@ -112,6 +115,10 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
             .Must(km => km is > 0)
             .When(q => q.Setback == Setback.Behind)
             .WithMessage("Say how far you ran last week, so the plan can pick up from there.");
+        RuleFor(q => q.Version)
+            .InclusiveBetween(TrainingPlanGenerator.OriginalVersion, TrainingPlanGenerator.LatestVersion)
+            .When(q => q.Version is not null)
+            .WithMessage("This plan link comes from a newer version of Taperday. Reload the page to open it.");
     }
 
     private static DateOnly? RaceDateFor(GeneratePlanQuery q, IRaceCatalogue catalogue) =>

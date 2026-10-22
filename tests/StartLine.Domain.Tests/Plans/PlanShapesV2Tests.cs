@@ -1,3 +1,4 @@
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Common;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Running;
@@ -84,6 +85,21 @@ public sealed class PlanShapesV2Tests
         comrades.Weeks.SelectMany(w => w.Sessions).Where(s => s.Zone == PaceZone.LongRun).ShouldAllBe(s => s.DistanceKm <= 45);
         var longest = slow.Weeks.SelectMany(w => w.Sessions).Where(s => s.Zone == PaceZone.LongRun).Max(s => s.DistanceKm);
         slow.Paces[PaceZone.LongRun].Midpoint.TimeFor(Distance.FromKilometres(longest)).ShouldBeLessThanOrEqualTo(TimeSpan.FromMinutes(195 + 3));
+    }
+
+    [Fact]
+    public void V2_long_runs_keep_the_time_cap_at_the_paces_the_coach_sets()
+    {
+        // A 4-hour goal, but from week 9 the coach reads the runner's fitness as a 6-hour marathon: slower paces, so the
+        // long run's track (built from the goal's paces) has to give way to the same 195-minute cap a 6-hour plan keeps.
+        var weekNine = Today.AddDays(4).AddDays(7 * 8);
+        var call = new CoachDecision(weekNine, CoachVerdict.OnTrack, HoldVolume: false, DoseStep: 0, CutbackNow: false, [CoachReason.RanAsPlanned], Fitness: TimeSpan.FromHours(6));
+
+        var plan = TrainingPlanGenerator.Generate(Marathon() with { Coaching = [call] });
+
+        var longRuns = plan.Weeks.Where(w => w.StartDate >= weekNine).SelectMany(w => w.Sessions).Where(s => s.Zone == PaceZone.LongRun).ToList();
+        longRuns.ShouldNotBeEmpty();
+        longRuns.ShouldAllBe(s => plan.Paces[PaceZone.LongRun].Midpoint.TimeFor(Distance.FromKilometres(s.DistanceKm)) <= TimeSpan.FromMinutes(195 + 3));
     }
 
     [Fact]

@@ -141,8 +141,11 @@ describe('building a plan', () => {
       runDays: ['Tuesday', 'Thursday', 'Sunday'],
       longRunDay: 'Sunday',
       planFrom: '2026-10-08',
+      // A new plan is built with the newest generator, and its link says so.
+      version: 2,
     })
     expect(window.location.search).toContain('goal=1470')
+    expect(window.location.search).toContain('&v=2')
   })
 
   it('shows the pace a goal works out to', async () => {
@@ -318,7 +321,7 @@ describe('a shared plan', () => {
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
     expect(wizard()).not.toBeInTheDocument()
-    expect(lastPlanRequest.body).toMatchObject({ planFrom: '2026-10-08', strengthDays: ['Monday'] })
+    expect(lastPlanRequest.body).toMatchObject({ planFrom: '2026-10-08', strengthDays: ['Monday'], version: null })
   })
 
   it('replans from today and keeps the replan in the link', async () => {
@@ -332,6 +335,19 @@ describe('a shared plan', () => {
 
     await waitFor(() => expect(window.location.search).toContain('from=2026-10-08&re=2026-10-21&why=missed'))
     expect(lastPlanRequest.body).toMatchObject({ planFrom: '2026-10-08', replanFrom: '2026-10-21', setback: 'MissedTraining' })
+  })
+
+  it('replans a newer plan with its own generator version', async () => {
+    vi.setSystemTime(new Date(2026, 9, 21, 9, 0))
+    window.history.replaceState(null, '', `/${link}&v=2`)
+    const { user } = setup()
+
+    await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
+    await user.click(screen.getByRole('radio', { name: /I missed some training/ }))
+    await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
+
+    await waitFor(() => expect(window.location.search).toContain('from=2026-10-08&v=2&re=2026-10-21&why=missed'))
+    expect(lastPlanRequest.body).toMatchObject({ version: 2, replanFrom: '2026-10-21' })
   })
 
   it('switches every distance and pace to miles', async () => {

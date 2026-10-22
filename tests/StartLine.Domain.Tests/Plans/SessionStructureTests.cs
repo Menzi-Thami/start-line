@@ -4,8 +4,13 @@ using StartLine.Domain.Running;
 namespace StartLine.Domain.Tests.Plans;
 
 /// <summary>Every session says, in a form a run can be judged against, how much of it is the real work.</summary>
-public sealed class SessionStructureTests
+public class SessionStructureTests
 {
+    // Every rule here holds for both generator versions: the subclass at the end runs them all again for version 2.
+    protected virtual int Version => TrainingPlanGenerator.OriginalVersion;
+
+    private TrainingPlan Generate(PlanParameters parameters) => TrainingPlanGenerator.Generate(parameters with { GeneratorVersion = Version });
+
     private static readonly DayOfWeek[] FiveDays =
         [DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday];
 
@@ -19,9 +24,9 @@ public sealed class SessionStructureTests
         { 90, 660 },
     };
 
-    private static List<PlannedSession> Sessions(double km, int goalMinutes) =>
+    private List<PlannedSession> Sessions(double km, int goalMinutes) =>
     [
-        .. TrainingPlanGenerator.Generate(new PlanParameters(
+        .. Generate(new PlanParameters(
                 Distance.FromKilometres(km), TimeSpan.FromMinutes(goalMinutes), new DateOnly(2027, 6, 13), new DateOnly(2026, 10, 8),
                 FiveDays, DayOfWeek.Sunday, 40))
             .Weeks.SelectMany(w => w.Sessions),
@@ -65,4 +70,9 @@ public sealed class SessionStructureTests
         fastFinish.Shape.ShouldBe(SessionStructure.Continuous(fastFinish.Shape.WorkKm, PaceZone.Race));
         fastFinish.Shape.WorkKm.ShouldBeInRange(2, 8);
     }
+}
+
+public sealed class SessionStructureV2Tests : SessionStructureTests
+{
+    protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

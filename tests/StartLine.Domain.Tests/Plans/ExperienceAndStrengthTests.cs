@@ -4,14 +4,19 @@ using StartLine.Domain.Running;
 
 namespace StartLine.Domain.Tests.Plans;
 
-public sealed class ExperienceAndStrengthTests
+public class ExperienceAndStrengthTests
 {
+    // Every rule here holds for both generator versions: the subclass at the end runs them all again for version 2.
+    protected virtual int Version => TrainingPlanGenerator.OriginalVersion;
+
+    private TrainingPlan Generate(PlanParameters parameters) => TrainingPlanGenerator.Generate(parameters with { GeneratorVersion = Version });
+
     private static readonly DateOnly Today = new(2026, 10, 8);
 
     private static readonly DayOfWeek[] FourDays = [DayOfWeek.Tuesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday];
 
-    private static TrainingPlan Half(Experience experience = Experience.Regular, DayOfWeek[]? strengthDays = null, double? currentKm = null) =>
-        TrainingPlanGenerator.Generate(new PlanParameters(
+    private TrainingPlan Half(Experience experience = Experience.Regular, DayOfWeek[]? strengthDays = null, double? currentKm = null) =>
+        Generate(new PlanParameters(
             Distance.HalfMarathon, TimeSpan.FromHours(2), new DateOnly(2027, 1, 24), Today,
             FourDays, DayOfWeek.Sunday, currentKm, experience, strengthDays));
 
@@ -153,4 +158,9 @@ public sealed class ExperienceAndStrengthTests
     [Fact]
     public void Rejects_more_than_three_strength_days() =>
         Should.Throw<DomainException>(() => Half(strengthDays: [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Friday]));
+}
+
+public sealed class ExperienceAndStrengthV2Tests : ExperienceAndStrengthTests
+{
+    protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

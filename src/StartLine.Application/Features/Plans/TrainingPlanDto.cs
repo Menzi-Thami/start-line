@@ -13,9 +13,10 @@ public sealed record TrainingPlanDto(
     IReadOnlyList<PlanWeekDto> Weeks,
     IReadOnlyList<PlanWarningDto> Warnings,
     ReplanDto? Replan = null,
-    TimeSpan? SuggestedGoal = null)
+    TimeSpan? SuggestedGoal = null,
+    GoalOutlookDto? Outlook = null)
 {
-    public static TrainingPlanDto From(TrainingPlan plan, RaceSummaryDto race)
+    public static TrainingPlanDto From(TrainingPlan plan, RaceSummaryDto race, GoalOutlook? outlook = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
 
@@ -40,9 +41,31 @@ public sealed record TrainingPlanDto(
                 w.IsReplanned))],
             [.. plan.Warnings.Select(w => new PlanWarningDto(w.Code, w.Message))],
             plan.Replan is { } replan ? new ReplanDto(replan.From, replan.Setback, replan.RecentWeeklyKm) : null,
-            plan.SuggestedGoal);
+            plan.SuggestedGoal,
+            outlook is null ? null : GoalOutlookDto.From(outlook));
     }
 }
+
+/// <summary>
+/// The coach's read on the goal: <c>Verdict</c> and a <c>Summary</c> sentence, the <c>Reasons</c> behind it in plain words,
+/// and a <c>SuggestedGoal</c> when the runner is ahead of their goal or it's at risk. <c>FitnessToday</c> is the race time
+/// the evidence points to. It never changes the plan.
+/// </summary>
+public sealed record GoalOutlookDto(
+    GoalVerdict Verdict,
+    string Summary,
+    IReadOnlyList<OutlookReasonDto> Reasons,
+    TimeSpan? SuggestedGoal,
+    TimeSpan? FitnessToday)
+{
+    public static GoalOutlookDto From(GoalOutlook outlook)
+    {
+        ArgumentNullException.ThrowIfNull(outlook);
+        return new(outlook.Verdict, outlook.Summary, [.. outlook.Reasons.Select(r => new OutlookReasonDto(r.Code, r.Message))], outlook.SuggestedGoal, outlook.FitnessToday);
+    }
+}
+
+public sealed record OutlookReasonDto(string Code, string Message);
 
 public sealed record RaceSummaryDto(string? Slug, string Name, DateOnly Date, double DistanceKm);
 

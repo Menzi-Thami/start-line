@@ -3,6 +3,7 @@ import { addDays, formatDate, formatDistance, formatDuration, formatPace, toKilo
 import { LATEST_PLAN_VERSION, type PlanInputs } from '../../lib/plan-url'
 import { SHORT_DAY, WEEK, type DayOfWeek, type Experience, type Race } from '../../lib/types'
 import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
+import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
@@ -195,16 +196,15 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
           <label className="field-label" htmlFor={`${id}-date`}>
             Start on
           </label>
-          <input
+          <DatePicker
             id={`${id}-date`}
-            className="input"
-            type="date"
+            value={draft.startOn}
+            onChange={(d) => onChange('day', d)}
             min={today}
             max={raceDate ? addDays(raceDate, -14) : undefined}
-            value={draft.startOn}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? `${id}-error` : undefined}
-            onChange={(e) => onChange('day', e.target.value)}
+            today={today}
+            invalid={!!error}
+            describedBy={error ? `${id}-error` : undefined}
           />
         </div>
       )}
@@ -466,14 +466,15 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                           <label className="field-label" htmlFor="race-date">
                             Race date
                           </label>
-                          <input
+                          <DatePicker
                             id="race-date"
-                            className="input"
-                            type="date"
-                            min={today}
                             value={draft.otherDate}
-                            aria-invalid={errors.date ? true : undefined}
-                            onChange={(e) => set('otherDate', e.target.value)}
+                            onChange={(d) => set('otherDate', d)}
+                            min={addDays(today, 14)}
+                            max={addDays(today, 2 * 365)}
+                            today={today}
+                            invalid={!!errors.date}
+                            describedBy={errors.date ? 'date-error' : undefined}
                           />
                           <FieldError id="date-error" message={errors.date} />
                         </div>

@@ -1310,6 +1310,9 @@ export interface paths {
                     Setback?: components["schemas"]["Setback"];
                     RecentWeeklyKm?: number;
                     Version?: number;
+                    RecentResultKm?: number;
+                    RecentResultTime?: string;
+                    RecentResultDate?: string;
                     units?: string;
                 };
                 header?: never;
@@ -1657,7 +1660,21 @@ export interface components {
             recentWeeklyKm?: null | number;
             /** Format: int32 */
             version?: null | number;
+            /** Format: double */
+            recentResultKm?: null | number;
+            recentResultTime?: null | string;
+            /** Format: date */
+            recentResultDate?: null | string;
         };
+        GoalOutlookDto: {
+            verdict: components["schemas"]["GoalVerdict"];
+            summary: string;
+            reasons: components["schemas"]["OutlookReasonDto"][];
+            suggestedGoal: null | string;
+            fitnessToday: null | string;
+        };
+        /** @enum {unknown} */
+        GoalVerdict: "NotAssessed" | "AheadOfGoal" | "OnTrack" | "Stretch" | "AtRisk";
         HalvesDto: {
             /** Format: double */
             firstHalfPaceSecondsPerKm: number;
@@ -1689,6 +1706,10 @@ export interface components {
         ImportStatus: "Imported" | "AlreadyUploaded" | "Skipped" | "Unreadable" | "LimitReached";
         /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
+        OutlookReasonDto: {
+            code: string;
+            message: string;
+        };
         /** @enum {unknown} */
         PaceVerdict: "NoTarget" | "Faster" | "OnTarget" | "Slower";
         /** @enum {unknown} */
@@ -1999,6 +2020,7 @@ export interface components {
             warnings: components["schemas"]["PlanWarningDto"][];
             replan?: null | components["schemas"]["ReplanDto"];
             suggestedGoal?: null | string;
+            outlook?: null | components["schemas"]["GoalOutlookDto"];
         };
         /** @enum {unknown} */
         Units: "Kilometres" | "Miles";

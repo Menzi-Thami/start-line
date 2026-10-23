@@ -21,19 +21,25 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
     /// <param name="coaching">The coach's calls, for a saved plan. A plan from a link has none.</param>
     public TrainingPlanDto Build(GeneratePlanQuery request, IReadOnlyList<CoachDecision>? coaching = null)
     {
-        var (plan, race) = Generate(request, coaching);
-        var dto = TrainingPlanDto.From(plan, race.Summary);
+        var (plan, parameters, race) = Generate(request, coaching);
+        var outlook = TrainingPlanGenerator.AssessGoal(parameters, plan, timeProvider.Today(), RecentResultOf(request));
+        var dto = TrainingPlanDto.From(plan, race.Summary, outlook);
         return race.Caveats.Count == 0 ? dto : dto with { Warnings = [.. race.Caveats, .. dto.Warnings] };
     }
 
     /// <summary>The plan itself, for features that need more than the public shape of it (such as each session's structure).</summary>
     public TrainingPlan BuildPlan(GeneratePlanQuery request, IReadOnlyList<CoachDecision>? coaching = null) => Generate(request, coaching).Plan;
 
-    private (TrainingPlan Plan, (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) Race) Generate(
+    private static RecentResult? RecentResultOf(GeneratePlanQuery request) =>
+        request is { RecentResultKm: { } km, RecentResultTime: { } time, RecentResultDate: { } date }
+            ? new RecentResult(Distance.FromKilometres(km), time, date)
+            : null;
+
+    private (TrainingPlan Plan, PlanParameters Parameters, (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) Race) Generate(
         GeneratePlanQuery request, IReadOnlyList<CoachDecision>? coaching)
     {
         var race = ResolveRace(request);
-        var plan = TrainingPlanGenerator.Generate(new PlanParameters(
+        var parameters = new PlanParameters(
             race.Distance,
             request.GoalTime,
             race.Date,
@@ -45,8 +51,8 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
             request.StrengthDays,
             request is { ReplanFrom: { } from, Setback: { } setback } ? new PlanReplan(from, setback, request.RecentWeeklyKm) : null,
             coaching,
-            request.Version ?? TrainingPlanGenerator.OriginalVersion));
-        return (plan, race);
+            request.Version ?? TrainingPlanGenerator.OriginalVersion);
+        return (TrainingPlanGenerator.Generate(parameters), parameters, race);
     }
 
     private (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) ResolveRace(GeneratePlanQuery request)

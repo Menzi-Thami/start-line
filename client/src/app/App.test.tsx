@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { lastPlanRequest, server } from '../test/server'
+import { lastPlanRequest, planFixture, server } from '../test/server'
 import { App } from './App'
 
 // The plan fixture was built from 8 October 2026, so "today" is pinned there.
@@ -255,7 +255,7 @@ describe('building a plan', () => {
     const { user } = setup()
     await user.click(await screen.findByRole('radio', { name: /Cape Town Marathon/ }))
     await next(user)
-    await user.click(screen.getByText('Not sure? Estimate it from a recent race'))
+    await user.click(screen.getByText('Add a recent race, so the coach can tell you if your goal is realistic'))
 
     const estimate = screen.getByRole('group', { name: 'Your time' })
     await user.type(within(estimate).getByLabelText('Minutes'), '50')
@@ -265,6 +265,59 @@ describe('building a plan', () => {
     const goal = screen.getByRole('group', { name: 'Goal finish time' })
     expect(within(goal).getByLabelText('Hours')).toHaveValue('1')
     expect(within(goal).getByLabelText('Minutes')).toHaveValue('51')
+  })
+
+  it('sends a recent race with the plan, so the coach can judge the goal', async () => {
+    const { user } = setup()
+    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
+    await next(user)
+    await fillGoal(user, '11', '0', '0')
+    await user.click(screen.getByText('Add a recent race, so the coach can tell you if your goal is realistic'))
+    await user.type(within(screen.getByRole('group', { name: 'Your time' })).getByLabelText('Minutes'), '50')
+    await next(user)
+    await next(user)
+    await next(user)
+
+    await buildIt(user)
+
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    // Today is pinned to 8 October 2026, and "in the last 2 weeks" is a week ago.
+    expect(lastPlanRequest.body).toMatchObject({ recentResultKm: 10, recentResultTime: '00:50:00', recentResultDate: '2026-10-01' })
+  })
+
+  it('sends no recent race when none was entered', async () => {
+    const { user } = setup()
+    await answerEverything(user)
+
+    await buildIt(user)
+
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    expect(lastPlanRequest.body).toMatchObject({ recentResultKm: null, recentResultTime: null, recentResultDate: null })
+  })
+
+  it('shows the coach’s read on the goal with the plan, and takes the goal it suggests', async () => {
+    const outlook = {
+      verdict: 'AtRisk' as const,
+      summary: '11:00:00 is unlikely on this plan. 12:00:00 is a more realistic goal. Your plan keeps your goal until you change it.',
+      reasons: [{ code: 'fitness-today', message: 'Your 10 km in 50:00 points to about 12:10:00 for this race today.' }],
+      suggestedGoal: '12:00:00',
+      fitnessToday: '12:10:00',
+    }
+    server.use(
+      http.post('*/api/v1/plans', async ({ request }) => {
+        lastPlanRequest.body = await request.json()
+        return HttpResponse.json({ ...planFixture, outlook })
+      }),
+    )
+    const { user } = setup()
+    await answerEverything(user)
+
+    await buildIt(user)
+
+    expect(await screen.findByRole('region', { name: 'Your goal is at risk' })).toBeInTheDocument()
+    expect(screen.getByText('Your 10 km in 50:00 points to about 12:10:00 for this race today.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Use 12:00:00 as my goal' }))
+    await waitFor(() => expect(lastPlanRequest.body).toMatchObject({ goalTime: '12:00:00' }))
   })
 
   it('reopens the answers on the summary from a built plan, and goes back to it', async () => {

@@ -21,6 +21,15 @@ export interface PlanInputs {
   version?: number
   /** "Replan from here": the plan is rebuilt from this day, after this setback. Both or neither. */
   replan?: ReplanInputs
+  /** A recent race or hard effort. It never changes the plan: it lets the coach say whether the goal is realistic. */
+  recent?: RecentResultInputs
+}
+
+export interface RecentResultInputs {
+  km: number
+  seconds: number
+  /** The day it was run, as YYYY-MM-DD. */
+  date: string
 }
 
 export interface ReplanInputs {
@@ -82,6 +91,11 @@ export function toSearchParams(inputs: PlanInputs): URLSearchParams {
   if (inputs.strengthDays.length > 0) p.set('gym', encodeDays(inputs.strengthDays))
   if (inputs.planFrom) p.set('from', inputs.planFrom)
   if (inputs.version && inputs.version > 1) p.set('v', String(inputs.version))
+  if (inputs.recent) {
+    p.set('rk', String(inputs.recent.km))
+    p.set('rt', String(Math.round(inputs.recent.seconds)))
+    p.set('rd', inputs.recent.date)
+  }
   if (inputs.replan) {
     p.set('re', inputs.replan.from)
     p.set('why', SETBACK_CODES[inputs.replan.setback])
@@ -98,6 +112,14 @@ function replanFrom(params: URLSearchParams): ReplanInputs | undefined {
   // Behind means "pick up from what I ran", so without that distance the replan is dropped, not guessed at.
   if (setback === 'Behind' && recentWeeklyKm === undefined) return undefined
   return { from, setback, recentWeeklyKm }
+}
+
+// A recent result is a distance, a time and a day, all or nothing: part of one is dropped, not guessed at.
+function recentFrom(params: URLSearchParams): RecentResultInputs | undefined {
+  const km = positive(params.get('rk'))
+  const seconds = positive(params.get('rt'))
+  const date = params.get('rd')
+  return km !== undefined && seconds !== undefined && date !== null && ISO_DATE.test(date) ? { km, seconds, date } : undefined
 }
 
 // Version 1 is the default, so it never shows in a link. A version this app doesn't know yet is kept: the API then says
@@ -138,6 +160,7 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
     planFrom: planFrom && ISO_DATE.test(planFrom) ? planFrom : undefined,
     version: generatorVersion(params.get('v')),
     replan: replanFrom(params),
+    recent: recentFrom(params),
   }
 }
 
@@ -162,7 +185,15 @@ export function fromRequest(request: GeneratePlanRequest): PlanInputs | null {
       request.replanFrom && request.setback
         ? { from: request.replanFrom, setback: request.setback, recentWeeklyKm: request.recentWeeklyKm ?? undefined }
         : undefined,
+    recent: recentFromRequest(request),
   }
+}
+
+function recentFromRequest(request: GeneratePlanRequest): RecentResultInputs | undefined {
+  const seconds = request.recentResultTime ? parseTimeSpan(request.recentResultTime) : null
+  return request.recentResultKm && seconds && request.recentResultDate
+    ? { km: request.recentResultKm, seconds, date: request.recentResultDate }
+    : undefined
 }
 
 export function toRequest(inputs: PlanInputs): GeneratePlanRequest {
@@ -182,5 +213,8 @@ export function toRequest(inputs: PlanInputs): GeneratePlanRequest {
     replanFrom: inputs.replan?.from ?? null,
     setback: inputs.replan?.setback ?? null,
     recentWeeklyKm: inputs.replan?.recentWeeklyKm ?? null,
+    recentResultKm: inputs.recent?.km ?? null,
+    recentResultTime: inputs.recent ? toTimeSpan(inputs.recent.seconds) : null,
+    recentResultDate: inputs.recent?.date ?? null,
   }
 }

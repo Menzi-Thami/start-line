@@ -1934,6 +1934,23 @@ export interface components {
             distanceKm: number;
             zone: null | components["schemas"]["PaceZone"];
             exercises: components["schemas"]["StrengthExerciseDto"][];
+            steps: components["schemas"]["SessionStepDto"][];
+        };
+        SessionStepDto: {
+            kind: components["schemas"]["StepKind"];
+            /** Format: double */
+            distanceKm: null | number;
+            /** Format: double */
+            durationSeconds: null | number;
+            zone: null | components["schemas"]["PaceZone"];
+            /** Format: double */
+            fastestSecondsPerKm: null | number;
+            /** Format: double */
+            slowestSecondsPerKm: null | number;
+            effort: null | string;
+            /** Format: int32 */
+            times: number;
+            steps: components["schemas"]["SessionStepDto"][];
         };
         /** @enum {unknown} */
         SessionType: "Easy" | "Recovery" | "EasyWithStrides" | "Hills" | "Fartlek" | "Intervals" | "Tempo" | "CruiseIntervals" | "ProgressionRun" | "RacePace" | "MediumLongRun" | "LongRun" | "LongRunFastFinish" | "LongRunRacePace" | "Shakeout" | "Race" | "Strength";
@@ -1970,6 +1987,8 @@ export interface components {
         };
         /** @enum {unknown} */
         SplitRole: "Steady" | "WarmUp" | "Work" | "CoolDown";
+        /** @enum {unknown} */
+        StepKind: "WarmUp" | "Run" | "Recover" | "CoolDown" | "Repeat";
         StravaConnectDto: {
             /** Format: uri */
             authorizeUrl: string;

@@ -37,7 +37,8 @@ public sealed record TrainingPlanDto(
                 w.IsCutback,
                 w.PlannedKm,
                 [.. w.Sessions.Select(s => new SessionDto(s.Date, s.Type, s.Title, s.Detail, s.Purpose, s.DistanceKm, s.Zone,
-                    [.. (s.Exercises ?? []).Select(e => new StrengthExerciseDto(e.Exercise, e.Sets, e.Reps, e.Unit, e.Summary))]))],
+                    [.. (s.Exercises ?? []).Select(e => new StrengthExerciseDto(e.Exercise, e.Sets, e.Reps, e.Unit, e.Summary))],
+                    s.Steps?.Select(SessionStepDto.From).ToList() ?? []))],
                 w.IsReplanned))],
             [.. plan.Warnings.Select(w => new PlanWarningDto(w.Code, w.Message))],
             plan.Replan is { } replan ? new ReplanDto(replan.From, replan.Setback, replan.RecentWeeklyKm) : null,
@@ -91,7 +92,40 @@ public sealed record SessionDto(
     string Purpose,
     double DistanceKm,
     PaceZone? Zone,
-    IReadOnlyList<StrengthExerciseDto> Exercises);
+    IReadOnlyList<StrengthExerciseDto> Exercises,
+    IReadOnlyList<SessionStepDto> Steps);
+
+/// <summary>
+/// One step of a session, the way a runner follows it on the day: a distance (<c>DistanceKm</c>) or a time
+/// (<c>DurationSeconds</c>), at a pace range (<c>FastestSecondsPerKm</c> to <c>SlowestSecondsPerKm</c>) or, where a pace says
+/// little, by feel (<c>Effort</c>). A <c>Repeat</c> step does its <c>Steps</c> <c>Times</c> times.
+/// </summary>
+public sealed record SessionStepDto(
+    StepKind Kind,
+    double? DistanceKm,
+    double? DurationSeconds,
+    PaceZone? Zone,
+    double? FastestSecondsPerKm,
+    double? SlowestSecondsPerKm,
+    string? Effort,
+    int Times,
+    IReadOnlyList<SessionStepDto> Steps)
+{
+    public static SessionStepDto From(SessionStep step)
+    {
+        ArgumentNullException.ThrowIfNull(step);
+        return new(
+            step.Kind,
+            step.DistanceKm is { } km ? Math.Round(km, 2) : null,
+            step.Duration?.TotalSeconds,
+            step.Zone,
+            step.Pace is { } fastest ? Math.Round(fastest.Fastest.SecondsPerKilometre) : null,
+            step.Pace is { } slowest ? Math.Round(slowest.Slowest.SecondsPerKilometre) : null,
+            step.Effort,
+            step.Times,
+            step.Block?.Select(From).ToList() ?? []);
+    }
+}
 
 /// <summary>
 /// One move in a strength session, listed in the order to do them; <c>Reps</c> counts seconds when the unit is a hold.

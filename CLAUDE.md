@@ -85,3 +85,9 @@ yet saved with a plan). A full build can take a share of the race time off by ex
 weeks of building left and the share of the original peak a rebuilt plan keeps; a goal asking up to half of that is
 `OnTrack`, up to all of it `Stretch`, more `AtRisk`. Beyond the marathon only the build is judged. Every threshold is a
 named constant with a test (`GoalOutlookTests`).
+
+Every run carries its `Steps` (`SessionSteps`, built in `WorkoutBuilder` from the same numbers as its `Detail`): warm-up,
+the work with its recoveries (a `Repeat` holds its block and count), cool-down, each with that week's pace range or, for
+hills, fartlek, strides and recoveries, how it should feel. They're guidance about the same sessions, not a change to
+them, so every plan of every version has them and `GeneratorV1SnapshotTests` leaves `PlannedSession.Steps` out of its
+hash. A new kind of session needs its steps and a case in `SessionStepsTests`.

@@ -11,10 +11,12 @@ interface Props {
   onBuildNew: () => void
   /** A plan was made current again or deleted: the app reloads the current plan. */
   onChanged?: () => void
+  /** A plan was deleted, after onChanged. Deleting the current plan takes the runner home. */
+  onDeleted?: (plan: SavedPlanSummary) => void
 }
 
 /** The runner's current plan, then their past plans (replaced by a newer one), newest first. */
-export function MyPlans({ onOpen, onBuildNew, onChanged }: Props) {
+export function MyPlans({ onOpen, onBuildNew, onChanged, onDeleted }: Props) {
   const auth = useAuth()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [confirming, setConfirming] = useState<string | null>(null)
@@ -55,7 +57,8 @@ export function MyPlans({ onOpen, onBuildNew, onChanged }: Props) {
     }
   }
 
-  const remove = async (id: string) => {
+  const remove = async (plan: SavedPlanSummary) => {
+    const { id } = plan
     setBusy(id)
     setActionError(null)
     try {
@@ -65,6 +68,7 @@ export function MyPlans({ onOpen, onBuildNew, onChanged }: Props) {
       setList((current) => (current.kind === 'ready' ? { kind: 'ready', plans: current.plans.filter((p) => p.id !== id) } : current))
       setConfirming(null)
       onChanged?.()
+      onDeleted?.(plan)
     } catch (error) {
       setActionError(error instanceof Error ? error.message : 'That plan wasn’t deleted. Try again.')
     } finally {
@@ -103,7 +107,7 @@ export function MyPlans({ onOpen, onBuildNew, onChanged }: Props) {
         {confirming === plan.id ? (
           <>
             <span className="field-help">Delete this plan?</span>
-            <button type="button" className="button button-danger" disabled={busy === plan.id} onClick={() => void remove(plan.id)}>
+            <button type="button" className="button button-danger" disabled={busy === plan.id} onClick={() => void remove(plan)}>
               Yes, delete
             </button>
             <button type="button" className="button button-quiet" onClick={() => setConfirming(null)}>

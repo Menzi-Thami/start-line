@@ -303,23 +303,83 @@ describe('a signed-up runner', () => {
     expect(window.location.search).toContain('goal=1470')
   })
 
-  it('asks before deleting a saved plan', async () => {
+  it('asks before deleting their plan, then takes them home to a fresh start', async () => {
     const db = accountApi({
       runner: thandi,
       plans: [{ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' }],
     })
+    window.history.replaceState(null, '', '/')
     const user = renderWith(signedIn())
-    await user.click(await screen.findByRole('button', { name: 'My plans' }))
+    // They open on their plan, then go to My plans to delete it.
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    await user.click(screen.getByRole('button', { name: 'My plans' }))
 
     await user.click(await screen.findByRole('button', { name: 'Delete Parkrun PB' }))
     expect(db.plans).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
-    expect(await screen.findByText(/No saved plans yet/)).toBeInTheDocument()
+    // Home, with nothing of the deleted plan left: not on screen, not in the link, not in the form.
+    expect(await screen.findByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     expect(db.plans).toHaveLength(0)
+    expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
+    expect(window.location.search).toBe('')
+
+    // And going "home" again never brings the deleted plan back.
+    await user.click(screen.getByRole('button', { name: 'Taperday' }))
+    expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
+  })
+
+  it('stays on My plans after deleting a past plan', async () => {
+    const db = accountApi({
+      runner: thandi,
+      plans: [
+        { id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' },
+        { id: 'plan-0', name: 'Spring 10K', raceName: 'Spring 10K', raceDate: '2026-09-13', createdAt: '2026-07-01T09:00:00Z', status: 'Archived' },
+      ],
+    })
+    window.history.replaceState(null, '', '/?view=plans')
+    const user = renderWith(signedIn())
+
+    await user.click(await screen.findByRole('button', { name: 'Delete Spring 10K' }))
+    await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
+
+    await waitFor(() => expect(db.plans).toHaveLength(1))
+    expect(screen.getByRole('heading', { name: 'My plans' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Delete Spring 10K' })).not.toBeInTheDocument()
   })
 
   const current = { id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' } as const
+
+  it('goes home from the Taperday wordmark: their own plan, even from a half-finished change of answers', async () => {
+    accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/')
+    const user = renderWith(signedIn())
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    await user.click(screen.getByRole('button', { name: 'Change answers' }))
+    expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Taperday' }))
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'My runs' }))
+    await user.click(screen.getByRole('button', { name: 'Taperday' }))
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+  })
+
+  it('comes back with the browser’s Back button instead of leaving Taperday', async () => {
+    accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/')
+    const user = renderWith(signedIn())
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    await user.click(screen.getByRole('button', { name: 'My plans' }))
+    expect(await screen.findByRole('heading', { name: 'My plans' })).toBeInTheDocument()
+    window.history.back()
+
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(window.location.search).toContain('goal=1470')
+  })
 
   it('opens on their plan after signing in, not on the builder', async () => {
     accountApi({ runner: thandi, plans: [current] })

@@ -14,22 +14,26 @@ public static partial class TrainingPlanGenerator
     // Weeks of building that earn the whole gain; fewer weeks earn a share of it.
     private const int FullBuildWeeks = 12;
 
-    // A goal this much slower than today's fitness is one the runner could beat.
-    private const double AheadOfGoalMargin = 0.03;
-
     // How much of the available gain a goal asks for: up to half is realistic, up to all of it a stretch, more is at risk.
     private const double OnTrackShareOfGain = 0.5;
     private const double StretchShareOfGain = 1.0;
 
-    // A suggested goal asks for this share of the gain: a higher goal for a runner ahead of theirs, a lower one at risk.
-    private const double HigherGoalShareOfGain = 0.5;
+    // A more realistic goal for a runner whose goal is at risk asks for this share of the gain.
     private const double RealisticGoalShareOfGain = 0.6;
 
     /// <summary>
-    /// The coach's read on the goal as of <paramref name="asOf"/>: is it realistic, and why. It looks at the plan as it
-    /// stands (after any replan or coach calls) against the plan as first written, and at what's known about the runner's
-    /// fitness: the coach's estimate from recorded runs, or a <paramref name="recent"/> result they gave. With neither,
-    /// only the build can be judged. Nothing here changes the plan.
+    /// The coach's read on the goal as of <paramref name="asOf"/>: is it realistic, and why. One plan never gives two
+    /// verdicts on the same goal, so this defers to what already judges one and adds a read only where nothing has:
+    /// <list type="bullet">
+    /// <item>A rebuild's own call: <see cref="TrainingPlan.SuggestedGoal"/> slower than the goal (it cost more training than
+    /// there is time to win back) is <see cref="GoalVerdict.AtRisk"/>, with that very goal.</item>
+    /// <item>The coach's: <see cref="TrainingPlan.SuggestedGoal"/> faster than the goal (three strong weeks) is
+    /// <see cref="GoalVerdict.AheadOfGoal"/>, with that very goal. Recorded runs never say it sooner.</item>
+    /// <item>A fresh plan's <c>low-volume</c> warning, which the plan's own shape decides: the build is never better than a stretch.</item>
+    /// <item>Otherwise, the runner's fitness against the goal: the coach's estimate from recorded runs, or a
+    /// <paramref name="recent"/> result they gave (judged by the same <see cref="Fitness"/> and Riegel as the coach).</item>
+    /// </list>
+    /// Nothing here changes the plan.
     /// </summary>
     public static GoalOutlook AssessGoal(PlanParameters p, TrainingPlan plan, DateOnly asOf, RecentResult? recent = null)
     {
@@ -44,13 +48,12 @@ public static partial class TrainingPlanGenerator
         var peakKm = BuildingPeakKm(plan);
         var writtenPeakKm = BuildingPeakKm(asWritten);
         var usualPeakKm = UsualPeakKm(p, profile);
-        // The generator's own call that the runner can't safely build to what the race needs from where they are; a plan's
-        // peak can't say it (hard sessions have a set length, so a low-volume week can add up to more than its target).
-        var lowVolume = plan.Warnings.Any(w => w.Code == "low-volume") || asWritten.Warnings.Any(w => w.Code == "low-volume");
-        var thin = lowVolume || peakKm < usualPeakKm * LowVolumeShare;
         var kept = writtenPeakKm > 0 ? Math.Min(1, peakKm / writtenPeakKm) : 1;
         var buildWeeksLeft = plan.Weeks.Count(w => w.Phase is TrainingPhase.Base or TrainingPhase.Build or TrainingPhase.Peak && w.StartDate.AddDays(6) >= asOf);
         var gain = GainFor(p.Experience) * Math.Min(1, buildWeeksLeft / (double)FullBuildWeeks) * kept;
+
+        // The generator's own call, which the plan's own shape decides (a rebuild drops it and makes its own call below).
+        var lowVolume = p.Replan is null && plan.Warnings.Any(w => w.Code == "low-volume");
 
         var reasons = new List<OutlookReason>();
         if (p.Replan is { } replan)
@@ -67,67 +70,75 @@ public static partial class TrainingPlanGenerator
                 $"The coach has changed {changed} {(changed == 1 ? "week" : "weeks")} so far to keep your training sustainable."));
         }
 
-        reasons.Add(BuildReason(profile, peakKm, writtenPeakKm, usualPeakKm, adjusted, thin, lowVolume));
+        reasons.Add(BuildReason(profile, peakKm, writtenPeakKm, usualPeakKm, adjusted, lowVolume));
 
-        // What the runner could race today: the coach's estimate from recorded runs, else a result they gave us.
-        var reliable = profile.Category is not (DistanceCategory.Ultra or DistanceCategory.LongUltra);
-        var fitness = calls.LastOrDefault(c => c.Fitness is not null)?.Fitness;
-        string? evidence = fitness is null ? null : "recent runs";
-        if (fitness is null && recent is not null)
-        {
-            fitness = Fitness.Estimate(p.RaceDistance, asOf.AddDays(1), [new Effort(recent.Date, recent.Distance.Kilometres * 1000, recent.Time)]);
-            evidence = $"{Kilometres(recent.Distance.Kilometres)} in {Clock(recent.Time)}";
-            if (fitness is null)
-            {
-                reasons.Add(new("result-too-old",
-                    $"That result can't be used: it needs to be at least {Fitness.ShortestEffortMetres / 1000:0} km and from the last {Fitness.WindowDays / 7} weeks."));
-            }
-        }
-
-        GoalVerdict? paceVerdict = null;
+        GoalVerdict verdict;
         TimeSpan? suggested = null;
-        if (!reliable)
-        {
-            fitness = null;
-            reasons.Add(new("ultra-prediction",
-                "Race-time predictions are least reliable beyond the marathon, so this looks at the build, not the time itself."));
-        }
-        else if (fitness is { } today)
-        {
-            (paceVerdict, suggested) = PaceVerdict(p, profile, today, gain, evidence!, buildWeeksLeft, reasons);
-        }
-        else if (recent is null && !adjusted)
-        {
-            reasons.Add(new("no-result",
-                $"Add a recent race or hard effort (at least {Fitness.ShortestEffortMetres / 1000:0} km, from the last {Fitness.WindowDays / 7} weeks) " +
-                $"and I can tell you whether {Clock(p.GoalTime)} is realistic, or whether you could aim higher."));
-        }
+        TimeSpan? fitness = null;
+        var reliable = profile.Category is not (DistanceCategory.Ultra or DistanceCategory.LongUltra);
 
-        // The replan's own call on the goal: it knows how much training the setback cost.
-        var replanRisk = p.Replan is not null && plan.SuggestedGoal is { } slower && slower > p.GoalTime;
-        var verdict = paceVerdict ?? (adjusted ? GoalVerdict.OnTrack : GoalVerdict.NotAssessed);
-        if (replanRisk)
+        if (p.Replan is not null && plan.SuggestedGoal is { } slower && slower > p.GoalTime)
         {
-            verdict = GoalVerdict.AtRisk;
-            suggested = suggested is { } own && own > plan.SuggestedGoal ? own : plan.SuggestedGoal;
+            // The rebuild's own call: there isn't time to win back the training the setback cost.
+            (verdict, suggested) = (GoalVerdict.AtRisk, slower);
+            reasons.Add(new("lost-training", "There isn't time to win back all the training you lost before race day."));
         }
-        else if (paceVerdict is null && plan.SuggestedGoal is { } faster && faster < p.GoalTime)
+        else if (plan.SuggestedGoal is { } faster && faster < p.GoalTime)
         {
-            verdict = GoalVerdict.AheadOfGoal;
-            suggested = faster;
+            // The coach's own call: three strong weeks, and fitness has run ahead of the goal.
+            (verdict, suggested) = (GoalVerdict.AheadOfGoal, faster);
+            reasons.Add(new("three-strong-weeks", $"Three strong weeks, and your recent runs point to about {Clock(faster)}."));
+        }
+        else
+        {
+            // What the runner could race today: the coach's estimate from recorded runs, else a result they gave us.
+            var recorded = calls.LastOrDefault(c => c.Fitness is not null)?.Fitness;
+            fitness = recorded;
+            var evidence = recorded is null ? null : "recent runs";
+            if (fitness is null && recent is not null)
+            {
+                fitness = Fitness.Estimate(p.RaceDistance, asOf.AddDays(1), [new Effort(recent.Date, recent.Distance.Kilometres * 1000, recent.Time)]);
+                evidence = $"{Kilometres(recent.Distance.Kilometres)} in {Clock(recent.Time)}";
+                if (fitness is null)
+                {
+                    reasons.Add(new("result-too-old",
+                        $"That result can't be used: it needs to be at least {Fitness.ShortestEffortMetres / 1000:0} km and from the last {Fitness.WindowDays / 7} weeks."));
+                }
+            }
+
+            GoalVerdict? read = null;
+            if (!reliable)
+            {
+                fitness = null;
+                reasons.Add(new("ultra-prediction",
+                    "Race-time predictions are least reliable beyond the marathon, so this looks at the build, not the time itself."));
+            }
+            else if (fitness is { } today)
+            {
+                // Recorded runs never say "aim higher" sooner than the coach does; a result given on day one can, as no coach has spoken yet.
+                (read, suggested) = PaceVerdict(p, profile, today, gain, evidence!, buildWeeksLeft, canAimHigher: recorded is null, reasons);
+            }
+            else if (recent is null && !adjusted)
+            {
+                reasons.Add(new("no-result",
+                    $"Add a recent race or hard effort (at least {Fitness.ShortestEffortMetres / 1000:0} km, from the last {Fitness.WindowDays / 7} weeks) " +
+                    $"and I can tell you whether {Clock(p.GoalTime)} is realistic, or whether you could aim higher."));
+            }
+
+            verdict = read ?? (adjusted ? GoalVerdict.OnTrack : GoalVerdict.NotAssessed);
         }
 
         // Speed over a shorter distance doesn't make up for a build that can't reach the volume the race needs.
-        if (thin && verdict is GoalVerdict.AheadOfGoal or GoalVerdict.OnTrack or GoalVerdict.NotAssessed)
+        if (lowVolume && verdict is GoalVerdict.AheadOfGoal or GoalVerdict.OnTrack or GoalVerdict.NotAssessed)
         {
             (verdict, suggested) = (GoalVerdict.Stretch, null);
         }
 
-        return new GoalOutlook(verdict, Summary(verdict, p.GoalTime, suggested, adjusted, thin), reasons, verdict is GoalVerdict.AheadOfGoal or GoalVerdict.AtRisk ? suggested : null, fitness);
+        return new GoalOutlook(verdict, Summary(verdict, p.GoalTime, suggested, adjusted, lowVolume), reasons, verdict is GoalVerdict.AheadOfGoal or GoalVerdict.AtRisk ? suggested : null, fitness);
     }
 
     private static (GoalVerdict Verdict, TimeSpan? Suggested) PaceVerdict(
-        PlanParameters p, PlanProfile profile, TimeSpan fitness, double gain, string evidence, int buildWeeksLeft, List<OutlookReason> reasons)
+        PlanParameters p, PlanProfile profile, TimeSpan fitness, double gain, string evidence, int buildWeeksLeft, bool canAimHigher, List<OutlookReason> reasons)
     {
         var need = (fitness.TotalSeconds - p.GoalTime.TotalSeconds) / fitness.TotalSeconds;
         var reach = TimeSpan.FromSeconds(fitness.TotalSeconds * (1 - gain));
@@ -142,10 +153,11 @@ public static partial class TrainingPlanGenerator
                 $"which would take you towards {Clock(reach)}."));
         }
 
-        if (need <= -AheadOfGoalMargin)
+        // The coach's own test and rounding for "fitter than the goal": a faster goal is what the runner could run today.
+        if (need <= -FasterGoalMargin)
         {
-            var higher = RoundedTo(TimeSpan.FromSeconds(fitness.TotalSeconds * (1 - gain * HigherGoalShareOfGain)), profile, up: false);
-            return higher < p.GoalTime ? (GoalVerdict.AheadOfGoal, higher) : (GoalVerdict.OnTrack, null);
+            var higher = RoundedGoal(fitness, profile);
+            return canAimHigher && higher < p.GoalTime ? (GoalVerdict.AheadOfGoal, higher) : (GoalVerdict.OnTrack, null);
         }
 
         var share = gain <= 0.001 ? (need > 0 ? double.PositiveInfinity : 0) : Math.Max(0, need) / gain;
@@ -159,11 +171,11 @@ public static partial class TrainingPlanGenerator
             return (GoalVerdict.Stretch, null);
         }
 
-        var realistic = RoundedTo(TimeSpan.FromSeconds(fitness.TotalSeconds * (1 - gain * RealisticGoalShareOfGain)), profile, up: true);
+        var realistic = RoundedUp(TimeSpan.FromSeconds(fitness.TotalSeconds * (1 - gain * RealisticGoalShareOfGain)), profile);
         return (GoalVerdict.AtRisk, realistic > p.GoalTime ? realistic : null);
     }
 
-    private static OutlookReason BuildReason(PlanProfile profile, double peakKm, double writtenPeakKm, double usualPeakKm, bool adjusted, bool thin, bool lowVolume)
+    private static OutlookReason BuildReason(PlanProfile profile, double peakKm, double writtenPeakKm, double usualPeakKm, bool adjusted, bool lowVolume)
     {
         var race = Label(profile.Category);
         var share = Percent(usualPeakKm <= 0 ? 1 : peakKm / usualPeakKm);
@@ -174,18 +186,11 @@ public static partial class TrainingPlanGenerator
                 "More weeks or a more forgiving goal would help.");
         }
 
-        if (thin)
-        {
-            return new("build-thin",
-                $"The plan only reaches {Km(peakKm)} a week at its peak, {share} of the {Km(usualPeakKm)} a {race} usually needs. " +
-                "Building safely from where you are can't get further in the time left; more weeks or a more forgiving goal would help.");
-        }
-
         if (adjusted && writtenPeakKm > 0 && peakKm < writtenPeakKm * 0.95)
         {
             return new("build-kept",
                 $"The plan now builds to {Km(peakKm)} a week, {Percent(peakKm / writtenPeakKm)} of the {Km(writtenPeakKm)} it was first written for. " +
-                $"That's still {share} of the {Km(usualPeakKm)} a {race} usually needs.");
+                $"That's {share} of the {Km(usualPeakKm)} a {race} usually needs.");
         }
 
         return adjusted
@@ -193,7 +198,7 @@ public static partial class TrainingPlanGenerator
             : new("build-enough", $"The plan builds to {Km(peakKm)} a week at its peak, {share} of the {Km(usualPeakKm)} a {race} usually needs: enough.");
     }
 
-    private static string Summary(GoalVerdict verdict, TimeSpan goal, TimeSpan? suggested, bool adjusted, bool thin) => verdict switch
+    private static string Summary(GoalVerdict verdict, TimeSpan goal, TimeSpan? suggested, bool adjusted, bool lowVolume) => verdict switch
     {
         GoalVerdict.AheadOfGoal =>
             $"You look fitter than {Clock(goal)} asks for. Around {Clock(suggested!.Value)} looks achievable: aim for it if you'd like the plan to ask more of you.",
@@ -203,7 +208,7 @@ public static partial class TrainingPlanGenerator
         GoalVerdict.AtRisk when suggested is { } realistic =>
             $"{Clock(goal)} is unlikely on this plan. {Clock(realistic)} is a more realistic goal. Your plan keeps your goal until you change it.",
         GoalVerdict.AtRisk => $"{Clock(goal)} is unlikely on this plan. More weeks, or a more forgiving goal, would help.",
-        _ when thin => $"The plan is built for {Clock(goal)}, but the build is thin for this race.",
+        _ when lowVolume => $"The plan is built for {Clock(goal)}, but the build is thin for this race.",
         _ => $"The plan is built for {Clock(goal)} and has the time and distance this race needs. Add a recent result and I can tell you whether the time itself is realistic.",
     };
 
@@ -217,12 +222,11 @@ public static partial class TrainingPlanGenerator
     private static double BuildingPeakKm(TrainingPlan plan) =>
         plan.Weeks.Where(w => w.Phase is TrainingPhase.Base or TrainingPhase.Build or TrainingPhase.Peak).Select(w => w.PlannedKm).DefaultIfEmpty().Max();
 
-    /// <summary>A goal rounded the way runners say them: to 10 s for a 5K or 10K, to the minute beyond; up or down as asked.</summary>
-    private static TimeSpan RoundedTo(TimeSpan time, PlanProfile profile, bool up)
+    /// <summary>A slower goal rounded up the way a rebuild's is (<see cref="SuggestedGoal"/>): to 10 s for a 5K or 10K, to the minute beyond.</summary>
+    private static TimeSpan RoundedUp(TimeSpan time, PlanProfile profile)
     {
         var step = profile.Category is DistanceCategory.FiveK or DistanceCategory.TenK ? 10 : 60;
-        var steps = time.TotalSeconds / step;
-        return TimeSpan.FromSeconds((up ? Math.Ceiling(steps) : Math.Floor(steps)) * step);
+        return TimeSpan.FromSeconds(Math.Ceiling(time.TotalSeconds / step) * step);
     }
 
     private static string WeeksLeft(TrainingPlan plan, DateOnly asOf)

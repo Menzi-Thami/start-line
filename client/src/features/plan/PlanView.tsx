@@ -234,8 +234,9 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
       {replan}
 
       {plan.outlook && (
-        // A rebuilt plan's own banner already offers the suggested goal, so the card only tells it then.
-        <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan ? undefined : onUseGoal} />
+        // A rebuilt plan's own banner already offers its suggested goal, which is the very goal the card names, so the
+        // card only tells it then.
+        <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />
       )}
 
       {plan.warnings.length > 0 && (

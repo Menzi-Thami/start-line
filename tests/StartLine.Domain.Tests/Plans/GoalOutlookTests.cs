@@ -22,7 +22,8 @@ public class GoalOutlookTests
         Experience experience = Experience.Regular,
         DateOnly? raceDate = null,
         PlanReplan? replan = null,
-        IReadOnlyList<CoachDecision>? coaching = null) => new(
+        IReadOnlyList<CoachDecision>? coaching = null,
+        int version = TrainingPlanGenerator.OriginalVersion) => new(
             Distance.Marathon,
             goal ?? TimeSpan.FromHours(4),
             raceDate ?? RaceDate,
@@ -32,7 +33,8 @@ public class GoalOutlookTests
             currentWeeklyKm,
             experience,
             Replan: replan,
-            Coaching: coaching);
+            Coaching: coaching,
+            GeneratorVersion: version);
 
     private static GoalOutlook Assess(PlanParameters p, RecentResult? recent = null, DateOnly? asOf = null) =>
         TrainingPlanGenerator.AssessGoal(p, TrainingPlanGenerator.Generate(p), asOf ?? Today, recent);
@@ -324,5 +326,108 @@ public class GoalOutlookTests
 
         JsonSerializer.Serialize(plan).ShouldBe(before);
         JsonSerializer.Serialize(TrainingPlanGenerator.Generate(p)).ShouldBe(before);
+    }
+
+    private static IReadOnlyList<CoachDecision> ThrivingWeeks(int count, TimeSpan fitness) => Enumerable.Range(0, count)
+        .Select(i => new CoachDecision(new DateOnly(2026, 11, 2).AddDays(7 * i), CoachVerdict.Thriving, HoldVolume: false, DoseStep: 1, CutbackNow: false, [CoachReason.RanAsPlanned], Fitness: fitness))
+        .ToList();
+
+    // ---- One plan never gives two verdicts on the same goal: the outlook defers to what already judges goals.
+
+    [Fact]
+    public void With_recorded_runs_one_strong_estimate_is_not_enough_to_aim_higher()
+    {
+        // The plan's own rule asks for three thriving weeks in a row before it suggests a faster goal. The outlook says the same, not sooner.
+        var p = Marathon(Hm(4, 0), coaching: ThrivingWeeks(1, Hm(3, 40)));
+        var plan = TrainingPlanGenerator.Generate(p);
+        plan.SuggestedGoal.ShouldBeNull();
+
+        var outlook = TrainingPlanGenerator.AssessGoal(p, plan, new DateOnly(2026, 11, 2));
+
+        outlook.Verdict.ShouldNotBe(GoalVerdict.AheadOfGoal);
+        outlook.SuggestedGoal.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Three_strong_weeks_suggest_the_very_goal_the_plan_does()
+    {
+        var p = Marathon(Hm(4, 0), coaching: ThrivingWeeks(3, Hm(3, 40)));
+        var plan = TrainingPlanGenerator.Generate(p);
+        var suggestedByPlan = plan.SuggestedGoal.ShouldNotBeNull();
+
+        var outlook = TrainingPlanGenerator.AssessGoal(p, plan, new DateOnly(2026, 11, 16));
+
+        outlook.Verdict.ShouldBe(GoalVerdict.AheadOfGoal);
+        outlook.SuggestedGoal.ShouldBe(suggestedByPlan);
+        outlook.Reasons.ShouldContain(r => r.Code == "three-strong-weeks");
+    }
+
+    [Fact]
+    public void A_result_the_runner_gives_suggests_what_the_coach_would_after_three_strong_weeks()
+    {
+        // Same rounding as the plan's own faster goal: what the runner could run today, to the minute.
+        var outlook = Assess(Marathon(Hm(4, 0)), TenKInFifty);
+
+        outlook.SuggestedGoal.ShouldBe(TimeSpan.FromMinutes(Math.Round(outlook.FitnessToday!.Value.TotalMinutes)));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void The_outlook_and_the_low_volume_warning_never_disagree(int version)
+    {
+        // Whatever the plan's own shape can reach: a build the generator warns about is never called realistic, and one it doesn't is never called thin.
+        var weeksToRace = new[] { 8, 12, 16, 24 };
+        foreach (var km in new double?[] { 8, 15, 25, 40, 60 })
+        {
+            foreach (var experience in Enum.GetValues<Experience>())
+            {
+                foreach (var weeks in weeksToRace)
+                {
+                    var p = Marathon(Hm(4, 30), km, experience, Today.AddDays(7 * weeks + 3), version: version);
+                    var plan = TrainingPlanGenerator.Generate(p);
+                    var lowVolume = plan.Warnings.Any(w => w.Code == "low-volume");
+
+                    foreach (var result in new RecentResult?[] { null, TenKInFifty with { Time = TimeSpan.FromMinutes(46) } })
+                    {
+                        var outlook = TrainingPlanGenerator.AssessGoal(p, plan, Today, result);
+                        var where = $"v{version}, {km} km, {experience}, {weeks} weeks";
+
+                        outlook.Reasons.Any(r => r.Code == "build-thin").ShouldBe(lowVolume, where);
+                        if (lowVolume)
+                        {
+                            outlook.Verdict.ShouldBeOneOf(GoalVerdict.Stretch, GoalVerdict.AtRisk);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    [Fact]
+    public void A_rebuild_judges_the_goal_by_its_own_rule_and_no_second_one()
+    {
+        // The replan keeps the goal unless the setback cost more training than there is time to win back. The outlook says what it says.
+        foreach (var setback in Enum.GetValues<Setback>())
+        {
+            foreach (var from in new[] { new DateOnly(2026, 11, 4), new DateOnly(2026, 12, 3), new DateOnly(2027, 1, 6), new DateOnly(2027, 1, 20) })
+            {
+                var p = Marathon(Hm(4, 0), replan: new PlanReplan(from, setback, setback == Setback.Behind ? 20 : null));
+                var plan = TrainingPlanGenerator.Generate(p);
+                var outlook = TrainingPlanGenerator.AssessGoal(p, plan, from);
+                var where = $"{setback} on {from}";
+
+                var replanSaysSlower = plan.SuggestedGoal is { } suggested && suggested > p.GoalTime;
+                (outlook.Verdict == GoalVerdict.AtRisk).ShouldBe(replanSaysSlower, where);
+                if (replanSaysSlower)
+                {
+                    outlook.SuggestedGoal.ShouldBe(plan.SuggestedGoal, where);
+                }
+                else
+                {
+                    outlook.Verdict.ShouldBe(GoalVerdict.OnTrack, where);
+                }
+            }
+        }
     }
 }

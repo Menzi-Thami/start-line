@@ -1,10 +1,10 @@
 import { useEffect, useRef } from 'react'
 
-/** Height of one number on the wheel, in pixels; app.css sizes rows with the same value (--wheel-row). */
-export const WHEEL_ROW = 36
+/** Height of one number on the wheel, in pixels: a comfortable finger target. app.css sizes rows the same (--wheel-row). */
+export const WHEEL_ROW = 44
 
 /** How long the wheel rests before the number under the line counts, so a flick can finish spinning first. */
-export const WHEEL_SETTLE_MS = 120
+export const WHEEL_SETTLE_MS = 150
 
 interface Props {
   id: string
@@ -19,41 +19,47 @@ interface Props {
 
 /**
  * One wheel of numbers, 0 to <paramref name="max"/>, that snaps to the line in the middle, like a phone's time picker:
- * flick it, or tap a number. Underneath it is the field itself (visually hidden): it holds the value, takes typing and
- * the arrow keys, and is what a screen reader sees, so the wheel is only ever a faster way to set it.
+ * flick it with a finger, scroll it, or tap a number. Underneath it is the field itself (visually hidden): it holds the
+ * value, takes typing and the arrow keys, and is what a screen reader sees, so the wheel is only ever a faster way to set
+ * it. A tap never focuses that field, so it never brings up a phone's keyboard.
  */
 export function TimeWheel({ id, label, value, max, onChange, invalid, describedBy }: Props) {
   const track = useRef<HTMLDivElement>(null)
-  const input = useRef<HTMLInputElement>(null)
-  const turning = useRef(false)
+  // Set while the wheel moves itself (to show a value set some other way), so that move never picks a number.
+  const moving = useRef(false)
   const settle = useRef<number | undefined>(undefined)
   const selected = value === '' ? null : Number(value)
 
-  // Show the value on the line whenever it changes from outside the wheel: typed, set by an estimate, or reset.
-  useEffect(() => {
+  const moveTo = (n: number) => {
     const wheel = track.current
-    if (!wheel || turning.current) return
-    wheel.scrollTop = (selected ?? 0) * WHEEL_ROW
-  }, [selected])
+    if (!wheel) return
+    const target = n * WHEEL_ROW
+    if (Math.abs(wheel.scrollTop - target) < 1) return
+    moving.current = true
+    wheel.scrollTop = target
+  }
+
+  // Show the value on the line whenever it changes: typed, tapped, set by an estimate, or reset.
+  useEffect(() => moveTo(selected ?? 0), [selected])
 
   useEffect(() => () => window.clearTimeout(settle.current), [])
 
   const choose = (n: number) => onChange(String(Math.max(0, Math.min(max, n))))
 
-  // Only a runner's own scroll picks a number; the wheel moving to show a typed one doesn't.
-  const startTurning = () => {
-    turning.current = true
-  }
-
+  // Every scroll, a finger's, a mouse wheel's or the wheel's own, ends the same way: once it rests, the number on the
+  // line counts, unless the wheel moved itself.
   const onScroll = () => {
-    if (!turning.current) return
     window.clearTimeout(settle.current)
     settle.current = window.setTimeout(() => {
-      turning.current = false
       const wheel = track.current
       if (!wheel) return
+      if (moving.current) {
+        moving.current = false
+        return
+      }
       const n = Math.max(0, Math.min(max, Math.round(wheel.scrollTop / WHEEL_ROW)))
       if (n !== selected) choose(n)
+      else moveTo(n) // back onto the line if it came to rest between two numbers
     }, WHEEL_SETTLE_MS)
   }
 
@@ -63,26 +69,10 @@ export function TimeWheel({ id, label, value, max, onChange, invalid, describedB
         {label}
       </label>
       <div className={`wheel-window${invalid ? ' is-invalid' : ''}`}>
-        <div
-          ref={track}
-          className="wheel-track"
-          aria-hidden="true"
-          onScroll={onScroll}
-          onWheel={startTurning}
-          onTouchStart={startTurning}
-          onPointerDown={startTurning}
-        >
+        <div ref={track} className="wheel-track" aria-hidden="true" onScroll={onScroll}>
           <span className="wheel-pad" />
           {Array.from({ length: max + 1 }, (_, n) => (
-            <span
-              key={n}
-              className={`wheel-item${n === selected ? ' is-selected' : ''}`}
-              onClick={() => {
-                turning.current = false
-                choose(n)
-                input.current?.focus({ preventScroll: true })
-              }}
-            >
+            <span key={n} className={`wheel-item${n === selected ? ' is-selected' : ''}`} onClick={() => choose(n)}>
               {String(n).padStart(2, '0')}
             </span>
           ))}
@@ -90,7 +80,6 @@ export function TimeWheel({ id, label, value, max, onChange, invalid, describedB
         </div>
         <span className="wheel-lens" aria-hidden="true" />
         <input
-          ref={input}
           id={id}
           className="visually-hidden wheel-input"
           inputMode="numeric"

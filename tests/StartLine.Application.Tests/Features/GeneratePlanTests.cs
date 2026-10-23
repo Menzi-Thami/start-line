@@ -343,6 +343,32 @@ public sealed class GeneratePlanTests
         with.Outlook!.Verdict.ShouldNotBe(without.Outlook!.Verdict);
     }
 
+    [Theory]
+    [InlineData(0, true)] // today
+    [InlineData(10, true)]
+    [InlineData(-1, false)] // before the plan is built
+    [InlineData(90, false)] // less than 14 days before the 17 January race
+    public void A_start_day_runs_from_today_to_two_weeks_before_the_race(int daysFromToday, bool valid)
+    {
+        var result = Validator().Validate(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 8), StartOn = new DateOnly(2026, 10, 8).AddDays(daysFromToday) });
+
+        result.IsValid.ShouldBe(valid);
+        if (!valid)
+        {
+            result.Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("StartOn");
+        }
+    }
+
+    [Fact]
+    public async Task A_plan_starts_on_the_day_the_runner_chose()
+    {
+        // Thursday 15 October: the first week keeps only the runs from that day.
+        var plan = await Handler().Handle(CustomRace() with { PlanFrom = new DateOnly(2026, 10, 8), StartOn = new DateOnly(2026, 10, 15) }, CancellationToken.None);
+
+        plan.StartDate.ShouldBe(new DateOnly(2026, 10, 15));
+        plan.Weeks.SelectMany(w => w.Sessions).ShouldAllBe(s => s.Date >= new DateOnly(2026, 10, 15));
+    }
+
     [Fact]
     public async Task Every_run_in_the_plan_comes_with_its_steps_and_paces()
     {

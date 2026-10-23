@@ -76,6 +76,7 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
             inputs.Property(i => i.RecentWeeklyKm).HasColumnName("RecentWeeklyKm");
             // Rows saved before the version stamp are version 1: they keep the shape they were built with.
             inputs.Property(i => i.GeneratorVersion).HasColumnName("GeneratorVersion").HasDefaultValue(TrainingPlanGenerator.OriginalVersion);
+            inputs.Property(i => i.StartOn).HasColumnName("StartOn");
         });
     }
 }

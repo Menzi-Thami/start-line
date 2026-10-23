@@ -53,7 +53,9 @@ public static partial class TrainingPlanGenerator
         var warnings = new List<PlanWarning>();
 
         var raceWeekStart = MondayOf(parameters.RaceDate);
-        var startDate = FirstMondayOnOrAfter(parameters.Today);
+        // The runner's own start day if they chose one, otherwise the next Monday. Weeks always run Monday to Sunday, so a
+        // start mid-week makes a shorter first week (trimmed below).
+        var startDate = parameters.StartOn is { } startOn ? MondayOf(startOn) : FirstMondayOnOrAfter(parameters.Today);
         var weekCount = (raceWeekStart.DayNumber - startDate.DayNumber) / 7 + 1;
 
         if (weekCount < MinWeeks)
@@ -155,8 +157,17 @@ public static partial class TrainingPlanGenerator
         weeks.Add(new PlanWeek(weekCount, raceWeekStart, TrainingPhase.RaceWeek, false,
             RaceWeek(parameters, profile, workoutsFor(raceWeekStart), layout, raceWeekStart, peakKm * profile.RaceWeekFactor)));
 
+        // A start mid-week: the first week keeps only the runs from that day on, and the plan starts that day. (A start
+        // moved later by the cap on plan length starts on its Monday instead.)
+        var firstDay = startDate;
+        if (parameters.StartOn is { } chosen && chosen > startDate)
+        {
+            weeks[0] = weeks[0] with { Sessions = [.. weeks[0].Sessions.Where(s => s.Date >= chosen)] };
+            firstDay = chosen;
+        }
+
         return new TrainingPlan(parameters.RaceDistance, profile.Category, parameters.RaceDate, parameters.GoalTime,
-            startDate, paces, weeks, warnings);
+            firstDay, paces, weeks, warnings);
     }
 
     // The taper weeks before race week, as shares of the peak.
@@ -238,6 +249,11 @@ public static partial class TrainingPlanGenerator
         if (p.RaceDate <= p.Today)
         {
             throw new DomainException("The race date must be in the future.");
+        }
+
+        if (p.StartOn is { } startOn && (startOn < p.Today || startOn > p.RaceDate.AddDays(-7 * MinWeeks)))
+        {
+            throw new DomainException($"Start your plan between today and {MinWeeks} weeks before your race.");
         }
 
         if (p.GeneratorVersion is < OriginalVersion or > LatestVersion)

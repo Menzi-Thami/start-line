@@ -46,11 +46,12 @@ internal static class SavedPlanMapping
         q.Setback is null ? null : q.ReplanFrom,
         q.ReplanFrom is null ? null : q.Setback,
         q.ReplanFrom is null || q.Setback is null ? null : q.RecentWeeklyKm,
-        q.Version ?? TrainingPlanGenerator.OriginalVersion);
+        q.Version ?? TrainingPlanGenerator.OriginalVersion,
+        q.StartOn);
 
     public static GeneratePlanQuery ToQuery(SavedPlanInputs i) => new(
         i.RaceSlug, i.RaceName, i.DistanceKm, i.RaceDate, i.GoalTime, i.RunDays, i.LongRunDay, i.CurrentWeeklyKm,
-        i.Experience, i.StrengthDays, i.PlanFrom, i.ReplanFrom, i.Setback, i.RecentWeeklyKm, i.GeneratorVersion);
+        i.Experience, i.StrengthDays, i.PlanFrom, i.ReplanFrom, i.Setback, i.RecentWeeklyKm, i.GeneratorVersion, StartOn: i.StartOn);
 }
 
 /// <summary>

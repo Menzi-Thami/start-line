@@ -4191,6 +4191,141 @@ a.menu-item {
   max-width: 28rem;
 }
 
+/* ---------- Date picker: a drop-down month, weeks Monday to Sunday, in the Night run volt ---------- */
+.datepick {
+  position: relative;
+}
+
+.datepick-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap);
+  text-align: left;
+  cursor: pointer;
+}
+
+.datepick-button.is-empty {
+  color: var(--muted);
+}
+
+.datepick-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.datepick-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(20rem, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+  animation: datepick-open 0.16s ease-out;
+}
+
+@keyframes datepick-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.datepick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.datepick-month {
+  font-weight: 700;
+}
+
+.datepick-nav {
+  width: var(--tap);
+  height: var(--tap);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.datepick-nav:disabled {
+  color: var(--line-strong);
+  cursor: default;
+}
+
+.datepick-grid {
+  display: grid;
+  gap: 2px;
+}
+
+.datepick-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.datepick-weekday {
+  padding: var(--space-1) 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--muted);
+}
+
+.datepick-day {
+  width: 100%;
+  aspect-ratio: 1;
+  min-height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-family: var(--font-mono);
+  cursor: pointer;
+}
+
+.datepick-day:hover:not(:disabled) {
+  background: var(--surface-sunk);
+}
+
+.datepick-day.is-outside {
+  color: var(--muted);
+}
+
+.datepick-day.is-today {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.datepick-day.is-selected {
+  background: var(--accent);
+  color: var(--surface-sunk);
+  font-weight: 700;
+}
+
+.datepick-day:disabled {
+  color: var(--line-strong);
+  cursor: default;
+  text-decoration: line-through;
+}
+
 /* ---------- Time wheels: hours, minutes and seconds scrolled like a phone's time picker ---------- */
 .wheels {
   --wheel-row: 44px;

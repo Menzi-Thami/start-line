@@ -1310,6 +1310,9 @@ export interface paths {
                     Setback?: components["schemas"]["Setback"];
                     RecentWeeklyKm?: number;
                     Version?: number;
+                    RecentResultKm?: number;
+                    RecentResultTime?: string;
+                    RecentResultDate?: string;
                     units?: string;
                 };
                 header?: never;
@@ -1703,14 +1706,14 @@ export interface components {
         ImportStatus: "Imported" | "AlreadyUploaded" | "Skipped" | "Unreadable" | "LimitReached";
         /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
-        /** @enum {unknown} */
-        PaceVerdict: "NoTarget" | "Faster" | "OnTarget" | "Slower";
-        /** @enum {unknown} */
-        PaceZone: "Recovery" | "Easy" | "LongRun" | "Tempo" | "Interval" | "Race";
         OutlookReasonDto: {
             code: string;
             message: string;
         };
+        /** @enum {unknown} */
+        PaceVerdict: "NoTarget" | "Faster" | "OnTarget" | "Slower";
+        /** @enum {unknown} */
+        PaceZone: "Recovery" | "Easy" | "LongRun" | "Tempo" | "Interval" | "Race";
         PaceZoneDto: {
             zone: components["schemas"]["PaceZone"];
             /** Format: double */

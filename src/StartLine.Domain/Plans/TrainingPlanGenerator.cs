@@ -397,7 +397,7 @@ public static partial class TrainingPlanGenerator
             var date = week.Start.AddDays(dayIndex);
             if (dayIndex == backToBackDay)
             {
-                sessions.Add(WorkoutBuilder.MediumLong(date, WorkoutBuilder.Round(Math.Max(8, longKm * 0.55))));
+                sessions.Add(workouts.MediumLong(date, WorkoutBuilder.Round(Math.Max(8, longKm * 0.55))));
                 continue;
             }
 
@@ -453,7 +453,7 @@ public static partial class TrainingPlanGenerator
             ? 0
             : WorkoutBuilder.Round(Math.Clamp(remaining / easyDays.Count, MinRunKm,
                 Math.Max(MinRunKm, Math.Min(MaxEasyRunKm, longKm * 0.75))));
-        sessions.AddRange(easyDays.Select(d => WorkoutBuilder.Easy(d.Date, d.Type, easyKm)));
+        sessions.AddRange(easyDays.Select(d => workouts.Easy(d.Date, d.Type, easyKm)));
 
         // Strength goes on any chosen day except the long run's: that day is long enough already.
         foreach (var day in (p.StrengthDays ?? []).Select(WeekLayout.MondayIndex).Distinct().Where(d => d != longDay))
@@ -566,9 +566,9 @@ public static partial class TrainingPlanGenerator
             {
                 sessions.Add(date switch
                 {
-                    _ when date == lastDay && date >= p.RaceDate.AddDays(-2) => WorkoutBuilder.Shakeout(date, easyKm),
+                    _ when date == lastDay && date >= p.RaceDate.AddDays(-2) => workouts.Shakeout(date, easyKm),
                     _ when date == sharpenerDay => workouts.Sharpener(date),
-                    _ => WorkoutBuilder.Easy(date, role == DayRole.Recovery ? SessionType.Recovery : SessionType.Easy, easyKm),
+                    _ => workouts.Easy(date, role == DayRole.Recovery ? SessionType.Recovery : SessionType.Easy, easyKm),
                 });
             }
         }

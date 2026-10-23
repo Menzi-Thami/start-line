@@ -10,7 +10,7 @@ const week = (number: number, km: number, isCutback = false): PlanWeek => ({
   phase: 'Build',
   isCutback,
   plannedKm: km,
-  sessions: [{ date: '2026-10-12', type: 'Easy', title: 'Easy', detail: '', purpose: '', distanceKm: km, zone: 'Easy', exercises: [] }],
+  sessions: [{ date: '2026-10-12', type: 'Easy', title: 'Easy', detail: '', purpose: '', distanceKm: km, zone: 'Easy', exercises: [], steps: [] }],
   isReplanned: false,
 })
 

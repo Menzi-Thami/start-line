@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { formatDate } from '../lib/format'
 import { lastPlanRequest, planFixture, server } from '../test/server'
 import { App } from './App'
 
@@ -21,6 +22,14 @@ const wizard = () => screen.queryByRole('form', { name: 'Build your plan' })
 const onStep = (n: number) => expect(screen.getByText(`Step ${n} of 5`)).toBeInTheDocument()
 const next = (user: User) => user.click(screen.getByRole('button', { name: 'Continue' }))
 const buildIt = (user: User) => user.click(screen.getByRole('button', { name: 'Build my plan' }))
+
+/** Opens a date field's calendar, steps on to the month and taps the day. */
+async function pickDate(user: User, label: string, isoDate: string) {
+  await user.click(screen.getByLabelText(label))
+  const day = { name: formatDate(isoDate, 'long') }
+  for (let i = 0; i < 24 && !screen.queryByRole('button', day); i++) await user.click(screen.getByRole('button', { name: 'Next month' }))
+  await user.click(screen.getByRole('button', day))
+}
 
 async function fillGoal(user: User, h: string, m: string, s: string) {
   const goal = screen.getByRole('group', { name: 'Goal finish time' })
@@ -110,7 +119,7 @@ describe('building a plan', () => {
 
     await user.click(await screen.findByRole('radio', { name: /Another race/ }))
     await user.click(screen.getByRole('radio', { name: '5K' }))
-    await user.type(screen.getByLabelText('Race date'), '2026-12-13')
+    await pickDate(user, 'Race date', '2026-12-13')
     await user.type(screen.getByLabelText(/Name/), 'Parkrun PB')
     await next(user)
 
@@ -299,7 +308,7 @@ describe('building a plan', () => {
     await next(user)
     expect(screen.getAllByText('Pick the day you want to start.').length).toBeGreaterThan(0)
 
-    await user.type(screen.getByLabelText('Start on'), '2026-10-15')
+    await pickDate(user, 'Start on', '2026-10-15')
     await next(user)
     await next(user)
     expect(screen.getByText('Thursday 15 October 2026')).toBeInTheDocument()

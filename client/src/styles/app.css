@@ -1945,6 +1945,55 @@ a.menu-item {
   padding-left: var(--space-5);
 }
 
+/* ---------- Goal outlook: the coach's read on the goal. The heading says it in words; the edge colour only hints. ---------- */
+.outlook {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.outlook h3,
+.outlook p {
+  margin: 0;
+}
+
+.outlook-aheadofgoal,
+.outlook-ontrack {
+  border-left-color: var(--accent);
+}
+
+.outlook-stretch {
+  border-left-color: var(--warn-line);
+  background: var(--warn-bg);
+}
+
+.outlook-atrisk {
+  border-left-color: var(--coral);
+  background: var(--warn-bg);
+}
+
+.outlook-why summary {
+  cursor: pointer;
+  font-weight: 700;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  color: var(--accent-strong);
+}
+
+.outlook-why ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+}
+
 /* ---------- Replan from here: the rebuilt plan's banner, and the form that rebuilds it ---------- */
 .replan {
   display: grid;

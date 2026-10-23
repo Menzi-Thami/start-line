@@ -7,6 +7,7 @@ import { Runner } from '../shared/Runner'
 import { CheckInCard } from '../coaching/CheckInCard'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { ExerciseList } from '../strength/ExerciseList'
+import { SessionSteps } from './SessionSteps'
 import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey, trainingKm } from './plan-math'
 
@@ -76,6 +77,7 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach }: {
         {numbers.length > 0 && <span className="session-numbers">{numbers.join(' · ')}</span>}
       </div>
       <p className="session-detail">{session.detail}</p>
+      <SessionSteps steps={session.steps} units={units} />
       <p className="session-why">Why: {session.purpose}</p>
       {session.exercises.length > 0 && (
         <div className="strength-moves">

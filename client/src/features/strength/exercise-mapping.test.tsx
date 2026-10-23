@@ -98,6 +98,7 @@ describe('exercise mapping', () => {
       distanceKm: 0,
       zone: null,
       exercises: order.map((exercise, i) => ({ exercise, sets: (i % 3) + 1, reps: 8, unit: 'Reps', summary: '' })),
+      steps: [],
     }
     const { getByRole } = render(<ExerciseList session={session} done={new Set()} onDoneChange={() => {}} />)
 

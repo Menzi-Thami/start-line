@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Running;
 
@@ -12,6 +13,9 @@ namespace StartLine.Domain.Tests.Plans;
 /// Version 1 plans are what every link and saved plan made before generator v2 was built with. They must keep
 /// generating exactly as they did, so each case here is a hash of a whole plan as it was before v2 existed.
 /// If one fails, version 1's behaviour changed: put it back rather than updating the hash.
+/// Guidance added to sessions since (<see cref="PlannedSession.Steps"/>) is left out of the hash: it describes the same
+/// sessions in more detail, for every plan, old or new, and has its own tests. Everything that was here before is
+/// still compared byte for byte.
 /// </summary>
 public sealed class GeneratorV1SnapshotTests
 {
@@ -25,7 +29,22 @@ public sealed class GeneratorV1SnapshotTests
         [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday];
 
     // Paces carry full double precision, and the last digit of Math.Pow can differ between Windows and Linux.
-    private static readonly JsonSerializerOptions Json = new() { Converters = { new JsonStringEnumConverter(), new TwelveDigits() } };
+    private static readonly JsonSerializerOptions Json = new()
+    {
+        Converters = { new JsonStringEnumConverter(), new TwelveDigits() },
+        TypeInfoResolver = new DefaultJsonTypeInfoResolver { Modifiers = { WithoutAddedGuidance } },
+    };
+
+    private static void WithoutAddedGuidance(JsonTypeInfo type)
+    {
+        if (type.Type != typeof(PlannedSession))
+        {
+            return;
+        }
+
+        var steps = type.Properties.Single(p => p.Name == nameof(PlannedSession.Steps));
+        type.Properties.Remove(steps);
+    }
 
     private static readonly Dictionary<string, PlanParameters> Cases = new()
     {

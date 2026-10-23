@@ -83,7 +83,7 @@ public static partial class TrainingPlanGenerator
         var weeks = original.Weeks.Where(w => w.StartDate < replanWeek).ToList();
         if (replanWeek < restart && original.Weeks.SingleOrDefault(w => w.StartDate == replanWeek) is { } thisWeek)
         {
-            weeks.Add(thisWeek with { Sessions = RestOfThisWeek(p, replan, thisWeek, restartKm), IsReplanned = true });
+            weeks.Add(thisWeek with { Sessions = RestOfThisWeek(p, replan, thisWeek, restartKm, workoutsFor(replanWeek)), IsReplanned = true });
         }
 
         // From the next Monday every week keeps its date, number and phase (a runner in Peak stays in Peak), but its
@@ -178,7 +178,7 @@ public static partial class TrainingPlanGenerator
     /// From the replan date to Sunday: rest after illness or injury; otherwise the runs stay, but all of them easy and
     /// none longer than a restart week's easy run.
     /// </summary>
-    private static List<PlannedSession> RestOfThisWeek(PlanParameters p, PlanReplan replan, PlanWeek week, double restartKm)
+    private static List<PlannedSession> RestOfThisWeek(PlanParameters p, PlanReplan replan, PlanWeek week, double restartKm, WorkoutBuilder workouts)
     {
         var resting = replan.Setback is Setback.Illness or Setback.Injury;
         var easyKm = WorkoutBuilder.Round(Math.Clamp(restartKm / p.RunsPerWeek, MinRunKm, MaxEasyRunKm));
@@ -188,7 +188,7 @@ public static partial class TrainingPlanGenerator
                 .Where(s => s.Date < replan.From || !resting)
                 .Select(s => s.Date < replan.From || s.Type == SessionType.Strength
                     ? s
-                    : WorkoutBuilder.Easy(s.Date, s.Type is SessionType.Recovery or SessionType.EasyWithStrides ? s.Type : SessionType.Easy,
+                    : workouts.Easy(s.Date, s.Type is SessionType.Recovery or SessionType.EasyWithStrides ? s.Type : SessionType.Easy,
                         Math.Min(s.DistanceKm, easyKm))),
         ];
     }

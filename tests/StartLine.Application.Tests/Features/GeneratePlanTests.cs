@@ -4,6 +4,7 @@ using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Plans;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Races;
+using StartLine.Domain.Running;
 
 namespace StartLine.Application.Tests.Features;
 
@@ -366,5 +367,20 @@ public sealed class GeneratePlanTests
 
         plan.StartDate.ShouldBe(new DateOnly(2026, 10, 15));
         plan.Weeks.SelectMany(w => w.Sessions).ShouldAllBe(s => s.Date >= new DateOnly(2026, 10, 15));
+    }
+
+    [Fact]
+    public async Task Every_run_in_the_plan_comes_with_its_steps_and_paces()
+    {
+        var plan = await Handler().Handle(CustomRace(), CancellationToken.None);
+        var runs = plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Type != SessionType.Strength).ToList();
+
+        runs.ShouldAllBe(s => s.Steps.Count > 0);
+        var intervals = runs.First(s => s.Type == SessionType.Intervals);
+        intervals.Steps.Select(s => s.Kind).ShouldBe([StepKind.WarmUp, StepKind.Repeat, StepKind.CoolDown]);
+        var rep = intervals.Steps[1].Steps[0];
+        var zone = plan.Paces.Single(p => p.Zone == PaceZone.Interval);
+        rep.FastestSecondsPerKm.ShouldBe(zone.FastestSecondsPerKm);
+        rep.SlowestSecondsPerKm.ShouldBe(zone.SlowestSecondsPerKm);
     }
 }

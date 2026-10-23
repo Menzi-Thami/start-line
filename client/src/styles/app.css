@@ -2512,6 +2512,36 @@ a.menu-item {
   margin-top: var(--space-1);
 }
 
+/* How to run it: the session step by step. A repeat block sits indented under "Repeat N times", with a rule to show it loops. */
+.session-steps {
+  margin-top: var(--space-2);
+}
+
+.session-steps-head {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.session-steps-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.session-step-repeat > .session-steps-list {
+  margin: var(--space-1) 0 var(--space-1);
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--accent);
+  list-style: none;
+}
+
+.session-step-recover {
+  color: var(--muted);
+}
+
 .session-why {
   color: var(--muted);
   font-size: var(--text-sm);
@@ -4294,4 +4324,88 @@ a.menu-item {
   color: var(--line-strong);
   cursor: default;
   text-decoration: line-through;
+}
+
+/* ---------- Time wheels: hours, minutes and seconds scrolled like a phone's time picker ---------- */
+.wheels {
+  --wheel-row: 36px;
+  display: flex;
+  gap: var(--space-3);
+}
+
+.wheel {
+  display: grid;
+  gap: var(--space-1);
+  justify-items: center;
+  flex: 0 1 5.5rem;
+}
+
+.wheel-window {
+  position: relative;
+  width: 100%;
+  min-width: 4.5rem;
+  height: calc(var(--wheel-row) * 3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunk);
+  overflow: hidden;
+}
+
+/* The field underneath takes typing and the arrow keys; focusing it lights up its wheel. */
+.wheel-window:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.wheel-window.is-invalid {
+  border-color: var(--coral);
+}
+
+.wheel-track {
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  /* Numbers fade towards the top and bottom edges, like a drum turning away. */
+  mask-image: linear-gradient(transparent, #000 35%, #000 65%, transparent);
+}
+
+.wheel-track::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-pad,
+.wheel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--wheel-row);
+}
+
+.wheel-item {
+  scroll-snap-align: center;
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.wheel-item.is-selected {
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.35rem;
+}
+
+/* The line the chosen number sits on. */
+.wheel-lens {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: var(--wheel-row);
+  height: var(--wheel-row);
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  pointer-events: none;
 }

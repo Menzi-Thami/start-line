@@ -57,6 +57,10 @@ public enum Experience
     Experienced,
 }
 
+/// <param name="Steps">
+/// How to run it, step by step (warm-up, the work and its recoveries, cool-down), each with its pace for that week. Built
+/// from the same numbers as <see cref="Detail"/>, which stays as the summary.
+/// </param>
 public sealed record PlannedSession(
     DateOnly Date,
     SessionType Type,
@@ -66,7 +70,8 @@ public sealed record PlannedSession(
     double DistanceKm,
     PaceZone? Zone,
     SessionStructure? Structure = null,
-    IReadOnlyList<StrengthExercise>? Exercises = null)
+    IReadOnlyList<StrengthExercise>? Exercises = null,
+    SessionSteps? Steps = null)
 {
     /// <summary>How the session is built. Without one, the whole run is meant to sit in <see cref="Zone"/>.</summary>
     public SessionStructure Shape => Structure ?? SessionStructure.Steady;

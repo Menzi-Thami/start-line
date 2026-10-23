@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { SHORT_DAY, WEEK, type DayOfWeek } from '../../lib/types'
 import type { Duration } from './duration'
+import { TimeWheel } from './TimeWheel'
 
 export function FieldError({ id, message }: { id: string; message?: string }) {
   return message ? (
@@ -91,35 +92,28 @@ interface DurationInputProps {
   help?: string
 }
 
-/** Hours, minutes and seconds as separate boxes: "3:45" can't be misread as minutes. */
+/**
+ * Hours, minutes and seconds as three wheels, scrolled like a phone's time picker (or typed): "3:45" can't be misread
+ * as minutes.
+ */
 export function DurationInput({ legend, value, onChange, error, help }: DurationInputProps) {
   const id = useId()
   const part = (key: keyof Duration, label: string, max: number) => (
-    <div className="field" style={{ flex: '1 1 5rem', marginBottom: 0 }}>
-      <label className="field-help" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
-      <input
-        id={`${id}-${key}`}
-        className="input"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        maxLength={2}
-        value={value[key]}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
-        onChange={(e) => {
-          const digits = e.target.value.replace(/\D/g, '').slice(0, 2)
-          onChange({ ...value, [key]: digits === '' ? '' : String(Math.min(Number(digits), max)) })
-        }}
-      />
-    </div>
+    <TimeWheel
+      id={`${id}-${key}`}
+      label={label}
+      value={value[key]}
+      max={max}
+      onChange={(next) => onChange({ ...value, [key]: next })}
+      invalid={!!error}
+      describedBy={error ? `${id}-error` : undefined}
+    />
   )
 
   return (
     <fieldset className="field" style={{ border: 0, padding: 0 }}>
       <legend className="field-label">{legend}</legend>
-      <div className="row">
+      <div className="wheels">
         {part('h', 'Hours', 99)}
         {part('m', 'Minutes', 59)}
         {part('s', 'Seconds', 59)}

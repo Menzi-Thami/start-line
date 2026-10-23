@@ -27,38 +27,53 @@ interface Props {
  */
 export function TimeWheel({ id, label, unit = label, value, max, onChange, invalid, describedBy }: Props) {
   const track = useRef<HTMLDivElement>(null)
-  // Set while the wheel moves itself (to show a value set some other way), so that move never picks a number.
-  const moving = useRef(false)
+  // Where the wheel is moving itself to (to show a value set some other way), so coming to rest there never picks a
+  // number. Only that spot: a finger that carries on past it, or a wheel that couldn't move, still counts.
+  const movingTo = useRef<number | null>(null)
   const settle = useRef<number | undefined>(undefined)
   const selected = value === '' ? null : Number(value)
+  const latest = useRef(selected)
 
   const moveTo = (n: number) => {
     const wheel = track.current
     if (!wheel) return
     const target = n * WHEEL_ROW
     if (Math.abs(wheel.scrollTop - target) < 1) return
-    moving.current = true
+    movingTo.current = target
     wheel.scrollTop = target
   }
 
   // Show the value on the line whenever it changes: typed, tapped, set by an estimate, or reset.
-  useEffect(() => moveTo(selected ?? 0), [selected])
+  useEffect(() => {
+    latest.current = selected
+    moveTo(selected ?? 0)
+  }, [selected])
+
+  // A wheel folded away (inside a closed "Add a recent race") can't scroll, so it lines up when it's first shown.
+  useEffect(() => {
+    const wheel = track.current
+    if (!wheel || typeof ResizeObserver === 'undefined') return
+    const shown = new ResizeObserver(() => {
+      if (wheel.clientHeight > 0) moveTo(latest.current ?? 0)
+    })
+    shown.observe(wheel)
+    return () => shown.disconnect()
+  }, [])
 
   useEffect(() => () => window.clearTimeout(settle.current), [])
 
   const choose = (n: number) => onChange(String(Math.max(0, Math.min(max, n))))
 
   // Every scroll, a finger's, a mouse wheel's or the wheel's own, ends the same way: once it rests, the number on the
-  // line counts, unless the wheel moved itself.
+  // line counts, unless the wheel moved itself there.
   const onScroll = () => {
     window.clearTimeout(settle.current)
     settle.current = window.setTimeout(() => {
       const wheel = track.current
       if (!wheel) return
-      if (moving.current) {
-        moving.current = false
-        return
-      }
+      const own = movingTo.current !== null && Math.abs(wheel.scrollTop - movingTo.current) < 1
+      movingTo.current = null
+      if (own) return
       const n = Math.max(0, Math.min(max, Math.round(wheel.scrollTop / WHEEL_ROW)))
       if (n !== selected) choose(n)
       else moveTo(n) // back onto the line if it came to rest between two numbers

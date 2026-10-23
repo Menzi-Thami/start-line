@@ -92,6 +92,7 @@ describe('ticking off strength', () => {
       { exercise: 'Squat', sets: 2, reps: 10, unit: 'Reps', summary: '2 × 10 squats' },
       { exercise: 'Plank', sets: 1, reps: 30, unit: 'Seconds', summary: '1 × 30 s plank' },
     ],
+    steps: [],
   }
 
   it('marks the session done when its last set is ticked, and not done again when one is unticked', () => {

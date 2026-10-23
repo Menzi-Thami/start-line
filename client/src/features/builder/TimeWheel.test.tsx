@@ -102,4 +102,40 @@ describe('the time wheels', () => {
     expect(onChange).not.toHaveBeenCalled()
     expect(wheel.scrollTop).toBe(30 * WHEEL_ROW)
   })
+
+  it('still picks where a finger ends up after pausing mid-scroll', async () => {
+    vi.useFakeTimers()
+    const onChange = vi.fn()
+    const { container, rerender } = render(<TimeWheel id="m" label="Minutes" value="" max={59} onChange={onChange} />)
+    const wheel = wheelOf(container)
+
+    // The finger rests a moment between 7 and 8: 7 counts, and the wheel lines itself up on it.
+    wheel.scrollTop = 7 * WHEEL_ROW + 10
+    fireEvent.scroll(wheel)
+    await act(() => vi.advanceTimersByTimeAsync(WHEEL_SETTLE_MS))
+    expect(onChange).toHaveBeenLastCalledWith('7')
+    rerender(<TimeWheel id="m" label="Minutes" value="7" max={59} onChange={onChange} />)
+    expect(wheel.scrollTop).toBe(7 * WHEEL_ROW)
+
+    // Then it carries on to 12 before the wheel's own move has been heard from: 12 is what counts.
+    wheel.scrollTop = 12 * WHEEL_ROW
+    fireEvent.scroll(wheel)
+    await act(() => vi.advanceTimersByTimeAsync(WHEEL_SETTLE_MS))
+    expect(onChange).toHaveBeenLastCalledWith('12')
+  })
+
+  it('counts the first scroll of a wheel that was set while hidden', async () => {
+    vi.useFakeTimers()
+    const onChange = vi.fn()
+    const { container, rerender } = render(<TimeWheel id="m" label="Minutes" value="" max={59} onChange={onChange} />)
+    const wheel = wheelOf(container)
+
+    // Set from an estimate while folded away, so the move never makes a scroll of its own.
+    rerender(<TimeWheel id="m" label="Minutes" value="40" max={59} onChange={onChange} />)
+    wheel.scrollTop = 45 * WHEEL_ROW
+    fireEvent.scroll(wheel)
+    await act(() => vi.advanceTimersByTimeAsync(WHEEL_SETTLE_MS))
+
+    expect(onChange).toHaveBeenCalledWith('45')
+  })
 })

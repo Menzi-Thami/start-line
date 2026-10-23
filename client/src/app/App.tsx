@@ -25,7 +25,7 @@ import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
-import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
+import type { Activity, CoachNote, GeneratePlanRequest, Runner, SavedPlanSummary, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
 type PlanState =
@@ -78,7 +78,8 @@ export function App() {
   const today = localToday()
   const auth = useAuth()
   const runner = useRunner()
-  const [initial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
+  // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
+  const [initial, setInitial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
   const [view, setView] = useState<View>(viewFromUrl)
   const [openRun, setOpenRun] = useState<OpenRun | null>(runFromUrl)
   // Strava's answer when the runner comes back from connecting, read once and handled when they're signed in.
@@ -259,6 +260,14 @@ export function App() {
     return () => inflight.current?.abort()
   }, [initial, fetchPlan])
 
+  // Moving to another page adds a history entry, so the browser's Back button comes back here instead of leaving
+  // Taperday. Changes within a page (a plan's link as it's rebuilt) replace the entry.
+  const moveTo = (query: string, toAnotherPage: boolean) => {
+    const url = query || window.location.pathname
+    if (toAnotherPage) window.history.pushState(null, '', url)
+    else window.history.replaceState(null, '', url)
+  }
+
   const go = (next: View) => {
     // Going somewhere on purpose means the app no longer opens the current plan by itself.
     landing.current = true
@@ -272,16 +281,86 @@ export function App() {
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
           : ''
-    window.history.replaceState(null, '', query || window.location.pathname)
+    moveTo(query, next !== view || openRun !== null)
     window.scrollTo?.({ top: 0 })
   }
 
   const showRun = (id: string, uploaded?: Activity) => {
     setView('runs')
     setOpenRun({ id, uploaded })
-    window.history.replaceState(null, '', `?view=runs&run=${encodeURIComponent(id)}`)
+    moveTo(`?view=runs&run=${encodeURIComponent(id)}`, true)
     window.scrollTo?.({ top: 0 })
   }
+
+  // A blank builder: no plan on screen, no answers half-typed, no link remembered. After deleting the runner's plan, and
+  // whenever they ask to build a new one, so a plan that's gone (or another one) never comes back by itself.
+  const startFresh = () => {
+    inflight.current?.abort()
+    landing.current = true
+    setLanded(true)
+    setInitial(null)
+    setPlan({ kind: 'idle' })
+    setFieldErrors({})
+    setEditing(false)
+    setBuilderKey((k) => k + 1)
+    setView('build')
+    setOpenRun(null)
+    moveTo('', true)
+    window.scrollTo?.({ top: 0 })
+  }
+
+  // Home, from the Taperday wordmark: the runner's own plan when they have one, otherwise a fresh start. Never a
+  // half-edited form. A plan from a link stays home for someone signed out: it lives only in that link.
+  const goHome = () => {
+    const own = currentPlan.current
+    const onScreen = plan.kind === 'ready' || plan.kind === 'error' ? toRequest(plan.inputs) : null
+    if (own && !(onScreen && samePlan(onScreen, own.inputs))) {
+      landing.current = true
+      setLanded(true)
+      setOpenRun(null)
+      openSaved(own.inputs)
+      window.scrollTo?.({ top: 0 })
+    } else if (!own && runner.state.kind === 'ready') {
+      startFresh()
+    } else {
+      setEditing(false)
+      go('build')
+    }
+  }
+
+  // The runner deleted a saved plan. Their current plan (or the plan on screen) is gone, so home is a fresh start;
+  // deleting a past plan is only tidying up, and they stay on My plans.
+  const planDeleted = (deleted: SavedPlanSummary) => {
+    if (deleted.status === 'Active' || deleted.id === savedOnScreen) startFresh()
+  }
+
+  // The browser's Back and Forward: show the page the URL names. A plan link builds its plan unless it's already on screen.
+  const shownQuery = useRef<string | null>(null)
+  useEffect(() => {
+    shownQuery.current = plan.kind === 'ready' || plan.kind === 'error' ? toSearchParams(plan.inputs).toString() : null
+  }, [plan])
+  useEffect(() => {
+    const onPop = () => {
+      landing.current = true
+      setLanded(true)
+      setEditing(false)
+      const next = viewFromUrl()
+      setView(next)
+      setOpenRun(runFromUrl())
+      const linked = next === 'build' ? fromSearchParams(new URLSearchParams(window.location.search)) : null
+      if (linked && toSearchParams(linked).toString() !== shownQuery.current) {
+        setFieldErrors({})
+        setPlan({ kind: 'loading' })
+        fetchPlan(linked)
+      } else if (!linked && next === 'build') {
+        inflight.current?.abort()
+        setPlan({ kind: 'idle' })
+      }
+      window.scrollTo?.({ top: 0 })
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [fetchPlan])
 
   const openSaved = (request: GeneratePlanRequest) => {
     const inputs = fromRequest(request)
@@ -378,7 +457,7 @@ export function App() {
       {playIntro && <RaceStartIntro onDone={finishIntro} />}
       {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">
-        <button type="button" className="wordmark wordmark-button" onClick={() => go('build')}>
+        <button type="button" className="wordmark wordmark-button" onClick={goHome}>
           {/* "taper" steps down letter by letter, like a taper; "day" comes back full size: race day. */}
           <span className="visually-hidden">Taperday</span>
           <span className="wordmark-letters" aria-hidden="true">
@@ -485,7 +564,9 @@ export function App() {
           <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
         )}
 
-        {view === 'plans' && state.kind === 'ready' && <MyPlans onOpen={openSaved} onBuildNew={() => go('build')} onChanged={currentPlan.refresh} />}
+        {view === 'plans' && state.kind === 'ready' && (
+          <MyPlans onOpen={openSaved} onBuildNew={startFresh} onChanged={currentPlan.refresh} onDeleted={planDeleted} />
+        )}
 
         {view === 'runs' &&
           state.kind === 'ready' &&

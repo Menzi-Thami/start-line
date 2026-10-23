@@ -4328,7 +4328,7 @@ a.menu-item {
 
 /* ---------- Time wheels: hours, minutes and seconds scrolled like a phone's time picker ---------- */
 .wheels {
-  --wheel-row: 36px;
+  --wheel-row: 44px;
   display: flex;
   gap: var(--space-3);
 }
@@ -4366,8 +4366,11 @@ a.menu-item {
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   /* Numbers fade towards the top and bottom edges, like a drum turning away. */
+  -webkit-mask-image: linear-gradient(transparent, #000 35%, #000 65%, transparent);
   mask-image: linear-gradient(transparent, #000 35%, #000 65%, transparent);
 }
 
@@ -4390,6 +4393,8 @@ a.menu-item {
   color: var(--muted);
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .wheel-item.is-selected {

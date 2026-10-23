@@ -1,0 +1,438 @@
+/* ---------- Home: the signed-in runner's page, in the Night run volt ---------- */
+.home {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.home-hello {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.home-hello-runner {
+  color: var(--accent);
+  flex: none;
+  animation: home-bob 0.42s ease-in-out infinite;
+}
+
+@keyframes home-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.home-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4vw, 2.3rem);
+  line-height: 1.1;
+}
+
+.home-lede {
+  margin: var(--space-1) 0 0;
+  color: var(--muted);
+}
+
+.home-heading {
+  margin: 0 0 var(--space-3);
+  font-size: 1.15rem;
+}
+
+.home-card-heading {
+  margin: 0 0 var(--space-3);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.home-top {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+
+.home-card {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  justify-items: start;
+}
+
+.home-card p {
+  margin: 0;
+}
+
+.home-today-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.home-today-meta {
+  color: var(--accent-strong);
+}
+
+.home-today .button {
+  margin-top: var(--space-2);
+}
+
+.home-week-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.home-ring {
+  width: 92px;
+  height: 92px;
+  flex: none;
+}
+
+.home-ring-track,
+.home-ring-fill {
+  fill: none;
+  stroke-width: 10;
+}
+
+.home-ring-track {
+  stroke: var(--surface-sunk);
+}
+
+.home-ring-fill {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.8s ease-out;
+}
+
+/* Your running: three figures, side by side where there's room. */
+.home-tiles {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.home-tile {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.home-tile p {
+  margin: 0;
+}
+
+.home-tile-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.home-tile-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.home-tile-unit {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.home-change {
+  margin-top: var(--space-2) !important;
+  font-size: 0.85rem;
+}
+
+.home-change-up {
+  color: var(--accent-strong);
+}
+
+.home-change-down {
+  color: var(--coral);
+}
+
+/* The last twelve weeks: bars of what was run, the plan's distance as an outline behind, and the 4-week average. */
+.home-chart {
+  margin: 0;
+}
+
+.home-bars {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 160px;
+  padding: 0 2px;
+  border-bottom: 1px solid var(--line);
+}
+
+.home-bar {
+  position: relative;
+  flex: 1;
+  height: 100%;
+}
+
+.home-bar-ran,
+.home-bar-planned {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 4px 4px 0 0;
+}
+
+.home-bar-ran {
+  left: 18%;
+  right: 18%;
+  background: var(--accent);
+  opacity: 0.55;
+  animation: bar-rise 0.7s ease-out both;
+  transform-origin: bottom;
+}
+
+.home-bar-now .home-bar-ran {
+  opacity: 1;
+}
+
+.home-bar-planned {
+  border: 1.5px dashed var(--line-strong);
+  border-bottom: 0;
+}
+
+.home-chart-average {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 2px dotted var(--coral);
+  pointer-events: none;
+}
+
+.home-bar-labels {
+  display: flex;
+  gap: 6px;
+  padding: var(--space-1) 2px 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.home-bar-labels span {
+  flex: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Personal bests: a row of race-day times. */
+.home-bests {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-best {
+  display: grid;
+  gap: 2px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+}
+
+.home-best-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.home-best-time {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.home-best .link-button {
+  justify-self: start;
+}
+
+/* Connections: what's live and what's coming. */
+.home-connections {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-connection {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  justify-items: start;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-4);
+}
+
+.home-connection-name {
+  font-weight: 700;
+}
+
+.home-connection-soon {
+  border-style: dashed;
+  opacity: 0.8;
+}
+
+/* Calculators: pick one, use it. */
+.calc-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.calc-chip {
+  min-height: var(--tap, 44px);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.calc-chip[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface-sunk);
+}
+
+.calc-panel {
+  margin-top: var(--space-3);
+}
+
+.calc-tool {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.calc-tool > * {
+  max-width: 100%;
+}
+
+.calc-row,
+.calc-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  width: 100%;
+}
+
+.calc-pair > div {
+  flex: 1 1 16rem;
+}
+
+.calc-short {
+  max-width: 8rem;
+}
+
+.calc-answer {
+  margin: var(--space-2) 0 0;
+}
+
+.calc-answer strong {
+  color: var(--accent-strong);
+  font-size: 1.2rem;
+}
+
+.calc-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.calc-scroll {
+  max-height: 22rem;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.calc-table {
+  border-collapse: collapse;
+  min-width: 16rem;
+}
+
+.calc-table th,
+.calc-table td {
+  padding: var(--space-1) var(--space-4) var(--space-1) 0;
+  text-align: left;
+}
+
+.calc-table thead th {
+  font-size: 0.78rem;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+
+.calc-zones {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.calc-zone {
+  display: grid;
+  grid-template-columns: minmax(10rem, auto) auto;
+  gap: 2px var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunk);
+}
+
+.calc-zone .field-help {
+  grid-column: 1 / -1;
+}
+
+.calc-zone-name {
+  font-weight: 700;
+}
+
+.calc-zone-1 {
+  border-left-color: var(--line-strong);
+}
+
+.calc-zone-2 {
+  border-left-color: var(--accent-soft, var(--accent));
+}
+
+.calc-zone-4 {
+  border-left-color: var(--warn-line);
+}
+
+.calc-zone-5 {
+  border-left-color: var(--coral);
+}
+
+.calc-fuel p {
+  margin: 0 0 var(--space-2);
+}

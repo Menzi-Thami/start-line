@@ -5,6 +5,7 @@ import { SHORT_DAY, WEEK, type DayOfWeek, type Experience, type Race } from '../
 import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
+import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 
 export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } | { kind: 'error'; message: string }
 
@@ -80,9 +81,11 @@ interface Draft {
   experience: Experience
   currentKm: string
   strengthDays: DayOfWeek[]
+  /** A recent race or time trial, optional: it lets the coach say whether the goal is realistic. */
+  recent: RecentDraft
 }
 
-function draftFrom(initial: PlanInputs | null, units: Units): Draft {
+function draftFrom(initial: PlanInputs | null, units: Units, today: string): Draft {
   if (!initial) {
     return {
       race: '',
@@ -95,6 +98,7 @@ function draftFrom(initial: PlanInputs | null, units: Units): Draft {
       experience: 'Regular',
       currentKm: '',
       strengthDays: [],
+      recent: emptyRecent(),
     }
   }
   const fromKm = (km: number | undefined) => (km ? String(Math.round((units === 'mi' ? km / 1.609344 : km) * 10) / 10) : '')
@@ -109,6 +113,7 @@ function draftFrom(initial: PlanInputs | null, units: Units): Draft {
     experience: initial.experience,
     currentKm: fromKm(initial.currentWeeklyKm),
     strengthDays: initial.strengthDays,
+    recent: recentDraft(initial.recent, today),
   }
 }
 
@@ -132,7 +137,7 @@ const dayList = (days: DayOfWeek[]) => WEEK.filter((d) => days.includes(d)).map(
 
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
   const id = useId()
-  const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units))
+  const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))
   const [clientErrors, setClientErrors] = useState<FieldErrors>({})
   // Changing an existing plan opens on the summary: every answer is already there.
   const [step, setStep] = useState(() => firstStepWith(serverErrors) ?? (initial ? LAST_STEP : 0))
@@ -224,6 +229,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       planFrom: today,
       // A new plan: built with the newest generator, and stamped with it so its link keeps that shape.
       version: LATEST_PLAN_VERSION,
+      recent: recentInputs(draft.recent, today),
     })
   }
 
@@ -407,8 +413,9 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                 <>
                   <DurationInput legend="Goal finish time" value={draft.goal} onChange={(v) => set('goal', v)} error={errors.goal} help={pacePreview} />
                   <details className="disclosure">
-                    <summary>Not sure? Estimate it from a recent race</summary>
-                    <GoalEstimator targetKm={targetKm} onUse={(seconds) => set('goal', toDuration(seconds))} />
+                    <summary>Add a recent race, so the coach can tell you if your goal is realistic</summary>
+                    <p className="field-help">Optional. A race or time trial from the last six weeks, at least 3 km. It never changes your plan: it lets the coach say whether {goalSeconds > 0 ? formatDuration(goalSeconds) : 'your goal'} is realistic, or whether you could aim higher.</p>
+                    <GoalEstimator targetKm={targetKm} value={draft.recent} onChange={(v) => set('recent', v)} onUse={(seconds) => set('goal', toDuration(seconds))} />
                   </details>
                 </>
               )}
@@ -460,6 +467,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                   <dl className="review">
                     {reviewRow('Race', raceSummary, 0)}
                     {reviewRow('Goal', `${formatDuration(goalSeconds)}${pacePreview ? `. ${pacePreview}` : ''}`, 1)}
+                    {recentInputs(draft.recent, today) && reviewRow('Recent race', describeRecent(draft.recent, formatDuration(durationSeconds(draft.recent.time))), 1)}
                     {reviewRow('Days', `${dayList(draft.runDays)}. Long run on ${draft.longRunDay ?? '?'}.`, 2)}
                     {reviewRow(
                       'You',

@@ -1657,7 +1657,21 @@ export interface components {
             recentWeeklyKm?: null | number;
             /** Format: int32 */
             version?: null | number;
+            /** Format: double */
+            recentResultKm?: null | number;
+            recentResultTime?: null | string;
+            /** Format: date */
+            recentResultDate?: null | string;
         };
+        GoalOutlookDto: {
+            verdict: components["schemas"]["GoalVerdict"];
+            summary: string;
+            reasons: components["schemas"]["OutlookReasonDto"][];
+            suggestedGoal: null | string;
+            fitnessToday: null | string;
+        };
+        /** @enum {unknown} */
+        GoalVerdict: "NotAssessed" | "AheadOfGoal" | "OnTrack" | "Stretch" | "AtRisk";
         HalvesDto: {
             /** Format: double */
             firstHalfPaceSecondsPerKm: number;
@@ -1693,6 +1707,10 @@ export interface components {
         PaceVerdict: "NoTarget" | "Faster" | "OnTarget" | "Slower";
         /** @enum {unknown} */
         PaceZone: "Recovery" | "Easy" | "LongRun" | "Tempo" | "Interval" | "Race";
+        OutlookReasonDto: {
+            code: string;
+            message: string;
+        };
         PaceZoneDto: {
             zone: components["schemas"]["PaceZone"];
             /** Format: double */
@@ -1999,6 +2017,7 @@ export interface components {
             warnings: components["schemas"]["PlanWarningDto"][];
             replan?: null | components["schemas"]["ReplanDto"];
             suggestedGoal?: null | string;
+            outlook?: null | components["schemas"]["GoalOutlookDto"];
         };
         /** @enum {unknown} */
         Units: "Kilometres" | "Miles";

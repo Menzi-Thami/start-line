@@ -271,4 +271,74 @@ public sealed class GeneratePlanTests
         unversioned.Weeks.Select(w => w.PlannedKm).ShouldBe(first.Weeks.Select(w => w.PlannedKm));
         second.Weeks.Select(w => w.PlannedKm).ShouldNotBe(first.Weeks.Select(w => w.PlannedKm));
     }
+
+    private static readonly DateOnly Today = new(2026, 10, 8);
+
+    private static GeneratePlanQuery WithRecentResult(double km = 10, int minutes = 40, int daysAgo = 7) =>
+        CustomRace() with { RecentResultKm = km, RecentResultTime = TimeSpan.FromMinutes(minutes), RecentResultDate = Today.AddDays(-daysAgo) };
+
+    [Fact]
+    public void A_recent_result_with_a_distance_a_time_and_a_day_is_valid() =>
+        Validator().Validate(WithRecentResult()).IsValid.ShouldBeTrue();
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(false, true, false)]
+    [InlineData(false, false, true)]
+    [InlineData(true, true, false)]
+    public void A_recent_result_is_all_three_parts_or_none(bool km, bool time, bool date)
+    {
+        var query = CustomRace() with
+        {
+            RecentResultKm = km ? 10 : null,
+            RecentResultTime = time ? TimeSpan.FromMinutes(40) : null,
+            RecentResultDate = date ? Today.AddDays(-7) : null,
+        };
+
+        var result = Validator().Validate(query);
+
+        result.IsValid.ShouldBeFalse();
+        result.Errors.ShouldAllBe(e => e.PropertyName.StartsWith("RecentResult"));
+    }
+
+    [Fact]
+    public void A_recent_result_that_cannot_be_right_is_rejected() =>
+        Validator().Validate(WithRecentResult(minutes: 3)).Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("RecentResultTime");
+
+    [Fact]
+    public void A_recent_result_cannot_be_in_the_future() =>
+        Validator().Validate(WithRecentResult(daysAgo: -5)).Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("RecentResultDate");
+
+    [Fact]
+    public async Task A_plan_carries_the_coachs_read_on_the_goal()
+    {
+        var plan = await Handler().Handle(CustomRace(), CancellationToken.None);
+
+        var outlook = plan.Outlook.ShouldNotBeNull();
+        outlook.Verdict.ShouldBe(GoalVerdict.NotAssessed);
+        outlook.Reasons.ShouldContain(r => r.Code == "no-result");
+    }
+
+    [Fact]
+    public async Task A_recent_result_lets_the_coach_say_the_goal_could_be_higher()
+    {
+        // A 10K in 40 minutes is about 1:28 for a half marathon: a 2 hour goal is far slower than that.
+        var plan = await Handler().Handle(WithRecentResult(), CancellationToken.None);
+
+        var outlook = plan.Outlook.ShouldNotBeNull();
+        outlook.Verdict.ShouldBe(GoalVerdict.AheadOfGoal);
+        outlook.SuggestedGoal.ShouldNotBeNull().ShouldBeLessThan(TimeSpan.FromHours(2));
+        outlook.FitnessToday.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task A_recent_result_never_changes_the_plan_only_the_outlook()
+    {
+        var without = await Handler().Handle(CustomRace(), CancellationToken.None);
+        var with = await Handler().Handle(WithRecentResult(), CancellationToken.None);
+
+        with.Weeks.Select(w => w.PlannedKm).ShouldBe(without.Weeks.Select(w => w.PlannedKm));
+        with.SuggestedGoal.ShouldBe(without.SuggestedGoal);
+        with.Outlook!.Verdict.ShouldNotBe(without.Outlook!.Verdict);
+    }
 }

@@ -69,3 +69,19 @@ New plans are version 2 (`PlanShape`, `TrainingPlanGenerator.Shapes.cs`): front-
 levelling off about three-fifths through the build, a stepped long-run track for half, marathon and ultra, a cutback
 every 3rd week for new runners, and the 10% limit held on each week's real distance. Every generator rule test runs for
 both versions (the `…V2Tests` subclasses). A shape change after this needs version 3, never an edit to version 2.
+
+The goal outlook (`GoalOutlook`, `TrainingPlanGenerator.AssessGoal` in `TrainingPlanGenerator.Outlook.cs`) is the coach's
+read on whether the goal is realistic and why: a verdict (`NotAssessed`, `AheadOfGoal`, `OnTrack`, `Stretch`, `AtRisk`), a
+sentence, reasons in plain words, and a suggested goal when ahead of it or at risk. It is a pure function of the plan, so
+it lives *outside* `TrainingPlan` and can never change a generated plan or a v1 hash (adding even a null property to
+`TrainingPlan` would change every snapshot hash); `PlanBuilder` calls it and the DTO carries it. **One plan never gives two
+verdicts on the same goal**, so it defers to what already judges one and only adds a read where nothing has: a rebuild's
+`SuggestedGoal` slower than the goal is `AtRisk` with that very goal; the coach's `SuggestedGoal` faster than the goal
+(three strong weeks) is `AheadOfGoal` with that very goal, and recorded runs never say it sooner; a fresh plan's
+`low-volume` warning (decided by the plan's own `PlanShape`) caps the build at `Stretch`, and the outlook never re-derives
+reachable volume itself. Otherwise it reads the runner's fitness against the goal, by the same `Fitness` and Riegel as the
+coach: the coach's estimate from recorded runs, or a `RecentResult` the runner gave (in the link and request only, not
+yet saved with a plan). A full build can take a share of the race time off by experience (8%, 5%, 3%), scaled by the
+weeks of building left and the share of the original peak a rebuilt plan keeps; a goal asking up to half of that is
+`OnTrack`, up to all of it `Stretch`, more `AtRisk`. Beyond the marathon only the build is judged. Every threshold is a
+named constant with a test (`GoalOutlookTests`).

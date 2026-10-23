@@ -16,6 +16,7 @@ import type { DoneUpdate } from '../strength/strength-progress'
 import { FOCUS, PHASES, ZONES } from './copy'
 import { trainingKm } from './plan-math'
 import { PlanProgress } from './PlanProgress'
+import { OutlookCard } from './OutlookCard'
 import { VolumeChart } from './VolumeChart'
 import { WeekDays, WeekList } from './WeekList'
 import { WeekTotals } from './WeekTotals'
@@ -231,6 +232,12 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
       <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
 
       {replan}
+
+      {plan.outlook && (
+        // A rebuilt plan's own banner already offers its suggested goal, which is the very goal the card names, so the
+        // card only tells it then.
+        <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />
+      )}
 
       {plan.warnings.length > 0 && (
         <div className="callout" role="note">

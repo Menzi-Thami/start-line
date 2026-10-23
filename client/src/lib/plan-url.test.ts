@@ -115,3 +115,34 @@ describe('plan generator versions', () => {
     expect(fromSearchParams(new URLSearchParams(`${toSearchParams(custom)}&v=${value}`))?.version).toBeUndefined()
   })
 })
+
+describe('a recent result', () => {
+  const recent = { km: 10, seconds: 3000, date: '2026-10-01' }
+
+  it('round-trips through the URL, the request and back', () => {
+    const withRecent = { ...custom, recent }
+
+    expect(fromSearchParams(toSearchParams(withRecent))?.recent).toEqual(recent)
+    expect(toRequest(withRecent)).toMatchObject({ recentResultKm: 10, recentResultTime: '00:50:00', recentResultDate: '2026-10-01' })
+    expect(fromRequest(toRequest(withRecent))?.recent).toEqual(recent)
+  })
+
+  it('adds three short parameters to a link and nothing without one', () => {
+    expect(toSearchParams({ ...custom, recent }).toString()).toContain('rk=10&rt=3000&rd=2026-10-01')
+    expect(toSearchParams(custom).has('rk')).toBe(false)
+    expect(toRequest(custom)).toMatchObject({ recentResultKm: null, recentResultTime: null, recentResultDate: null })
+  })
+
+  it.each([
+    ['no time', 'rk=10&rd=2026-10-01'],
+    ['no distance', 'rt=3000&rd=2026-10-01'],
+    ['no date', 'rk=10&rt=3000'],
+    ['a garbled date', 'rk=10&rt=3000&rd=lastweek'],
+    ['a negative time', 'rk=10&rt=-5&rd=2026-10-01'],
+  ])('is dropped whole, not guessed at, with %s', (_, extra) => {
+    const params = toSearchParams(custom)
+    new URLSearchParams(extra).forEach((value, key) => params.set(key, value))
+
+    expect(fromSearchParams(params)?.recent).toBeUndefined()
+  })
+})

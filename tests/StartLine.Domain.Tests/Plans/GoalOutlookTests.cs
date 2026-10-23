@@ -328,7 +328,7 @@ public class GoalOutlookTests
         JsonSerializer.Serialize(TrainingPlanGenerator.Generate(p)).ShouldBe(before);
     }
 
-    private static IReadOnlyList<CoachDecision> ThrivingWeeks(int count, TimeSpan fitness) => Enumerable.Range(0, count)
+    private static List<CoachDecision> ThrivingWeeks(int count, TimeSpan fitness) => Enumerable.Range(0, count)
         .Select(i => new CoachDecision(new DateOnly(2026, 11, 2).AddDays(7 * i), CoachVerdict.Thriving, HoldVolume: false, DoseStep: 1, CutbackNow: false, [CoachReason.RanAsPlanned], Fitness: fitness))
         .ToList();
 

@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { formatDate, formatDistance, formatDuration, formatPace, toKilometres, type Units } from '../../lib/format'
+import { addDays, formatDate, formatDistance, formatDuration, formatPace, toKilometres, type Units } from '../../lib/format'
 import { LATEST_PLAN_VERSION, type PlanInputs } from '../../lib/plan-url'
 import { SHORT_DAY, WEEK, type DayOfWeek, type Experience, type Race } from '../../lib/types'
 import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
+import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
@@ -24,15 +25,20 @@ const EXPERIENCE: { value: Experience; title: string; note: string }[] = [
   { value: 'Experienced', title: 'Experienced', note: 'Years of steady training and a few of these races behind you.' },
 ]
 
-export type FieldErrors = Partial<Record<'race' | 'distance' | 'date' | 'goal' | 'runDays' | 'longRunDay' | 'currentKm' | 'strength', string>>
+export type FieldErrors = Partial<Record<'race' | 'distance' | 'date' | 'goal' | 'runDays' | 'longRunDay' | 'startOn' | 'currentKm' | 'strength', string>>
 type Field = keyof FieldErrors
+
+type StartChoice = 'monday' | 'today' | 'day'
+
+/** The Monday a plan starts on when the runner doesn't choose: today if it's a Monday, otherwise the next one. */
+const nextMonday = (today: string) => addDays(today, (8 - new Date(`${today}T00:00:00Z`).getUTCDay()) % 7)
 
 // One question per screen. Each field lives on exactly one step, so an error (ours or the server's) can send the
 // runner straight back to the screen that needs fixing.
 const STEPS = [
   { title: 'Which race?', hint: 'Pick it from the list, or tell us about any other race.', fields: ['race', 'distance', 'date'] },
   { title: 'What’s your goal time?', hint: 'Every session’s pace is worked out from this.', fields: ['goal'] },
-  { title: 'When can you run?', hint: 'Hard sessions go on days that aren’t back to back, wherever your choice allows.', fields: ['runDays', 'longRunDay'] },
+  { title: 'When can you run?', hint: 'Hard sessions go on days that aren’t back to back, wherever your choice allows.', fields: ['runDays', 'longRunDay', 'startOn'] },
   { title: 'About you', hint: 'So the plan starts where you are, not where a template thinks you should be.', fields: ['currentKm'] },
   { title: 'Check and build', hint: 'Change anything you like, then build your plan.', fields: ['strength'] },
 ] as const satisfies readonly { title: string; hint: string; fields: readonly Field[] }[]
@@ -81,6 +87,9 @@ interface Draft {
   experience: Experience
   currentKm: string
   strengthDays: DayOfWeek[]
+  /** When to start: the next Monday (as every plan before), today, or a day the runner picks. */
+  start: StartChoice
+  startOn: string
   /** A recent race or time trial, optional: it lets the coach say whether the goal is realistic. */
   recent: RecentDraft
 }
@@ -98,6 +107,8 @@ function draftFrom(initial: PlanInputs | null, units: Units, today: string): Dra
       experience: 'Regular',
       currentKm: '',
       strengthDays: [],
+      start: 'monday',
+      startOn: '',
       recent: emptyRecent(),
     }
   }
@@ -113,11 +124,13 @@ function draftFrom(initial: PlanInputs | null, units: Units, today: string): Dra
     experience: initial.experience,
     currentKm: fromKm(initial.currentWeeklyKm),
     strengthDays: initial.strengthDays,
+    start: !initial.startOn ? 'monday' : initial.startOn === today ? 'today' : 'day',
+    startOn: initial.startOn ?? '',
     recent: recentDraft(initial.recent, today),
   }
 }
 
-function validate(draft: Draft, goalSeconds: number): FieldErrors {
+function validate(draft: Draft, goalSeconds: number, today: string, raceDate: string | null): FieldErrors {
   const found: FieldErrors = {}
   if (!draft.race) found.race = 'Choose a race, or pick "another race" and tell us about it.'
   if (draft.race === OTHER) {
@@ -127,6 +140,12 @@ function validate(draft: Draft, goalSeconds: number): FieldErrors {
   if (goalSeconds <= 0) found.goal = 'Enter a goal time. Not sure? Use the estimate below.'
   if (draft.runDays.length < 3) found.runDays = 'Pick at least three days. Two runs a week isn’t enough to build on.'
   if (!draft.longRunDay) found.longRunDay = 'Pick which of your days is the long run.'
+  if (draft.start === 'day') {
+    const latest = raceDate ? addDays(raceDate, -14) : null
+    if (!draft.startOn) found.startOn = 'Pick the day you want to start.'
+    else if (draft.startOn < today) found.startOn = 'Pick today or a day after it.'
+    else if (latest && draft.startOn > latest) found.startOn = 'Start at least two weeks before your race, so there’s a plan to follow.'
+  }
   return found
 }
 
@@ -134,6 +153,65 @@ const onStep = (errors: FieldErrors, step: number): FieldErrors =>
   Object.fromEntries(Object.entries(errors).filter(([field]) => (STEPS[step]!.fields as readonly string[]).includes(field)))
 
 const dayList = (days: DayOfWeek[]) => WEEK.filter((d) => days.includes(d)).map((d) => SHORT_DAY[d]).join(', ')
+
+/** The day the plan will start, for the summary. */
+function startSummary(draft: Draft, today: string): string {
+  const day = draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn : nextMonday(today)
+  return day ? formatDate(day, 'long') : 'Pick a day'
+}
+
+/**
+ * When to start: the next Monday (as every plan did before), today, or any day up to two weeks before the race. Weeks
+ * run Monday to Sunday, so a start mid-week makes a short first week, and the summary says which day it is.
+ */
+function StartDay({ draft, today, raceDate, onChange, error }: {
+  draft: Draft
+  today: string
+  raceDate: string | null
+  onChange: (start: StartChoice, startOn: string) => void
+  error?: string
+}) {
+  const id = useId()
+  const monday = nextMonday(today)
+  const options: { value: StartChoice; title: string; note: string }[] = [
+    { value: 'monday', title: monday === today ? 'Today' : 'Next Monday', note: formatDate(monday) },
+    ...(monday === today ? [] : [{ value: 'today' as const, title: 'Today', note: `${formatDate(today)}: a short first week` }]),
+    { value: 'day', title: 'Another day', note: 'Up to two weeks before your race' },
+  ]
+
+  return (
+    <fieldset className="field" style={{ border: 0, padding: 0 }}>
+      <legend className="field-label">When do you want to start?</legend>
+      <div className="segmented" role="radiogroup" aria-label="When to start">
+        {options.map((o) => (
+          <label className="segment" key={o.value}>
+            <input type="radio" name={`${id}-start`} checked={draft.start === o.value} onChange={() => onChange(o.value, o.value === 'day' ? draft.startOn : '')} />
+            <strong>{o.title}</strong>
+            <span>{o.note}</span>
+          </label>
+        ))}
+      </div>
+      {draft.start === 'day' && (
+        <div className="field" style={{ marginTop: 'var(--space-3)' }}>
+          <label className="field-label" htmlFor={`${id}-date`}>
+            Start on
+          </label>
+          <DatePicker
+            id={`${id}-date`}
+            value={draft.startOn}
+            onChange={(d) => onChange('day', d)}
+            min={today}
+            max={raceDate ? addDays(raceDate, -14) : undefined}
+            today={today}
+            invalid={!!error}
+            describedBy={error ? `${id}-error` : undefined}
+          />
+        </div>
+      )}
+      <FieldError id={`${id}-error`} message={error} />
+    </fieldset>
+  )
+}
 
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
   const id = useId()
@@ -181,6 +259,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const errors: FieldErrors = { ...serverErrors, ...clientErrors }
   const stepErrors = Object.values(onStep(errors, step)).filter(Boolean)
 
+  const raceDate = chosenRace?.date ?? (draft.race === OTHER && draft.otherDate ? draft.otherDate : null)
   const pacePreview = targetKm && goalSeconds > 0 ? `That’s ${formatPace(goalSeconds / targetKm, units)} on average.` : undefined
 
   const setRunDays = (days: DayOfWeek[]) =>
@@ -194,7 +273,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    const found = validate(draft, goalSeconds)
+    const found = validate(draft, goalSeconds, today, raceDate)
 
     if (step < LAST_STEP) {
       const here = onStep(found, step)
@@ -230,6 +309,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       // A new plan: built with the newest generator, and stamped with it so its link keeps that shape.
       version: LATEST_PLAN_VERSION,
       recent: recentInputs(draft.recent, today),
+      startOn: draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn : undefined,
     })
   }
 
@@ -386,14 +466,15 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                           <label className="field-label" htmlFor="race-date">
                             Race date
                           </label>
-                          <input
+                          <DatePicker
                             id="race-date"
-                            className="input"
-                            type="date"
-                            min={today}
                             value={draft.otherDate}
-                            aria-invalid={errors.date ? true : undefined}
-                            onChange={(e) => set('otherDate', e.target.value)}
+                            onChange={(d) => set('otherDate', d)}
+                            min={addDays(today, 14)}
+                            max={addDays(today, 2 * 365)}
+                            today={today}
+                            invalid={!!errors.date}
+                            describedBy={errors.date ? 'date-error' : undefined}
                           />
                           <FieldError id="date-error" message={errors.date} />
                         </div>
@@ -429,6 +510,13 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     value={draft.longRunDay}
                     onChange={(d) => set('longRunDay', d)}
                     error={errors.longRunDay}
+                  />
+                  <StartDay
+                    draft={draft}
+                    today={today}
+                    raceDate={raceDate}
+                    onChange={(start, startOn) => setDraft((d) => ({ ...d, start, startOn }))}
+                    error={errors.startOn}
                   />
                 </>
               )}
@@ -469,6 +557,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     {reviewRow('Goal', `${formatDuration(goalSeconds)}${pacePreview ? `. ${pacePreview}` : ''}`, 1)}
                     {recentInputs(draft.recent, today) && reviewRow('Recent race', describeRecent(draft.recent, formatDuration(durationSeconds(draft.recent.time))), 1)}
                     {reviewRow('Days', `${dayList(draft.runDays)}. Long run on ${draft.longRunDay ?? '?'}.`, 2)}
+                    {reviewRow('Start', startSummary(draft, today), 2)}
                     {reviewRow(
                       'You',
                       `${experience.title} runner${Number(draft.currentKm) > 0 ? `, about ${draft.currentKm} ${units} a week now` : ''}.`,

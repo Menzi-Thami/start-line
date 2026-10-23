@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { formatDate } from '../lib/format'
 import { lastPlanRequest, planFixture, server } from '../test/server'
 import { App } from './App'
 
@@ -21,6 +22,14 @@ const wizard = () => screen.queryByRole('form', { name: 'Build your plan' })
 const onStep = (n: number) => expect(screen.getByText(`Step ${n} of 5`)).toBeInTheDocument()
 const next = (user: User) => user.click(screen.getByRole('button', { name: 'Continue' }))
 const buildIt = (user: User) => user.click(screen.getByRole('button', { name: 'Build my plan' }))
+
+/** Opens a date field's calendar, steps on to the month and taps the day. */
+async function pickDate(user: User, label: string, isoDate: string) {
+  await user.click(screen.getByLabelText(label))
+  const day = { name: formatDate(isoDate, 'long') }
+  for (let i = 0; i < 24 && !screen.queryByRole('button', day); i++) await user.click(screen.getByRole('button', { name: 'Next month' }))
+  await user.click(screen.getByRole('button', day))
+}
 
 async function fillGoal(user: User, h: string, m: string, s: string) {
   const goal = screen.getByRole('group', { name: 'Goal finish time' })
@@ -110,7 +119,7 @@ describe('building a plan', () => {
 
     await user.click(await screen.findByRole('radio', { name: /Another race/ }))
     await user.click(screen.getByRole('radio', { name: '5K' }))
-    await user.type(screen.getByLabelText('Race date'), '2026-12-13')
+    await pickDate(user, 'Race date', '2026-12-13')
     await user.type(screen.getByLabelText(/Name/), 'Parkrun PB')
     await next(user)
 
@@ -283,6 +292,42 @@ describe('building a plan', () => {
     await screen.findByRole('heading', { name: 'Parkrun PB' })
     // Today is pinned to 8 October 2026, and "in the last 2 weeks" is a week ago.
     expect(lastPlanRequest.body).toMatchObject({ recentResultKm: 10, recentResultTime: '00:50:00', recentResultDate: '2026-10-01' })
+  })
+
+  it('starts the next Monday unless the runner picks today or another day', async () => {
+    const { user } = setup()
+    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
+    await next(user)
+    await fillGoal(user, '11', '0', '0')
+    await next(user)
+
+    // Today is pinned to Thursday 8 October 2026: the next Monday is the 12th.
+    expect(screen.getByRole('radio', { name: /Next Monday/ })).toBeChecked()
+    expect(screen.getByText('Mon 12 Oct')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: /Another day/ }))
+    await next(user)
+    expect(screen.getAllByText('Pick the day you want to start.').length).toBeGreaterThan(0)
+
+    await pickDate(user, 'Start on', '2026-10-15')
+    await next(user)
+    await next(user)
+    expect(screen.getByText('Thursday 15 October 2026')).toBeInTheDocument()
+    await buildIt(user)
+
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    expect(lastPlanRequest.body).toMatchObject({ startOn: '2026-10-15' })
+    expect(window.location.search).toContain('start=2026-10-15')
+  })
+
+  it('sends no start day when the runner keeps the next Monday', async () => {
+    const { user } = setup()
+    await answerEverything(user)
+
+    await buildIt(user)
+
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    expect(lastPlanRequest.body).toMatchObject({ startOn: null })
+    expect(window.location.search).not.toContain('start=')
   })
 
   it('sends no recent race when none was entered', async () => {

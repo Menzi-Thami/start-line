@@ -18,7 +18,7 @@ namespace StartLine.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -450,6 +450,10 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                                 .HasMaxLength(16)
                                 .HasColumnType("nvarchar(16)")
                                 .HasColumnName("Setback");
+
+                            b1.Property<DateOnly?>("StartOn")
+                                .HasColumnType("date")
+                                .HasColumnName("StartOn");
 
                             b1.Property<int>("StrengthDays")
                                 .HasColumnType("int")

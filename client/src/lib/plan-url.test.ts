@@ -146,3 +146,21 @@ describe('a recent result', () => {
     expect(fromSearchParams(params)?.recent).toBeUndefined()
   })
 })
+
+describe('a chosen start day', () => {
+  it('rides in the link and the request, and stays out of both when none was chosen', () => {
+    const withStart = { ...custom, startOn: '2026-10-15' }
+
+    expect(toSearchParams(withStart).toString()).toContain('from=2026-10-08&start=2026-10-15')
+    expect(fromSearchParams(toSearchParams(withStart))?.startOn).toBe('2026-10-15')
+    expect(toRequest(withStart).startOn).toBe('2026-10-15')
+    expect(fromRequest(toRequest(withStart))?.startOn).toBe('2026-10-15')
+
+    expect(toSearchParams(custom).has('start')).toBe(false)
+    expect(toRequest(custom).startOn).toBeNull()
+  })
+
+  it('drops a garbled start day instead of guessing', () => {
+    expect(fromSearchParams(new URLSearchParams(`${toSearchParams(custom)}&start=soon`))?.startOn).toBeUndefined()
+  })
+})

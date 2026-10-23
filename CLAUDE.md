@@ -86,6 +86,11 @@ weeks of building left and the share of the original peak a rebuilt plan keeps; 
 `OnTrack`, up to all of it `Stretch`, more `AtRisk`. Beyond the marathon only the build is judged. Every threshold is a
 named constant with a test (`GoalOutlookTests`).
 
+A runner can choose the day their plan starts (`PlanParameters.StartOn`, `start=` in the link, `GeneratePlanQuery.StartOn`,
+a `StartOn` column on saved plans), from the day it's built to two weeks before the race. Weeks still run Monday to
+Sunday, so a start mid-week makes a short first week holding only the runs from that day. Without it a plan starts the next
+Monday, exactly as before, so no plan changes and no generator version is needed.
+
 Every run carries its `Steps` (`SessionSteps`, built in `WorkoutBuilder` from the same numbers as its `Detail`): warm-up,
 the work with its recoveries (a `Repeat` holds its block and count), cool-down, each with that week's pace range or, for
 hills, fartlek, strides and recoveries, how it should feel. They're guidance about the same sessions, not a change to

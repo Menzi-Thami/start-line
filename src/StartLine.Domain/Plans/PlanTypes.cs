@@ -106,6 +106,11 @@ public sealed record TrainingPlan(
 /// Which shape of plan to build: 1 for plans made before the per-distance shapes, 2 since. A plan keeps the version it
 /// was first built with, so a shared link or a saved plan never changes shape part-way through.
 /// </param>
+/// <param name="StartOn">
+/// The day the runner wants to start, from <see cref="Today"/> to two weeks before the race. Null: the first Monday on or
+/// after <see cref="Today"/>, as every plan before this. Weeks still run Monday to Sunday, so a start mid-week makes a
+/// shorter first week with only the runs from that day on.
+/// </param>
 public sealed record PlanParameters(
     Distance RaceDistance,
     TimeSpan GoalTime,
@@ -118,7 +123,8 @@ public sealed record PlanParameters(
     IReadOnlyCollection<DayOfWeek>? StrengthDays = null,
     PlanReplan? Replan = null,
     IReadOnlyList<CoachDecision>? Coaching = null,
-    int GeneratorVersion = TrainingPlanGenerator.OriginalVersion)
+    int GeneratorVersion = TrainingPlanGenerator.OriginalVersion,
+    DateOnly? StartOn = null)
 {
     public int RunsPerWeek => RunDays.Where(Enum.IsDefined).Distinct().Count();
 }

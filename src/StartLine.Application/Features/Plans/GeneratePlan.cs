@@ -20,6 +20,9 @@ namespace StartLine.Application.Features.Plans;
 /// illness, injury or a lean spell; <see cref="RecentWeeklyKm"/> is what the runner ran last week, needed when behind.
 /// <see cref="Version"/> is the generator version the plan was first built with: none or 1 for plans made before the
 /// per-distance shapes, so their links and saved plans keep their shape; new plans send the latest (2).
+/// <see cref="RecentResultKm"/>, <see cref="RecentResultTime"/> and <see cref="RecentResultDate"/> are a recent race or hard
+/// effort, all three or none: they let the coach say whether the goal is realistic before any runs are recorded. They only
+/// feed the goal outlook and never change the plan.
 /// </summary>
 public sealed record GeneratePlanQuery(
     string? RaceSlug,
@@ -36,7 +39,10 @@ public sealed record GeneratePlanQuery(
     DateOnly? ReplanFrom = null,
     Setback? Setback = null,
     double? RecentWeeklyKm = null,
-    int? Version = null) : IRequest<TrainingPlanDto>;
+    int? Version = null,
+    double? RecentResultKm = null,
+    TimeSpan? RecentResultTime = null,
+    DateOnly? RecentResultDate = null) : IRequest<TrainingPlanDto>;
 
 internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuery>
 {
@@ -119,6 +125,29 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
             .InclusiveBetween(TrainingPlanGenerator.OriginalVersion, TrainingPlanGenerator.LatestVersion)
             .When(q => q.Version is not null)
             .WithMessage("This plan link comes from a newer version of Taperday. Reload the page to open it.");
+
+        // A recent result is a distance, a time and a day, always together.
+        RuleFor(q => q.RecentResultKm).NotNull()
+            .When(q => q.RecentResultTime is not null || q.RecentResultDate is not null)
+            .WithMessage("Give the distance of your recent result.");
+        RuleFor(q => q.RecentResultTime).NotNull()
+            .When(q => q.RecentResultKm is not null || q.RecentResultDate is not null)
+            .WithMessage("Give the time of your recent result.");
+        RuleFor(q => q.RecentResultDate).NotNull()
+            .When(q => q.RecentResultKm is not null || q.RecentResultTime is not null)
+            .WithMessage("Give the date of your recent result.");
+        RuleFor(q => q.RecentResultKm).Cascade(CascadeMode.Stop)
+            .GreaterThan(0)
+            .LessThanOrEqualTo(Distance.MaxKilometres)
+            .When(q => q.RecentResultKm is not null);
+        RuleFor(q => q.RecentResultTime)
+            .Must((q, time) => q.RecentResultKm is not { } km || GoalTimeRules.IsPlausible(km, time!.Value))
+            .When(q => q.RecentResultTime is not null)
+            .WithMessage("That recent result doesn't look right. Check the distance and the time.");
+        RuleFor(q => q.RecentResultDate)
+            .Must(d => d <= timeProvider.Today().AddDays(1))
+            .When(q => q.RecentResultDate is not null)
+            .WithMessage("A recent result can't be in the future.");
     }
 
     private static DateOnly? RaceDateFor(GeneratePlanQuery q, IRaceCatalogue catalogue) =>

@@ -23,6 +23,8 @@ namespace StartLine.Application.Features.Plans;
 /// <see cref="RecentResultKm"/>, <see cref="RecentResultTime"/> and <see cref="RecentResultDate"/> are a recent race or hard
 /// effort, all three or none: they let the coach say whether the goal is realistic before any runs are recorded. They only
 /// feed the goal outlook and never change the plan.
+/// <see cref="StartOn"/> is the day the runner chose to start, from the day the plan is built to two weeks before the race.
+/// Without it the plan starts the next Monday, as every plan did before.
 /// </summary>
 public sealed record GeneratePlanQuery(
     string? RaceSlug,
@@ -42,7 +44,8 @@ public sealed record GeneratePlanQuery(
     int? Version = null,
     double? RecentResultKm = null,
     TimeSpan? RecentResultTime = null,
-    DateOnly? RecentResultDate = null) : IRequest<TrainingPlanDto>;
+    DateOnly? RecentResultDate = null,
+    DateOnly? StartOn = null) : IRequest<TrainingPlanDto>;
 
 internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuery>
 {
@@ -148,6 +151,14 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
             .Must(d => d <= timeProvider.Today().AddDays(1))
             .When(q => q.RecentResultDate is not null)
             .WithMessage("A recent result can't be in the future.");
+
+        RuleFor(q => q.StartOn).Cascade(CascadeMode.Stop)
+            .Must((q, d) => d >= From(q))
+            .When(q => q.StartOn is not null)
+            .WithMessage("Your plan can start today at the earliest.")
+            .Must((q, d) => RaceDateFor(q, catalogue) is not { } race || race >= d!.Value.AddDays(MinDaysUntilRace))
+            .When(q => q.StartOn is not null)
+            .WithMessage($"Start at least {MinDaysUntilRace} days before your race, so there's a plan to follow.");
     }
 
     private static DateOnly? RaceDateFor(GeneratePlanQuery q, IRaceCatalogue catalogue) =>

@@ -212,6 +212,21 @@ public sealed class ReplanTests : IClassFixture<ReplanClockFactory>
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await Json(response)).GetProperty("errors").TryGetProperty("Version", out _).ShouldBeTrue();
     }
+
+    [Fact]
+    public async Task A_saved_plan_keeps_the_day_the_runner_chose_to_start()
+    {
+        var client = _factory.CreateClient().As(Guid.NewGuid().ToString());
+        (await client.PutAsJsonAsync(Url("/api/v1/me"), Profile)).EnsureSuccessStatusCode();
+        // Thursday 5 November: a short first week, then Monday to Sunday.
+        var saved = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = With(("startOn", "2026-11-05")) });
+        saved.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var id = (await Json(saved)).GetProperty("id").GetGuid();
+
+        var reopened = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        reopened.GetProperty("inputs").GetProperty("startOn").GetString().ShouldBe("2026-11-05");
+        reopened.GetProperty("plan").GetProperty("startDate").GetString().ShouldBe("2026-11-05");
+    }
 }
 
 /// <summary>A factory of its own, so moving its clock on never moves another test class's.</summary>

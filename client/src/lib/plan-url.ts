@@ -14,6 +14,8 @@ export interface PlanInputs {
   experience: Experience
   strengthDays: DayOfWeek[]
   planFrom?: string
+  /** The day the runner chose to start, as YYYY-MM-DD. Undefined: the next Monday, as every plan before. */
+  startOn?: string
   /**
    * The plan generator version the plan was first built with. Undefined is version 1: every link made before plans were
    * shaped per distance, which keeps its shape. New plans get LATEST_PLAN_VERSION.
@@ -90,6 +92,7 @@ export function toSearchParams(inputs: PlanInputs): URLSearchParams {
   if (inputs.currentWeeklyKm) p.set('now', String(inputs.currentWeeklyKm))
   if (inputs.strengthDays.length > 0) p.set('gym', encodeDays(inputs.strengthDays))
   if (inputs.planFrom) p.set('from', inputs.planFrom)
+  if (inputs.startOn) p.set('start', inputs.startOn)
   if (inputs.version && inputs.version > 1) p.set('v', String(inputs.version))
   if (inputs.recent) {
     p.set('rk', String(inputs.recent.km))
@@ -145,6 +148,7 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
 
   const experience = EXPERIENCE.find((e) => e.toLowerCase() === params.get('exp')) ?? 'Regular'
   const planFrom = params.get('from') ?? undefined
+  const startOn = params.get('start') ?? undefined
 
   return {
     raceSlug,
@@ -158,6 +162,7 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
     experience,
     strengthDays: decodeDays(params.get('gym')).slice(0, 3),
     planFrom: planFrom && ISO_DATE.test(planFrom) ? planFrom : undefined,
+    startOn: startOn && ISO_DATE.test(startOn) ? startOn : undefined,
     version: generatorVersion(params.get('v')),
     replan: replanFrom(params),
     recent: recentFrom(params),
@@ -180,6 +185,7 @@ export function fromRequest(request: GeneratePlanRequest): PlanInputs | null {
     experience: request.experience ?? 'Regular',
     strengthDays: WEEK.filter((d) => (request.strengthDays ?? []).includes(d)),
     planFrom: request.planFrom ?? undefined,
+    startOn: request.startOn ?? undefined,
     version: generatorVersion(request.version?.toString() ?? null),
     replan:
       request.replanFrom && request.setback
@@ -209,6 +215,7 @@ export function toRequest(inputs: PlanInputs): GeneratePlanRequest {
     experience: inputs.experience,
     strengthDays: inputs.strengthDays,
     planFrom: inputs.planFrom ?? null,
+    startOn: inputs.startOn ?? null,
     version: inputs.version ?? null,
     replanFrom: inputs.replan?.from ?? null,
     setback: inputs.replan?.setback ?? null,

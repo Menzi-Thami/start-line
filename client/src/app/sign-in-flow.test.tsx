@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SignInWait, SLOW_AFTER_MS } from '../features/account/SignInWait'
+import { SCENE_MS, SCENES, TIPS } from '../features/account/wait-film'
+import { WAKE_RETRIES } from '../features/account/useRunner'
 import { api } from '../lib/api-client'
 import type { Runner } from '../lib/types'
 import { server, stravaOff } from '../test/server'
@@ -64,6 +66,39 @@ describe('waiting for a sleeping server after sign-in', () => {
     expect(onSignOut).toHaveBeenCalled()
   })
 
+  it('plays a short film in order while it waits, then keeps running laps', async () => {
+    vi.useFakeTimers()
+    render(<SignInWait onRetry={vi.fn()} onSignOut={vi.fn()} />)
+    const seen: string[] = []
+
+    for (let i = 0; i < SCENES.length + 2; i++) {
+      seen.push(SCENES.find((s) => screen.queryByText(s.caption))!.caption)
+      await act(() => vi.advanceTimersByTimeAsync(SCENE_MS))
+    }
+
+    expect(seen).toEqual([
+      'Waking the coach',
+      'On your marks',
+      'And they’re off',
+      'Ticking off the kilometres',
+      'Through the tape',
+      'And they’re off',
+      'Ticking off the kilometres',
+    ])
+  })
+
+  it('shows a tip with each scene, but tells a screen reader only that the account is being checked', async () => {
+    vi.useFakeTimers()
+    const { container } = render(<SignInWait onRetry={vi.fn()} onSignOut={vi.fn()} />)
+
+    expect(screen.getByText(TIPS[0]!)).toBeInTheDocument()
+    await act(() => vi.advanceTimersByTimeAsync(SCENE_MS))
+    expect(screen.getByText(TIPS[1]!)).toBeInTheDocument()
+
+    expect(screen.getByRole('status')).toHaveTextContent(/^Checking your account$/)
+    expect(container.querySelector('.wait-film')).toHaveAttribute('aria-hidden', 'true')
+  })
+
   it('never leaves a blank page on My plans, My runs or Account while the account loads', async () => {
     server.use(
       http.get('*/api/v1/me', async () => {
@@ -81,6 +116,40 @@ describe('waiting for a sleeping server after sign-in', () => {
       expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
       unmount()
     }
+  })
+})
+
+describe('signing in while the server wakes', () => {
+  it('keeps waiting through a slow wake instead of failing the sign-in', async () => {
+    // The API client retries once; the sign-in tries again until the database is back.
+    let reads = 0
+    server.use(
+      http.get('*/api/v1/me', () => {
+        reads++
+        return reads <= 2 * (1 + WAKE_RETRIES) - 1 ? HttpResponse.json({}, { status: 503 }) : HttpResponse.json(thandi)
+      }),
+    )
+    window.history.replaceState(null, '', '/?view=account')
+
+    renderApp(signedIn())
+
+    expect(await screen.findByRole('heading', { name: /Account/ }, { timeout: 5000 })).toBeInTheDocument()
+    expect(reads).toBe(2 * (1 + WAKE_RETRIES))
+  })
+
+  it('still gives up on an answer that isn’t about waking', async () => {
+    let reads = 0
+    server.use(
+      http.get('*/api/v1/me', () => {
+        reads++
+        return HttpResponse.json({ title: 'Forbidden' }, { status: 403 })
+      }),
+    )
+
+    renderApp(signedIn())
+
+    expect((await screen.findAllByText(/Forbidden/)).length).toBeGreaterThan(0)
+    expect(reads).toBe(1)
   })
 })
 

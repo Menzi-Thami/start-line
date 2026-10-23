@@ -11,6 +11,16 @@ export type RunnerState =
   | { kind: 'ready'; runner: Runner }
   | { kind: 'error'; message: string }
 
+/**
+ * More tries of the sign-in read while the server wakes, on top of the API client's own retry. The free server sleeps
+ * when idle and its database pauses too: waking both can take a couple of minutes, and the runner is watching the
+ * waiting film (with a way out) the whole time, so giving up early only means signing in again.
+ */
+export const WAKE_RETRIES = 2
+
+// A dropped connection or timeout (0), or the server answering before its database is back (500, 502-504).
+const stillWaking = (error: unknown) => error instanceof ApiError && [0, 500, 502, 503, 504].includes(error.status)
+
 /** Who the runner is, as far as Taperday knows: signed out, mid sign-up, or registered. */
 export function useRunner() {
   const auth = useAuth()
@@ -18,9 +28,18 @@ export function useRunner() {
 
   const fetchRunner = useCallback(() => {
     let cancelled = false
+    const me = async (token: string): Promise<Runner> => {
+      for (let attempt = 0; ; attempt++) {
+        try {
+          return await api.me.get(token)
+        } catch (error) {
+          if (cancelled || attempt >= WAKE_RETRIES || !stillWaking(error)) throw error
+        }
+      }
+    }
     auth
       .getToken()
-      .then((token) => (token ? api.me.get(token) : Promise.reject(new ApiError('Not signed in', 401))))
+      .then((token) => (token ? me(token) : Promise.reject(new ApiError('Not signed in', 401))))
       .then((runner) => !cancelled && setState({ kind: 'ready', runner }))
       .catch((error: unknown) => {
         if (cancelled) return

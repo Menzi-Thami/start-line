@@ -9,6 +9,8 @@ export const WHEEL_SETTLE_MS = 150
 interface Props {
   id: string
   label: string
+  /** The short unit shown beside the chosen number ("hr", "min", "sec"); the label is what's read out. */
+  unit?: string
   /** The digits as typed: "" when nothing is chosen yet. */
   value: string
   max: number
@@ -23,7 +25,7 @@ interface Props {
  * value, takes typing and the arrow keys, and is what a screen reader sees, so the wheel is only ever a faster way to set
  * it. A tap never focuses that field, so it never brings up a phone's keyboard.
  */
-export function TimeWheel({ id, label, value, max, onChange, invalid, describedBy }: Props) {
+export function TimeWheel({ id, label, unit = label, value, max, onChange, invalid, describedBy }: Props) {
   const track = useRef<HTMLDivElement>(null)
   // Set while the wheel moves itself (to show a value set some other way), so that move never picks a number.
   const moving = useRef(false)
@@ -64,11 +66,11 @@ export function TimeWheel({ id, label, value, max, onChange, invalid, describedB
   }
 
   return (
-    <div className="wheel">
-      <label className="field-help" htmlFor={id}>
+    <div className={`wheel${invalid ? ' is-invalid' : ''}`}>
+      <label className="visually-hidden" htmlFor={id}>
         {label}
       </label>
-      <div className={`wheel-window${invalid ? ' is-invalid' : ''}`}>
+      <div className="wheel-window">
         <div ref={track} className="wheel-track" aria-hidden="true" onScroll={onScroll}>
           <span className="wheel-pad" />
           {Array.from({ length: max + 1 }, (_, n) => (
@@ -78,7 +80,6 @@ export function TimeWheel({ id, label, value, max, onChange, invalid, describedB
           ))}
           <span className="wheel-pad" />
         </div>
-        <span className="wheel-lens" aria-hidden="true" />
         <input
           id={id}
           className="visually-hidden wheel-input"
@@ -99,6 +100,9 @@ export function TimeWheel({ id, label, value, max, onChange, invalid, describedB
           }}
         />
       </div>
+      <span className="wheel-unit" aria-hidden="true">
+        {unit}
+      </span>
     </div>
   )
 }

@@ -85,3 +85,8 @@ yet saved with a plan). A full build can take a share of the race time off by ex
 weeks of building left and the share of the original peak a rebuilt plan keeps; a goal asking up to half of that is
 `OnTrack`, up to all of it `Stretch`, more `AtRisk`. Beyond the marathon only the build is judged. Every threshold is a
 named constant with a test (`GoalOutlookTests`).
+
+A runner can choose the day their plan starts (`PlanParameters.StartOn`, `start=` in the link, `GeneratePlanQuery.StartOn`,
+a `StartOn` column on saved plans), from the day it's built to two weeks before the race. Weeks still run Monday to
+Sunday, so a start mid-week makes a short first week holding only the runs from that day. Without it a plan starts the next
+Monday, exactly as before, so no plan changes and no generator version is needed.

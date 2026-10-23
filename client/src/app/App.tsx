@@ -49,6 +49,7 @@ const FIELD_FOR: Record<string, keyof FieldErrors> = {
   GoalTime: 'goal',
   RunDays: 'runDays',
   LongRunDay: 'longRunDay',
+  StartOn: 'startOn',
   CurrentWeeklyKm: 'currentKm',
   StrengthDays: 'strength',
 }

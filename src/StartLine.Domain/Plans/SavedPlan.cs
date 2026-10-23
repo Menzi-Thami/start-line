@@ -17,6 +17,7 @@ public enum SavedPlanStatus
 /// from these inputs on read; nothing about the schedule is frozen here yet. A replan is stored the same way: as the
 /// answers that rebuild the plan from a date, never as the rebuilt sessions. <see cref="GeneratorVersion"/> is the
 /// generator version the plan was first built with, so a saved plan keeps its shape when newer versions arrive.
+/// <see cref="StartOn"/> is the day the runner chose to start, if they chose one.
 /// </summary>
 public sealed record SavedPlanInputs(
     string? RaceSlug,
@@ -33,7 +34,8 @@ public sealed record SavedPlanInputs(
     DateOnly? ReplanFrom = null,
     Setback? Setback = null,
     double? RecentWeeklyKm = null,
-    int GeneratorVersion = TrainingPlanGenerator.OriginalVersion)
+    int GeneratorVersion = TrainingPlanGenerator.OriginalVersion,
+    DateOnly? StartOn = null)
 {
     /// <summary>The latest replan, if the runner has rebuilt the plan after a setback.</summary>
     public PlanReplan? Replan => ReplanFrom is { } from && Setback is { } setback ? new PlanReplan(from, setback, RecentWeeklyKm) : null;

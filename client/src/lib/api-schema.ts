@@ -1313,6 +1313,7 @@ export interface paths {
                     RecentResultKm?: number;
                     RecentResultTime?: string;
                     RecentResultDate?: string;
+                    StartOn?: string;
                     units?: string;
                 };
                 header?: never;
@@ -1665,6 +1666,8 @@ export interface components {
             recentResultTime?: null | string;
             /** Format: date */
             recentResultDate?: null | string;
+            /** Format: date */
+            startOn?: null | string;
         };
         GoalOutlookDto: {
             verdict: components["schemas"]["GoalVerdict"];

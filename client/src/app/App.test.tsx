@@ -285,6 +285,42 @@ describe('building a plan', () => {
     expect(lastPlanRequest.body).toMatchObject({ recentResultKm: 10, recentResultTime: '00:50:00', recentResultDate: '2026-10-01' })
   })
 
+  it('starts the next Monday unless the runner picks today or another day', async () => {
+    const { user } = setup()
+    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
+    await next(user)
+    await fillGoal(user, '11', '0', '0')
+    await next(user)
+
+    // Today is pinned to Thursday 8 October 2026: the next Monday is the 12th.
+    expect(screen.getByRole('radio', { name: /Next Monday/ })).toBeChecked()
+    expect(screen.getByText('Mon 12 Oct')).toBeInTheDocument()
+    await user.click(screen.getByRole('radio', { name: /Another day/ }))
+    await next(user)
+    expect(screen.getAllByText('Pick the day you want to start.').length).toBeGreaterThan(0)
+
+    await user.type(screen.getByLabelText('Start on'), '2026-10-15')
+    await next(user)
+    await next(user)
+    expect(screen.getByText('Thursday 15 October 2026')).toBeInTheDocument()
+    await buildIt(user)
+
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    expect(lastPlanRequest.body).toMatchObject({ startOn: '2026-10-15' })
+    expect(window.location.search).toContain('start=2026-10-15')
+  })
+
+  it('sends no start day when the runner keeps the next Monday', async () => {
+    const { user } = setup()
+    await answerEverything(user)
+
+    await buildIt(user)
+
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    expect(lastPlanRequest.body).toMatchObject({ startOn: null })
+    expect(window.location.search).not.toContain('start=')
+  })
+
   it('sends no recent race when none was entered', async () => {
     const { user } = setup()
     await answerEverything(user)

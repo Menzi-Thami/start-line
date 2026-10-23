@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountPage } from '../features/account/AccountPage'
 import { MyPlans } from '../features/account/MyPlans'
+import { Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
@@ -34,7 +35,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'build' | 'plans' | 'runs' | 'account' | 'privacy' | 'sign-up'
+type View = 'home' | 'build' | 'plans' | 'runs' | 'account' | 'privacy' | 'sign-up'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -71,7 +72,7 @@ const runFromUrl = (): OpenRun | null => {
 const viewFromUrl = (): View => {
   if (window.location.pathname === STRAVA_CALLBACK_PATH) return 'account'
   const view = new URLSearchParams(window.location.search).get('view')
-  return view === 'plans' || view === 'runs' || view === 'account' || view === 'privacy' ? view : 'build'
+  return view === 'home' || view === 'plans' || view === 'runs' || view === 'account' || view === 'privacy' ? view : 'build'
 }
 
 export function App() {
@@ -187,7 +188,7 @@ export function App() {
 
   // The runner's runs (uploaded and synced), bests and Strava status, shown inside the plan. Loaded when the plan
   // view opens, so a new upload or a run that just arrived from Strava appears.
-  const synced = useSyncedRuns(runner.state.kind === 'ready' && view === 'build')
+  const synced = useSyncedRuns(runner.state.kind === 'ready' && (view === 'build' || view === 'home'))
   const currentPlan = useCurrentPlan(runner.state.kind === 'ready')
   const landing = useRef(false)
   const [landed, setLanded] = useState(false)
@@ -239,20 +240,19 @@ export function App() {
       .catch((failure: unknown) => setStravaNotice(failure instanceof Error ? failure.message : 'Connecting Strava didn’t work. Try again.'))
   }, [stravaCallback, runner.state.kind, auth])
 
-  // Signed in with a plan: open on it, not on the builder. Once per visit, and never over a plan link they opened.
+  // Signed in with a plan: open on Home, with the plan a tap away, not on the builder. Once per visit, and never over a
+  // plan link they opened.
   const found = currentPlan.current
   useEffect(() => {
     if (landing.current || !found || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
     landing.current = true
-    const inputs = fromRequest(found.inputs)
-    // After this render, not inside it: the plan view takes over from the "opening" placeholder.
+    // After this render, not inside it: Home takes over from the "opening" placeholder.
     void Promise.resolve().then(() => {
       setLanded(true)
-      if (!inputs) return
-      setPlan({ kind: 'loading' })
-      fetchPlan(inputs)
+      setView('home')
+      window.history.replaceState(null, '', '?view=home')
     })
-  }, [found, initial, view, plan.kind, editing, fetchPlan])
+  }, [found, initial, view, plan.kind, editing])
 
   // A shared link builds its plan straight away.
   useEffect(() => {
@@ -276,7 +276,7 @@ export function App() {
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'plans' || next === 'runs' || next === 'account' || next === 'privacy'
+      next === 'home' || next === 'plans' || next === 'runs' || next === 'account' || next === 'privacy'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
@@ -292,9 +292,8 @@ export function App() {
     window.scrollTo?.({ top: 0 })
   }
 
-  // A blank builder: no plan on screen, no answers half-typed, no link remembered. After deleting the runner's plan, and
-  // whenever they ask to build a new one, so a plan that's gone (or another one) never comes back by itself.
-  const startFresh = () => {
+  // Nothing loaded, nothing half-typed, no link remembered, so a plan that's gone (or another one) never comes back by itself.
+  const clearPlan = () => {
     inflight.current?.abort()
     landing.current = true
     setLanded(true)
@@ -303,35 +302,39 @@ export function App() {
     setFieldErrors({})
     setEditing(false)
     setBuilderKey((k) => k + 1)
+  }
+
+  // A blank builder, whenever the runner asks to build a new plan.
+  const startFresh = () => {
+    clearPlan()
     setView('build')
     setOpenRun(null)
     moveTo('', true)
     window.scrollTo?.({ top: 0 })
   }
 
-  // Home, from the Taperday wordmark: the runner's own plan when they have one, otherwise a fresh start. Never a
-  // half-edited form. A plan from a link stays home for someone signed out: it lives only in that link.
+  // Home, from the Taperday wordmark: the runner's Home when they're signed in, and never a half-edited form. Signed
+  // out, the builder (or the plan from their link, which lives only in that link) is home.
   const goHome = () => {
-    const own = currentPlan.current
-    const onScreen = plan.kind === 'ready' || plan.kind === 'error' ? toRequest(plan.inputs) : null
-    if (own && !(onScreen && samePlan(onScreen, own.inputs))) {
-      landing.current = true
-      setLanded(true)
-      setOpenRun(null)
-      openSaved(own.inputs)
-      window.scrollTo?.({ top: 0 })
-    } else if (!own && runner.state.kind === 'ready') {
-      startFresh()
-    } else {
-      setEditing(false)
-      go('build')
-    }
+    setEditing(false)
+    go(runner.state.kind === 'ready' ? 'home' : 'build')
   }
 
-  // The runner deleted a saved plan. Their current plan (or the plan on screen) is gone, so home is a fresh start;
-  // deleting a past plan is only tidying up, and they stay on My plans.
+  // The runner's own plan, from Home. Back comes back to Home.
+  const openOwnPlan = () => {
+    const own = currentPlan.current
+    if (!own) return
+    moveTo(window.location.search, true)
+    openSaved(own.inputs)
+    window.scrollTo?.({ top: 0 })
+  }
+
+  // The runner deleted a saved plan. Their current plan (or the plan on screen) is gone, so they go Home, which offers a
+  // new one; deleting a past plan is only tidying up, and they stay on My plans.
   const planDeleted = (deleted: SavedPlanSummary) => {
-    if (deleted.status === 'Active' || deleted.id === savedOnScreen) startFresh()
+    if (deleted.status !== 'Active' && deleted.id !== savedOnScreen) return
+    clearPlan()
+    go('home')
   }
 
   // The browser's Back and Forward: show the page the URL names. A plan link builds its plan unless it's already on screen.
@@ -482,6 +485,9 @@ export function App() {
               <>
                 {state.kind === 'ready' && (
                   <>
+                    <button type="button" className="nav-link" aria-current={view === 'home' ? 'page' : undefined} onClick={() => go('home')}>
+                      Home
+                    </button>
                     <button type="button" className="nav-link" aria-current={view === 'plans' ? 'page' : undefined} onClick={() => go('plans')}>
                       My plans
                     </button>
@@ -560,8 +566,25 @@ export function App() {
           </section>
         )}
 
-        {(view === 'plans' || view === 'runs' || view === 'account') && state.kind === 'loading' && (
+        {(view === 'home' || view === 'plans' || view === 'runs' || view === 'account') && state.kind === 'loading' && (
           <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
+        )}
+
+        {view === 'home' && state.kind === 'ready' && (
+          <Home
+            runner={state.runner}
+            units={units}
+            today={today}
+            current={currentPlan.current}
+            runs={runs}
+            bests={synced.bests}
+            strava={synced.strava}
+            onOpenPlan={openOwnPlan}
+            onBuildPlan={startFresh}
+            onOpenRuns={() => go('runs')}
+            onOpenRun={(id) => showRun(id)}
+            onOpenAccount={() => go('account')}
+          />
         )}
 
         {view === 'plans' && state.kind === 'ready' && (
@@ -598,7 +621,7 @@ export function App() {
           />
         )}
 
-        {(view === 'plans' || view === 'runs' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
+        {(view === 'home' || view === 'plans' || view === 'runs' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
           <div className="empty">
             <p>Sign in to see your saved plans, runs and account.</p>
             {state.kind === 'signed-out' && (

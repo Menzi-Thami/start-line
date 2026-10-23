@@ -94,14 +94,15 @@ interface DurationInputProps {
 
 /**
  * Hours, minutes and seconds as three wheels, scrolled like a phone's time picker (or typed): "3:45" can't be misread
- * as minutes.
+ * as minutes. One drum with one band across it, so the chosen time reads as a time: 03 hr : 45 min : 00 sec.
  */
 export function DurationInput({ legend, value, onChange, error, help }: DurationInputProps) {
   const id = useId()
-  const part = (key: keyof Duration, label: string, max: number) => (
+  const part = (key: keyof Duration, label: string, unit: string, max: number) => (
     <TimeWheel
       id={`${id}-${key}`}
       label={label}
+      unit={unit}
       value={value[key]}
       max={max}
       onChange={(next) => onChange({ ...value, [key]: next })}
@@ -113,10 +114,16 @@ export function DurationInput({ legend, value, onChange, error, help }: Duration
   return (
     <fieldset className="field" style={{ border: 0, padding: 0 }}>
       <legend className="field-label">{legend}</legend>
-      <div className="wheels">
-        {part('h', 'Hours', 99)}
-        {part('m', 'Minutes', 59)}
-        {part('s', 'Seconds', 59)}
+      <div className={`wheels${error ? ' is-invalid' : ''}`}>
+        {part('h', 'Hours', 'hr', 99)}
+        <span className="wheel-colon" aria-hidden="true">
+          :
+        </span>
+        {part('m', 'Minutes', 'min', 59)}
+        <span className="wheel-colon" aria-hidden="true">
+          :
+        </span>
+        {part('s', 'Seconds', 'sec', 59)}
       </div>
       {help && <p className="goal-pace">{help}</p>}
       <FieldError id={`${id}-error`} message={error} />

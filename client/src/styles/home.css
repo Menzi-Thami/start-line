@@ -57,6 +57,16 @@
   color: var(--ink-2);
 }
 
+/* Home from the copy on this device while the account loads: a quiet line, so it's clear what's on screen. */
+.home-catching-up {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
 .home-title {
   margin: 0;
   font-family: var(--font-display);

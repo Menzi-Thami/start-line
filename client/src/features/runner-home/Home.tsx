@@ -24,28 +24,56 @@ interface Props {
   onBuildPlan: () => void
   onOpenRun: (id: string) => void
   onOpenAccount: () => void
+  /** The plan as last seen on this device, shown until this visit's has loaded. */
+  initialPlan?: HomePlan | null
+  /** This visit's plan, once it has loaded, so the device can keep a copy. */
+  onPlanLoaded?: (plan: HomePlan) => void
+  /** When Home is showing the copy kept on this device while the account loads: when that copy was saved. */
+  catchingUpFrom?: string | null
 }
+
+type HomePlan = { id: string; plan: TrainingPlan }
 
 /** The race distances worth a place on Home; the plan's Overview and the run pages list the rest. */
 const HEADLINE_BESTS = [5000, 10000, 21097.5, 42195]
 
 /** The runner's plan, as the coach has it this week. Without it Home still shows their running. */
-function useHomePlan(current: CurrentPlan | null | undefined): TrainingPlan | null {
+function useHomePlan(current: CurrentPlan | null | undefined, initial?: HomePlan | null, onLoaded?: (plan: HomePlan) => void): TrainingPlan | null {
   const auth = useAuth()
-  const [plan, setPlan] = useState<{ id: string; plan: TrainingPlan } | null>(null)
+  const [plan, setPlan] = useState<HomePlan | null>(null)
+  const loaded = useRef(onLoaded)
+  useEffect(() => {
+    loaded.current = onLoaded
+  }, [onLoaded])
   useEffect(() => {
     if (!current) return
     let cancelled = false
     auth
       .getToken()
       .then((token) => (token ? api.me.coachPlan(token, current.id) : null))
-      .then((saved) => !cancelled && saved && setPlan({ id: current.id, plan: saved.plan }))
+      .then((saved) => {
+        if (cancelled || !saved) return
+        const found = { id: current.id, plan: saved.plan }
+        setPlan(found)
+        loaded.current?.(found)
+      })
       .catch(() => undefined)
     return () => {
       cancelled = true
     }
   }, [current, auth])
-  return plan && current && plan.id === current.id ? plan.plan : null
+  // Until this visit's plan arrives, the copy from last time (if it's the same plan) stands in for it.
+  const shown = plan && current && plan.id === current.id ? plan : initial
+  return shown && current && shown.id === current.id ? shown.plan : null
+}
+
+const clock = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: '2-digit' })
+
+/** "from 9:14", or "from Tuesday" when the copy is from another day. */
+function savedWhen(savedAt: string, today: string): string {
+  const saved = new Date(savedAt)
+  const sameDay = saved.toLocaleDateString('en-CA') === today
+  return sameDay ? `from ${clock.format(saved)}` : `from ${saved.toLocaleDateString('en-GB', { weekday: 'long' })}`
 }
 
 function ChangeLine({ value, units, against }: { value: Change; units: Units; against: string }) {
@@ -259,12 +287,28 @@ function tabToUrl(tab: HomeTab) {
  * Home for a signed-in runner, in three tabs so the everyday answer comes first. Today: what's on today and how the week
  * is going. Progress: their running over the months, week by week, and their bests. Tools: the calculators. Built from
  * their own runs, so it's useful with or without a plan. A plan adds today's session, this week's ring and the planned
- * distance behind each week's bar.
+ * distance behind each week's bar. While the account loads it can show the copy kept on this device, saying so, and
+ * fills in as each answer arrives.
  */
-export function Home({ runner, units, today, current, runs = [], bests, strava, onOpenPlan, onBuildPlan, onOpenRun, onOpenAccount }: Props) {
+export function Home({
+  runner,
+  units,
+  today,
+  current,
+  runs = [],
+  bests,
+  strava,
+  onOpenPlan,
+  onBuildPlan,
+  onOpenRun,
+  onOpenAccount,
+  initialPlan,
+  onPlanLoaded,
+  catchingUpFrom,
+}: Props) {
   const [tab, setTab] = useState<HomeTab>(tabFromUrl)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
-  const plan = useHomePlan(current)
+  const plan = useHomePlan(current, initialPlan, onPlanLoaded)
   const totals = trainingTotals(runs, today)
   const bars = weeklyBars(runs, today, plan)
   const week = plan?.weeks.find((w) => w.startDate <= today && today <= weekEnd(w)) ?? null
@@ -312,6 +356,13 @@ export function Home({ runner, units, today, current, runs = [], bests, strava, 
           </p>
         </div>
       </header>
+
+      {catchingUpFrom && (
+        <p className="home-catching-up" role="status">
+          <span className="wait-spinner" aria-hidden="true" />
+          Showing your page {savedWhen(catchingUpFrom, today)} while Taperday catches up.
+        </p>
+      )}
 
       <div className="tabs home-tabs" role="tablist" aria-label="Home" onKeyDown={onTabKey}>
         {HOME_TABS.map((t, i) => (

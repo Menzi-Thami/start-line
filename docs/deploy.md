@@ -133,6 +133,26 @@ is `client/public/og-image.png` (1200 x 630). The CSP needs no change for it: cr
 - On the website, **Sign in** opens the Taperday sign-in page. If nothing happens, check the browser console
   for `endpoints_resolution_error`: the authority is missing the tenant ID (see `docs/accounts-setup.md`).
 
+## Keeping the free API awake
+
+On F1, Azure unloads the API after about 20 minutes without a request, and F1 has no Always On. Until launch, an
+outside uptime monitor keeps it loaded for free:
+
+- Point it at `<apiUrl>/health/live` every 5 minutes, for example on UptimeRobot's free plan (check its terms).
+- **`/health/live`, never `/health/ready`.** `live` runs no checks and never touches the database (`Program.cs`),
+  so the pings cost almost no CPU: a second or two a day of F1's 60 CPU minutes. `ready` queries the database, and
+  keeping the database awake would use up the free offer's 100,000 vCore-seconds in two or three days, after which it
+  stays paused until the next month.
+- The ping must come from outside Azure. A timer inside the API can't wake it: once F1 unloads the API, nothing in
+  it runs.
+- **Not from a scheduled GitHub Action.** Every run bills at least a minute, so a ping every 5 minutes is about 8,600
+  minutes a month, well over a private repo's 2,000 free ones.
+
+The database still pauses after an hour with no queries (`autoPauseDelay: 60`) and took 47 s to resume when measured
+(23 Oct 2026). Building and sharing plans never touch it. A signed-in runner who arrives after a quiet hour sees the
+waiting screen (`SignInWait`), which follows the wake through `live` then `ready` and keeps trying for up to 2½
+minutes (`WAKE_PATIENCE_MS`).
+
 ## Going live
 
 Redeploy with `-p apiSku=B1 databaseTier=basic`. Changing the database tier moves the data with it; the free

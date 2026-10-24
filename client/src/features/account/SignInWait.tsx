@@ -1,9 +1,33 @@
 import { useEffect, useState } from 'react'
+import { isUp } from '../../lib/api-client'
 import { Runner } from '../shared/Runner'
-import { SCENE_MS, sceneAt, TIPS } from './wait-film'
+import { followWake, SCENE_MS, sceneAt, SLOW_AFTER_MS, TIP_MS, TIPS, WAKE_CHECK_MS, type WakeStep } from './wait-film'
 
-/** How long before the wait is explained: a warm server answers well inside this. */
-export const SLOW_AFTER_MS = 6000
+function useWakeStep(): WakeStep {
+  const [step, setStep] = useState<WakeStep>('server')
+
+  useEffect(() => {
+    let stopped = false
+    void followWake(isUp, () => new Promise((resolve) => setTimeout(resolve, WAKE_CHECK_MS)), setStep, () => stopped)
+    return () => {
+      stopped = true
+    }
+  }, [])
+
+  return step
+}
+
+const STATUS: Record<WakeStep, string> = {
+  server: 'Waking Taperday up',
+  database: 'Taperday’s up. Fetching your training',
+  almost: 'Almost there. Opening your page',
+}
+
+const NOTE: Record<WakeStep, string> = {
+  server: 'Its free server sleeps when no one’s using it, so the first visit of the day can take a minute or two.',
+  database: 'Your training is kept safe in a database that naps too. It’s on its way.',
+  almost: 'Everything’s awake. Your page is a moment away.',
+}
 
 interface Props {
   onRetry: () => void
@@ -12,30 +36,36 @@ interface Props {
 
 /**
  * Shown on any page while Taperday checks who the runner is. The free server and its database sleep when nobody's using
- * them, so the first visit of the day can take a minute or more. A short film plays while we wait, with a tip beneath it;
- * after a few seconds, if the server is still waking, it says so and offers a way out instead of an endless spinner. The
- * film is decoration (aria-hidden) and the tips aren't announced: the status text carries the meaning, and every
- * animation stops for reduced motion.
+ * them, so the first visit of the day can take a minute or more. A short film plays while we wait, with a running tip
+ * beneath it that stays long enough to read. After a few seconds, if the server is still waking, it says how far the wake
+ * has got, ends with an "almost there" loader once only the account is left, and offers a way out instead of an endless
+ * spinner. The film and tips are decoration (aria-hidden): the status text carries the meaning, and every animation stops
+ * for reduced motion.
  */
 export function SignInWait({ onRetry, onSignOut }: Props) {
   const [slow, setSlow] = useState(false)
   const [tick, setTick] = useState(0)
+  const [tip, setTip] = useState(0)
+  const step = useWakeStep()
 
   useEffect(() => {
     const timer = window.setTimeout(() => setSlow(true), SLOW_AFTER_MS)
     const film = window.setInterval(() => setTick((t) => t + 1), SCENE_MS)
+    const tips = window.setInterval(() => setTip((t) => t + 1), TIP_MS)
     return () => {
       window.clearTimeout(timer)
       window.clearInterval(film)
+      window.clearInterval(tips)
     }
   }, [])
 
   const scene = sceneAt(tick)
+  const almost = slow && step === 'almost'
 
   return (
     <div className="sign-in-wait">
       {/* Keyed by tick, so each scene enters fresh even when two in a row share a pose. */}
-      <div key={tick} className={`wait-film wait-scene-${scene.id}`} aria-hidden="true">
+      <div key={`scene-${tick}`} className={`wait-film wait-scene-${scene.id}`} aria-hidden="true">
         <span className="wait-caption">{scene.caption}</span>
         <span className="wait-ground" />
         {scene.id === 'wake' && (
@@ -62,22 +92,24 @@ export function SignInWait({ onRetry, onSignOut }: Props) {
         <Runner pose={scene.pose} size={scene.pose === 'sleep' ? 28 : 46} className="wait-runner" />
       </div>
       <div role="status" aria-live="polite">
-        <p className="loading-line">
-          Checking your account
-          <span className="loading-dots" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </span>
+        <p className={`loading-line${almost ? ' is-almost' : ''}`}>
+          {almost && <span className="wait-spinner" aria-hidden="true" />}
+          {slow ? STATUS[step] : 'Checking your account'}
+          {!almost && (
+            <span className="loading-dots" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+          )}
         </p>
-        {slow && (
-          <p className="field-help sign-in-wait-note">
-            Waking Taperday up. Its free server sleeps when no one’s using it, so the first visit of the day can take a minute or
-            two.
-          </p>
-        )}
+        {slow && <p className="field-help sign-in-wait-note">{NOTE[step]}</p>}
       </div>
-      <p className="wait-tip">{TIPS[tick % TIPS.length]}</p>
+      {/* Keyed by tip, so each one fades in. */}
+      <figure key={`tip-${tip}`} className="wait-tip" aria-hidden="true">
+        <figcaption className="wait-tip-label">Running tip</figcaption>
+        <p>{TIPS[tip % TIPS.length]}</p>
+      </figure>
       {slow && (
         <div className="submit-row">
           <button type="button" className="button button-quiet" onClick={onRetry}>

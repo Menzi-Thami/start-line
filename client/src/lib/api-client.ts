@@ -63,6 +63,19 @@ export function wakeApi(): void {
   fetch(`${BASE_URL}/health/live`, { mode: 'no-cors', cache: 'no-store' }).catch(() => undefined)
 }
 
+/**
+ * Whether the API is answering (`live`: the server alone, never the database) or ready (`ready`: its database too).
+ * Only ever a hint for the waiting screen, so any failure is simply "not yet".
+ */
+export async function isUp(check: 'live' | 'ready'): Promise<boolean> {
+  try {
+    const signal = typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(READ_TIMEOUT_MS) : undefined
+    return (await fetch(`${BASE_URL}/health/${check}`, { cache: 'no-store', signal })).ok
+  } catch {
+    return false
+  }
+}
+
 const isRead = (init: RequestInit) => !init.method || init.method === 'GET'
 
 function withTimeout(init: RequestInit): AbortSignal | undefined {

@@ -53,6 +53,16 @@ describe('a session, step by step', () => {
     expect(stepText(step({ durationSeconds: 20, effort: 'Stride: quick and relaxed' }), 'km')).toBe('20 s: stride: quick and relaxed')
   })
 
+  it('gives every hard bit and every jog a pace to hold on a watch', () => {
+    expect(
+      stepText(step({ durationSeconds: 60, zone: 'Interval', fastestSecondsPerKm: 280, slowestSecondsPerKm: 290, effort: 'Hard' }), 'km'),
+    ).toBe('60 s at interval pace (hard) · 4:40–4:50/km')
+    expect(
+      stepText(step({ kind: 'Recover', durationSeconds: 60, zone: 'Recovery', fastestSecondsPerKm: 370, slowestSecondsPerKm: 400, effort: 'Easy' }), 'km'),
+    ).toBe('60 s easy · 6:10–6:40/km')
+    expect(stepText(step({ kind: 'Recover', durationSeconds: 60, effort: 'Walk back' }), 'km')).toBe('60 s walk back')
+  })
+
   it('speaks miles to runners who use them', () => {
     expect(stepText(step({ distanceKm: 1.609344, zone: 'Race', fastestSecondsPerKm: 300, slowestSecondsPerKm: 300 }), 'mi')).toBe('1 mi at race pace · 8:03/mi')
   })

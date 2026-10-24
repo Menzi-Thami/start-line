@@ -92,7 +92,10 @@ Sunday, so a start mid-week makes a short first week holding only the runs from 
 Monday, exactly as before, so no plan changes and no generator version is needed.
 
 Every run carries its `Steps` (`SessionSteps`, built in `WorkoutBuilder` from the same numbers as its `Detail`): warm-up,
-the work with its recoveries (a `Repeat` holds its block and count), cool-down, each with that week's pace range or, for
-hills, fartlek, strides and recoveries, how it should feel. They're guidance about the same sessions, not a change to
+the work with its recoveries (a `Repeat` holds its block and count), cool-down. Every running step has a distance or a
+time and that week's pace range, so a runner with a watch has numbers to hold: fartlek and hills at interval pace (hills
+say the pace drops on a climb), strides and fast bursts at its quick end, every jog timed at recovery pace. Only the walk
+between strides has no pace. Hills, fartlek and strides keep how they should feel as well. They're guidance about the
+same sessions, not a change to
 them, so every plan of every version has them and `GeneratorV1SnapshotTests` leaves `PlannedSession.Steps` out of its
 hash. A new kind of session needs its steps and a case in `SessionStepsTests`.

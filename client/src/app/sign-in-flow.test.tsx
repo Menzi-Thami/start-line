@@ -2,9 +2,9 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { SignInWait, SLOW_AFTER_MS } from '../features/account/SignInWait'
-import { SCENE_MS, SCENES, TIPS } from '../features/account/wait-film'
-import { WAKE_RETRIES } from '../features/account/useRunner'
+import { SignInWait } from '../features/account/SignInWait'
+import { followWake, SCENE_MS, SCENES, SLOW_AFTER_MS, TIP_MS, TIPS, type WakeStep } from '../features/account/wait-film'
+import { WAKE_TRIES } from '../features/account/useRunner'
 import { api } from '../lib/api-client'
 import type { Runner } from '../lib/types'
 import { server, stravaOff } from '../test/server'
@@ -48,6 +48,7 @@ afterEach(() => vi.useRealTimers())
 
 describe('waiting for a sleeping server after sign-in', () => {
   it('explains the wait after a few seconds and offers a way out', async () => {
+    server.use(http.get('*/health/live', () => new HttpResponse(null, { status: 503 })))
     vi.useFakeTimers()
     const onRetry = vi.fn()
     const onSignOut = vi.fn()
@@ -87,16 +88,54 @@ describe('waiting for a sleeping server after sign-in', () => {
     ])
   })
 
-  it('shows a tip with each scene, but tells a screen reader only that the account is being checked', async () => {
+  it('keeps each running tip up long enough to read, but tells a screen reader only that the account is being checked', async () => {
     vi.useFakeTimers()
     const { container } = render(<SignInWait onRetry={vi.fn()} onSignOut={vi.fn()} />)
 
+    expect(screen.getByRole('status')).toHaveTextContent(/^Checking your account$/)
     expect(screen.getByText(TIPS[0]!)).toBeInTheDocument()
+    // A scene changes before the tip does: the film moves on, the tip stays.
     await act(() => vi.advanceTimersByTimeAsync(SCENE_MS))
+    expect(screen.getByText(TIPS[0]!)).toBeInTheDocument()
+    await act(() => vi.advanceTimersByTimeAsync(TIP_MS - SCENE_MS))
     expect(screen.getByText(TIPS[1]!)).toBeInTheDocument()
 
-    expect(screen.getByRole('status')).toHaveTextContent(/^Checking your account$/)
     expect(container.querySelector('.wait-film')).toHaveAttribute('aria-hidden', 'true')
+    expect(container.querySelector('.wait-tip')).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('says how far the wake has got, and shows a loader once only the account is left', async () => {
+    let ready = false
+    server.use(http.get('*/health/ready', () => (ready ? new HttpResponse('Healthy') : new HttpResponse(null, { status: 503 }))))
+    const { container } = render(<SignInWait onRetry={vi.fn()} onSignOut={vi.fn()} />)
+
+    expect(await screen.findByText(/Taperday’s up. Fetching your training/, {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(container.querySelector('.wait-spinner')).not.toBeInTheDocument()
+
+    ready = true
+    expect(await screen.findByText(/Almost there/, {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(container.querySelector('.wait-spinner')).toBeInTheDocument()
+  })
+
+  it('follows the wake in order, server then database, and stops when the wait is over', async () => {
+    const answers = { live: [false, false, true], ready: [false, true] }
+    const steps: WakeStep[] = []
+    await followWake(
+      (check) => Promise.resolve(answers[check].shift() ?? true),
+      () => Promise.resolve(),
+      (step) => steps.push(step),
+      () => false,
+    )
+    expect(steps).toEqual(['database', 'almost'])
+
+    const none: WakeStep[] = []
+    await followWake(
+      () => Promise.resolve(false),
+      () => Promise.resolve(),
+      (step) => none.push(step),
+      () => true,
+    )
+    expect(none).toEqual([])
   })
 
   it('never leaves a blank page on My plans, My runs or Account while the account loads', async () => {
@@ -121,12 +160,13 @@ describe('waiting for a sleeping server after sign-in', () => {
 
 describe('signing in while the server wakes', () => {
   it('keeps waiting through a slow wake instead of failing the sign-in', async () => {
-    // The API client retries once; the sign-in tries again until the database is back.
+    // A server that's still starting answers fast with an error. Seven of those once used up every try inside a minute
+    // and showed "We couldn't load your account"; now the sign-in keeps going until the database is back.
     let reads = 0
     server.use(
       http.get('*/api/v1/me', () => {
         reads++
-        return reads <= 2 * (1 + WAKE_RETRIES) - 1 ? HttpResponse.json({}, { status: 503 }) : HttpResponse.json(thandi)
+        return reads <= 7 ? HttpResponse.json({}, { status: 503 }) : HttpResponse.json(thandi)
       }),
     )
     window.history.replaceState(null, '', '/?view=account')
@@ -134,7 +174,23 @@ describe('signing in while the server wakes', () => {
     renderApp(signedIn())
 
     expect(await screen.findByRole('heading', { name: /Account/ }, { timeout: 5000 })).toBeInTheDocument()
-    expect(reads).toBe(2 * (1 + WAKE_RETRIES))
+    expect(reads).toBe(8)
+  })
+
+  it('gives up in the end on a server that never wakes, with a way to try again', async () => {
+    let reads = 0
+    server.use(
+      http.get('*/api/v1/me', () => {
+        reads++
+        return HttpResponse.json({}, { status: 503 })
+      }),
+    )
+
+    renderApp(signedIn())
+
+    expect((await screen.findAllByText(/We couldn’t load your account/, {}, { timeout: 5000 })).length).toBeGreaterThan(0)
+    // Each try is the API client's read plus its own one retry.
+    expect(reads).toBe(2 * WAKE_TRIES)
   })
 
   it('still gives up on an answer that isn’t about waking', async () => {

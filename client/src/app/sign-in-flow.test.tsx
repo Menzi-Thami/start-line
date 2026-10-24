@@ -6,6 +6,7 @@ import { SignInWait } from '../features/account/SignInWait'
 import { followWake, SCENE_MS, SCENES, SLOW_AFTER_MS, TIP_MS, TIPS, type WakeStep } from '../features/account/wait-film'
 import { WAKE_TRIES } from '../features/account/useRunner'
 import { api } from '../lib/api-client'
+import { ownerOf, readSnapshot, saveSnapshot } from '../lib/home-snapshot'
 import type { Runner } from '../lib/types'
 import { server, stravaOff } from '../test/server'
 import { App } from './App'
@@ -155,6 +156,50 @@ describe('waiting for a sleeping server after sign-in', () => {
       expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
       unmount()
     }
+  })
+})
+
+describe('Home from the copy kept on this device', () => {
+  afterEach(() => window.localStorage.clear())
+
+  it('shows at once while the database wakes, then carries on with the real answers', async () => {
+    saveSnapshot(ownerOf({ name: 'Thandi', email: 'thandi@example.com' }), { runner: thandi, current: null })
+    let answer: (() => void) | undefined
+    server.use(
+      http.get('*/api/v1/me', async () => {
+        await new Promise<void>((resolve) => (answer = resolve))
+        return HttpResponse.json(thandi)
+      }),
+    )
+    window.history.replaceState(null, '', '/?view=home')
+
+    renderApp(signedIn())
+
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    expect(screen.getByText(/while Taperday catches up/)).toBeInTheDocument()
+    expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
+
+    await waitFor(() => expect(answer).toBeDefined())
+    answer!()
+    await waitFor(() => expect(screen.queryByText(/while Taperday catches up/)).not.toBeInTheDocument())
+    expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+  })
+
+  it('is never shown to someone else signed in on the same device', async () => {
+    saveSnapshot(ownerOf({ name: 'Sipho', email: 'sipho@example.com' }), { runner: { ...thandi, displayName: 'Sipho' } })
+    server.use(
+      http.get('*/api/v1/me', async () => {
+        await delay('infinite')
+        return HttpResponse.json(thandi)
+      }),
+    )
+    window.history.replaceState(null, '', '/?view=home')
+
+    renderApp(signedIn())
+
+    expect(await screen.findByText(/Checking your account/)).toBeInTheDocument()
+    expect(screen.queryByText(/Sipho/)).not.toBeInTheDocument()
+    expect(readSnapshot(ownerOf({ name: 'Sipho', email: 'sipho@example.com' }))).toBeNull()
   })
 })
 

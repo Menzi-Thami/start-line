@@ -1,5 +1,6 @@
 import { InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { clearSnapshot } from '../lib/home-snapshot'
 import { AuthContext, accountsOff, type Auth, type AuthConfig } from './auth-context'
 import { describeSignInError, type SignInProblem } from './sign-in-errors'
 
@@ -69,7 +70,11 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       // Come back to exactly this page, so a plan being built isn't lost.
       signIn: () => void msal.loginRedirect({ scopes: [config.scope], redirectStartPage: window.location.href }),
       signUp: () => void msal.loginRedirect({ scopes: [config.scope], prompt: 'create', redirectStartPage: window.location.href }),
-      signOut: () => void msal.logoutRedirect({ account: info ?? undefined }),
+      // Signing out leaves nothing of the runner's on this device: the copy of their Home goes too.
+      signOut: () => {
+        clearSnapshot()
+        void msal.logoutRedirect({ account: info ?? undefined })
+      },
       getToken: async () => {
         if (!info) return null
         try {

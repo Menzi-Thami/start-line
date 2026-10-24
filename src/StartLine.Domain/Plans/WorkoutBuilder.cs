@@ -143,8 +143,8 @@ internal sealed class WorkoutBuilder(
                 "Builds climbing strength and the downhill toughness that ultras demand.",
                 Round(WarmUpAndCoolDownKm + climbs * 0.8), PaceZone.Interval, SessionStructure.ByEffort,
                 Steps: Worked(Repeat(climbs,
-                    new SessionStep(StepKind.Run, Duration: TimeSpan.FromMinutes(2.5), Zone: PaceZone.Interval, Effort: "Uphill at a strong, steady effort"),
-                    new SessionStep(StepKind.Recover, Effort: "Run back down, relaxed and quick-footed"))));
+                    Uphill(TimeSpan.FromMinutes(2.5), "Uphill at a strong, steady effort"),
+                    Jog(TimeSpan.FromMinutes(2.5), "Run back down, relaxed and quick-footed"))));
         }
 
         var reps = 6 + Steps(progress, 4);
@@ -153,8 +153,8 @@ internal sealed class WorkoutBuilder(
             "Builds strength and running form before the faster work starts.",
             Round(WarmUpAndCoolDownKm + reps * 0.35), PaceZone.Interval, SessionStructure.ByEffort,
             Steps: Worked(Repeat(reps,
-                new SessionStep(StepKind.Run, Duration: TimeSpan.FromSeconds(60), Zone: PaceZone.Interval, Effort: "Uphill, hard but controlled"),
-                new SessionStep(StepKind.Recover, Effort: "Jog back down"))));
+                Uphill(TimeSpan.FromSeconds(60), "Uphill, hard but controlled"),
+                Jog(TimeSpan.FromSeconds(90), "Jog back down"))));
     }
 
     private PlannedSession Fartlek(DateOnly date, TrainingPhase phase, double progress)
@@ -178,7 +178,7 @@ internal sealed class WorkoutBuilder(
             Steps: Worked(Repeat(sets,
                 ByFeel(TimeSpan.FromMinutes(2), "Hard"), Jog(TimeSpan.FromMinutes(1), "Easy"),
                 ByFeel(TimeSpan.FromMinutes(1), "Hard"), Jog(TimeSpan.FromMinutes(1), "Easy"),
-                ByFeel(TimeSpan.FromSeconds(30), "Fast"), Jog(TimeSpan.FromSeconds(90), "Easy"))));
+                ByFeel(TimeSpan.FromSeconds(30), "Fast") with { Pace = QuickEnd }, Jog(TimeSpan.FromSeconds(90), "Easy"))));
     }
 
     private PlannedSession Intervals(DateOnly date, TrainingPhase phase, double progress)
@@ -271,16 +271,36 @@ internal sealed class WorkoutBuilder(
     private SessionStep At(PaceZone zone, double? km = null, TimeSpan? time = null) =>
         new(StepKind.Run, km, time, zone, paces[zone]);
 
-    /// <summary>Hard work judged by feel (fartlek), where a pace on a watch says little.</summary>
-    private static SessionStep ByFeel(TimeSpan time, string effort) => new(StepKind.Run, Duration: time, Zone: PaceZone.Interval, Effort: effort);
+    /// <summary>
+    /// Hard work with a feel to it (fartlek), still with the pace to aim for, so a runner with a watch can hold it: that
+    /// week's interval pace.
+    /// </summary>
+    private SessionStep ByFeel(TimeSpan time, string effort) =>
+        new(StepKind.Run, Duration: time, Zone: PaceZone.Interval, Pace: paces[PaceZone.Interval], Effort: effort);
 
-    private static SessionStep Jog(TimeSpan time, string effort = "Easy jog") => new(StepKind.Recover, Duration: time, Effort: effort);
+    /// <summary>
+    /// A hill rep: interval pace as the guide, with the effort leading, since a climb slows any pace whatever the
+    /// runner's fitness.
+    /// </summary>
+    private SessionStep Uphill(TimeSpan time, string effort) => ByFeel(time, $"{effort}, slower on the climb is fine");
+
+    /// <summary>The quick end of interval pace, as one pace: strides and the fastest fartlek bursts.</summary>
+    private PaceRange QuickEnd => new(paces[PaceZone.Interval].Fastest, paces[PaceZone.Interval].Fastest);
+
+    /// <summary>A recovery jog, timed and at recovery pace, so a watch can count it down.</summary>
+    private SessionStep Jog(TimeSpan time, string effort = "Easy jog") =>
+        new(StepKind.Recover, Duration: time, Zone: PaceZone.Recovery, Pace: paces[PaceZone.Recovery], Effort: effort);
 
     private static SessionStep Repeat(int times, params SessionStep[] block) => new(StepKind.Repeat, Times: times, Block: new SessionSteps(block));
 
-    /// <summary>Strides after an easy run: short, quick and relaxed, walking back between each.</summary>
-    private static SessionStep Strides(int count) =>
-        Repeat(count, new SessionStep(StepKind.Run, Duration: StrideTime, Effort: "Stride: quick and relaxed"), new SessionStep(StepKind.Recover, Effort: "Walk back"));
+    /// <summary>Walking back between strides: about a minute, enough to catch the breath.</summary>
+    private static readonly TimeSpan StrideWalk = TimeSpan.FromSeconds(60);
+
+    /// <summary>Strides after an easy run: short, quick and relaxed at the quick end of interval pace, walking back between each.</summary>
+    private SessionStep Strides(int count) =>
+        Repeat(count,
+            new SessionStep(StepKind.Run, Duration: StrideTime, Zone: PaceZone.Interval, Pace: QuickEnd, Effort: "Stride: quick and relaxed"),
+            new SessionStep(StepKind.Recover, Duration: StrideWalk, Effort: "Walk back"));
 
     private static SessionSteps Steps(params SessionStep[] steps) => new(steps);
 

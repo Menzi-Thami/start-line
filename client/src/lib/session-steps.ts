@@ -47,7 +47,7 @@ export function stepText(step: SessionStep, units: Units): string {
     case 'CoolDown':
       return withPace(`Cool down: ${howMuch} easy`)
     case 'Recover':
-      return howMuch ? `${howMuch} ${(step.effort ?? 'easy jog').toLowerCase()}` : (step.effort ?? 'Recover')
+      return withPace(howMuch ? `${howMuch} ${(step.effort ?? 'easy jog').toLowerCase()}` : (step.effort ?? 'Recover'))
     default:
       if (range && step.zone) return `${howMuch} at ${ZONE_WORDS[step.zone]}${step.effort ? ` (${step.effort.toLowerCase()})` : ''} · ${range}`
       return `${howMuch}${step.effort ? `: ${step.effort.toLowerCase()}` : ''}`

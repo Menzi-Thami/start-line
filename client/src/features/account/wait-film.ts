@@ -23,14 +23,57 @@ export const SCENES: readonly Scene[] = [
 
 const LOOP_FROM = 2
 
-/** Something worth reading while the film plays: how a Taperday plan works, one rule at a time. */
+const testing = import.meta.env.MODE === 'test'
+
+/** How long before the wait is explained: a warm server answers well inside this. */
+export const SLOW_AFTER_MS = testing ? 300 : 6000
+
+/** Between checks of whether the server is up yet. */
+export const WAKE_CHECK_MS = testing ? 20 : 3000
+
+/** How far the wake has got: the server starting, then its database resuming, then only the account left to load. */
+export type WakeStep = 'server' | 'database' | 'almost'
+
+/**
+ * Follows the wake through the API's health checks: `live` answers once the server is up (it never touches the
+ * database), then `ready` once the database is back, after which the account read is moments away. Only ever a hint
+ * for the screen: a failed check is "not yet", and the page shows the moment the account loads, whatever this says.
+ */
+export async function followWake(
+  up: (check: 'live' | 'ready') => Promise<boolean>,
+  pause: () => Promise<unknown>,
+  onStep: (step: WakeStep) => void,
+  stopped: () => boolean,
+): Promise<void> {
+  while (!stopped() && !(await up('live'))) await pause()
+  if (stopped()) return
+  onStep('database')
+  while (!stopped() && !(await up('ready'))) await pause()
+  if (!stopped()) onStep('almost')
+}
+
+/** How long each tip stays up: long enough to read it twice, so nobody's cut off mid-sentence. */
+export const TIP_MS = 8000
+
+/**
+ * Something worth reading while the film plays, written for someone new to running as much as for a regular: what
+ * makes training work, and how a Taperday plan uses it. General, well-established advice only; nothing medical.
+ */
 export const TIPS: readonly string[] = [
-  'Most of your fitness is built at an easy, chatty pace.',
+  'Most of your fitness is built at an easy, chatty pace. If you can’t talk in full sentences, slow down.',
+  'Walk breaks are a smart way to go further, not cheating. Plenty of marathoners use them.',
+  'Fitness is built in the rest after a run, not during it. Sleep is part of training.',
+  'Add distance gradually. Taperday never lets a week grow by more than 10%.',
   'A cutback week isn’t lost training: it’s when the work sinks in.',
-  'Hard days sit apart, so your legs recover in between.',
+  'Hard days sit apart in your plan, so your legs recover in between.',
+  'Warm up with ten minutes of easy running before a hard session. Your first kilometres will feel better for it.',
+  'Short, quick steps are usually kinder to your legs than long, reaching strides.',
+  'Comfortable shoes matter more than the brand. Most last somewhere between 500 and 800 km.',
+  'Strides are short, relaxed bursts of speed. They keep your legs quick without tiring you out.',
   'Long runs are capped by time as well as distance, so they never become an all-day effort.',
-  'Strides keep your legs quick without adding fatigue.',
+  'On your first race, start slower than feels right. It’s far easier to speed up than to hang on.',
   'Race week is light on purpose: you can’t get fitter in the last few days, only fresher.',
+  'Consistency beats heroics. Three easy runs a week, every week, builds more than one big run now and then.',
 ]
 
 /** The scene for the nth tick of the film: once through, then laps from the start gun. */

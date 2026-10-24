@@ -24,6 +24,9 @@ export const stravaOff: StravaStatus = {
 export const lastPlanRequest: { body: unknown } = { body: undefined }
 
 export const handlers = [
+  // The waiting screen follows the wake through these; an awake server answers both at once.
+  http.get('*/health/live', () => new HttpResponse('Healthy')),
+  http.get('*/health/ready', () => new HttpResponse('Healthy')),
   http.get('*/api/v1/races', () => HttpResponse.json(racesFixture)),
   http.post('*/api/v1/plans', async ({ request }) => {
     lastPlanRequest.body = await request.json()

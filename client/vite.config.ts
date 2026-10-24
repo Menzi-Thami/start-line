@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       // The API runs separately in development; same-origin requests avoid CORS entirely.
-      proxy: { '/api': 'http://localhost:5122' },
+      proxy: { '/api': 'http://localhost:5122', '/health': 'http://localhost:5122' },
     },
     test: {
       environment: 'jsdom',

@@ -208,6 +208,11 @@ export function PrivacyPolicy() {
           Your browser keeps your sign-in for the session, and your unit choice and ticked sessions on your device. There are no tracking
           cookies.
         </p>
+        <p>
+          Once you’re signed in, it also keeps a copy of your last Home (your name, current plan, recent runs, bests and whether Strava is
+          connected, never your email or heart rate), so Home opens straight away next time. It’s cleared when you sign out, dropped
+          after a week, and Strava runs in it go after seven days, as on Taperday itself.
+        </p>
       </section>
 
       <section className="section">

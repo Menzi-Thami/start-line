@@ -22,6 +22,7 @@ import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strav
 import { useSyncedRuns } from '../features/sync/useSyncedRuns'
 import { api, ApiError, apiOrigin } from '../lib/api-client'
 import { calendarLinks } from '../lib/calendar-links'
+import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/home-snapshot'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
@@ -197,6 +198,31 @@ export function App() {
   const [justSignedUp, setJustSignedUp] = useState(false)
   const runs = synced.runs
 
+  // The runner's last-seen Home, kept on this device, so it shows at once while the free database wakes. Read once per
+  // account; each piece is replaced as this visit's answer arrives, and saved again for next time.
+  const owner = auth.account ? ownerOf(auth.account) : null
+  const [snapshot, setSnapshot] = useState<{ owner: string; copy: HomeSnapshot | null } | null>(null)
+  if (owner && snapshot?.owner !== owner) setSnapshot({ owner, copy: readSnapshot(owner) })
+  const copy = owner && snapshot?.owner === owner ? snapshot.copy : null
+  const ready = runner.state.kind === 'ready' ? runner.state.runner : null
+  useEffect(() => {
+    if (owner && ready) saveSnapshot(owner, { runner: ready })
+  }, [owner, ready])
+  const loadedPlan = currentPlan.current
+  useEffect(() => {
+    if (owner && ready && loadedPlan !== undefined) saveSnapshot(owner, { current: loadedPlan })
+  }, [owner, ready, loadedPlan])
+  useEffect(() => {
+    if (owner && ready && synced.runs) saveSnapshot(owner, { runs: synced.runs })
+  }, [owner, ready, synced.runs])
+  useEffect(() => {
+    if (owner && ready && synced.bests) saveSnapshot(owner, { bests: synced.bests })
+  }, [owner, ready, synced.bests])
+  useEffect(() => {
+    if (owner && ready && synced.strava) saveSnapshot(owner, { strava: synced.strava })
+  }, [owner, ready, synced.strava])
+  const savePlan = useCallback((plan: { id: string; plan: TrainingPlan }) => owner && saveSnapshot(owner, { plan }), [owner])
+
   // Check-ins live on the runner's saved plan, so they're offered only when that's the plan on screen.
   const savedOnScreen =
     plan.kind === 'ready' && currentPlan.current && samePlan(toRequest(plan.inputs), currentPlan.current.inputs) ? currentPlan.current.id : null
@@ -243,7 +269,9 @@ export function App() {
 
   // Signed in with a plan: open on Home, with the plan a tap away, not on the builder. Once per visit, and never over a
   // plan link they opened.
-  const found = currentPlan.current
+  // The plan this visit found, or until then the one last seen on this device, so Home opens without waiting.
+  const ownPlan = currentPlan.current !== undefined ? currentPlan.current : (copy?.current ?? undefined)
+  const found = ownPlan
   useEffect(() => {
     if (landing.current || !found || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
     landing.current = true
@@ -323,7 +351,7 @@ export function App() {
 
   // The runner's own plan, from Home. Back comes back to Home.
   const openOwnPlan = () => {
-    const own = currentPlan.current
+    const own = ownPlan
     if (!own) return
     moveTo(window.location.search, true)
     openSaved(own.inputs)
@@ -407,6 +435,8 @@ export function App() {
   }
 
   const state = runner.state
+  // Home shows for a registered runner, or, while the account is still loading, from the copy kept on this device.
+  const homeRunner = state.kind === 'ready' ? state.runner : state.kind === 'loading' ? (copy?.runner ?? null) : null
   const signedUp = (saved: Runner) => {
     setJustSignedUp(true)
     runner.setRunner(saved)
@@ -567,19 +597,22 @@ export function App() {
           </section>
         )}
 
-        {(view === 'home' || view === 'plans' || view === 'runs' || view === 'account') && state.kind === 'loading' && (
+        {(view === 'home' || view === 'plans' || view === 'runs' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
           <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
         )}
 
-        {view === 'home' && state.kind === 'ready' && (
+        {view === 'home' && homeRunner && (
           <Home
-            runner={state.runner}
+            runner={homeRunner}
             units={units}
             today={today}
-            current={currentPlan.current}
-            runs={runs}
-            bests={synced.bests}
-            strava={synced.strava}
+            current={ownPlan}
+            runs={runs ?? copy?.runs}
+            bests={synced.bests ?? copy?.bests}
+            strava={synced.strava ?? copy?.strava}
+            initialPlan={copy?.plan}
+            onPlanLoaded={savePlan}
+            catchingUpFrom={state.kind === 'loading' && copy ? copy.savedAt : null}
             onOpenPlan={openOwnPlan}
             onBuildPlan={startFresh}
             onOpenRun={(id) => showRun(id)}

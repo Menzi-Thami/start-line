@@ -38,14 +38,17 @@ public sealed class SessionStepsTests
 
     [Theory]
     [MemberData(nameof(Races))]
-    public void Every_step_is_a_distance_or_a_time_and_a_pace_or_a_feel(double km, int goalMinutes, int version)
+    public void Every_step_is_a_distance_or_a_time_and_every_running_step_has_a_pace(double km, int goalMinutes, int version)
     {
+        // A runner with a watch needs numbers, not "hard" and "easy": every running step says how far or how long, and at
+        // what pace; every recovery says how long, and a jog says at what pace. Only walking has no pace.
         var steps = Sessions(Plan(km, goalMinutes, version)).Where(s => s.Steps != null).SelectMany(s => Flat(s.Steps!)).ToList();
 
         steps.Where(s => s.Kind == StepKind.Repeat).ShouldAllBe(s => s.Times > 1 && s.Block != null && s.Block.Count > 0);
         steps.Where(s => s.Kind is StepKind.Run or StepKind.WarmUp or StepKind.CoolDown)
-            .ShouldAllBe(s => (s.DistanceKm > 0 || s.Duration > TimeSpan.Zero) && (s.Pace != null || s.Effort != null));
-        steps.Where(s => s.Kind == StepKind.Recover).ShouldAllBe(s => s.Effort != null);
+            .ShouldAllBe(s => (s.DistanceKm > 0 || s.Duration > TimeSpan.Zero) && s.Pace != null);
+        steps.Where(s => s.Kind == StepKind.Recover).ShouldAllBe(s => s.Duration > TimeSpan.Zero && s.Effort != null);
+        steps.Where(s => s.Kind == StepKind.Recover && s.Effort != "Walk back").ShouldAllBe(s => s.Pace != null && s.Zone == PaceZone.Recovery);
     }
 
     [Fact]
@@ -94,24 +97,32 @@ public sealed class SessionStepsTests
     }
 
     [Fact]
-    public void Strides_follow_the_easy_running()
+    public void Strides_follow_the_easy_running_at_the_quick_end_of_interval_pace()
     {
-        var strides = Sessions(Plan(10, 52)).First(s => s.Type == SessionType.EasyWithStrides).Steps!;
+        var plan = Plan(10, 52);
+        var strides = Sessions(plan).First(s => s.Type == SessionType.EasyWithStrides).Steps!;
 
         strides[0].Zone.ShouldBe(PaceZone.Easy);
         strides[1].Times.ShouldBe(6);
-        strides[1].Block![0].Duration.ShouldBe(TimeSpan.FromSeconds(20));
+        var stride = strides[1].Block![0];
+        stride.Duration.ShouldBe(TimeSpan.FromSeconds(20));
+        stride.Pace.ShouldBe(new PaceRange(plan.Paces[PaceZone.Interval].Fastest, plan.Paces[PaceZone.Interval].Fastest));
         strides[1].Block![1].Effort.ShouldBe("Walk back");
+        strides[1].Block![1].Duration.ShouldBe(TimeSpan.FromSeconds(60));
     }
 
     [Fact]
-    public void Hills_and_fartlek_are_run_by_feel_not_by_a_pace()
+    public void Hills_and_fartlek_keep_their_feel_and_add_the_pace_to_hold()
     {
-        var sessions = Sessions(Plan(42.195, 240)).Where(s => s.Type is SessionType.Hills or SessionType.Fartlek).ToList();
+        var plan = Plan(42.195, 240);
+        var sessions = Sessions(plan).Where(s => s.Type is SessionType.Hills or SessionType.Fartlek).ToList();
+        var interval = plan.Paces[PaceZone.Interval];
 
         sessions.ShouldNotBeEmpty();
-        sessions.SelectMany(s => s.Steps![1].Block!).Where(step => step.Kind == StepKind.Run)
-            .ShouldAllBe(step => step.Pace == null && step.Effort != null && step.Duration > TimeSpan.Zero);
+        var work = sessions.SelectMany(s => s.Steps![1].Block!).ToList();
+        work.Where(step => step.Kind == StepKind.Run)
+            .ShouldAllBe(step => step.Effort != null && step.Duration > TimeSpan.Zero && step.Pace != null && step.Pace.Fastest == interval.Fastest);
+        work.Where(step => step.Kind == StepKind.Recover).ShouldAllBe(step => step.Pace == plan.Paces[PaceZone.Recovery] && step.Duration > TimeSpan.Zero);
     }
 
     [Fact]

@@ -23,6 +23,40 @@
   }
 }
 
+/* Today, Progress, Tools: the plan's own pill tabs, under the greeting. */
+.home-tabs {
+  width: 100%;
+  max-width: 26rem;
+  margin-top: var(--space-4);
+}
+
+.home-panel {
+  display: grid;
+  gap: var(--space-2);
+  animation: home-panel-in 0.22s ease-out;
+}
+
+/* The grid above would otherwise show a hidden panel. */
+.home-panel[hidden] {
+  display: none;
+}
+
+@keyframes home-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* The one line Home keeps about Strava, when it could be sending runs and isn't. */
+.home-nudge {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--ink-2);
+}
+
 .home-title {
   margin: 0;
   font-family: var(--font-display);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
@@ -22,7 +22,6 @@ interface Props {
   strava?: StravaStatus
   onOpenPlan: () => void
   onBuildPlan: () => void
-  onOpenRuns: () => void
   onOpenRun: (id: string) => void
   onOpenAccount: () => void
 }
@@ -217,55 +216,54 @@ function WeeklyChart({ bars, units, averageKm }: { bars: WeekBar[]; units: Units
   )
 }
 
-function Connections({ strava, onOpenAccount, onOpenRuns }: { strava?: StravaStatus; onOpenAccount: () => void; onOpenRuns: () => void }) {
-  const stravaLine = strava?.connected
-    ? strava.status === 'NeedsReconnect'
-      ? 'Stopped sending runs. Connect again.'
-      : 'Connected. Runs arrive by themselves.'
-    : strava?.available
-      ? 'Not connected yet.'
-      : 'Not available right now.'
+/**
+ * One line, only when Strava could send runs and isn't: connecting is set up once, in Account, so Home doesn't list
+ * every way in each time. Account has the full list.
+ */
+function StravaNudge({ strava, onOpenAccount }: { strava?: StravaStatus; onOpenAccount: () => void }) {
+  if (!strava?.available || (strava.connected && strava.status !== 'NeedsReconnect')) return null
   return (
-    <section className="section home-section" aria-labelledby="home-connections">
-      <h2 id="home-connections" className="home-heading">
-        Your runs, from anywhere
-      </h2>
-      <ul className="home-connections">
-        <li className="home-connection">
-          <span className="home-connection-name">Strava</span>
-          <span className="field-help">{stravaLine}</span>
-          {strava?.available && (!strava.connected || strava.status === 'NeedsReconnect') && (
-            <button type="button" className="link-button" onClick={onOpenAccount}>
-              Connect Strava
-            </button>
-          )}
-        </li>
-        <li className="home-connection">
-          <span className="home-connection-name">Any watch</span>
-          <span className="field-help">Upload a .fit, .gpx or .tcx file: Garmin, Coros, Polar, Suunto and more.</span>
-          <button type="button" className="link-button" onClick={onOpenRuns}>
-            Upload a run
-          </button>
-        </li>
-        <li className="home-connection home-connection-soon">
-          <span className="home-connection-name">Garmin Connect</span>
-          <span className="field-help">Coming. Until then, upload your .fit files from Garmin Connect.</span>
-        </li>
-        <li className="home-connection home-connection-soon">
-          <span className="home-connection-name">Apple Health · Health Connect</span>
-          <span className="field-help">Coming with the Taperday phone app: a website can’t read them.</span>
-        </li>
-      </ul>
-    </section>
+    <p className="home-nudge">
+      {strava.connected ? 'Strava has stopped sending your runs.' : 'Connect Strava and your runs arrive by themselves.'}{' '}
+      <button type="button" className="link-button" onClick={onOpenAccount}>
+        {strava.connected ? 'Connect again' : 'Connect Strava'}
+      </button>
+    </p>
   )
 }
 
+type HomeTab = 'today' | 'progress' | 'tools'
+
+const HOME_TABS: readonly { id: HomeTab; label: string }[] = [
+  { id: 'today', label: 'Today' },
+  { id: 'progress', label: 'Progress' },
+  { id: 'tools', label: 'Tools' },
+]
+
+/** The tab in the address (`tab=`), so a shared link or Back from a run opens the same one. */
+function tabFromUrl(): HomeTab {
+  const tab = new URLSearchParams(window.location.search).get('tab')
+  return HOME_TABS.some((t) => t.id === tab) ? (tab as HomeTab) : 'today'
+}
+
+function tabToUrl(tab: HomeTab) {
+  const params = new URLSearchParams(window.location.search)
+  if (tab === 'today') params.delete('tab')
+  else params.set('tab', tab)
+  const query = params.toString()
+  // Replaced, not pushed: tabs are one page, as on the plan, so Back leaves Home rather than stepping through them.
+  window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
+}
+
 /**
- * Home for a signed-in runner: what's on today, how the week is going, their running over the months, their bests, and
- * the calculators. Built from their own runs, so it's useful with or without a plan. A plan adds today's session, this
- * week's ring and the planned distance behind each week's bar.
+ * Home for a signed-in runner, in three tabs so the everyday answer comes first. Today: what's on today and how the week
+ * is going. Progress: their running over the months, week by week, and their bests. Tools: the calculators. Built from
+ * their own runs, so it's useful with or without a plan. A plan adds today's session, this week's ring and the planned
+ * distance behind each week's bar.
  */
-export function Home({ runner, units, today, current, runs = [], bests, strava, onOpenPlan, onBuildPlan, onOpenRuns, onOpenRun, onOpenAccount }: Props) {
+export function Home({ runner, units, today, current, runs = [], bests, strava, onOpenPlan, onBuildPlan, onOpenRun, onOpenAccount }: Props) {
+  const [tab, setTab] = useState<HomeTab>(tabFromUrl)
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const plan = useHomePlan(current)
   const totals = trainingTotals(runs, today)
   const bars = weeklyBars(runs, today, plan)
@@ -275,6 +273,29 @@ export function Home({ runner, units, today, current, runs = [], bests, strava, 
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
   const goalSeconds = plan ? parseTimeSpan(plan.goalTime) : null
   const fromStrava = runs.some((r) => r.source.kind === 'Strava')
+
+  const showTab = (next: HomeTab, focus = false) => {
+    setTab(next)
+    tabToUrl(next)
+    if (focus) tabRefs.current[HOME_TABS.findIndex((t) => t.id === next)]?.focus()
+  }
+
+  // Arrow keys move between tabs, as screen-reader users expect from a tab list, like the plan's own tabs.
+  const onTabKey = (event: KeyboardEvent) => {
+    const index = HOME_TABS.findIndex((t) => t.id === tab)
+    const moves: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: HOME_TABS.length - 1 }
+    if (!(event.key in moves)) return
+    event.preventDefault()
+    showTab(HOME_TABS[(moves[event.key]! + HOME_TABS.length) % HOME_TABS.length]!.id, true)
+  }
+
+  const panel = (id: HomeTab) => ({
+    id: `home-panel-${id}`,
+    role: 'tabpanel',
+    'aria-labelledby': `home-tab-${id}`,
+    hidden: tab !== id,
+    className: 'tab-panel home-panel',
+  })
 
   return (
     <div className="home">
@@ -292,108 +313,134 @@ export function Home({ runner, units, today, current, runs = [], bests, strava, 
         </div>
       </header>
 
-      <div className="home-top">
-        {current ? (
-          <TodayCard plan={plan} today={today} units={units} runs={runs} onOpenPlan={onOpenPlan} />
-        ) : (
-          <section className="panel home-card" aria-labelledby="home-goal">
-            <h2 id="home-goal" className="home-card-heading">
-              Something to run towards?
+      <div className="tabs home-tabs" role="tablist" aria-label="Home" onKeyDown={onTabKey}>
+        {HOME_TABS.map((t, i) => (
+          <button
+            key={t.id}
+            ref={(el) => {
+              tabRefs.current[i] = el
+            }}
+            type="button"
+            role="tab"
+            id={`home-tab-${t.id}`}
+            className="tab"
+            aria-selected={tab === t.id}
+            aria-controls={`home-panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
+            onClick={() => showTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div {...panel('today')}>
+        <div className="home-top">
+          {current ? (
+            <TodayCard plan={plan} today={today} units={units} runs={runs} onOpenPlan={onOpenPlan} />
+          ) : (
+            <section className="panel home-card" aria-labelledby="home-goal">
+              <h2 id="home-goal" className="home-card-heading">
+                Something to run towards?
+              </h2>
+              <p>{current === undefined ? 'Looking for your plan…' : 'Pick a race and a goal, and get a plan built around the days you can run.'}</p>
+              {current === null && (
+                <button type="button" className="button" onClick={onBuildPlan}>
+                  Build my plan
+                </button>
+              )}
+            </section>
+          )}
+
+          <section className="panel home-card home-week" aria-labelledby="home-week">
+            <h2 id="home-week" className="home-card-heading">
+              This week
             </h2>
-            <p>{current === undefined ? 'Looking for your plan…' : 'Pick a race and a goal, and get a plan built around the days you can run.'}</p>
-            {current === null && (
-              <button type="button" className="button" onClick={onBuildPlan}>
-                Build my plan
-              </button>
+            {soFar ? (
+              <div className="home-week-body">
+                <WeekRing ran={soFar.ranKm} planned={soFar.plannedKm} />
+                <div>
+                  <p className="home-tile-value">
+                    <span className="mono">{formatDistance(soFar.ranKm, units)}</span>
+                  </p>
+                  <p className="field-help">
+                    of {formatDistance(soFar.plannedKm, units)} planned · {soFar.doneRuns} of {soFar.plannedRuns} runs
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="home-tile-value">
+                  <span className="mono">{formatDistance(bars.at(-1)?.km ?? 0, units)}</span>
+                </p>
+                <p className="field-help">Last week {formatDistance(bars.at(-2)?.km ?? 0, units)}</p>
+              </>
             )}
           </section>
-        )}
+        </div>
+        <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
+      </div>
 
-        <section className="panel home-card home-week" aria-labelledby="home-week">
-          <h2 id="home-week" className="home-card-heading">
-            This week
+      <div {...panel('progress')}>
+        <section className="section home-section" aria-labelledby="home-training">
+          <h2 id="home-training" className="home-heading">
+            Your running
           </h2>
-          {soFar ? (
-            <div className="home-week-body">
-              <WeekRing ran={soFar.ranKm} planned={soFar.plannedKm} />
-              <div>
-                <p className="home-tile-value">
-                  <span className="mono">{formatDistance(soFar.ranKm, units)}</span>
-                </p>
-                <p className="field-help">
-                  of {formatDistance(soFar.plannedKm, units)} planned · {soFar.doneRuns} of {soFar.plannedRuns} runs
-                </p>
-              </div>
-            </div>
+          <div className="home-tiles">
+            <Tile label="This month" value={amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} runs · ${hoursAndMinutes(totals.month.seconds)}`}>
+              <ChangeLine
+                value={change(totals.month.km, totals.previousMonth.km)}
+                units={units}
+                against={`${formatDate(totals.previousMonth.from, 'dayMonth')}–${formatDate(totals.previousMonth.to, 'dayMonth')}`}
+              />
+            </Tile>
+            <Tile label="This year" value={amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} runs · ${hoursAndMinutes(totals.year.seconds)}`} />
+            <Tile label="Weekly average" value={amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
+              <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />
+            </Tile>
+          </div>
+          {fromStrava && (
+            <p className="field-help">Runs from Strava stay on Taperday for 7 days, as Strava asks, so these totals count uploads and this week’s Strava runs.</p>
+          )}
+        </section>
+
+        <section className="section home-section" aria-labelledby="home-weeks">
+          <h2 id="home-weeks" className="home-heading">
+            The last 12 weeks
+          </h2>
+          <WeeklyChart bars={bars} units={units} averageKm={totals.weeklyAverageKm} />
+        </section>
+
+        <section className="section home-section" aria-labelledby="home-bests">
+          <h2 id="home-bests" className="home-heading">
+            Personal bests
+          </h2>
+          {headline.length === 0 ? (
+            <p className="field-help">Your fastest 5K, 10K, half and full show here, from any run, race or not.</p>
           ) : (
-            <>
-              <p className="home-tile-value">
-                <span className="mono">{formatDistance(bars.at(-1)?.km ?? 0, units)}</span>
-              </p>
-              <p className="field-help">Last week {formatDistance(bars.at(-2)?.km ?? 0, units)}</p>
-            </>
+            <ul className="home-bests">
+              {headline.map((best) => (
+                <li key={best.distanceMetres} className="home-best">
+                  <span className="home-best-name">{best.name}</span>
+                  <span className="mono home-best-time">{formatDuration(best.seconds)}</span>
+                  <span className="mono field-help">{formatPace(best.paceSecondsPerKm, units)}</span>
+                  <button type="button" className="link-button field-help" onClick={() => onOpenRun(best.activityId)}>
+                    {formatDate(best.localDate, 'dayMonth')}
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </section>
       </div>
 
-      <section className="section home-section" aria-labelledby="home-training">
-        <h2 id="home-training" className="home-heading">
-          Your running
-        </h2>
-        <div className="home-tiles">
-          <Tile label="This month" value={amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} runs · ${hoursAndMinutes(totals.month.seconds)}`}>
-            <ChangeLine
-              value={change(totals.month.km, totals.previousMonth.km)}
-              units={units}
-              against={`${formatDate(totals.previousMonth.from, 'dayMonth')}–${formatDate(totals.previousMonth.to, 'dayMonth')}`}
-            />
-          </Tile>
-          <Tile label="This year" value={amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} runs · ${hoursAndMinutes(totals.year.seconds)}`} />
-          <Tile label="Weekly average" value={amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
-            <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />
-          </Tile>
-        </div>
-        {fromStrava && (
-          <p className="field-help">Runs from Strava stay on Taperday for 7 days, as Strava asks, so these totals count uploads and this week’s Strava runs.</p>
-        )}
-      </section>
-
-      <section className="section home-section" aria-labelledby="home-weeks">
-        <h2 id="home-weeks" className="home-heading">
-          The last 12 weeks
-        </h2>
-        <WeeklyChart bars={bars} units={units} averageKm={totals.weeklyAverageKm} />
-      </section>
-
-      <section className="section home-section" aria-labelledby="home-bests">
-        <h2 id="home-bests" className="home-heading">
-          Personal bests
-        </h2>
-        {headline.length === 0 ? (
-          <p className="field-help">Your fastest 5K, 10K, half and full show here, from any run, race or not.</p>
-        ) : (
-          <ul className="home-bests">
-            {headline.map((best) => (
-              <li key={best.distanceMetres} className="home-best">
-                <span className="home-best-name">{best.name}</span>
-                <span className="mono home-best-time">{formatDuration(best.seconds)}</span>
-                <span className="mono field-help">{formatPace(best.paceSecondsPerKm, units)}</span>
-                <button type="button" className="link-button field-help" onClick={() => onOpenRun(best.activityId)}>
-                  {formatDate(best.localDate, 'dayMonth')}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <Calculators
-        units={units}
-        maxHeartRate={runner.maxHeartRate}
-        race={plan && goalSeconds ? { distanceKm: plan.race.distanceKm, goalSeconds } : null}
-      />
-
-      <Connections strava={strava} onOpenAccount={onOpenAccount} onOpenRuns={onOpenRuns} />
+      <div {...panel('tools')}>
+        <Calculators
+          units={units}
+          maxHeartRate={runner.maxHeartRate}
+          race={plan && goalSeconds ? { distanceKm: plan.race.distanceKm, goalSeconds } : null}
+        />
+      </div>
     </div>
   )
 }

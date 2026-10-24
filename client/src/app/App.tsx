@@ -582,7 +582,6 @@ export function App() {
             strava={synced.strava}
             onOpenPlan={openOwnPlan}
             onBuildPlan={startFresh}
-            onOpenRuns={() => go('runs')}
             onOpenRun={(id) => showRun(id)}
             onOpenAccount={() => go('account')}
           />
@@ -615,6 +614,7 @@ export function App() {
             stravaNotice={stravaNotice}
             stravaConnecting={stravaConnecting}
             onSaved={runner.setRunner}
+            onOpenRuns={() => go('runs')}
             onDeleted={() => {
               go('build')
               auth.signOut()

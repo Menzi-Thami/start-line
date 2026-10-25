@@ -99,3 +99,10 @@ between strides has no pace. Hills, fartlek and strides keep how they should fee
 same sessions, not a change to
 them, so every plan of every version has them and `GeneratorV1SnapshotTests` leaves `PlannedSession.Steps` out of its
 hash. A new kind of session needs its steps and a case in `SessionStepsTests`.
+
+Taperday installs as an app (a PWA): `client/public/manifest.webmanifest`, the icons beside it, and `client/public/sw.js`,
+registered only in a production build (`lib/install-app.ts`). The worker keeps **only the app's own files**: the page
+network-first (so a deploy always shows; the last copy only offline) and the hashed `/assets/*` cache-first. It never
+touches another host, so the API, sign-in and anyone's data are never stored by it; keep it that way. Bump its `VERSION` to
+drop an old cache. `sw.js` and the manifest are served `no-cache` (`staticwebapp.config.json`). The Add to home screen option
+is a one-time card on Home and a section in Account (`features/install`).

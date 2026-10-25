@@ -480,3 +480,52 @@
 .calc-fuel p {
   margin: 0 0 var(--space-2);
 }
+
+/* ---------- Taperday on the home screen: the one-time card on Home, and the same option in Account ---------- */
+.install-card {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+  margin-top: var(--space-4);
+}
+
+.install-icon {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.install-body {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.install-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.install-steps {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--ink-2);
+}
+
+.install-share {
+  width: 18px;
+  height: 18px;
+  margin-left: 2px;
+  vertical-align: -3px;
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

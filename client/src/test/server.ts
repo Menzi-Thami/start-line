@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import type { Race, StravaStatus, TrainingPlan } from '../lib/types'
+import type { Race, Reminders, StravaStatus, TrainingPlan } from '../lib/types'
 import plan from './fixtures/plan-5k.json'
 import races from './fixtures/races.json'
 
@@ -21,6 +21,9 @@ export const stravaOff: StravaStatus = {
   syncedRuns: 0,
 }
 
+/** Reminders as they are until the VAPID keys are configured: not offered. */
+export const remindersOff: Reminders = { available: false, publicKey: null, devices: [] }
+
 export const lastPlanRequest: { body: unknown } = { body: undefined }
 
 export const handlers = [
@@ -38,6 +41,7 @@ export const handlers = [
   http.get('*/api/v1/me/sync/strava', () => HttpResponse.json(stravaOff)),
   // A saved plan's check-ins; none by default.
   http.get('*/api/v1/me/plans/:id/check-ins', () => HttpResponse.json([])),
+  http.get('*/api/v1/me/reminders', () => HttpResponse.json(remindersOff)),
   http.get('*/api/v1/predictions', ({ request }) => {
     const url = new URL(request.url)
     return HttpResponse.json({ distanceKm: Number(url.searchParams.get('toKm')), predictedTime: '01:51:20', paceSecondsPerKm: 316.6 })

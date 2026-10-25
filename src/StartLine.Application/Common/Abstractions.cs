@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using StartLine.Domain.Activities;
 using StartLine.Domain.Coaching;
+using StartLine.Domain.Notifications;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 using StartLine.Domain.Sync;
@@ -31,6 +32,8 @@ public interface IApplicationDbContext
     DbSet<SessionCheckIn> SessionCheckIns { get; }
 
     DbSet<CoachWeek> CoachWeeks { get; }
+
+    DbSet<PushSubscription> PushSubscriptions { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }

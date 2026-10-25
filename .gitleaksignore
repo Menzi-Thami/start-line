@@ -1,0 +1,3 @@
+# False positives only: each line is a gitleaks fingerprint (commit:file:rule:line) with why it isn't a secret.
+# A test's SHA-256 of a made-up push endpoint; the test now works it out instead (b94a960).
+c1a40662028c848ddb5e89f5032074aef7b15ebc:client/src/features/reminders/Reminders.test.tsx:generic-api-key:27

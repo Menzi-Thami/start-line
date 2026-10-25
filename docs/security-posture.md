@@ -20,7 +20,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 | 2 | XSS | Covered | React escapes by default; no `dangerouslySetInnerHTML`. The SPA's CSP forbids inline and eval scripts. |
 | 3 | CSRF | Covered | The API takes a bearer token in the `Authorization` header, not a cookie, so there's nothing for a cross-site form to ride. The Strava OAuth `state` is signed and runner-bound (`DataProtectionConnectState`). |
 | 4 | CORS | Covered | Explicit origin allow-list (`Cors:AllowedOrigins`), specific methods and headers, no credentials. Empty by default. |
-| 5 | SSRF | Covered | No endpoint takes a URL to fetch. The only outbound calls are to fixed Strava hosts from config. |
+| 5 | SSRF | Covered | The only URL a runner gives the API is a browser's push endpoint for reminders, and it's accepted only as HTTPS on the default port to a known push service (`Push:AllowedHosts`: Google, Apple, Mozilla, Microsoft), with tests. Every other outbound call goes to fixed Strava hosts from config. |
 | 6 | IDOR | Covered | Every `me/*` query is scoped by the runner id from the validated token, never from the body. Another runner's row returns 404, not 403. |
 | 7 | Path traversal | Covered | No file paths come from users. Uploads are read in memory; zip entry names are never used as paths. |
 | 8 | Mass assignment | Covered | Requests bind to explicit DTOs; the runner id and email come from the token, not the body. |
@@ -39,7 +39,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 
 | # | Topic | Status | Where / note |
 |---|---|---|---|
-| 17 | Secrets management | Covered | No secrets in the repo or `appsettings`. Runtime secrets in App Service settings; Strava tokens encrypted with a Key Vault-wrapped key. |
+| 17 | Secrets management | Covered | No secrets in the repo or `appsettings`. Runtime secrets in App Service settings; Strava tokens encrypted with a Key Vault-wrapped key. The VAPID private key for reminders is an App Service setting too, and devices' push endpoints (which work as keys to push to that device) are encrypted the same way as Strava tokens, kept out of logs and redacted in traces (`PushTraces`). |
 | 18 | .env in .gitignore | Covered | No `.env`; dev uses LocalDB trusted auth. gitleaks history scan is clean. |
 | 19 | API key rotation | Partial | Tokens rotate on refresh. App-level secrets (Strava client secret, webhook secret) are rotated by hand; see [To do](#to-do). |
 | 20 | Secret scanning | Covered | gitleaks runs in CI on every push. |
@@ -51,7 +51,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 | 29 | MFA | Partial | Available in the Entra External ID tenant; enabling it is a tenant setting, not code. |
 | 30–31 | Brute force / account enumeration | Partial | Sign-in (email code) is handled by Entra, which has its own protections. The API's own rate limiter adds a per-IP cap. |
 | 32 | Timing attacks | Covered | The webhook secret and verify token are compared in constant time (`CryptographicOperations.FixedTimeEquals`). |
-| 37 | Encryption at rest | Covered | Azure SQL is encrypted at rest; Strava tokens are additionally app-encrypted with a Key Vault-wrapped key. |
+| 37 | Encryption at rest | Covered | Azure SQL is encrypted at rest; Strava tokens and push endpoints and keys are additionally app-encrypted with a Key Vault-wrapped key. |
 | 35 | TLS certificate expiry | Covered | Azure-managed certificates on both hosts auto-renew. HTTPS is forced. |
 | 36 | HSTS | Covered | `UseHsts` in production. |
 
@@ -62,8 +62,8 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 | 41 | Indexes | Covered | Indexes on every foreign key and lookup, plus the filtered unique index for one active plan per runner. |
 | 46–47 | Migrations / down migrations | Covered | EF Core migrations, applied by the deploy before the new API starts. Each has a `Down`. |
 | 48–50 | Transactions / ACID / isolation | Covered | `SaveChanges` is transactional; Azure SQL is ACID. |
-| 52 | Optimistic locking | Covered | `rowversion` concurrency tokens on saved plans and connections. |
-| 56–58 | Foreign keys / unique constraints / cascade deletes | Covered | FKs throughout; unique indexes on identity and one-active-plan; account delete cascades to plans, activities and connections. |
+| 52 | Optimistic locking | Covered | `rowversion` concurrency tokens on saved plans, connections and reminder devices (so two API instances never send one reminder twice). |
+| 56–58 | Foreign keys / unique constraints / cascade deletes | Covered | FKs throughout; unique indexes on identity and one-active-plan; account delete cascades to plans, activities, connections and reminder devices. |
 | 59 | Soft deletes | N/A | Taperday hard-deletes on request (POPIA erasure). Past plans are archived, not deleted. |
 | 60 | UUIDs vs auto-increment | Covered | GUID keys, so ids aren't guessable or enumerable. |
 | 70–72 | Backups / restore testing / PITR | Partial | Azure SQL keeps automated backups with point-in-time restore; the retention on the free offer is short, and a restore hasn't been rehearsed. See [To do](#to-do). |
@@ -91,6 +91,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 | 234 | Audit logs | Gap | There's no dedicated, tamper-evident log of security events (sign-ins, deletes, connects). See [To do](#to-do). |
 | 235 | Data residency | Covered | API and database are in South Africa North. |
 | 238 | Cookie consent | N/A | Taperday sets no tracking cookies; it uses `sessionStorage` for the sign-in token only. |
+| Reminders | Covered | Off unless the runner turns them on in Account, per device. Kept: the device's push address and keys (encrypted), the time, the Monday choice and the last day reminded. A reminder says only the plan's session name, built from the plan as written (not the coach's run-based adjustments), never runs, heart rate or anything from Strava, so lock screens show nothing sensitive. Turning off, the push service reporting the device gone, or deleting the account removes it; the export lists devices without their addresses. |
 | Location data | Covered | GPS positions are never stored, from any source: FIT, GPX, TCX or Strava. They're used only to measure distance, then discarded. |
 | Heart rate | Covered | Health information (POPIA special personal information), so kept only with its own, optional consent (`Runner.HeartRateConsent`). Without it every reading is dropped before a run is recorded, from any source, and anything held from before is hidden; withdrawing deletes what's stored. No medical claims. |
 | 240–241 | SPF/DKIM/DMARC, bounce handling | N/A | No outbound email yet (the weekly email is "coming soon"). Revisit when it ships. |

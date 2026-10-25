@@ -76,8 +76,8 @@ public sealed class PrivacyConsentTests(StartLineApiFactory factory) : IClassFix
     }
 
     [Fact]
-    public void The_notice_version_moved_on_when_runs_and_heart_rate_were_added() =>
-        Application.Features.Account.PrivacyNotice.CurrentVersion.ShouldBe("2026-10-21");
+    public void The_notice_version_moved_on_when_reminders_were_added() =>
+        Application.Features.Account.PrivacyNotice.CurrentVersion.ShouldBe("2026-10-25");
 
     [Fact]
     public async Task Without_heart_rate_consent_a_run_is_kept_with_no_heart_rate_at_all()
@@ -140,7 +140,7 @@ public sealed class PrivacyConsentTests(StartLineApiFactory factory) : IClassFix
         var accepted = await Json(await client.PutAsJsonAsync(Url("/api/v1/me/privacy"), new { heartRateConsent = true }));
 
         accepted.GetProperty("needsPrivacyConsent").GetBoolean().ShouldBeFalse();
-        accepted.GetProperty("privacyNoticeVersion").GetString().ShouldBe("2026-10-21");
+        accepted.GetProperty("privacyNoticeVersion").GetString().ShouldBe("2026-10-25");
         accepted.GetProperty("heartRateConsent").GetBoolean().ShouldBeTrue();
         (await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = ParkrunPlan })).StatusCode.ShouldBe(HttpStatusCode.Created);
     }

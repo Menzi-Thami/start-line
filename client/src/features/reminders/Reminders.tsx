@@ -104,9 +104,9 @@ export function RemindersSection() {
     <section className="section" aria-labelledby={ids.heading}>
       <h3 id={ids.heading}>Reminders</h3>
       <p>
-        A notification on the days your plan has a run, at the time you choose: the session’s name, and a good-luck note on race day. On Mondays it
-        can also tell you a new week has started and the coach’s note on it is waiting. It never says anything about your runs, and nothing from
-        Strava. Off until you turn it on, and you can turn it off at any time.
+        A notification on the days your plan has a run, at the time you choose: the session with its distance and pace, and your race plan on race
+        day. On Mondays it can also give you the week ahead and how many of last week’s runs you checked in. It never includes your recorded runs
+        or anything from Strava. Off until you turn it on, and you can turn it off at any time.
       </p>
 
       {state.kind === 'loading' && <p className="loading-line">Checking reminders…</p>}

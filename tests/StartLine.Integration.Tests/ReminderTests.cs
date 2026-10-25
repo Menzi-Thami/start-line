@@ -37,6 +37,7 @@ internal static class ReminderClients
 }
 
 /// <summary>Turning reminders on and off from Account, and what's kept while they're on.</summary>
+[Collection(RemindersInSeries.Name)]
 public sealed class ReminderApiTests(RemindersFactory factory) : IClassFixture<RemindersFactory>
 {
     private static Uri Url(string path) => ReminderClients.Url(path);
@@ -208,6 +209,7 @@ public sealed class ReminderApiTests(RemindersFactory factory) : IClassFixture<R
 }
 
 /// <summary>Without VAPID keys configured, reminders aren't offered and can't be turned on.</summary>
+[Collection(RemindersInSeries.Name)]
 public sealed class RemindersSwitchedOffTests(StartLineApiFactory factory) : IClassFixture<StartLineApiFactory>
 {
     [Fact]
@@ -229,6 +231,7 @@ public sealed class RemindersSwitchedOffTests(StartLineApiFactory factory) : ICl
 /// Sending: at each runner's own time, from the plan alone, once a day at most, and late rather than never when the app
 /// slept. Each test has its own API and clock, because it moves the clock on.
 /// </summary>
+[Collection(RemindersInSeries.Name)]
 public sealed class ReminderSendingTests
 {
     // A 10K on Sunday 20 December, saved on Thursday 8 October (the factory's clock), so the plan starts Monday 12 October.
@@ -256,7 +259,32 @@ public sealed class ReminderSendingTests
             .Min();
     }
 
-    private static async Task<DateTimeOffset?> RunDue(RemindersFactory factory)
+    /// <summary>Saves the 10K and returns its id, every run (date and type) and the Monday each week starts.</summary>
+    internal static async Task<(Guid Id, List<(DateOnly Date, string Type)> Runs, List<DateOnly> Weeks)> SavePlan(HttpClient client)
+    {
+        var saved = await client.PostAsJsonAsync(ReminderClients.Url("/api/v1/me/plans"), new { plan = TenK });
+        saved.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var id = (await ReminderClients.Json(saved)).GetProperty("id").GetGuid();
+        var weeks = (await client.GetFromJsonAsync<JsonElement>(ReminderClients.Url($"/api/v1/me/plans/{id}"))).GetProperty("plan").GetProperty("weeks").EnumerateArray().ToList();
+        var runs = weeks.SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .Select(s => (Date: DateOnly.Parse(s.GetProperty("date").GetString()!, CultureInfo.InvariantCulture), Type: s.GetProperty("type").GetString()!))
+            .Where(s => s.Type is not ("Strength" or "Race"))
+            .ToList();
+        return (id, runs, [.. weeks.Select(w => DateOnly.Parse(w.GetProperty("startDate").GetString()!, CultureInfo.InvariantCulture))]);
+    }
+
+    /// <summary>Checks in every run of the plan's first week as done, from the end of that week.</summary>
+    internal static async Task CheckInFirstWeek(RemindersFactory factory, HttpClient client, Guid id, List<(DateOnly Date, string Type)> runs, DateOnly secondWeek)
+    {
+        factory.Time.SetUtcNow(Utc(secondWeek.AddDays(-1), 18));
+        foreach (var (date, type) in runs.Where(r => r.Date < secondWeek))
+        {
+            (await client.PutAsJsonAsync(ReminderClients.Url($"/api/v1/me/plans/{id}/check-ins/{date:yyyy-MM-dd}/{type}"), new { status = "Done", effort = 5 }))
+                .EnsureSuccessStatusCode();
+        }
+    }
+
+    internal static async Task<DateTimeOffset?> RunDue(RemindersFactory factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         return await scope.ServiceProvider.GetRequiredService<IReminderRunner>().RunDueAsync(CancellationToken.None);
@@ -286,7 +314,8 @@ public sealed class ReminderSendingTests
         var next = await RunDue(factory);
 
         var sent = factory.Push.To(jhb).ShouldHaveSingleItem();
-        sent.Title.ShouldBe(Reminders.RunTitle);
+        sent.Title.ShouldStartWith("Today: ");
+        sent.Body.ShouldContain(" km at ");
         sent.Url.ShouldBe("/?view=home");
         sent.Tag.ShouldBe($"reminder-{day:yyyy-MM-dd}");
         factory.Push.To(nyc).ShouldBeEmpty();
@@ -300,7 +329,7 @@ public sealed class ReminderSendingTests
         await RunDue(factory);
 
         factory.Push.To(jhb).Count.ShouldBe(1);
-        factory.Push.To(nyc).ShouldHaveSingleItem().Title.ShouldBe(Reminders.RunTitle);
+        factory.Push.To(nyc).ShouldHaveSingleItem().Title.ShouldStartWith("Today: ");
     }
 
     [Fact]
@@ -349,4 +378,68 @@ public sealed class ReminderSendingTests
 
         factory.Push.To(endpoint).ShouldBeEmpty();
     }
+}
+
+/// <summary>The Monday reminder: the new week, last week and today. What comes from runs only goes when it's allowed.</summary>
+[Collection(RemindersInSeries.Name)]
+public sealed class ReminderWeekTests
+{
+    [Fact]
+    public async Task Without_run_data_Monday_says_last_weeks_check_ins_and_this_week_but_no_coachs_call()
+    {
+        await using var factory = new RemindersFactory();
+        var client = await factory.SignedUp("Africa/Johannesburg");
+        var (id, runs, weeks) = await ReminderSendingTests.SavePlan(client);
+        var endpoint = RemindersFactory.NewEndpoint();
+        await client.TurnOn(endpoint, weekAhead: true);
+        await ReminderSendingTests.CheckInFirstWeek(factory, client, id, runs, weeks[1]);
+
+        // 07:30 in Johannesburg on the second Monday.
+        factory.Time.SetUtcNow(new DateTimeOffset(weeks[1].ToDateTime(new TimeOnly(5, 30)), TimeSpan.Zero));
+        await ReminderSendingTests.RunDue(factory);
+
+        var sent = factory.Push.To(endpoint).ShouldHaveSingleItem();
+        sent.Title.ShouldStartWith($"Week 2 of {weeks.Count}");
+        sent.Body.ShouldStartWith(Reminders.NoCoachYet);
+        var firstWeekRuns = runs.Count(r => r.Date < weeks[1]);
+        sent.Body.ShouldContain($"Last week you checked in {firstWeekRuns} of {firstWeekRuns} runs.");
+        sent.Body.ShouldContain("This week: ");
+        sent.Body.ShouldNotContain("Coach:");
+        using var scope = factory.Services.CreateScope();
+        // The reminder didn't make the coach's call either: that reads runs.
+        (await scope.ServiceProvider.GetRequiredService<StartLineDbContext>().CoachWeeks.AnyAsync(w => w.SavedPlanId == id)).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task With_run_data_Monday_leads_with_the_coachs_call_the_plan_page_then_shows()
+    {
+        await using var factory = new RemindersFactory { IncludeRunData = true };
+        var client = await factory.SignedUp("Africa/Johannesburg");
+        var (id, runs, weeks) = await ReminderSendingTests.SavePlan(client);
+        var endpoint = RemindersFactory.NewEndpoint();
+        await client.TurnOn(endpoint, weekAhead: true);
+        await ReminderSendingTests.CheckInFirstWeek(factory, client, id, runs, weeks[1]);
+
+        factory.Time.SetUtcNow(new DateTimeOffset(weeks[1].ToDateTime(new TimeOnly(5, 30)), TimeSpan.Zero));
+        await ReminderSendingTests.RunDue(factory);
+
+        var sent = factory.Push.To(endpoint).ShouldHaveSingleItem();
+        sent.Body.ShouldStartWith("Coach: ");
+        sent.Body.ShouldContain(" km of ");
+        // The call was made and kept, so opening the plan shows the same one.
+        var coached = await client.PostAsync(ReminderClients.Url($"/api/v1/me/plans/{id}/coach"), null);
+        var notes = (await ReminderClients.Json(coached)).GetProperty("coaching").EnumerateArray().ToList();
+        notes.ShouldHaveSingleItem().GetProperty("weekStart").GetString().ShouldBe(weeks[1].ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+    }
+}
+
+/// <summary>
+/// The reminder tests run one at a time. Every test API shares one database and the sender works through every device in
+/// it, so a test running alongside could claim another test's reminder first (and the rowversion would rightly stop the
+/// second pass sending it).
+/// </summary>
+[CollectionDefinition(Name, DisableParallelization = true)]
+public sealed class RemindersInSeries
+{
+    public const string Name = "Reminders";
 }

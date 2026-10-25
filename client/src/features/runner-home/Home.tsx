@@ -4,13 +4,16 @@ import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
 import { runsByDate, weekEnd } from '../../lib/plan-runs'
-import type { ActivitySummary, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, CoachNote, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import type { CurrentPlan } from '../account/useCurrentPlan'
+import { useCheckIns } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
+import { SessionSteps } from '../plan/SessionSteps'
 import { Runner as RunnerFigure } from '../shared/Runner'
 import { Calculators } from './Calculators'
 import { change, todayInPlan, trainingTotals, weeklyBars, type Change, type WeekBar } from './home-math'
+import { YourWeek } from './YourWeek'
 
 interface Props {
   runner: Runner
@@ -38,10 +41,18 @@ type HomePlan = { id: string; plan: TrainingPlan }
 /** The race distances worth a place on Home; the plan's Overview and the run pages list the rest. */
 const HEADLINE_BESTS = [5000, 10000, 21097.5, 42195]
 
-/** The runner's plan, as the coach has it this week. Without it Home still shows their running. */
-function useHomePlan(current: CurrentPlan | null | undefined, initial?: HomePlan | null, onLoaded?: (plan: HomePlan) => void): TrainingPlan | null {
+/**
+ * The runner's plan, as the coach has it this week, and the coach's calls on it. Without it Home still shows their running.
+ * The calls come with this visit's plan only: the copy kept on the device has the plan alone.
+ */
+function useHomePlan(
+  current: CurrentPlan | null | undefined,
+  initial?: HomePlan | null,
+  onLoaded?: (plan: HomePlan) => void,
+): { plan: TrainingPlan | null; coaching: CoachNote[] } {
   const auth = useAuth()
   const [plan, setPlan] = useState<HomePlan | null>(null)
+  const [coaching, setCoaching] = useState<{ id: string; notes: CoachNote[] } | null>(null)
   const loaded = useRef(onLoaded)
   useEffect(() => {
     loaded.current = onLoaded
@@ -56,6 +67,7 @@ function useHomePlan(current: CurrentPlan | null | undefined, initial?: HomePlan
         if (cancelled || !saved) return
         const found = { id: current.id, plan: saved.plan }
         setPlan(found)
+        setCoaching({ id: current.id, notes: saved.coaching ?? [] })
         loaded.current?.(found)
       })
       .catch(() => undefined)
@@ -65,7 +77,10 @@ function useHomePlan(current: CurrentPlan | null | undefined, initial?: HomePlan
   }, [current, auth])
   // Until this visit's plan arrives, the copy from last time (if it's the same plan) stands in for it.
   const shown = plan && current && plan.id === current.id ? plan : initial
-  return shown && current && shown.id === current.id ? shown.plan : null
+  return {
+    plan: shown && current && shown.id === current.id ? shown.plan : null,
+    coaching: coaching && current && coaching.id === current.id ? coaching.notes : [],
+  }
 }
 
 const clock = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: '2-digit' })
@@ -187,6 +202,8 @@ function TodaysRuns({ plan, today, units, runs }: { plan: TrainingPlan; today: s
           {pace(s) ? ` · ${pace(s)}` : ''}
         </p>
         <p className="field-help">{s.detail}</p>
+        <SessionSteps steps={s.steps} units={units} />
+        <p className="home-today-why">Why: {s.purpose}</p>
       </div>
     ))
   })()
@@ -338,7 +355,8 @@ export function Home({
 }: Props) {
   const [tab, setTab] = useState<HomeTab>(tabFromUrl)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
-  const plan = useHomePlan(current, initialPlan, onPlanLoaded)
+  const { plan, coaching } = useHomePlan(current, initialPlan, onPlanLoaded)
+  const checkIns = useCheckIns(current?.id ?? null)
   const totals = trainingTotals(runs, today)
   const bars = weeklyBars(runs, today, plan)
   const week = plan?.weeks.find((w) => w.startDate <= today && today <= weekEnd(w)) ?? null
@@ -461,6 +479,9 @@ export function Home({
             {week && <WeekRuns week={week} today={today} units={units} ranOn={(date) => ranDates.has(date)} />}
           </section>
         </div>
+        {plan && week && progress?.kind !== 'race' && (
+          <YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />
+        )}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
         <InstallCard />
 

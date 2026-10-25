@@ -21,7 +21,7 @@ const TITLES: Record<CoachVerdict, string> = {
 
 /** Why, in Taperday's voice. The API sends the reasons as codes so the words live in one place. */
 const WHY: Record<CoachReason, string> = {
-  FewCheckIns: 'Check in after your runs, or let your watch send them, and I’ll fit each week to how you’re going.',
+  FewCheckIns: 'Check in after your runs and I’ll fit each week to you.',
   RanAsPlanned: 'Last week went to plan.',
   FeltHarderThanPlanned: 'Several runs last week felt harder than they should.',
   MissedVolume: 'Last week came in well short of the plan.',

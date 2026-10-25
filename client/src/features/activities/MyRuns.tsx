@@ -99,8 +99,7 @@ export function MyRuns({ units, onOpen }: Props) {
           <div>
             <p className="upload-way">Strava, COROS, Suunto, Polar, Apple</p>
             <p className="field-help">
-              Export the run from its app or site and upload the file. Strava gives a .gpx (open a run, then “Export GPX”); most others give a .fit
-              or .tcx. Your browser sends only the run, never where you went.
+              Export the run (a .fit, .gpx or .tcx) and upload it.
             </p>
           </div>
         </div>
@@ -126,8 +125,7 @@ export function MyRuns({ units, onOpen }: Props) {
         )}
         {bulk && <BulkSummary running={bulk.running} progress={bulk.progress} result={bulk.result} error={bulk.error} onStop={() => stop.current?.abort()} />}
         <p className="field-help" style={{ marginTop: 'var(--space-3)' }}>
-          We read each file and throw it away. Taperday keeps the totals, splits and best efforts, never your route. Runs you’ve
-          already added are skipped, so it’s safe to upload the same files again.
+          Runs already added are skipped. Your route is never kept.
         </p>
       </div>
 

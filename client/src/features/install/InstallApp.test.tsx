@@ -15,7 +15,7 @@ const asIphone = () =>
 
 // These run in order: the browser's install offer, once it arrives, stays until it's used.
 describe('adding Taperday to the home screen', () => {
-  it('stays off Home where adding isn’t a tap or two, and Account says how', () => {
+  it('stays off Home where adding isn’t a tap or two, and Account’s one button says where the browser’s menu is', async () => {
     render(
       <>
         <InstallCard />
@@ -24,16 +24,24 @@ describe('adding Taperday to the home screen', () => {
     )
 
     expect(screen.queryByRole('region', { name: 'Put Taperday on your home screen' })).not.toBeInTheDocument()
-    expect(screen.getByText(/choose Install app or Add to Home screen/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Add to home screen' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent(/choose Install app or Add to Home screen/)
+    await userEvent.click(screen.getByRole('button', { name: 'Got it' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('gives an iPhone the two Safari steps, and remembers Not now on this device', async () => {
+  it('on an iPhone, the one button opens the two taps with an arrow to Share, and Not now is remembered on this device', async () => {
     asIphone()
-    const { unmount } = render(<InstallCard />)
+    const { unmount, container } = render(<InstallCard />)
 
-    const card = screen.getByRole('region', { name: 'Put Taperday on your home screen' })
-    expect(card).toHaveTextContent('In Safari, tap Share')
-    expect(card).toHaveTextContent('Choose Add to Home Screen, then Add')
+    await userEvent.click(screen.getByRole('button', { name: 'Add to home screen' }))
+    const guide = screen.getByRole('dialog', { name: 'Two taps and it’s on your home screen' })
+    expect(guide).toHaveTextContent('Tap Share in the toolbar at the bottom')
+    expect(guide).toHaveTextContent('Add to Home Screen')
+    expect(container.querySelector('.install-guide-arrow')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
     await userEvent.click(screen.getByRole('button', { name: 'Not now' }))
     expect(screen.queryByRole('region', { name: 'Put Taperday on your home screen' })).not.toBeInTheDocument()
 
@@ -60,6 +68,6 @@ describe('adding Taperday to the home screen', () => {
 
     expect(prompt).toHaveBeenCalled()
     expect(screen.queryByRole('region', { name: 'Put Taperday on your home screen' })).not.toBeInTheDocument()
-    expect(screen.getByText(/Taperday is on your home screen/)).toBeInTheDocument()
+    expect(screen.getByText(/It’s on your home screen/)).toBeInTheDocument()
   })
 })

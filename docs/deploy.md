@@ -153,6 +153,42 @@ The database still pauses after an hour with no queries (`autoPauseDelay: 60`) a
 waiting screen (`SignInWait`), which follows the wake through `live` then `ready` and keeps trying for up to 2½
 minutes (`WAKE_PATIENCE_MS`).
 
+## Reminders (Web Push)
+
+Runners can turn on a reminder of the day's run (and a Monday "new week" nudge) in Account. It's off until a VAPID key
+pair is set; without one, Account doesn't offer it and nothing is ever sent. Web Push itself is free: the browsers'
+push services (Google, Apple, Mozilla, Microsoft) carry the messages at no charge.
+
+1. **Make a key pair, on your laptop.** Never commit it, paste it in a chat, or put it in `appsettings`:
+   ```bash
+   npx web-push generate-vapid-keys --json
+   ```
+   It prints `publicKey` (65 bytes, base64url) and `privateKey` (32 bytes, base64url).
+2. **Set them in the API's App Service settings** (Taperday CLI profile, as above). Put the values in shell variables
+   first, so they aren't typed into the command itself:
+   ```bash
+   az webapp config appsettings set -g rg-taperday -n <apiName> --settings \
+     Push__PublicKey="$VAPID_PUBLIC" Push__PrivateKey="$VAPID_PRIVATE" Push__Subject="mailto:<contact email>"
+   ```
+   `Push__Subject` is how a push service can reach you about Taperday's pushes (a `mailto:` or `https:` address). The
+   API checks all three at start and won't start with a malformed key.
+3. **Data Protection must be wrapped by Key Vault** (`DataProtection__KeyVaultKeyUri`, already set for Strava): devices'
+   push addresses are encrypted with the same key ring as Strava tokens, under their own purpose.
+
+Keep the key pair for good. A browser subscribes with the public key, so a new pair stops every existing device, and
+each runner would have to turn reminders off and on again.
+
+**Timing on the free plan.** A background worker sleeps until the next reminder is due. On F1 that only works while
+the API is loaded, which is what the uptime ping on `/health/live` (above) is for. If the API slept anyway, reminders
+still due that day go out as soon as it starts again (late, never twice); a day it slept through entirely is skipped.
+
+**Database cost.** The worker never polls. It reads the database when the API starts, when a reminder is due, and when
+a runner changes a plan, a time zone or a device, so the free database can still pause. Each wake keeps the database up
+for its 60-minute pause delay: about 1,800 vCore-seconds at 0.5 vCore, under 2% of the monthly 100,000. Reminders at
+the same time share a wake, and days with nothing in a runner's plan don't wake it. With a handful of runners who
+mostly open Taperday after their reminder anyway, that's well inside the allowance; if many runners pick many
+different times, watch the database's usage.
+
 ## Going live
 
 Redeploy with `-p apiSku=B1 databaseTier=basic`. Changing the database tier moves the data with it; the free

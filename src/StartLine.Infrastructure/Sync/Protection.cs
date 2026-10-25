@@ -65,7 +65,10 @@ internal sealed class DataProtectionConnectState(IDataProtectionProvider provide
 }
 
 /// <summary>Wakes the sync worker. Several wakes before it runs count as one.</summary>
-internal sealed class SyncSignal : ISyncSignal, IDisposable
+internal sealed class SyncSignal : WakeSignal, ISyncSignal;
+
+/// <summary>Wakes a background worker early. Several wakes before it runs count as one.</summary>
+internal abstract class WakeSignal : IDisposable
 {
     private readonly SemaphoreSlim signal = new(0, 1);
 

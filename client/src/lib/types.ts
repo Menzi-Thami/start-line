@@ -57,6 +57,9 @@ export type PersonalBest = Schemas['PersonalBestDto']
 export type PaceVerdict = Schemas['PaceVerdict']
 export type StravaStatus = Schemas['StravaStatusDto']
 export type StravaDisconnected = Schemas['StravaDisconnectedDto']
+export type Reminders = Schemas['RemindersDto']
+export type ReminderDevice = Schemas['ReminderDeviceDto']
+export type TurnOnRemindersRequest = Schemas['TurnOnRemindersCommand']
 
 /** Monday first, the way most runners plan a week. */
 export const WEEK: readonly DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

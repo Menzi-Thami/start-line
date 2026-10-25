@@ -13,9 +13,12 @@ import { App } from './app/App'
 import { readAuthConfig } from './app/auth-context'
 import { AuthProvider } from './app/AuthProvider'
 import { wakeApi } from './lib/api-client'
+import { setUpInstall } from './lib/install-app'
 
 // The free API sleeps when idle; start it waking now, while the page and any sign-in redirect are still loading.
 wakeApi()
+// Taperday can be added to a home screen: catch the browser's offer before React starts, and register the service worker.
+setUpInstall()
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')

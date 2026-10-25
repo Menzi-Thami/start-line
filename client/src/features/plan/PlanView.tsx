@@ -390,7 +390,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
 
         <div {...panel('all')}>
           <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
-          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
+          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} today={today} />
         </div>
 
         <div {...panel('strength')}>

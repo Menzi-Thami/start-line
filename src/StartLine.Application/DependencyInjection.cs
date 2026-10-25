@@ -4,6 +4,7 @@ using StartLine.Application.Common.Behaviours;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Account;
 using StartLine.Application.Features.Activities;
+using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Races;
@@ -29,6 +30,7 @@ public static class DependencyInjection
 
         services.AddSingleton<RaceCalendarSync>();
         services.AddScoped<PlanBuilder>();
+        services.AddScoped<PlanCoach>();
         services.AddScoped<CurrentRunner>();
         services.AddScoped<HeartRateData>();
         services.AddScoped<PersonalBests>();

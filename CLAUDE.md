@@ -39,8 +39,8 @@ dotnet run --project src/StartLine.API --launch-profile http   # http://localhos
 - `Domain/Sync` — `ProviderConnection` (encrypted tokens), `SyncJob` (retries), `RateLimit`. Worked by
   `Application/Features/Sync/StravaSyncRunner` behind `IStravaApi`; tests use `FakeStravaApi`, never Strava.
 - `Domain/Plans/SavedPlan` — a runner has **one current plan** (a filtered unique index enforces it). A new plan for the
-  same race updates it in place; another race replaces it and the old one becomes a past plan (`Archived`), which can be made
-  current again. Signed-in runners open on their current plan.
+  same race updates it in place; another race replaces it (the old one is kept server-side as `Archived`; the app has no
+  My plans page since 25 Oct 2026, so it is not shown). Signed-in runners open on Home; the plan is deleted from the plan itself.
 - `Domain/Plans` — `TrainingPlanGenerator` (phases, volume, taper), `WeekLayout` (which run goes on which
   chosen day), `WorkoutBuilder` (concrete sessions per distance), `PlanProfile` (per-distance shape).
 - `Application/Features/{Plans,Races,Predictions}` — query + validator + handler per feature.

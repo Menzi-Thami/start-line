@@ -8,8 +8,9 @@ import type { RunnerState } from './useRunner'
 interface Props {
   runner: RunnerState
   request: GeneratePlanRequest
-  onOpenMyPlans: () => void
   onFinishSignUp: () => void
+  /** The runner deleted their plan from here. */
+  onDeleted?: () => void
   /** Save straight away: the runner signed up to build this plan, so asking again would be a chore. Only when they have no plan yet. */
   autoSave?: boolean
   /** The runner's current plan: null when they have none, undefined while it isn't known. */
@@ -23,13 +24,15 @@ type Status =
   | { kind: 'confirming' }
   | { kind: 'saving' }
   | { kind: 'saved' }
+  | { kind: 'confirming-delete' }
+  | { kind: 'deleting' }
   | { kind: 'error'; message: string }
 
 /**
- * Saves the plan on screen as the runner's one current plan, or says what has to happen first (sign in, finish
- * signing up). With a plan already, it asks first: the same race updates it, another race moves it to Past plans.
+ * Saves the plan on screen as the runner's one plan, or says what has to happen first (sign in, finish signing up).
+ * With a plan already, it asks first. On the runner's own plan it's where they delete it.
  */
-export function SavePlanButton({ runner, request, onOpenMyPlans, onFinishSignUp, autoSave = false, current, onSaved }: Props) {
+export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, autoSave = false, current, onSaved }: Props) {
   const auth = useAuth()
   const ready = runner.kind === 'ready'
   const canAutoSave = autoSave && ready && current === null
@@ -49,6 +52,19 @@ export function SavePlanButton({ runner, request, onOpenMyPlans, onFinishSignUp,
       // The app didn't know about the runner's plan yet (it couldn't load): reload it, so the button offers to replace it.
       if (error instanceof ApiError && error.code === 'plan_active') onSaved?.()
       setStatus({ kind: 'error', message: error instanceof Error ? error.message : 'That didn’t save. Try again.' })
+    }
+  }
+
+  const remove = async (id: string) => {
+    setStatus({ kind: 'deleting' })
+    try {
+      const token = await auth.getToken()
+      if (!token) throw new ApiError('Your sign-in has expired. Sign in again to carry on.', 401)
+      await api.me.deletePlan(token, id)
+      onSaved?.()
+      onDeleted?.()
+    } catch (error) {
+      setStatus({ kind: 'error', message: error instanceof Error ? error.message : 'That didn’t delete. Try again.' })
     }
   }
 
@@ -81,28 +97,40 @@ export function SavePlanButton({ runner, request, onOpenMyPlans, onFinishSignUp,
   if (!ready) return null
 
   if (current && samePlan(request, current.inputs)) {
+    if (status.kind === 'confirming-delete' || status.kind === 'deleting') {
+      return (
+        <span className="save-confirm" role="group" aria-label="Delete your plan">
+          <span className="field-help">Delete this plan?</span>
+          <button type="button" className="button button-danger" disabled={status.kind === 'deleting'} onClick={() => void remove(current.id)}>
+            Yes, delete
+          </button>
+          <button type="button" className="button button-quiet" onClick={() => setStatus({ kind: 'idle' })}>
+            Keep it
+          </button>
+        </span>
+      )
+    }
     return (
-      <button type="button" className="button button-quiet" onClick={onOpenMyPlans}>
-        Your current plan
-      </button>
+      <>
+        <button type="button" className="button button-quiet" onClick={() => setStatus({ kind: 'confirming-delete' })}>
+          Delete plan
+        </button>
+        {status.kind === 'error' && (
+          <span className="field-error" role="alert">
+            {status.message}
+          </span>
+        )}
+      </>
     )
   }
 
-  if (status.kind === 'saved') {
-    return (
-      <button type="button" className="button button-quiet" onClick={onOpenMyPlans}>
-        Saved as your plan. Open My plans
-      </button>
-    )
-  }
+  if (status.kind === 'saved') return <span className="chip chip-good">Saved</span>
 
   if (status.kind === 'confirming' && current) {
     const update = sameRace(request, current.inputs)
     return (
       <span className="save-confirm" role="group" aria-label="Replace your current plan">
-        <span className="field-help">
-          {update ? `Update your plan for ${current.name} with these answers?` : `Replace ${current.name}? It moves to Past plans, with its runs.`}
-        </span>
+        <span className="field-help">{update ? `Update ${current.name}?` : `Replace ${current.name}?`}</span>
         <button type="button" className="button" onClick={() => void persist(true)}>
           {update ? 'Yes, update it' : 'Yes, replace it'}
         </button>
@@ -118,7 +146,7 @@ export function SavePlanButton({ runner, request, onOpenMyPlans, onFinishSignUp,
   return (
     <>
       <button type="button" className="button button-quiet" onClick={save} disabled={status.kind === 'saving'}>
-        {status.kind === 'saving' ? 'Saving…' : current ? 'Make this my plan' : 'Save to My plans'}
+        {status.kind === 'saving' ? 'Saving…' : current ? 'Make this my plan' : 'Save plan'}
       </button>
       {status.kind === 'error' && (
         <span className="field-error" role="alert">

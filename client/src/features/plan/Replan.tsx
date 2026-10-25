@@ -19,8 +19,8 @@ const MIN_DAYS_BEFORE_RACE = 14
 
 const SETBACKS: readonly { value: Setback; label: string; help: string }[] = [
   { value: 'MissedTraining', label: 'I missed some training', help: 'A holiday, work or life got in the way, for up to about two weeks.' },
-  { value: 'Illness', label: 'I was ill', help: 'Rest for the rest of this week, then a week of easy runs before the harder sessions come back.' },
-  { value: 'Injury', label: 'I was injured', help: 'Two weeks of easy runs once you can run without pain.' },
+  { value: 'Illness', label: 'I was ill', help: 'Rest this week, then a week of easy runs.' },
+  { value: 'Injury', label: 'I was injured', help: 'Two weeks of easy runs once you’re pain-free.' },
   { value: 'Behind', label: 'I’m running less than planned', help: 'The plan picks up from what you ran last week.' },
 ]
 
@@ -108,8 +108,7 @@ export function Replan({ plan, today, units, onReplan, onUseGoal }: Props) {
         <form className="replan-form" onSubmit={submit} aria-labelledby={`${id}-title`}>
           <h3 id={`${id}-title`}>Replan from today</h3>
           <p className="field-help">
-            The rest of your plan is rebuilt from where you are now, building back up safely. The weeks you’ve run stay as they were, and
-            your race date and goal stay the same.
+            Rebuilds the rest of your plan from where you are now. Your race and goal stay the same.
           </p>
           <fieldset className="field">
             <legend className="field-label">What happened?</legend>

@@ -19,7 +19,7 @@ const BUILD_UP = [30, 36, 42, 26, 46, 52, 60, 38, 64, 72, 80, 50, 34, 18]
 const REASONS: { title: string; body: string; mini: ReactNode; wide?: boolean }[] = [
   {
     title: 'Built for your race',
-    body: 'Any distance from a parkrun 5K to Comrades, with Two Oceans, the Cape Town Marathon and more already in. A 10K and an ultra are trained differently, so each gets its own plan.',
+    body: 'Any distance, up to an ultra. Two Oceans, Comrades and more are already in.',
     mini: (
       <span className="mini-chips">
         {['5K', '10K', 'Half', 'Marathon', '56 km', '90 km'].map((d) => (
@@ -33,7 +33,7 @@ const REASONS: { title: string; body: string; mini: ReactNode; wide?: boolean }[
   },
   {
     title: 'Fits the days you can run',
-    body: 'Pick three to seven days and your long-run day. Hard sessions are spread out so they don’t land back to back.',
+    body: 'Pick your days and your long-run day.',
     mini: (
       <span className="mini-days">
         {DAYS.map((d, i) => (
@@ -46,7 +46,7 @@ const REASONS: { title: string; body: string; mini: ReactNode; wide?: boolean }[
   },
   {
     title: 'A pace and a reason for every run',
-    body: 'Intervals, tempo, fartlek, hills, long runs: each one tells you how fast to go and what it’s for.',
+    body: 'Every run has a pace and a purpose.',
     mini: (
       <span className="mini-paces">
         {[
@@ -64,7 +64,7 @@ const REASONS: { title: string; body: string; mini: ReactNode; wide?: boolean }[
   },
   {
     title: 'Builds you up without breaking you',
-    body: 'It starts from what you run now, adds no more than 10% a week, eases off every fourth week and tapers you in fresh.',
+    body: 'Builds up safely from what you run now, and tapers you in fresh.',
     mini: (
       <span className="mini-build">
         {BUILD_UP.map((h, i) => (
@@ -75,7 +75,7 @@ const REASONS: { title: string; body: string; mini: ReactNode; wide?: boolean }[
   },
   {
     title: 'Yours on any device',
-    body: 'Your plans are saved to your account. Add them to your phone’s calendar or print them for the fridge.',
+    body: 'Saved to your account. Add it to your calendar or print it.',
     mini: (
       <span className="mini-chips">
         {['Apple Calendar', 'Google', 'Outlook', 'Print'].map((d) => (

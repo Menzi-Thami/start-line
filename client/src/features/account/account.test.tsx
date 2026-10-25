@@ -151,7 +151,7 @@ describe('when accounts are switched off', () => {
 
     await screen.findByRole('heading', { name: 'Parkrun PB' })
     expect(screen.queryByRole('button', { name: /Sign in/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Save to My plans/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Save plan/ })).not.toBeInTheDocument()
   })
 })
 
@@ -218,7 +218,7 @@ describe('signing up comes first', () => {
 
     expect(await screen.findByRole('heading', { name: 'Which race?' })).toHaveFocus()
     expect(screen.getByText('Step 2 of 6')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'My plans' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'My runs' })).toBeInTheDocument()
     expect(db.profiles[0]).toMatchObject({ displayName: 'Thandi M', acceptPrivacyNotice: true, units: 'Kilometres' })
     expect(typeof (db.profiles[0] as { timeZone: string }).timeZone).toBe('string')
   })
@@ -248,9 +248,9 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await user.click(await screen.findByRole('button', { name: 'Save to My plans' }))
+    await user.click(await screen.findByRole('button', { name: 'Save plan' }))
 
-    expect(await screen.findByRole('button', { name: 'Saved as your plan. Open My plans' })).toBeInTheDocument()
+    expect(await screen.findByText('Saved')).toBeInTheDocument()
     expect(db.saved[0]).toMatchObject({ plan: { distanceKm: 5, raceDate: '2026-12-13', goalTime: '00:24:30', planFrom: '2026-10-08' } })
   })
 
@@ -268,7 +268,7 @@ describe('a signed-up runner', () => {
     await next()
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
-    expect(await screen.findByRole('button', { name: 'Saved as your plan. Open My plans' })).toBeInTheDocument()
+    expect(await screen.findByText('Saved')).toBeInTheDocument()
     expect(db.saved).toHaveLength(1)
 
     await user.click(screen.getByRole('button', { name: 'Change answers' }))
@@ -276,31 +276,17 @@ describe('a signed-up runner', () => {
     await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
-    expect(await screen.findByRole('button', { name: 'Save to My plans' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Save plan' })).toBeInTheDocument()
     expect(db.saved).toHaveLength(1)
   })
 
-  it('sees an empty state before saving anything', async () => {
+  it('has one plan, so there’s no My plans, and an old My plans link opens Home', async () => {
     accountApi({ runner: thandi })
-    const user = renderWith(signedIn())
+    window.history.replaceState(null, '', '/?view=plans')
+    renderWith(signedIn())
 
-    await user.click(await screen.findByRole('button', { name: 'My plans' }))
-
-    expect(await screen.findByText(/No saved plans yet/)).toBeInTheDocument()
-  })
-
-  it('opens a saved plan', async () => {
-    accountApi({
-      runner: thandi,
-      plans: [{ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' }],
-    })
-    const user = renderWith(signedIn())
-    await user.click(await screen.findByRole('button', { name: 'My plans' }))
-
-    await user.click(await screen.findByRole('button', { name: 'Open' }))
-
-    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
-    expect(window.location.search).toContain('goal=1470')
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' }, { timeout: 3000 })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'My plans' })).not.toBeInTheDocument()
   })
 
   // Signed in with a plan, they open on Home; their plan is a tap away.
@@ -316,11 +302,10 @@ describe('a signed-up runner', () => {
     })
     window.history.replaceState(null, '', '/')
     const user = renderWith(signedIn())
-    // They open their plan, then go to My plans to delete it.
+    // They open their plan and delete it from there.
     await openTheirPlan(user)
-    await user.click(screen.getByRole('button', { name: 'My plans' }))
 
-    await user.click(await screen.findByRole('button', { name: 'Delete Parkrun PB' }))
+    await user.click(await screen.findByRole('button', { name: 'Delete plan' }, { timeout: 3000 }))
     expect(db.plans).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
@@ -335,25 +320,6 @@ describe('a signed-up runner', () => {
     expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Taperday' }))
     expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
-  })
-
-  it('stays on My plans after deleting a past plan', async () => {
-    const db = accountApi({
-      runner: thandi,
-      plans: [
-        { id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' },
-        { id: 'plan-0', name: 'Spring 10K', raceName: 'Spring 10K', raceDate: '2026-09-13', createdAt: '2026-07-01T09:00:00Z', status: 'Archived' },
-      ],
-    })
-    window.history.replaceState(null, '', '/?view=plans')
-    const user = renderWith(signedIn())
-
-    await user.click(await screen.findByRole('button', { name: 'Delete Spring 10K' }))
-    await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
-
-    await waitFor(() => expect(db.plans).toHaveLength(1))
-    expect(screen.getByRole('heading', { name: 'My plans' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Delete Spring 10K' })).not.toBeInTheDocument()
   })
 
   const current = { id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' } as const
@@ -380,8 +346,8 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
-    await user.click(screen.getByRole('button', { name: 'My plans' }))
-    expect(await screen.findByRole('heading', { name: 'My plans' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'My runs' }))
+    expect(await screen.findByRole('heading', { name: 'My runs' })).toBeInTheDocument()
     window.history.back()
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
@@ -406,7 +372,7 @@ describe('a signed-up runner', () => {
     expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
 
     await openTheirPlan(user)
-    expect(await screen.findByRole('button', { name: 'Your current plan' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Delete plan' })).toBeInTheDocument()
     expect(window.location.search).toContain('goal=1470')
   })
 
@@ -466,7 +432,7 @@ describe('a signed-up runner', () => {
 
     // The plan shows first; the button changes once the current plan has loaded.
     await user.click(await screen.findByRole('button', { name: 'Make this my plan' }, { timeout: 3000 }))
-    expect(screen.getByText('Replace Parkrun PB? It moves to Past plans, with its runs.')).toBeInTheDocument()
+    expect(screen.getByText('Replace Parkrun PB?')).toBeInTheDocument()
     expect(db.saved).toHaveLength(0)
     await user.click(screen.getByRole('button', { name: 'Yes, replace it' }))
 
@@ -498,30 +464,6 @@ describe('a signed-up runner', () => {
     expect(window.location.search).toContain('re=2026-10-21&why=ill')
   })
 
-  it('sees in My plans when a plan was replanned', async () => {
-    accountApi({ runner: thandi, plans: [{ ...current, replannedFrom: '2026-10-21' }] })
-    const user = renderWith(signedIn())
-
-    await user.click(await screen.findByRole('button', { name: 'My plans' }))
-
-    expect(await screen.findByText('Replanned 21 Oct')).toBeInTheDocument()
-  })
-
-  it('keeps past plans, and can make one current again', async () => {
-    const db = accountApi({
-      runner: thandi,
-      plans: [current, { id: 'plan-0', name: 'Spring 10K', raceName: 'Spring 10K', raceDate: '2026-09-20', createdAt: '2026-06-01T09:00:00Z', status: 'Archived' }],
-    })
-    const user = renderWith(signedIn())
-    await user.click(await screen.findByRole('button', { name: 'My plans' }))
-
-    expect(await screen.findByRole('heading', { name: 'Your plan' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Past plans' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Make this my plan again' }))
-
-    await waitFor(() => expect(db.restored).toEqual(['plan-0']))
-  })
-
   it('can delete their account after confirming, which signs them out', async () => {
     const auth = signedIn()
     const db = accountApi({ runner: thandi })
@@ -538,10 +480,11 @@ describe('a signed-up runner', () => {
 
   it('is told plainly when their sign-in has expired', async () => {
     accountApi({ runner: thandi })
-    server.use(http.get('*/api/v1/me/plans', () => HttpResponse.json({}, { status: 401 })))
+    server.use(http.post('*/api/v1/me/plans', () => HttpResponse.json({}, { status: 401 })))
+    window.history.replaceState(null, '', `/${link}`)
     const user = renderWith(signedIn())
 
-    await user.click(await screen.findByRole('button', { name: 'My plans' }))
+    await user.click(await screen.findByRole('button', { name: 'Save plan' }, { timeout: 3000 }))
 
     expect(await screen.findByText(/sign-in has expired/)).toBeInTheDocument()
   })

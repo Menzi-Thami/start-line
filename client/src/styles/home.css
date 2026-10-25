@@ -529,3 +529,173 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* This week's runs from the plan, inside the This week card: one row a day, done ticked, today in volt. */
+.home-week-runs {
+  display: grid;
+  gap: 2px;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.home-week-run {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr auto 1.2rem;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.home-week-run-day {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.home-week-run-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-week-run-km {
+  color: var(--ink-2);
+}
+
+.home-week-run-mark {
+  color: var(--accent);
+  font-weight: 700;
+  text-align: right;
+}
+
+.home-week-run.is-today {
+  background: var(--accent-soft);
+}
+
+.home-week-run.is-today .home-week-run-day {
+  color: var(--accent);
+}
+
+.home-week-run.is-missed {
+  opacity: 0.55;
+}
+
+/* The two-tap guide: a sheet from the bottom, and on an iPhone an arrow bouncing towards Safari's Share button. */
+.install-guide-scrim {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.install-guide-panel {
+  position: fixed;
+  z-index: 71;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  gap: var(--space-4);
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-5) calc(var(--space-7) + env(safe-area-inset-bottom));
+  border: 1px solid var(--line-strong);
+  border-bottom: 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--surface);
+  box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.5);
+  animation: install-sheet 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.install-guide-panel:focus {
+  outline: none;
+}
+
+@keyframes install-sheet {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+.install-guide-steps {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-lg);
+}
+
+.install-guide-steps li {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.install-guide-number {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.install-guide-hint {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* A picture of the row to tap, as it looks in the share sheet. */
+.install-guide-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+}
+
+.install-guide-arrow {
+  position: fixed;
+  z-index: 72;
+  bottom: var(--space-2);
+  left: 50%;
+  display: grid;
+  justify-items: center;
+  transform: translateX(-50%);
+  color: var(--accent);
+  font-size: 2rem;
+  line-height: 1;
+  pointer-events: none;
+  animation: install-bounce 1s ease-in-out infinite;
+}
+
+.install-guide-arrow-icon {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes install-bounce {
+  50% {
+    transform: translate(-50%, 8px);
+  }
+}

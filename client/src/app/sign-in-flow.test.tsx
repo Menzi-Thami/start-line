@@ -201,6 +201,39 @@ describe('Home from the copy kept on this device', () => {
     expect(screen.queryByText(/Sipho/)).not.toBeInTheDocument()
     expect(readSnapshot(ownerOf({ name: 'Sipho', email: 'sipho@example.com' }))).toBeNull()
   })
+
+  it('opens the installed app on Home at once for a runner this device knows, even one without a plan yet', async () => {
+    saveSnapshot(ownerOf({ name: 'Thandi', email: 'thandi@example.com' }), { runner: thandi, current: null })
+    server.use(
+      http.get('*/api/v1/me', async () => {
+        await delay('infinite')
+        return HttpResponse.json(thandi)
+      }),
+    )
+    // The app's start page, the way the home-screen icon opens it.
+    window.history.replaceState(null, '', '/')
+
+    renderApp(signedIn())
+
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    expect(screen.getByText(/while Taperday catches up/)).toBeInTheDocument()
+    expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
+  })
+
+  it('still shows the wait to a runner this device hasn’t seen, with nothing to show yet', async () => {
+    server.use(
+      http.get('*/api/v1/me', async () => {
+        await delay('infinite')
+        return HttpResponse.json(thandi)
+      }),
+    )
+    window.history.replaceState(null, '', '/')
+
+    renderApp(signedIn())
+
+    expect(await screen.findByText(/Checking your account/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
+  })
 })
 
 describe('signing in while the server wakes', () => {

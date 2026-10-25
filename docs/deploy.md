@@ -175,6 +175,13 @@ push services (Google, Apple, Mozilla, Microsoft) carry the messages at no charg
 3. **Data Protection must be wrapped by Key Vault** (`DataProtection__KeyVaultKeyUri`, already set for Strava): devices'
    push addresses are encrypted with the same key ring as Strava tokens, under their own purpose.
 
+**What reminders say.** The day's run with its distance and pace range in the runner's units, then the plan's own words for
+it; race day with the goal pace; and, for runners who tick it, a Monday note: the week number and phase, last week's
+check-ins, this week's distance, key sessions and long run, and today's run. `Push__IncludeRunData=true` adds what comes
+from runs: the coach's call (made on Monday morning if the runner hasn't opened the plan yet, so the plan page then shows
+the same one), the plan as the coach has it, and last week's distance run. It's **off** until Strava confirms that
+pushing a runner their own synced data to their own device is fine (`docs/strava-sync.md`).
+
 Keep the key pair for good. A browser subscribes with the public key, so a new pair stops every existing device, and
 each runner would have to turn reminders off and on again.
 

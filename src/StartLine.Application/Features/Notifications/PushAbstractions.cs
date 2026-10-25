@@ -14,6 +14,12 @@ public interface IPushSettings
     /// device gives it, so only those hosts are accepted: an endpoint can never point the API at anywhere else.
     /// </summary>
     bool Accepts(Uri endpoint);
+
+    /// <summary>
+    /// Whether a reminder may carry what comes from the runner's runs: the coach's call, the plan as the coach has it,
+    /// and the distance they ran. Off by default, so no run data (Strava's or any other) is pushed until it's turned on.
+    /// </summary>
+    bool IncludeRunData { get; }
 }
 
 /// <summary>Where one device's pushes go, in the clear: only ever in memory, on the way to the push service.</summary>

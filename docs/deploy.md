@@ -71,9 +71,16 @@ Both files are safe to run again.
 
 ## Automatic deploys
 
-Every push to `main` deploys itself once CI passes (`.github/workflows/deploy.yml`): it builds the API and the
-website, applies any new migrations, deploys the API, deploys the website, then waits for `/health/ready`. It can also
-be run by hand: Actions → deploy → Run workflow.
+Every change is checked in full **before it's merged**, on the developer's machine: `scripts/check.sh` from the repo
+root runs the backend format, build, all .NET tests (LocalDB) and the migrations check, then the client's lint,
+typecheck, tests, build and audit, then the Playwright end-to-end suite. GitHub Actions doesn't repeat that on pull
+requests: the private repo's free 2,000 Actions minutes a month ran out on 25 Oct 2026, so they're kept for deploys.
+`ci.yml` still exists to run by hand (Actions → ci → Run workflow); `secret-scan` still runs on every pull request
+and on `main`.
+
+Every push to `main` then deploys itself (`.github/workflows/deploy.yml`, about 4 minutes): it builds the API and the
+website (any build error or warning stops it before production is touched), applies any new migrations, deploys the
+API, deploys the website, then waits for `/health/ready`. It can also be run by hand: Actions → deploy → Run workflow.
 
 How it signs in, with no password stored anywhere:
 

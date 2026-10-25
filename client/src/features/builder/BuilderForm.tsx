@@ -38,8 +38,8 @@ const nextMonday = (today: string) => addDays(today, (8 - new Date(`${today}T00:
 const STEPS = [
   { title: 'Which race?', hint: 'Pick it from the list, or tell us about any other race.', fields: ['race', 'distance', 'date'] },
   { title: 'What’s your goal time?', hint: 'Every session’s pace is worked out from this.', fields: ['goal'] },
-  { title: 'When can you run?', hint: 'Hard sessions go on days that aren’t back to back, wherever your choice allows.', fields: ['runDays', 'longRunDay', 'startOn'] },
-  { title: 'About you', hint: 'So the plan starts where you are, not where a template thinks you should be.', fields: ['currentKm'] },
+  { title: 'When can you run?', hint: 'Hard runs never land back to back.', fields: ['runDays', 'longRunDay', 'startOn'] },
+  { title: 'About you', hint: 'So your plan starts where you are.', fields: ['currentKm'] },
   { title: 'Check and build', hint: 'Change anything you like, then build your plan.', fields: ['strength'] },
 ] as const satisfies readonly { title: string; hint: string; fields: readonly Field[] }[]
 
@@ -568,7 +568,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     <summary>Add strength and mobility sessions</summary>
                     <DayPills
                       legend="Strength days"
-                      hint="Up to three, about 30 minutes each. Pairing them with a hard run day keeps your easy days easy."
+                      hint="Up to three, about 30 minutes each."
                       selected={draft.strengthDays}
                       onChange={(d) => set('strengthDays', d)}
                       max={3}

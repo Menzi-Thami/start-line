@@ -31,7 +31,7 @@ to keep it, bring in your runs and have the plan adjust to how your training is 
 
 - **Home.** Today's run, your week, your running totals and bests, and calculators for race splits, pace and time,
   heart-rate zones and race-day fuelling.
-- **Your plans.** One current plan, with past plans kept so you can go back to one.
+- **Your plan.** One plan at a time, on Home and a tap away. Delete it from the plan whenever you like.
 - **Your runs.** Connect Strava once and runs arrive by themselves, or upload a `.fit`, `.gpx` or `.tcx` file (or the
   zip it came in) from almost any watch. Each run is matched to the session it was for, with splits, halves and best
   efforts.

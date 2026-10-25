@@ -24,9 +24,9 @@ const STATUS: Record<WakeStep, string> = {
 }
 
 const NOTE: Record<WakeStep, string> = {
-  server: 'Its free server sleeps when no one’s using it, so the first visit of the day can take a minute or two.',
-  database: 'Your training is kept safe in a database that naps too. It’s on its way.',
-  almost: 'Everything’s awake. Your page is a moment away.',
+  server: 'The first visit of the day takes a minute.',
+  database: 'Nearly there.',
+  almost: 'Opening your page.',
 }
 
 interface Props {

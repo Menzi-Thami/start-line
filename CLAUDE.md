@@ -28,8 +28,12 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
 dotnet build StartLine.slnx        # must be 0 warnings (TreatWarningsAsErrors)
 dotnet test  StartLine.slnx        # Domain, Application, Architecture, Integration
 dotnet run --project src/StartLine.API --launch-profile http   # http://localhost:5122, Scalar at /scalar
+scripts/check.sh                   # every check, before any merge (backend, client, end-to-end)
 ```
 `UseAppHost=false` is set because locked-down Windows devices block the generated .exe.
+
+**Before merging any PR, run `scripts/check.sh` locally and merge only when it passes.** CI doesn't run on pull
+requests (the free Actions minutes are kept for deploys; see `docs/deploy.md`), and every merge to `main` deploys.
 
 ## Layout
 - `Domain/Running` — `Distance`, `Pace`, `RaceTimePredictor` (Riegel), `TrainingPaces` (zones from goal).

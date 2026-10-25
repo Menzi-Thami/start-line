@@ -84,8 +84,7 @@ export function StravaSection({ notice, connecting = false }: Props) {
       {!connecting && state.kind === 'ready' && !state.status.connected && (
         <>
           <p>
-            Save a run on Strava (from your Garmin, COROS, phone or anything else that syncs there) and it appears in your plan by itself, judged against
-            the session it was for. Uploading a .fit file still works too.
+            Your runs on Strava arrive in your plan by themselves.
           </p>
           <ConnectWithStrava onClick={() => void connect()} disabled={busy} />
         </>

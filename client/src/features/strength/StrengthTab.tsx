@@ -23,8 +23,7 @@ export function StrengthTab({ plan, week, done, onDoneChange }: Props) {
     return (
       <>
         <p className="tab-intro">
-          Two short strength sessions a week make you a stronger, steadier runner. Choose strength days under “Add strength and mobility
-          sessions” when you change your answers, and they’ll appear here with sets and reps to tick off.
+          Add strength days under “Change answers” and they’ll show here.
         </p>
         <h3>The moves</h3>
         <ExerciseLibrary />
@@ -35,8 +34,7 @@ export function StrengthTab({ plan, week, done, onDoneChange }: Props) {
   return (
     <>
       <p className="tab-intro">
-        Strength that follows your running: learn the moves first, then add weight and single-leg work, and keep it light in easier weeks.
-        Tick each set as you finish it. Ticks are saved on this device.
+        Tick each set as you finish it.
       </p>
       {sessions.length === 0 && (
         <p className="empty">{week?.phase === 'RaceWeek' ? 'No strength in race week: it’s for fresh legs.' : 'No strength this week.'}</p>

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountPage } from '../features/account/AccountPage'
-import { MyPlans } from '../features/account/MyPlans'
 import { Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
@@ -27,7 +26,7 @@ import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
 import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
-import type { Activity, CoachNote, GeneratePlanRequest, Runner, SavedPlanSummary, TrainingPlan } from '../lib/types'
+import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
 type PlanState =
@@ -36,7 +35,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'home' | 'build' | 'plans' | 'runs' | 'account' | 'privacy' | 'sign-up'
+type View = 'home' | 'build' | 'runs' | 'account' | 'privacy' | 'sign-up'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -74,7 +73,9 @@ const runFromUrl = (): OpenRun | null => {
 const viewFromUrl = (): View => {
   if (window.location.pathname === STRAVA_CALLBACK_PATH) return 'account'
   const view = new URLSearchParams(window.location.search).get('view')
-  return view === 'home' || view === 'plans' || view === 'runs' || view === 'account' || view === 'privacy' ? view : 'build'
+  // A runner has one plan, so the old My plans page is now Home.
+  if (view === 'plans') return 'home'
+  return view === 'home' || view === 'runs' || view === 'account' || view === 'privacy' ? view : 'build'
 }
 
 export function App() {
@@ -305,7 +306,7 @@ export function App() {
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'home' || next === 'plans' || next === 'runs' || next === 'account' || next === 'privacy'
+      next === 'home' || next === 'runs' || next === 'account' || next === 'privacy'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
@@ -358,10 +359,8 @@ export function App() {
     window.scrollTo?.({ top: 0 })
   }
 
-  // The runner deleted a saved plan. Their current plan (or the plan on screen) is gone, so they go Home, which offers a
-  // new one; deleting a past plan is only tidying up, and they stay on My plans.
-  const planDeleted = (deleted: SavedPlanSummary) => {
-    if (deleted.status !== 'Active' && deleted.id !== savedOnScreen) return
+  // The runner deleted their plan from the plan itself: it's gone, so they go Home, which offers a new one.
+  const planDeleted = () => {
     clearPlan()
     go('home')
   }
@@ -454,7 +453,7 @@ export function App() {
       ? {
           key: 'pitch',
           title: 'Your race, your week, your plan',
-          hint: 'A free account keeps your plans with you, from the first easy run to the start line.',
+          hint: 'Save your plan and track your runs.',
           body: <SignUpPitch onSignUp={auth.signUp} onSignIn={auth.signIn} />,
         }
       : state.kind === 'needs-sign-up'
@@ -518,9 +517,6 @@ export function App() {
                   <>
                     <button type="button" className="nav-link" aria-current={view === 'home' ? 'page' : undefined} onClick={() => go('home')}>
                       Home
-                    </button>
-                    <button type="button" className="nav-link" aria-current={view === 'plans' ? 'page' : undefined} onClick={() => go('plans')}>
-                      My plans
                     </button>
                     <button type="button" className="nav-link" aria-current={view === 'runs' ? 'page' : undefined} onClick={() => go('runs')}>
                       My runs
@@ -597,7 +593,7 @@ export function App() {
           </section>
         )}
 
-        {(view === 'home' || view === 'plans' || view === 'runs' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
+        {(view === 'home' || view === 'runs' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
           <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
         )}
 
@@ -620,9 +616,6 @@ export function App() {
           />
         )}
 
-        {view === 'plans' && state.kind === 'ready' && (
-          <MyPlans onOpen={openSaved} onBuildNew={startFresh} onChanged={currentPlan.refresh} onDeleted={planDeleted} />
-        )}
 
         {view === 'runs' &&
           state.kind === 'ready' &&
@@ -655,7 +648,7 @@ export function App() {
           />
         )}
 
-        {(view === 'home' || view === 'plans' || view === 'runs' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
+        {(view === 'home' || view === 'runs' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
           <div className="empty">
             <p>Sign in to see your saved plans, runs and account.</p>
             {state.kind === 'signed-out' && (
@@ -696,8 +689,8 @@ export function App() {
                       units={units}
                       lede={
                         auth.enabled
-                          ? 'A week-by-week running plan built around your race and the days you can run, with a pace and a reason for every session.'
-                          : 'Five quick questions and you’ll have a week-by-week plan with a pace and a reason for every session. No account, no app, nothing to pay.'
+                          ? 'A plan for any distance, up to an ultra.'
+                          : 'A plan for any distance, up to an ultra. Free.'
                       }
                     />
                     <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
@@ -771,7 +764,7 @@ export function App() {
                       key={toSearchParams(plan.inputs).toString()}
                       runner={state}
                       request={toRequest(plan.inputs)}
-                      onOpenMyPlans={() => go('plans')}
+                      onDeleted={planDeleted}
                       onFinishSignUp={() => go('sign-up')}
                       autoSave={freshBuild}
                       current={currentPlan.current}
@@ -789,8 +782,7 @@ export function App() {
 
       <footer className="footer">
         <p>
-          Plans are a guide, not medical advice. If something hurts in a way that isn’t normal tiredness, rest and get it checked.
-          Race dates come from organisers and can change, so confirm on the race’s own site before you enter.
+          Plans are a guide, not medical advice. If something hurts, rest and get it checked. Check race dates with the organiser.
         </p>
         <p className="footer-links">
           <button type="button" className="link-button" onClick={() => go('privacy')}>

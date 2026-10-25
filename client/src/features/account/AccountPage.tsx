@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { Runner } from '../../lib/types'
+import { InstallSection } from '../install/InstallApp'
 import { StravaSection } from '../sync/StravaSection'
 import { ProfileForm } from './ProfileForm'
 import { RunSources } from './RunSources'
@@ -68,6 +69,8 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <StravaSection notice={stravaNotice} connecting={stravaConnecting} />
 
       <RunSources onOpenRuns={onOpenRuns} />
+
+      <InstallSection />
 
       <div className="section">
         <h3>Your data</h3>

@@ -88,6 +88,24 @@ test('a shared link builds the plan straight away and survives a reload', async 
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
 })
 
+test('installs as an app: the manifest, its icons, and a service worker that opens Taperday with no signal', async ({ page, context, request }) => {
+  const manifest = (await (await request.get('/manifest.webmanifest')).json()) as { display: string; start_url: string; icons: { src: string; purpose: string }[] }
+  expect(manifest.display).toBe('standalone')
+  expect(manifest.start_url).toBe('/')
+  expect(manifest.icons.some((icon) => icon.purpose === 'maskable')).toBe(true)
+  for (const icon of [...manifest.icons.map((i) => i.src), '/apple-touch-icon.png']) expect((await request.get(icon)).ok()).toBe(true)
+
+  await page.goto('/')
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  // Once the worker controls the page it keeps the app's files; then the app still opens offline.
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
+  await context.setOffline(true)
+  await page.reload()
+  await expect(page.locator('.masthead')).toBeVisible()
+  await context.setOffline(false)
+})
+
 test('distances switch to miles', async ({ page }) => {
   await page.goto(sharedLink())
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()

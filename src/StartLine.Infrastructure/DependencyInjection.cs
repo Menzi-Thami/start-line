@@ -6,10 +6,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StartLine.Application.Common;
 using StartLine.Application.Features.Activities;
+using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Races;
 using StartLine.Application.Features.Sync;
 using StartLine.Infrastructure.Activities;
 using StartLine.Infrastructure.Persistence;
+using StartLine.Infrastructure.Push;
 using StartLine.Infrastructure.Races;
 using StartLine.Infrastructure.Sync;
 
@@ -17,7 +19,7 @@ namespace StartLine.Infrastructure;
 
 public static class DependencyInjection
 {
-    /// <summary>Set to a Key Vault key URI in Azure to wrap the Data Protection key ring. Required wherever Strava is on outside development.</summary>
+    /// <summary>Set to a Key Vault key URI in Azure to wrap the Data Protection key ring. Required wherever Strava or reminders are on outside development.</summary>
     public const string KeyVaultKeySetting = "DataProtection:KeyVaultKeyUri";
 
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
@@ -51,17 +53,19 @@ public static class DependencyInjection
             .Validate(o => !string.IsNullOrWhiteSpace(o.ConnectionString), $"ConnectionStrings:{DatabaseOptions.ConnectionStringName} is required.")
             .ValidateOnStart();
         services.AddSingleton<AuditTimestampsInterceptor>();
+        services.AddSingleton<ReminderScheduleInterceptor>();
         services.AddDbContext<StartLineDbContext>((sp, o) =>
         {
             var database = sp.GetRequiredService<IOptions<DatabaseOptions>>().Value;
             // Retries cover Azure SQL's transient faults, including the free tier waking from auto-pause.
             o.UseSqlServer(database.ConnectionString, sql => sql.EnableRetryOnFailure());
-            o.AddInterceptors(sp.GetRequiredService<AuditTimestampsInterceptor>());
+            o.AddInterceptors(sp.GetRequiredService<AuditTimestampsInterceptor>(), sp.GetRequiredService<ReminderScheduleInterceptor>());
         });
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<StartLineDbContext>());
         services.AddHealthChecks().AddDbContextCheck<StartLineDbContext>("database", tags: ["ready"]);
 
         AddStravaSync(services, configuration);
+        AddReminders(services);
 
         return services;
     }
@@ -87,5 +91,22 @@ public static class DependencyInjection
         services.AddHttpClient<IStravaApi, HttpStravaApi>((sp, http) =>
             http.Timeout = sp.GetRequiredService<IOptions<StravaOptions>>().Value.Timeout);
         services.AddHostedService<StravaSyncWorker>();
+    }
+
+    private static void AddReminders(IServiceCollection services)
+    {
+        // Uses the Data Protection key ring set up with Strava sync above, under its own purpose.
+        services.AddOptions<PushOptions>().BindConfiguration(PushOptions.Section).ValidateOnStart();
+        services.AddSingleton<IValidateOptions<PushOptions>, PushOptionsValidator>();
+        services.AddSingleton<IPushSettings, PushSettings>();
+        services.AddSingleton<IPushAddressProtector, DataProtectionPushAddressProtector>();
+        services.AddSingleton<ReminderSignal>();
+        services.AddTransient<MarkPushRequests>();
+        // No request logging: the URL is a device's push endpoint, a secret (PushTraces keeps it out of traces too).
+        services.AddHttpClient<IPushSender, WebPushSender>((sp, http) =>
+                http.Timeout = sp.GetRequiredService<IOptions<PushOptions>>().Value.Timeout)
+            .AddHttpMessageHandler<MarkPushRequests>()
+            .RemoveAllLoggers();
+        services.AddHostedService<ReminderWorker>();
     }
 }

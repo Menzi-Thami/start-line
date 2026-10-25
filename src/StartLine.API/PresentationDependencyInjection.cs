@@ -18,6 +18,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using StartLine.API.Infrastructure;
 using StartLine.Application.Common;
+using StartLine.Infrastructure.Push;
 
 namespace StartLine.API;
 
@@ -176,7 +177,7 @@ internal static class PresentationDependencyInjection
             .ConfigureResource(r => r.AddService(environment.ApplicationName))
             .WithTracing(t => t
                 .AddAspNetCoreInstrumentation(o => o.EnrichWithHttpRequest = RedactWebhookSecret)
-                .AddHttpClientInstrumentation())
+                .AddHttpClientInstrumentation(o => o.EnrichWithHttpRequestMessage = PushTraces.Redact))
             .WithMetrics(m => m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation())
             .WithLogging();
         if (!string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))

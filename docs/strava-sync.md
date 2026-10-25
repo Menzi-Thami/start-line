@@ -34,6 +34,9 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
   call, so they never wait for the rate limit. Disconnecting revokes at Strava, deletes every synced run and says so
   on screen (the written confirmation).
 - **2.3 / 6.1: display.** A runner's Strava runs are only ever shown to that runner.
+- **Reminders never carry Strava Data.** A push goes through a third party (the browser's push service) and shows on a
+  lock screen, so `ReminderRunner` never reads runs: a reminder is built from the plan as the runner wrote it, without
+  the coach's calls (which come partly from synced runs), and says only the session's name.
 - **5.3: AI.** Taperday sends nothing to any AI service.
 - **Brand.** Official, unmodified "Connect with Strava" button and "Powered by Strava" logo (`client/public/strava/`,
   from developers.strava.com/guidelines), smaller than Taperday's own name; every synced run links back with
@@ -111,7 +114,7 @@ What Strava's Developer Program asks for, and where Taperday meets it. This is t
 | Webhooks, not polling, for updates and deauthorisations | One push subscription (id 377962); the worker reacts to events, with a catch-up only when the app is opened. |
 | Works for up to 10 athletes before review; submit to go further | Capacity is at 10. Submit the review form once there's real usage: https://share.hsforms.com/1VXSwPUYqSH6IxK0y51FjHwcnkd8 |
 | Within rate limits (200/15 min, 2,000/day; 400/4,000 after upgrade) | `StravaRateGate` reads Strava's usage headers and stops background work at 90%, leaving room for runners connecting. |
-| A lawful privacy policy (Policy 7.3) | Published at `/?view=privacy` (linked from every page's footer). It names synced runs, the 7-day cache, heart rate and the contact, and runners accept it (version `2026-10-21`) before connecting. |
+| A lawful privacy policy (Policy 7.3) | Published at `/?view=privacy` (linked from every page's footer). It names synced runs, the 7-day cache, heart rate and the contact, and runners accept it (version `2026-10-25`, which added reminders) before connecting. |
 
 Open actions are in `security-posture.md` → To do.
 

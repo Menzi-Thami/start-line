@@ -45,11 +45,8 @@ internal static class CoachCalls
     }
 
     /// <summary>Today where the runner is: a week starts on their Monday, not UTC's.</summary>
-    public static DateOnly LocalToday(Runner runner, TimeProvider time)
-    {
-        var zone = TimeZoneInfo.TryFindSystemTimeZoneById(runner.TimeZone, out var found) ? found : TimeZoneInfo.Utc;
-        return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(time.GetUtcNow(), zone).DateTime);
-    }
+    public static DateOnly LocalToday(Runner runner, TimeProvider time) =>
+        DateOnly.FromDateTime(time.LocalNow(TimeProviderExtensions.ZoneOf(runner.TimeZone)));
 }
 
 /// <summary>

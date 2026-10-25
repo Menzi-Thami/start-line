@@ -62,6 +62,7 @@ No secrets are needed to build and share plans. Sign-in and Strava stay off unti
 ## Tests
 
 ```bash
+scripts/check.sh                   # everything below and more, in order; run it before merging anything
 dotnet test StartLine.slnx         # domain, application, architecture and integration tests
 cd client && npm test              # unit and component tests
 cd client && npm run e2e           # end-to-end, in a real browser (starts the API and the app itself)

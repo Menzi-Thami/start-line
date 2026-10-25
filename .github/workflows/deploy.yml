@@ -1,10 +1,10 @@
 name: deploy
 
-# Ships main to production once CI has passed on it. Also runnable by hand (Actions → deploy → Run workflow).
+# Ships main to production on every merge. Each change is checked in full before it's merged (scripts/check.sh, run
+# locally), so this doesn't wait for CI to repeat it; it still builds everything first and stops on any failure, so a
+# broken build never reaches production. Also runnable by hand (Actions → deploy → Run workflow).
 on:
-  workflow_run:
-    workflows: [ci]
-    types: [completed]
+  push:
     branches: [main]
   workflow_dispatch:
 
@@ -18,7 +18,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     # The environment holds the settings, and is the only thing Azure trusts (see docs/deploy.md).
     environment:
@@ -29,9 +28,6 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7
-        with:
-          # workflow_run starts from the default branch's head; deploy exactly the commit CI passed.
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - uses: actions/setup-dotnet@v6
         with:

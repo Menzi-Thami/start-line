@@ -31,11 +31,14 @@ jobs:
 
       # Microsoft's current install script, not actions/setup-dotnet: the copy bundled in setup-dotnet@v6 downloads from
       # a storage account that began refusing public access on 25 Oct 2026 (409 PublicAccessNotPermitted). The current
-      # script downloads from builds.dotnet.microsoft.com. Latest 10.0 SDK, as global.json's rollForward allows.
+      # script downloads from builds.dotnet.microsoft.com, but only for an exact version: asked for a channel, it still
+      # tries an aka.ms link that leads to the blocked account. So look up the latest 10.0 SDK first (global.json's
+      # rollForward allows any 10.0 feature band from its own up).
       - name: Install .NET
         run: |
           curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
-          bash "$RUNNER_TEMP/dotnet-install.sh" --channel 10.0 --install-dir "$HOME/.dotnet"
+          version=$(curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json | jq -r '."latest-sdk"')
+          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$version" --install-dir "$HOME/.dotnet"
           echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
           echo "$HOME/.dotnet" >> "$GITHUB_PATH"
           "$HOME/.dotnet/dotnet" --version

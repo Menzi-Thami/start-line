@@ -5,6 +5,7 @@ import type { ActivitySummary, PaceZone, PaceZoneRange, PlanWeek, Session } from
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
 import { CheckInCard } from '../coaching/CheckInCard'
+import { reviewLine, reviewWeek } from '../coaching/week-review'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { ExerciseList } from '../strength/ExerciseList'
 import { SessionSteps } from './SessionSteps'
@@ -23,6 +24,8 @@ interface Props {
   onOpenRun?: (id: string) => void
   /** Check-ins on the runner's saved plan. Without it (a shared link, or signed out), runs only tick off. */
   coach?: SessionCoach
+  /** With it, and the runner's runs or check-ins, each finished week opens with how it went. */
+  today?: string
 }
 
 /**
@@ -191,7 +194,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
 }
 
 /** Every week as a disclosure, every day of the week listed, rest days included, so the shape of the week is obvious. */
-export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange, runs, onOpenRun, coach }: Props) {
+export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange, runs, onOpenRun, coach, today }: Props) {
   const byZone = new Map(paces.map((p) => [p.zone, p]))
   const openWeek = currentWeek ?? weeks[0]?.number
 
@@ -215,6 +218,12 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
               </span>
               <span className="week-km">{formatDistance(trainingKm(week), units)}</span>
             </summary>
+            {today && (runs || coach) && addDays(week.startDate, 6) < today && (
+              <p className="week-review">
+                <span className="week-review-label">How it went:</span>{' '}
+                {reviewLine(reviewWeek(week, runs ? [...runs.values()].flat() : [], today, coach?.get), units)}
+              </p>
+            )}
             <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} coach={coach} />
           </details>
         )

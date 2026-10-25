@@ -31,6 +31,13 @@ public sealed class PushOptions
     /// <summary>How long a push service keeps a reminder for a phone that's offline. Past it, the day's reminder is stale.</summary>
     public TimeSpan TimeToLive { get; set; } = TimeSpan.FromHours(8);
 
+    /// <summary>
+    /// Let a reminder carry what comes from the runner's runs (the coach's call, coached distances and paces, last week's
+    /// distance). Off until Strava confirms that pushing a runner their own synced data to their own device is allowed
+    /// (<c>docs/strava-sync.md</c>): without it, reminders are built from the plan as written and check-ins only.
+    /// </summary>
+    public bool IncludeRunData { get; set; }
+
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(20);
 }
 
@@ -41,6 +48,8 @@ internal sealed class PushSettings(IOptions<PushOptions> options) : IPushSetting
     public bool IsEnabled => !string.IsNullOrWhiteSpace(Value.PublicKey) && !string.IsNullOrWhiteSpace(Value.PrivateKey);
 
     public string? PublicKey => IsEnabled ? Value.PublicKey : null;
+
+    public bool IncludeRunData => Value.IncludeRunData;
 
     public bool Accepts(Uri endpoint)
     {

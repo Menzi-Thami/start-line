@@ -39,6 +39,8 @@ export const handlers = [
   http.get('*/api/v1/me/activities', () => HttpResponse.json([])),
   http.get('*/api/v1/me/activities/bests', () => HttpResponse.json([])),
   http.get('*/api/v1/me/sync/strava', () => HttpResponse.json(stravaOff)),
+  // A saved plan's check-ins; none by default.
+  http.get('*/api/v1/me/plans/:id/check-ins', () => HttpResponse.json([])),
   http.get('*/api/v1/me/reminders', () => HttpResponse.json(remindersOff)),
   http.get('*/api/v1/predictions', ({ request }) => {
     const url = new URL(request.url)

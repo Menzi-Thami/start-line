@@ -4768,3 +4768,14 @@ select.input option {
     transition: none;
   }
 }
+
+/* A finished week's review, at the top of the week in the plan's week list. */
+.week-review {
+  margin: var(--space-2) 0 var(--space-3);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.week-review-label {
+  font-weight: 700;
+}

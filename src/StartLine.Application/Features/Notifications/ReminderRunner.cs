@@ -3,18 +3,23 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Exceptions;
+using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Plans;
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Common;
 using StartLine.Domain.Notifications;
 using StartLine.Domain.Plans;
+using StartLine.Domain.Runners;
 
 namespace StartLine.Application.Features.Notifications;
 
 /// <summary>
-/// Sends every reminder that's due, then says when the next one is. It reads only what a reminder is made of: devices,
-/// time zones and current plans, never runs. A reminder missed while the app slept goes out the next time this runs,
-/// as long as it's still that day where the runner is; each day's goes once at most.
+/// Sends every reminder that's due, then says when the next one is. When one is due is decided from the plan as written
+/// and the runner's own clock. What it says comes from the plan and the runner's check-ins; the coach's call, the plan as
+/// the coach has it and the distance run are added only when <see cref="IPushSettings.IncludeRunData"/> is on, because
+/// they come from runs (Strava's among them). A reminder missed while the app slept goes out the next time this runs, as
+/// long as it's still that day where the runner is; each day's goes once at most.
 /// </summary>
 internal sealed partial class ReminderRunner(
     IApplicationDbContext db,
@@ -22,6 +27,7 @@ internal sealed partial class ReminderRunner(
     IPushSender sender,
     IPushAddressProtector protector,
     PlanBuilder builder,
+    PlanCoach coach,
     TimeProvider time,
     ILogger<ReminderRunner> logger)
     : IReminderRunner
@@ -43,9 +49,9 @@ internal sealed partial class ReminderRunner(
         }
 
         var runnerIds = devices.Select(d => d.RunnerId).Distinct().ToList();
-        var zones = await db.Runners.AsNoTracking()
+        var runners = await db.Runners.AsNoTracking()
             .Where(r => runnerIds.Contains(r.Id))
-            .ToDictionaryAsync(r => r.Id, r => r.TimeZone, cancellationToken);
+            .ToDictionaryAsync(r => r.Id, cancellationToken);
         var plans = await db.SavedPlans.AsNoTracking()
             .Where(p => runnerIds.Contains(p.RunnerId) && p.Status == SavedPlanStatus.Active)
             .ToListAsync(cancellationToken);
@@ -53,14 +59,22 @@ internal sealed partial class ReminderRunner(
         DateTimeOffset? next = null;
         foreach (var runnerDevices in devices.GroupBy(d => d.RunnerId))
         {
-            var zone = TimeProviderExtensions.ZoneOf(zones.GetValueOrDefault(runnerDevices.Key, ""));
-            var plan = PlanAsWritten(plans.SingleOrDefault(p => p.RunnerId == runnerDevices.Key));
+            var runner = runners.GetValueOrDefault(runnerDevices.Key);
+            var zone = TimeProviderExtensions.ZoneOf(runner?.TimeZone ?? "");
+            var saved = plans.SingleOrDefault(p => p.RunnerId == runnerDevices.Key);
+            var plan = PlanAsWritten(saved);
+            ReminderFacts? facts = null;
             foreach (var device in runnerDevices)
             {
                 var localNow = time.LocalNow(zone);
-                if (Reminders.Due(device, plan, localNow) is { } reminder && !await SendAsync(device, reminder, cancellationToken))
+                if (runner is not null && saved is not null && Reminders.DueDay(device, plan, localNow) is { } day)
                 {
-                    continue;
+                    // Worked out once for all of a runner's devices: the coach's call is made at most once a week anyway.
+                    facts ??= await FactsAsync(saved, runner, plan!, day, cancellationToken);
+                    if (Reminders.For(facts, day, device.WeekAhead) is { } reminder && !await SendAsync(device, reminder, cancellationToken))
+                    {
+                        continue;
+                    }
                 }
 
                 if (Reminders.NextDue(device, plan, localNow) is { } due)
@@ -72,6 +86,45 @@ internal sealed partial class ReminderRunner(
         }
 
         return next;
+    }
+
+    /// <summary>
+    /// What a day's reminder is made of. Always: the plan and the runner's units, and on a Monday the check-ins of the week
+    /// before. With run data allowed: the coach's call (made now if it's due, as opening the plan would), the plan as the
+    /// coach has it, and last week's runs.
+    /// </summary>
+    private async Task<ReminderFacts> FactsAsync(SavedPlan saved, Runner runner, TrainingPlan asWritten, DateOnly day, CancellationToken cancellationToken)
+    {
+        var plan = asWritten;
+        string? coachSays = null;
+        if (settings.IncludeRunData)
+        {
+            var calls = await coach.CallsAsync(saved, runner, cancellationToken);
+            plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls);
+            coachSays = calls.FirstOrDefault(c => c.WeekStart == day) is { } call ? CoachWords.Of(call) : null;
+        }
+
+        if (day.DayOfWeek != DayOfWeek.Monday || plan.Weeks.FirstOrDefault(w => w.StartDate == day.AddDays(-7)) is not { } lastWeek)
+        {
+            return new ReminderFacts(plan, runner.Units, CoachSays: coachSays);
+        }
+
+        var planned = lastWeek.Sessions.Where(s => SessionCheckIn.IsCheckable(s.Type)).ToList();
+        var checkIns = await db.SessionCheckIns.AsNoTracking()
+            .Where(c => c.SavedPlanId == saved.Id && c.Date >= lastWeek.StartDate && c.Date < day)
+            .ToListAsync(cancellationToken);
+        bool CheckedIn(PlannedSession s) => checkIns.Any(c => c.Date == s.Date && c.SessionType == s.Type && c.Status != CheckInStatus.Skipped);
+        if (!settings.IncludeRunData)
+        {
+            return new ReminderFacts(plan, runner.Units, new LastWeek(planned.Count, planned.Count(CheckedIn), lastWeek.PlannedKm));
+        }
+
+        var runs = await db.Activities.AsNoTracking()
+            .Visible(time.GetUtcNow())
+            .Where(a => a.RunnerId == runner.Id && a.LocalDate >= lastWeek.StartDate && a.LocalDate < day)
+            .ToListAsync(cancellationToken);
+        var done = planned.Count(s => CheckedIn(s) || runs.Any(a => a.LocalDate == s.Date && a.PlannedSession?.SessionType == s.Type));
+        return new ReminderFacts(plan, runner.Units, new LastWeek(planned.Count, done, lastWeek.PlannedKm, Math.Round(runs.Sum(a => a.DistanceKm), 1)), coachSays);
     }
 
     /// <summary>

@@ -56,7 +56,7 @@ internal static class CoachCalls
 /// </summary>
 public sealed record CoachMyPlanCommand(Guid Id) : IRequest<SavedPlanDto>;
 
-internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time)
+internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, PlanCoach coach)
     : IRequestHandler<CoachMyPlanCommand, SavedPlanDto>
 {
     public async Task<SavedPlanDto> Handle(CoachMyPlanCommand request, CancellationToken cancellationToken)
@@ -71,8 +71,24 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
         }
 
         var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var calls = await coach.CallsAsync(saved, runner, cancellationToken);
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls), saved.Status,
+            [.. calls.Select(CoachNoteDto.From)]);
+    }
+}
+
+/// <summary>
+/// The coach's calls on a saved plan, oldest first, with this week's made and kept first when it's due. Opening the plan
+/// does this, and so does a Monday reminder that carries the call, so both say the same.
+/// </summary>
+internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, TimeProvider time)
+{
+    public async Task<IReadOnlyList<CoachDecision>> CallsAsync(SavedPlan saved, Runner runner, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        ArgumentNullException.ThrowIfNull(runner);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var plan = builder.BuildPlan(query, calls);
+        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls);
 
         if (saved.Status == SavedPlanStatus.Active && await DecideThisWeekAsync(saved, runner, plan, calls, cancellationToken) is { } call)
         {
@@ -83,8 +99,8 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
             }
             catch (DbUpdateException)
             {
-                // The same plan opened on two devices at once: the other one made this week's call first, and it stands.
-                // Anything else is a real failure.
+                // The same plan opened on two devices at once (or by a reminder): the other one made this week's call
+                // first, and it stands. Anything else is a real failure.
                 if (!await db.CoachWeeks.AsNoTracking().AnyAsync(w => w.SavedPlanId == saved.Id && w.WeekStart == call.WeekStart, cancellationToken))
                 {
                     throw;
@@ -94,8 +110,7 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
             calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
         }
 
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls), saved.Status,
-            [.. calls.Select(CoachNoteDto.From)]);
+        return calls;
     }
 
     private async Task<CoachDecision?> DecideThisWeekAsync(

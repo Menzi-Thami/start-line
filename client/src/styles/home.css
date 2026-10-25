@@ -530,6 +530,52 @@
   stroke-linejoin: round;
 }
 
+/* ---------- Today's run, in full ---------- */
+
+.home-today-why {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* ---------- Your week: the coach's call, last week, this week ---------- */
+
+.your-week {
+  margin-top: var(--space-4);
+}
+
+.your-week .coach-note {
+  margin-top: 0;
+}
+
+.your-week-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.your-week-grid h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.your-week-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.your-week-list li {
+  overflow-wrap: anywhere;
+}
+
+.your-week-list .home-change {
+  display: inline;
+  font-size: var(--text-sm);
+}
+
 /* This week's runs from the plan, inside the This week card: one row a day, done ticked, today in volt. */
 .home-week-runs {
   display: grid;

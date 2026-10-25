@@ -29,9 +29,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-dotnet@v6
-        with:
-          global-json-file: global.json
+      # Microsoft's current install script, not actions/setup-dotnet: the copy bundled in setup-dotnet@v6 downloads from
+      # a storage account that began refusing public access on 25 Oct 2026 (409 PublicAccessNotPermitted). The current
+      # script downloads from builds.dotnet.microsoft.com. Latest 10.0 SDK, as global.json's rollForward allows.
+      - name: Install .NET
+        run: |
+          curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
+          bash "$RUNNER_TEMP/dotnet-install.sh" --channel 10.0 --install-dir "$HOME/.dotnet"
+          echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
+          echo "$HOME/.dotnet" >> "$GITHUB_PATH"
+          "$HOME/.dotnet/dotnet" --version
       - uses: actions/setup-node@v7
         with:
           node-version-file: client/.nvmrc

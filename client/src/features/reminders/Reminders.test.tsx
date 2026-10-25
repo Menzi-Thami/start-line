@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext, type Auth } from '../../app/auth-context'
 import { toBase64Url } from '../../lib/push'
 import type { ReminderDevice, Reminders } from '../../lib/types'
@@ -23,11 +23,15 @@ const PUBLIC_KEY_BYTES = new Uint8Array(65).fill(7)
 PUBLIC_KEY_BYTES[0] = 4
 const PUBLIC_KEY = toBase64Url(PUBLIC_KEY_BYTES.buffer)
 const ENDPOINT = 'https://fcm.googleapis.com/fcm/send/this-phone'
-// SHA-256 of ENDPOINT, as the API and the browser both work it out.
-const DEVICE_KEY = '53073f4b5ec51541f07574937bb12ac90b3982c076a8745c1f70725b60ceafaf'
 
 const available: Reminders = { available: true, publicKey: PUBLIC_KEY, devices: [] }
-const thisPhone: ReminderDevice = { id: 'device-1', deviceKey: DEVICE_KEY, remindAt: '06:15:00', weekAhead: false, createdAt: '2026-10-25T08:00:00Z' }
+// This phone's entry, known by the SHA-256 of ENDPOINT as the API works it out (worked out here, not by the app's code).
+let thisPhone: ReminderDevice
+beforeAll(async () => {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ENDPOINT))
+  const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+  thisPhone = { id: 'device-1', deviceKey: hash, remindAt: '06:15:00', weekAhead: false, createdAt: '2026-10-25T08:00:00Z' }
+})
 
 /** A browser that can take pushes: a service worker, its push manager and the Notification permission prompt. */
 function pushCapableBrowser(permission: NotificationPermission = 'granted', subscribed = false) {

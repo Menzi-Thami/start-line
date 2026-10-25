@@ -352,6 +352,67 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("SessionCheckIns", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Notifications.PushSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Auth")
+                        .IsRequired()
+                        .HasMaxLength(3000)
+                        .HasColumnType("nvarchar(3000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DeviceKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("char(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("Endpoint")
+                        .IsRequired()
+                        .HasMaxLength(3000)
+                        .HasColumnType("nvarchar(3000)");
+
+                    b.Property<DateOnly?>("LastRemindedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("P256dh")
+                        .IsRequired()
+                        .HasMaxLength(3000)
+                        .HasColumnType("nvarchar(3000)");
+
+                    b.Property<TimeOnly>("RemindAt")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<bool>("WeekAhead")
+                        .HasColumnType("bit");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceKey")
+                        .IsUnique();
+
+                    b.HasIndex("RunnerId");
+
+                    b.ToTable("PushSubscriptions", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -725,6 +786,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
                         .WithMany()
                         .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Notifications.PushSubscription", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

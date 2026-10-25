@@ -18,6 +18,10 @@ export function PrivacyNoticeSummary() {
         </li>
         <li>Runs from Strava are kept for 7 days at a time and refreshed while you stay connected. Disconnecting deletes them.</li>
         <li>Heart rate only if you agree below. It’s health information, so it’s your choice.</li>
+        <li>
+          Reminders only if you turn them on in Account: your device’s push address, kept encrypted. They name the day’s session and nothing
+          about your runs.
+        </li>
         <li>Sign-in is handled by Microsoft, so we never see a password. We don’t sell your data, show ads or use AI.</li>
         <li>You can download everything we hold, or delete it all, from Account at any time.</li>
       </ul>
@@ -90,7 +94,8 @@ export function PrivacyUpdate({ runner, onAccepted, onOpenAccount }: UpdateProps
         We’ve updated what we keep
       </h2>
       <p className="plan-focus">
-        Taperday now keeps your runs and, only if you agree, their heart rate. Have a read, then carry on where you left off.
+        Taperday can now send reminders of your runs to your phone or computer, only if you turn them on. Have a read, then carry on where you
+        left off.
       </p>
       <div className="panel notice">
         <h3>What we keep, and why</h3>
@@ -163,6 +168,11 @@ export function PrivacyPolicy() {
             <strong>Strava, if you connect it:</strong> your Strava athlete id, what you allowed us to read, and the access tokens, which
             are encrypted.
           </li>
+          <li>
+            <strong>Reminders, only if you turn them on:</strong> for each device you turn them on for, the push address and keys your
+            browser gives us (encrypted, because with them anyone could send that device a notification), the time you chose, whether you
+            want the Monday note, and the last day we sent one. So we can remind you of the day’s run, once, at your time.
+          </li>
         </ul>
         <p>
           We never keep the files you upload, your route or GPS positions, or a password. Files are read once and thrown away, and
@@ -184,6 +194,9 @@ export function PrivacyPolicy() {
           <li>Your account and plans: until you delete them or your account.</li>
           <li>Runs you upload: until you delete them or your account (up to 1,000 runs).</li>
           <li>
+            Reminders: until you turn them off on that device, the device’s browser ends its subscription, or you delete your account.
+          </li>
+          <li>
             Runs from Strava: 7 days at a time, refreshed while you stay connected, as Strava’s rules require. Disconnecting deletes them
             all, and we ask Strava to revoke our access.
           </li>
@@ -196,6 +209,12 @@ export function PrivacyPolicy() {
         <ul>
           <li>Microsoft handles sign-in (Entra External ID) and hosts Taperday on Azure, in South Africa.</li>
           <li>Strava, only if you connect it, and only to read your own runs. Strava’s own privacy policy covers what it holds.</li>
+          <li>
+            Your browser’s push service, only if you turn reminders on: Google (Chrome, Edge on Android, Android), Apple (Safari, iPhone and
+            iPad), Mozilla (Firefox) or Microsoft (Edge on Windows) carries each reminder to your device. A reminder says only the day’s session
+            from your plan, such as “Easy run”, a good-luck note on race day, or that a new week has started. Never your runs, heart rate or
+            anything from Strava.
+          </li>
         </ul>
         <p>
           No one else. We don’t sell your information, show ads or use AI. Your runs are only ever shown to you, and your saved plans too unless you share a plan link yourself.
@@ -207,6 +226,10 @@ export function PrivacyPolicy() {
         <p>
           Your browser keeps your sign-in for the session, and your unit choice and ticked sessions on your device. There are no tracking
           cookies.
+        </p>
+        <p>
+          If you turn reminders on, your device shows them as notifications, which can appear on your lock screen. Turn them off in Account, or
+          block notifications for Taperday in your browser or phone settings.
         </p>
         <p>
           Once you’re signed in, it also keeps a copy of your last Home (your name, current plan, recent runs, bests and whether Strava is
@@ -223,6 +246,7 @@ export function PrivacyPolicy() {
           <li>Delete any run, or your whole account and everything in it, straight away.</li>
           <li>Withdraw heart-rate consent, from Account: we delete the heart rate we hold straight away.</li>
           <li>Disconnect Strava at any time.</li>
+          <li>Turn reminders off at any time, from Account: we forget that device straight away.</li>
           <li>Ask us anything, or ask us to remove your Microsoft sign-in too: {mail}.</li>
           <li>
             If you’re not happy with how we handle your information, you can complain to South Africa’s Information Regulator

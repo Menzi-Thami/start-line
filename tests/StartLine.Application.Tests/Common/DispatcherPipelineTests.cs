@@ -7,6 +7,7 @@ using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Activities;
+using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Predictions;
 using StartLine.Application.Features.Races;
@@ -31,6 +32,9 @@ public sealed class DispatcherPipelineTests
             .AddSingleton(Substitute.For<ITokenProtector>())
             .AddSingleton(Substitute.For<IConnectState>())
             .AddSingleton(Substitute.For<ISyncSignal>())
+            .AddSingleton(Substitute.For<IPushSettings>())
+            .AddSingleton(Substitute.For<IPushSender>())
+            .AddSingleton(Substitute.For<IPushAddressProtector>())
             .AddScoped(_ => Substitute.For<IApplicationDbContext>())
             .AddScoped(_ => Substitute.For<ICurrentUser>())
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));

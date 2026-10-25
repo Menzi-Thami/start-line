@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StartLine.Domain.Activities;
 using StartLine.Domain.Coaching;
+using StartLine.Domain.Notifications;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 using StartLine.Domain.Sync;
@@ -29,6 +30,7 @@ internal sealed class RunnerConfiguration : IEntityTypeConfiguration<Runner>
         builder.HasMany<Activity>().WithOne().HasForeignKey(a => a.RunnerId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany<ProviderConnection>().WithOne().HasForeignKey(c => c.RunnerId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany<SyncJob>().WithOne().HasForeignKey(j => j.RunnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany<PushSubscription>().WithOne().HasForeignKey(s => s.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -255,5 +257,24 @@ internal sealed class CoachWeekConfiguration : IEntityTypeConfiguration<CoachWee
         // One call per week of a plan; the plan going takes its calls with it.
         builder.HasIndex(w => new { w.SavedPlanId, w.WeekStart }).IsUnique();
         builder.HasOne<SavedPlan>().WithMany().HasForeignKey(w => w.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class PushSubscriptionConfiguration : IEntityTypeConfiguration<PushSubscription>
+{
+    public void Configure(EntityTypeBuilder<PushSubscription> builder)
+    {
+        builder.ToTable("PushSubscriptions");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.DeviceKey).HasMaxLength(PushSubscription.DeviceKeyLength).IsFixedLength().IsUnicode(false).IsRequired();
+        // Encrypted with Data Protection before they get here; never stored or logged in the clear.
+        builder.Property(s => s.Endpoint).HasMaxLength(PushSubscription.MaxProtectedLength).IsRequired();
+        builder.Property(s => s.P256dh).HasMaxLength(PushSubscription.MaxProtectedLength).IsRequired();
+        builder.Property(s => s.Auth).HasMaxLength(PushSubscription.MaxProtectedLength).IsRequired();
+        builder.Property(s => s.Version).IsRowVersion();
+        // One entry per device, whoever is signed in on it.
+        builder.HasIndex(s => s.DeviceKey).IsUnique();
+        builder.HasIndex(s => s.RunnerId);
     }
 }

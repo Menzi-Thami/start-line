@@ -4,6 +4,7 @@ using StartLine.Application.Common.Behaviours;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Account;
 using StartLine.Application.Features.Activities;
+using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Races;
 using StartLine.Application.Features.Sync;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddSingleton<StravaRateGate>();
         services.AddScoped<StravaTokens>();
         services.AddScoped<IStravaSync, StravaSyncRunner>();
+        services.AddScoped<IReminderRunner, ReminderRunner>();
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
         services.AddScoped(typeof(IPipelineBehaviour<,>), typeof(ValidationBehaviour<,>));
         return services;

@@ -19,8 +19,8 @@ export function PrivacyNoticeSummary() {
         <li>Runs from Strava are kept for 7 days at a time and refreshed while you stay connected. Disconnecting deletes them.</li>
         <li>Heart rate only if you agree below. It’s health information, so it’s your choice.</li>
         <li>
-          Reminders only if you turn them on in Account: your device’s push address, kept encrypted. They name the day’s session and nothing
-          about your runs.
+          Reminders only if you turn them on in Account: your device’s push address, kept encrypted. They say what your plan has for the
+          day and, on Mondays, the week ahead and how many runs you checked in. Never your recorded runs or anything from Strava.
         </li>
         <li>Sign-in is handled by Microsoft, so we never see a password. We don’t sell your data, show ads or use AI.</li>
         <li>You can download everything we hold, or delete it all, from Account at any time.</li>
@@ -211,9 +211,10 @@ export function PrivacyPolicy() {
           <li>Strava, only if you connect it, and only to read your own runs. Strava’s own privacy policy covers what it holds.</li>
           <li>
             Your browser’s push service, only if you turn reminders on: Google (Chrome, Edge on Android, Android), Apple (Safari, iPhone and
-            iPad), Mozilla (Firefox) or Microsoft (Edge on Windows) carries each reminder to your device. A reminder says only the day’s session
-            from your plan, such as “Easy run”, a good-luck note on race day, or that a new week has started. Never your runs, heart rate or
-            anything from Strava.
+            iPad), Mozilla (Firefox) or Microsoft (Edge on Windows) carries each reminder to your device. A reminder says what your plan has for
+            the day, such as “Today: Easy run, 6 km at 5:50–6:20/km”, your race plan and goal pace on race day, and, if you want the Monday
+            note, the week ahead and how many of last week’s runs you checked in. Never your recorded runs, heart rate or anything from
+            Strava.
           </li>
         </ul>
         <p>

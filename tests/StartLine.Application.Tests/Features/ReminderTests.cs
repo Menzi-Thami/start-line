@@ -37,7 +37,7 @@ public sealed class ReminderTests
 
         var localNow = time.LocalNow(TimeProviderExtensions.ZoneOf(zone));
 
-        (Reminders.Due(DeviceAtSeven(), Plan, localNow) is not null).ShouldBe(due);
+        (Reminders.DueDay(DeviceAtSeven(), Plan, localNow) is not null).ShouldBe(due);
     }
 
     [Fact]
@@ -73,6 +73,8 @@ public sealed class ReminderTests
         public bool IsEnabled => true;
 
         public string? PublicKey => "key";
+
+        public bool IncludeRunData => false;
 
         public bool Accepts(Uri endpoint) => endpoint.Host == "fcm.googleapis.com";
     }

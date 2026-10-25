@@ -34,6 +34,9 @@ public sealed class RemindersFactory : StartLineApiFactory
 {
     public FakePushSender Push { get; } = new();
 
+    /// <summary>Let reminders carry run data (the coach's call, distance run): <c>Push:IncludeRunData</c>.</summary>
+    public bool IncludeRunData { get; init; }
+
     /// <summary>A browser's subscription, as <c>pushManager.subscribe</c> gives it, on Google's push service.</summary>
     public static object Subscription(string endpoint, string remindAt = "07:00:00", bool weekAhead = false) => new
     {
@@ -51,6 +54,7 @@ public sealed class RemindersFactory : StartLineApiFactory
         ["Push:PublicKey"] = Base64Url.EncodeToString([0x04, .. Enumerable.Repeat((byte)7, 64)]),
         ["Push:PrivateKey"] = Base64Url.EncodeToString([.. Enumerable.Repeat((byte)9, 32)]),
         ["Push:Subject"] = "mailto:reminders@taperday.test",
+        ["Push:IncludeRunData"] = IncludeRunData ? "true" : "false",
     };
 
     protected override void ConfigureServices(IServiceCollection services)

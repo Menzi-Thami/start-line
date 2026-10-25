@@ -112,9 +112,10 @@ drop an old cache. `sw.js` and the manifest are served `no-cache` (`staticwebapp
 is a one-time card on Home and a section in Account (`features/install`).
 
 Reminders are opt-in Web Push (`Domain/Notifications`, `Application/Features/Notifications`, `Infrastructure/Push`), per
-device, turned on in Account. `Reminders.Due` decides from the plan **as written** (never the coach's calls or any run, so no
-Strava data is ever pushed) and the runner's own clock: the day's run at their time, race day, and on a Monday a new week if
-they asked. A day's reminder is marked sent before it's sent (with a rowversion), so it goes once at most; one missed while
+device, turned on in Account. `Reminders.DueDay` decides when from the plan as written and the runner's own clock: the day's run at their time
+(distance, pace, the plan's words), race day, and on a Monday a new week if they asked (last week's check-ins, this week,
+today). What comes from runs (the coach's call, made via `PlanCoach` as opening the plan would, coached numbers, distance
+run) is added only with `Push:IncludeRunData`, off by default, so no Strava data is pushed unless that's turned on. A day's reminder is marked sent before it's sent (with a rowversion), so it goes once at most; one missed while
 the app slept goes out later that day. `ReminderWorker` sleeps until the next one is due and is woken by
 `ReminderScheduleInterceptor` when a plan, time zone or device changes: it never polls the database. Push endpoints are
 secrets: encrypted like Strava tokens, never logged, redacted in traces (`PushTraces`), and only push-service hosts are

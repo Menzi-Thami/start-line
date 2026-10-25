@@ -34,9 +34,12 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
   call, so they never wait for the rate limit. Disconnecting revokes at Strava, deletes every synced run and says so
   on screen (the written confirmation).
 - **2.3 / 6.1: display.** A runner's Strava runs are only ever shown to that runner.
-- **Reminders never carry Strava Data.** A push goes through a third party (the browser's push service) and shows on a
-  lock screen, so `ReminderRunner` never reads runs: a reminder is built from the plan as the runner wrote it, without
-  the coach's calls (which come partly from synced runs), and says only the session's name.
+- **Reminders carry no Strava Data by default.** A push goes through a third party (the browser's push service, though
+  Web Push encrypts it end to end) and shows on a lock screen, so with `Push:IncludeRunData` off (the default) a
+  reminder never reads runs: it's built from the plan as the runner wrote it, without the coach's calls (which come
+  partly from synced runs), and from check-ins. Turning it on adds the coach's call, coached distances and paces, and
+  last week's distance run. **Ask Strava first** whether pushing a runner their own data to their own device is allowed
+  (with the 7-day cache question).
 - **5.3: AI.** Taperday sends nothing to any AI service.
 - **Brand.** Official, unmodified "Connect with Strava" button and "Powered by Strava" logo (`client/public/strava/`,
   from developers.strava.com/guidelines), smaller than Taperday's own name; every synced run links back with

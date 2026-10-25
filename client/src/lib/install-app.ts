@@ -38,13 +38,13 @@ export function setUpInstall(): void {
 }
 
 /** Already running from the home screen: opened full screen, or added from Safari. */
-function runningInstalled(): boolean {
+export function runningInstalled(): boolean {
   const standalone = typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches
   return standalone || (navigator as Navigator & { standalone?: boolean }).standalone === true
 }
 
 /** An iPhone or iPad, including an iPad that says it's a Mac. */
-function onIos(): boolean {
+export function onIos(): boolean {
   const agent = navigator.userAgent
   return /iPhone|iPad|iPod/.test(agent) || (/Macintosh/.test(agent) && navigator.maxTouchPoints > 1)
 }

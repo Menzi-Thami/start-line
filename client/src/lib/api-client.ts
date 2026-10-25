@@ -10,6 +10,8 @@ import type {
   PersonalBest,
   Prediction,
   Race,
+  ReminderDevice,
+  Reminders,
   Runner,
   SavedPlan,
   SavedPlanSummary,
@@ -18,6 +20,7 @@ import type {
   StravaDisconnected,
   StravaStatus,
   TrainingPlan,
+  TurnOnRemindersRequest,
 } from './types'
 
 /** The one place the app talks to the network. Every failure becomes an ApiError with words a runner can act on. */
@@ -218,6 +221,13 @@ export const api = {
     deleteActivity: (token: string, id: string) =>
       request<void>(`/api/v1/me/activities/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
     bests: (token: string) => request<PersonalBest[]>('/api/v1/me/activities/bests', {}, token),
+    reminders: {
+      get: (token: string) => request<Reminders>('/api/v1/me/reminders', {}, token),
+      turnOn: (token: string, body: TurnOnRemindersRequest) =>
+        request<ReminderDevice>('/api/v1/me/reminders/devices', { method: 'PUT', body: JSON.stringify(body) }, token),
+      turnOff: (token: string, id: string) =>
+        request<void>(`/api/v1/me/reminders/devices/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
+    },
     strava: {
       status: (token: string) => request<StravaStatus>('/api/v1/me/sync/strava', {}, token),
       /** Where to send the runner to approve Taperday on Strava. */

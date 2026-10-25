@@ -71,9 +71,16 @@ Both files are safe to run again.
 
 ## Automatic deploys
 
-Every push to `main` deploys itself once CI passes (`.github/workflows/deploy.yml`): it builds the API and the
-website, applies any new migrations, deploys the API, deploys the website, then waits for `/health/ready`. It can also
-be run by hand: Actions → deploy → Run workflow.
+Every change is checked in full **before it's merged**, on the developer's machine: `scripts/check.sh` from the repo
+root runs the backend format, build, all .NET tests (LocalDB) and the migrations check, then the client's lint,
+typecheck, tests, build and audit, then the Playwright end-to-end suite. GitHub Actions doesn't repeat that on pull
+requests: the private repo's free 2,000 Actions minutes a month ran out on 25 Oct 2026, so they're kept for deploys.
+`ci.yml` still exists to run by hand (Actions → ci → Run workflow); `secret-scan` still runs on every pull request
+and on `main`.
+
+Every push to `main` then deploys itself (`.github/workflows/deploy.yml`, about 4 minutes): it builds the API and the
+website (any build error or warning stops it before production is touched), applies any new migrations, deploys the
+API, deploys the website, then waits for `/health/ready`. It can also be run by hand: Actions → deploy → Run workflow.
 
 How it signs in, with no password stored anywhere:
 
@@ -152,6 +159,42 @@ The database still pauses after an hour with no queries (`autoPauseDelay: 60`) a
 (23 Oct 2026). Building and sharing plans never touch it. A signed-in runner who arrives after a quiet hour sees the
 waiting screen (`SignInWait`), which follows the wake through `live` then `ready` and keeps trying for up to 2½
 minutes (`WAKE_PATIENCE_MS`).
+
+## Reminders (Web Push)
+
+Runners can turn on a reminder of the day's run (and a Monday "new week" nudge) in Account. It's off until a VAPID key
+pair is set; without one, Account doesn't offer it and nothing is ever sent. Web Push itself is free: the browsers'
+push services (Google, Apple, Mozilla, Microsoft) carry the messages at no charge.
+
+1. **Make a key pair, on your laptop.** Never commit it, paste it in a chat, or put it in `appsettings`:
+   ```bash
+   npx web-push generate-vapid-keys --json
+   ```
+   It prints `publicKey` (65 bytes, base64url) and `privateKey` (32 bytes, base64url).
+2. **Set them in the API's App Service settings** (Taperday CLI profile, as above). Put the values in shell variables
+   first, so they aren't typed into the command itself:
+   ```bash
+   az webapp config appsettings set -g rg-taperday -n <apiName> --settings \
+     Push__PublicKey="$VAPID_PUBLIC" Push__PrivateKey="$VAPID_PRIVATE" Push__Subject="mailto:<contact email>"
+   ```
+   `Push__Subject` is how a push service can reach you about Taperday's pushes (a `mailto:` or `https:` address). The
+   API checks all three at start and won't start with a malformed key.
+3. **Data Protection must be wrapped by Key Vault** (`DataProtection__KeyVaultKeyUri`, already set for Strava): devices'
+   push addresses are encrypted with the same key ring as Strava tokens, under their own purpose.
+
+Keep the key pair for good. A browser subscribes with the public key, so a new pair stops every existing device, and
+each runner would have to turn reminders off and on again.
+
+**Timing on the free plan.** A background worker sleeps until the next reminder is due. On F1 that only works while
+the API is loaded, which is what the uptime ping on `/health/live` (above) is for. If the API slept anyway, reminders
+still due that day go out as soon as it starts again (late, never twice); a day it slept through entirely is skipped.
+
+**Database cost.** The worker never polls. It reads the database when the API starts, when a reminder is due, and when
+a runner changes a plan, a time zone or a device, so the free database can still pause. Each wake keeps the database up
+for its 60-minute pause delay: about 1,800 vCore-seconds at 0.5 vCore, under 2% of the monthly 100,000. Reminders at
+the same time share a wake, and days with nothing in a runner's plan don't wake it. With a handful of runners who
+mostly open Taperday after their reminder anyway, that's well inside the allowance; if many runners pick many
+different times, watch the database's usage.
 
 ## Going live
 

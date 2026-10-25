@@ -4,7 +4,7 @@ import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
 import { runsByDate, weekEnd } from '../../lib/plan-runs'
-import type { ActivitySummary, CoachNote, PersonalBest, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, CoachNote, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import { useCheckIns } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
@@ -237,7 +237,7 @@ function WeeklyChart({ bars, units, averageKm }: { bars: WeekBar[]; units: Units
         ))}
       </div>
       <figcaption className="field-help">
-        Bars are what you ran; the outline behind is what your plan asked for. The line is your 4-week average.
+        Bars: ran. Outline: planned. Line: 4-week average.
       </figcaption>
       <table className="visually-hidden">
         <caption>Weekly distance, last 12 weeks</caption>
@@ -278,18 +278,46 @@ function StravaNudge({ strava, onOpenAccount }: { strava?: StravaStatus; onOpenA
   )
 }
 
-type HomeTab = 'today' | 'progress' | 'tools'
+type HomeTab = 'today' | 'tools'
 
 const HOME_TABS: readonly { id: HomeTab; label: string }[] = [
   { id: 'today', label: 'Today' },
-  { id: 'progress', label: 'Progress' },
   { id: 'tools', label: 'Tools' },
 ]
 
-/** The tab in the address (`tab=`), so a shared link or Back from a run opens the same one. */
+/** The tab in the address (`tab=`), so a shared link or Back from a run opens the same one. An old Progress link opens Today, where progress now is. */
 function tabFromUrl(): HomeTab {
   const tab = new URLSearchParams(window.location.search).get('tab')
   return HOME_TABS.some((t) => t.id === tab) ? (tab as HomeTab) : 'today'
+}
+
+/**
+ * This week's runs from the plan, day by day, so the plan is on Home without opening it: done (a run was recorded that
+ * day), today, still to come, or gone by.
+ */
+function WeekRuns({ week, today, units, ranOn }: { week: PlanWeek; today: string; units: Units; ranOn: (date: string) => boolean }) {
+  const sessions = week.sessions.filter((s) => s.type !== 'Strength')
+  if (sessions.length === 0) return null
+  return (
+    <ol className="home-week-runs" aria-label="This week’s runs">
+      {sessions.map((s) => {
+        const state = ranOn(s.date) ? 'done' : s.date === today ? 'today' : s.date < today ? 'missed' : 'ahead'
+        return (
+          <li key={`${s.date}|${s.type}`} className={`home-week-run is-${state}`}>
+            <span className="home-week-run-day">{formatDate(s.date, 'weekday')}</span>
+            <span className="home-week-run-title">{s.title}</span>
+            <span className="mono home-week-run-km">{s.distanceKm > 0 ? formatDistance(s.distanceKm, units) : ''}</span>
+            <span className="visually-hidden">{state === 'done' ? ', done' : state === 'today' ? ', today' : ''}</span>
+            {state === 'done' && (
+              <span className="home-week-run-mark" aria-hidden="true">
+                ✓
+              </span>
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
 }
 
 function tabToUrl(tab: HomeTab) {
@@ -302,8 +330,9 @@ function tabToUrl(tab: HomeTab) {
 }
 
 /**
- * Home for a signed-in runner, in three tabs so the everyday answer comes first. Today: what's on today and how the week
- * is going. Progress: their running over the months, week by week, and their bests. Tools: the calculators. Built from
+ * Home for a signed-in runner. Today, where it opens: what's on today, this week's runs from the plan and how the week
+ * is going, then their running over the months, week by week, and their bests, all in one place without a tap. Tools:
+ * the calculators. Built from
  * their own runs, so it's useful with or without a plan. A plan adds today's session, this week's ring and the planned
  * distance behind each week's bar. While the account loads it can show the copy kept on this device, saying so, and
  * fills in as each answer arrives.
@@ -336,6 +365,7 @@ export function Home({
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
   const goalSeconds = plan ? parseTimeSpan(plan.goalTime) : null
   const fromStrava = runs.some((r) => r.source.kind === 'Strava')
+  const ranDates = new Set(runs.filter((r) => r.kind !== 'Other').map((r) => r.localDate))
 
   const showTab = (next: HomeTab, focus = false) => {
     setTab(next)
@@ -446,6 +476,7 @@ export function Home({
                 <p className="field-help">Last week {formatDistance(bars.at(-2)?.km ?? 0, units)}</p>
               </>
             )}
+            {week && <WeekRuns week={week} today={today} units={units} ranOn={(date) => ranDates.has(date)} />}
           </section>
         </div>
         {plan && week && progress?.kind !== 'race' && (
@@ -453,9 +484,7 @@ export function Home({
         )}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
         <InstallCard />
-      </div>
 
-      <div {...panel('progress')}>
         <section className="section home-section" aria-labelledby="home-training">
           <h2 id="home-training" className="home-heading">
             Your running

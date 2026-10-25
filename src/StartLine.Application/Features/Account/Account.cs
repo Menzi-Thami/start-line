@@ -8,6 +8,7 @@ using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.CheckIns;
 using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
+using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Sync;
 using StartLine.Domain.Activities;
 using StartLine.Domain.Runners;
@@ -43,8 +44,12 @@ public sealed record RunnerDto(
 /// </summary>
 public static class PrivacyNotice
 {
-    /// <summary>2026-10-21: names uploaded and synced runs, heart rate (asked for separately), Strava, and the contact.</summary>
-    public const string CurrentVersion = "2026-10-21";
+    /// <summary>
+    /// 2026-10-25: adds reminders (a device's push address, kept only if the runner turns them on, and the browsers' push
+    /// services that carry them). 2026-10-21 named uploaded and synced runs, heart rate (asked for separately), Strava, and
+    /// the contact.
+    /// </summary>
+    public const string CurrentVersion = "2026-10-25";
 }
 
 /// <summary>Signs up on first call, updates the profile after. Email comes from the token, never the body.</summary>
@@ -176,7 +181,8 @@ public sealed record AccountExportDto(
     IReadOnlyList<ActivityDto> Activities,
     IReadOnlyList<ConnectionExportDto> Connections,
     IReadOnlyList<CheckInExportDto> CheckIns,
-    IReadOnlyList<CoachExportDto> Coaching);
+    IReadOnlyList<CoachExportDto> Coaching,
+    IReadOnlyList<ReminderDeviceDto> Reminders);
 
 /// <summary>A coach's call as exported with the account: which plan and week it was for, then the call.</summary>
 public sealed record CoachExportDto(Guid PlanId, CoachNoteDto Call);
@@ -223,18 +229,23 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .Where(w => planIds.Contains(w.SavedPlanId))
             .OrderBy(w => w.WeekStart)
             .ToListAsync(cancellationToken);
+        var reminders = await db.PushSubscriptions.AsNoTracking()
+            .Where(s => s.RunnerId == runner.Id)
+            .OrderBy(s => s.CreatedAt)
+            .ToListAsync(cancellationToken);
         return new AccountExportDto(
             RunnerDto.From(runner),
             [.. plans.Select(SavedPlanExportDto.From)],
             [.. activities.Select(a => ActivityDto.From(a, bests.FromRunsOtherThan(a.Id), runner.MaxHeartRate))],
             [.. connections.Select(ConnectionExportDto.From)],
             [.. checkIns.Select(c => new CheckInExportDto(c.SavedPlanId, CheckInDto.From(c)))],
-            [.. coachWeeks.Select(w => new CoachExportDto(w.SavedPlanId, CoachNoteDto.From(w.ToDecision())))]);
+            [.. coachWeeks.Select(w => new CoachExportDto(w.SavedPlanId, CoachNoteDto.From(w.ToDecision())))],
+            [.. reminders.Select(ReminderDeviceDto.From)]);
     }
 }
 
 /// <summary>
-/// Deletes the runner and everything they saved, plans, runs and connections (POPIA right to erasure). Strava is asked
+/// Deletes the runner and everything they saved, plans, runs, connections and reminders (POPIA right to erasure). Strava is asked
 /// to revoke Taperday first. Sign-in itself lives with the identity provider.
 /// </summary>
 public sealed record DeleteAccountCommand : IRequest<bool>;
@@ -260,7 +271,7 @@ internal sealed class DeleteAccountHandler(
             await StravaRevoke.TryAsync(strava, tokens, connection, logger, cancellationToken);
         }
 
-        // Saved plans, activities, connections and sync jobs go with the runner through the database's cascade delete.
+        // Saved plans, activities, connections, sync jobs and reminder devices go with the runner through the database's cascade delete.
         db.Runners.Remove(runner);
         await db.SaveChangesAsync(cancellationToken);
         return true;

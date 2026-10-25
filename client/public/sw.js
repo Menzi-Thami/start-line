@@ -5,11 +5,15 @@
 // - /assets/* (hashed, never change): cache first, kept after the first visit.
 // - Everything else on this host (icons, the manifest): network, untouched.
 //
+// Reminders, if the runner turned them on in Account: a push carries the whole message ({ title, body, url, tag }), so
+// showing it needs nothing fetched. A tap opens Taperday on today's run, and only ever a page of Taperday's own.
+//
 // Bump VERSION to drop everything stored by an older worker.
 
-const VERSION = 'taperday-v1'
+const VERSION = 'taperday-v2'
 const SHELL = '/'
 const MAX_ASSETS = 60
+const OPENS_AT = '/?view=home'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -76,4 +80,49 @@ async function fromCacheThenNetwork(request) {
 async function trim(cache) {
   const keys = (await cache.keys()).filter((key) => new URL(key.url).pathname.startsWith('/assets/'))
   await Promise.all(keys.slice(0, Math.max(0, keys.length - MAX_ASSETS)).map((key) => cache.delete(key)))
+}
+
+self.addEventListener('push', (event) => {
+  let message = {}
+  try {
+    message = event.data ? event.data.json() : {}
+  } catch {
+    // Not ours to read: still say something, as a push must show a notification.
+  }
+  const title = typeof message.title === 'string' && message.title ? message.title : 'Taperday'
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: typeof message.body === 'string' ? message.body : 'Open Taperday for today’s plan.',
+      icon: '/app-icon-192.png',
+      tag: typeof message.tag === 'string' ? message.tag : undefined,
+      data: { url: pageOf(message.url) },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = pageOf(event.notification.data && event.notification.data.url)
+  event.waitUntil(openPage(url))
+})
+
+// Only a page on this host: a push can't send the runner anywhere else.
+function pageOf(url) {
+  if (typeof url !== 'string') return OPENS_AT
+  try {
+    const page = new URL(url, self.location.origin)
+    return page.origin === self.location.origin ? page.pathname + page.search : OPENS_AT
+  } catch {
+    return OPENS_AT
+  }
+}
+
+async function openPage(url) {
+  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+  const open = windows.find((client) => new URL(client.url).origin === self.location.origin)
+  if (open) {
+    const focused = await open.focus()
+    return (focused || open).navigate(url).catch(() => self.clients.openWindow(url))
+  }
+  return self.clients.openWindow(url)
 }

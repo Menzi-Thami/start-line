@@ -1,8 +1,10 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ActivitySummary, PersonalBest, Runner } from '../../lib/types'
+import type { ActivitySummary, PersonalBest, Runner, TrainingPlan } from '../../lib/types'
 import { stravaOff } from '../../test/server'
+import type { CurrentPlan } from '../account/useCurrentPlan'
+import plan5k from '../../test/fixtures/plan-5k.json'
 import { Home } from './Home'
 
 const thandi = { id: 'runner-1', displayName: 'Thandi', maxHeartRate: 190 } as Runner
@@ -29,8 +31,11 @@ const renderHome = (props: Partial<Parameters<typeof Home>[0]> = {}) => {
   const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenAccount: vi.fn() }
   render(<Home runner={thandi} units="km" today="2026-10-23" current={null} runs={[]} {...handlers} {...props} />)
   const user = userEvent.setup()
-  return { ...handlers, user, openTab: (name: 'Today' | 'Progress' | 'Tools') => user.click(screen.getByRole('tab', { name })) }
+  return { ...handlers, user, openTab: (name: 'Today' | 'Tools') => user.click(screen.getByRole('tab', { name })) }
 }
+
+const current = { id: 'plan-1', name: 'Spring 5K', inputs: {} as CurrentPlan['inputs'] }
+const withPlan = { current, initialPlan: { id: 'plan-1', plan: plan5k as unknown as TrainingPlan } }
 
 beforeEach(() => window.history.replaceState(null, '', '/?view=home'))
 
@@ -43,12 +48,13 @@ describe('Home', () => {
     expect(onBuildPlan).toHaveBeenCalled()
   })
 
-  it('opens on Today, with their running and the calculators a tab away', async () => {
+  it('opens on Today with the week and their progress in view, and the calculators a tab away', async () => {
     const { openTab } = renderHome()
 
     expect(screen.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('region', { name: 'This week' })).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Your running' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Your running' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Personal bests' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Calculators' })).not.toBeInTheDocument()
 
     await openTab('Tools')
@@ -56,13 +62,31 @@ describe('Home', () => {
     expect(screen.queryByRole('region', { name: 'This week' })).not.toBeInTheDocument()
   })
 
+  it('lists this week’s runs from the plan, ticking the ones already run', () => {
+    renderHome({ ...withPlan, runs: [run('2026-10-20', 6.5)] })
+
+    const week = screen.getByRole('list', { name: 'This week’s runs' })
+    const rows = within(week).getAllByRole('listitem').map((row) => row.textContent)
+    expect(rows).toHaveLength(4)
+    expect(rows[0]).toMatch(/Fartlek.*6.5 km, done/)
+    expect(rows.join(' ')).not.toMatch(/Strength/)
+  })
+
   it('keeps the tab in the address, so a shared link or Back opens the same one', async () => {
     const { openTab } = renderHome()
 
-    await openTab('Progress')
-    expect(window.location.search).toBe('?view=home&tab=progress')
+    await openTab('Tools')
+    expect(window.location.search).toBe('?view=home&tab=tools')
     await openTab('Today')
     expect(window.location.search).toBe('?view=home')
+  })
+
+  it('opens an old Progress link on Today, where progress now is', () => {
+    window.history.replaceState(null, '', '/?view=home&tab=progress')
+    renderHome()
+
+    expect(screen.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('region', { name: 'Your running' })).toBeInTheDocument()
   })
 
   it('opens on the tab the address names', () => {
@@ -78,15 +102,14 @@ describe('Home', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Today' }))
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Progress' })).toHaveFocus()
-    expect(screen.getByRole('tab', { name: 'Progress' })).toHaveAttribute('aria-selected', 'true')
-    await user.keyboard('{ArrowLeft}{ArrowLeft}')
+    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveFocus()
     expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('shows their running this month, this year and week by week, from their own runs', async () => {
-    const { openTab } = renderHome({ runs: [run('2026-10-18', 42.2), run('2026-10-02', 10), run('2026-09-05', 12)] })
-    await openTab('Progress')
+    renderHome({ runs: [run('2026-10-18', 42.2), run('2026-10-02', 10), run('2026-09-05', 12)] })
 
     const running = screen.getByRole('region', { name: 'Your running' })
     expect(within(running).getByText('52.2')).toBeInTheDocument()
@@ -96,15 +119,13 @@ describe('Home', () => {
   })
 
   it('says plainly that Strava runs only stay for a week', async () => {
-    const { openTab } = renderHome({ runs: [run('2026-10-21', 8, 'Strava')] })
-    await openTab('Progress')
+    renderHome({ runs: [run('2026-10-21', 8, 'Strava')] })
 
     expect(screen.getByText(/Runs from Strava stay on Taperday for 7 days/)).toBeInTheDocument()
   })
 
   it('shows personal bests, each opening the run it came from', async () => {
-    const { user, onOpenRun, openTab } = renderHome({ bests: [tenK] })
-    await openTab('Progress')
+    const { user, onOpenRun } = renderHome({ bests: [tenK] })
 
     const bests = screen.getByRole('region', { name: 'Personal bests' })
     expect(within(bests).getByText('54:18')).toBeInTheDocument()

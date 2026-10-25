@@ -3,6 +3,7 @@ import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { Runner } from '../../lib/types'
 import { InstallSection } from '../install/InstallApp'
+import { RemindersSection } from '../reminders/Reminders'
 import { StravaSection } from '../sync/StravaSection'
 import { ProfileForm } from './ProfileForm'
 import { RunSources } from './RunSources'
@@ -72,11 +73,12 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
 
       <InstallSection />
 
+      <RemindersSection />
+
       <div className="section">
         <h3>Your data</h3>
         <p>
-          Download a copy of everything Taperday holds about you: your profile, every saved plan, every run, and which services you’ve connected. Sign-in
-          keys for those services are never included.
+          Everything Taperday holds about you, as one file.
         </p>
         <button type="button" className="button" onClick={() => void download()} disabled={status.kind === 'busy'}>
           Download my data
@@ -86,7 +88,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <div className="section danger-zone">
         <h3>Delete account</h3>
         <p>
-          This deletes your profile, every saved plan and every run straight away, and ends Taperday’s access to Strava if you connected it. It can’t be undone. Your sign-in itself is kept by
+          This deletes your profile, every saved plan, every run and your reminders straight away, and ends Taperday’s access to Strava if you connected it. It can’t be undone. Your sign-in itself is kept by
           Microsoft; ask us if you want that removed too.
         </p>
         {confirmingDelete ? (

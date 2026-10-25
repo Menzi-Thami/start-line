@@ -28,8 +28,12 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
 dotnet build StartLine.slnx        # must be 0 warnings (TreatWarningsAsErrors)
 dotnet test  StartLine.slnx        # Domain, Application, Architecture, Integration
 dotnet run --project src/StartLine.API --launch-profile http   # http://localhost:5122, Scalar at /scalar
+scripts/check.sh                   # every check, before any merge (backend, client, end-to-end)
 ```
 `UseAppHost=false` is set because locked-down Windows devices block the generated .exe.
+
+**Before merging any PR, run `scripts/check.sh` locally and merge only when it passes.** CI doesn't run on pull
+requests (the free Actions minutes are kept for deploys; see `docs/deploy.md`), and every merge to `main` deploys.
 
 ## Layout
 - `Domain/Running` — `Distance`, `Pace`, `RaceTimePredictor` (Riegel), `TrainingPaces` (zones from goal).
@@ -39,8 +43,8 @@ dotnet run --project src/StartLine.API --launch-profile http   # http://localhos
 - `Domain/Sync` — `ProviderConnection` (encrypted tokens), `SyncJob` (retries), `RateLimit`. Worked by
   `Application/Features/Sync/StravaSyncRunner` behind `IStravaApi`; tests use `FakeStravaApi`, never Strava.
 - `Domain/Plans/SavedPlan` — a runner has **one current plan** (a filtered unique index enforces it). A new plan for the
-  same race updates it in place; another race replaces it and the old one becomes a past plan (`Archived`), which can be made
-  current again. Signed-in runners open on their current plan.
+  same race updates it in place; another race replaces it (the old one is kept server-side as `Archived`; the app has no
+  My plans page since 25 Oct 2026, so it is not shown). Signed-in runners open on Home; the plan is deleted from the plan itself.
 - `Domain/Plans` — `TrainingPlanGenerator` (phases, volume, taper), `WeekLayout` (which run goes on which
   chosen day), `WorkoutBuilder` (concrete sessions per distance), `PlanProfile` (per-distance shape).
 - `Application/Features/{Plans,Races,Predictions}` — query + validator + handler per feature.
@@ -106,3 +110,12 @@ network-first (so a deploy always shows; the last copy only offline) and the has
 touches another host, so the API, sign-in and anyone's data are never stored by it; keep it that way. Bump its `VERSION` to
 drop an old cache. `sw.js` and the manifest are served `no-cache` (`staticwebapp.config.json`). The Add to home screen option
 is a one-time card on Home and a section in Account (`features/install`).
+
+Reminders are opt-in Web Push (`Domain/Notifications`, `Application/Features/Notifications`, `Infrastructure/Push`), per
+device, turned on in Account. `Reminders.Due` decides from the plan **as written** (never the coach's calls or any run, so no
+Strava data is ever pushed) and the runner's own clock: the day's run at their time, race day, and on a Monday a new week if
+they asked. A day's reminder is marked sent before it's sent (with a rowversion), so it goes once at most; one missed while
+the app slept goes out later that day. `ReminderWorker` sleeps until the next one is due and is woken by
+`ReminderScheduleInterceptor` when a plan, time zone or device changes: it never polls the database. Push endpoints are
+secrets: encrypted like Strava tokens, never logged, redacted in traces (`PushTraces`), and only push-service hosts are
+accepted. VAPID keys come from App Service settings (`docs/deploy.md`); without them reminders stay hidden.

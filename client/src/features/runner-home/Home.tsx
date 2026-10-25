@@ -7,6 +7,7 @@ import { runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, PersonalBest, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import { weekSoFar } from '../dashboard/dashboard-math'
+import { InstallCard } from '../install/InstallApp'
 import { Runner as RunnerFigure } from '../shared/Runner'
 import { Calculators } from './Calculators'
 import { change, todayInPlan, trainingTotals, weeklyBars, type Change, type WeekBar } from './home-math'
@@ -430,6 +431,7 @@ export function Home({
           </section>
         </div>
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
+        <InstallCard />
       </div>
 
       <div {...panel('progress')}>

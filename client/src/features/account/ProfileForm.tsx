@@ -126,8 +126,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
             onChange={(e) => setMaxHeartRate(e.target.value.replace(/\D/g, ''))}
           />
           <p className="field-help">
-            With it, your runs show time in heart-rate zones. Use the highest you’ve seen on your watch in a hard race or test. Leave it
-            blank and we won’t guess.
+            For heart-rate zones. The highest your watch has shown.
           </p>
         </div>
       )}

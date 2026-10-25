@@ -78,8 +78,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <div className="section">
         <h3>Your data</h3>
         <p>
-          Download a copy of everything Taperday holds about you: your profile, every saved plan, every run, which services you’ve connected and which devices get reminders. Sign-in
-          keys for those services are never included.
+          Everything Taperday holds about you, as one file.
         </p>
         <button type="button" className="button" onClick={() => void download()} disabled={status.kind === 'busy'}>
           Download my data

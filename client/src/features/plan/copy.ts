@@ -18,11 +18,10 @@ export const PHASES: Record<TrainingPhase, string> = {
 }
 
 export const FOCUS: Record<DistanceCategory, string> = {
-  FiveK: 'A 5K rewards speed, so the hard days are short intervals, hills and strides, and the long runs stay modest.',
-  TenK: 'A 10K needs speed and stamina: 1 km reps, tempo runs and blocks at goal pace.',
-  HalfMarathon: 'The half is a threshold race. Expect tempo runs, cruise intervals and long stretches at goal pace.',
-  Marathon: 'The marathon is endurance at pace: cruise intervals, marathon-pace runs and long runs that rehearse race day.',
-  Ultra: 'Ultras are won on time on your feet: back-to-back weekends, long hills and practising what you eat on the run.',
-  LongUltra:
-    'The longest races need the most patience: back-to-back weekends, long climbs and descents, and a build that never rushes.',
+  FiveK: 'Short intervals, hills and strides, with modest long runs.',
+  TenK: '1 km reps, tempo runs and goal-pace blocks.',
+  HalfMarathon: 'Tempo runs, cruise intervals and goal-pace work.',
+  Marathon: 'Cruise intervals, marathon-pace runs and long runs that rehearse race day.',
+  Ultra: 'Back-to-back weekends, long hills and eating on the run.',
+  LongUltra: 'Back-to-back weekends, long climbs and descents, and a patient build.',
 }

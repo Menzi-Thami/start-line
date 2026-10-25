@@ -273,8 +273,11 @@ export function App() {
   // The plan this visit found, or until then the one last seen on this device, so Home opens without waiting.
   const ownPlan = currentPlan.current !== undefined ? currentPlan.current : (copy?.current ?? undefined)
   const found = ownPlan
+  // A runner this device already knows opens on Home from the copy too, plan or no plan, so the waiting film only plays
+  // when there's nothing to show yet: a first sign-in here, or a brand new account.
+  const knownHere = copy?.runner !== undefined
   useEffect(() => {
-    if (landing.current || !found || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
+    if (landing.current || !(found || knownHere) || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
     landing.current = true
     // After this render, not inside it: Home takes over from the "opening" placeholder.
     void Promise.resolve().then(() => {
@@ -282,7 +285,7 @@ export function App() {
       setView('home')
       window.history.replaceState(null, '', '?view=home')
     })
-  }, [found, initial, view, plan.kind, editing])
+  }, [found, knownHere, initial, view, plan.kind, editing])
 
   // A shared link builds its plan straight away.
   useEffect(() => {

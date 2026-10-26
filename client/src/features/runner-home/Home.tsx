@@ -92,6 +92,16 @@ function savedWhen(savedAt: string, today: string): string {
   return sameDay ? `from ${clock.format(saved)}` : `from ${saved.toLocaleDateString('en-GB', { weekday: 'long' })}`
 }
 
+/** A quiet line while a page shows the copy kept on this device, so it's clear what's on screen and that it's catching up. */
+export function CatchingUp({ what, savedAt, today }: { what: string; savedAt: string; today: string }) {
+  return (
+    <p className="home-catching-up" role="status">
+      <span className="wait-spinner" aria-hidden="true" />
+      Showing your {what} {savedWhen(savedAt, today)} while Taperday catches up.
+    </p>
+  )
+}
+
 function ChangeLine({ value, units, against }: { value: Change; units: Units; against: string }) {
   if (value.delta === 0) return <p className="home-change">Level with {against}</p>
   const up = value.delta > 0
@@ -406,12 +416,7 @@ export function Home({
         </div>
       </header>
 
-      {catchingUpFrom && (
-        <p className="home-catching-up" role="status">
-          <span className="wait-spinner" aria-hidden="true" />
-          Showing your page {savedWhen(catchingUpFrom, today)} while Taperday catches up.
-        </p>
-      )}
+      {catchingUpFrom && <CatchingUp what="page" savedAt={catchingUpFrom} today={today} />}
 
       <div className="tabs home-tabs" role="tablist" aria-label="Home" onKeyDown={onTabKey}>
         {HOME_TABS.map((t, i) => (

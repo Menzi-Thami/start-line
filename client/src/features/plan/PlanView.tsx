@@ -31,6 +31,8 @@ interface Props {
   reveal?: boolean
   /** A tab to switch to, from the app's own navigation (Strength in the bottom bar). A new seq switches again. */
   openTab?: { id: string; seq: number }
+  /** Back to Home, for the runner's own plan: an arrow above it, as an app's inner page has. */
+  onBack?: () => void
   units: Units
   onUnitsChange: (units: Units) => void
   shareUrl: string
@@ -91,7 +93,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, reveal = false, openTab, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal }: Props) {
+export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -261,6 +263,11 @@ export function PlanView({ plan, reveal = false, openTab, units, onUnitsChange, 
 
   return (
     <section className={`plan${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
+      {onBack && (
+        <button type="button" className="plan-back" aria-label="Back to Home" onClick={onBack}>
+          ‹ Home
+        </button>
+      )}
       <p className="plan-kicker">Your plan</p>
       <h2 className="plan-title" id="plan-title" ref={headingRef} tabIndex={-1}>
         {plan.race.name}

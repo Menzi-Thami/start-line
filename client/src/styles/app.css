@@ -5384,3 +5384,76 @@ button.plan-calendar-day {
     width: min(3.2rem, 100%);
   }
 }
+
+/* The header stays at the top while the page scrolls, full width behind it; sticky tab rows sit just under it. */
+:root {
+  --masthead-h: 4.5rem;
+}
+
+.masthead {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: var(--masthead-h);
+  padding-block: var(--space-3);
+  background: var(--paper);
+  box-shadow: 0 0 0 100vmax var(--paper);
+  clip-path: inset(0 -100vmax);
+}
+
+.tabs {
+  top: calc(var(--masthead-h) + var(--space-2));
+}
+
+/* Back to Home, above the runner's own plan. */
+.plan-back {
+  margin: 0 0 var(--space-2);
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* A session folded to its name and numbers; the chevron opens how to run it and why. */
+.session-more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--accent-strong);
+  cursor: pointer;
+  list-style: none;
+}
+
+.session-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.session-more > summary::after {
+  content: '';
+  width: 0.45em;
+  height: 0.45em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--dur-base) var(--ease-standard);
+}
+
+.session-more[open] > summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+@media print {
+  .masthead {
+    position: static;
+    box-shadow: none;
+  }
+
+  .session-more > summary {
+    display: none;
+  }
+}

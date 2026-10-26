@@ -871,6 +871,7 @@ export function App() {
                 plan={plan.plan}
                 reveal={revealPlan}
                 openTab={planTabAsk}
+                onBack={state.kind === 'ready' ? () => go('home') : undefined}
                 units={units}
                 onUnitsChange={changeUnits}
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}

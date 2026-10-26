@@ -89,7 +89,7 @@ function Guide({ ios, onClose }: { ios: boolean; onClose: () => void }) {
  * One button wherever Taperday isn't on the home screen yet: it installs straight away where the browser allows (Android,
  * desktop Chrome and Edge), and opens the two-tap guide everywhere else.
  */
-function AddButton({ way, onInstalled }: { way: InstallWay; onInstalled?: () => void }) {
+function AddButton({ way, onInstalled, big = false }: { way: InstallWay; onInstalled?: () => void; big?: boolean }) {
   const [busy, setBusy] = useState(false)
   const [guide, setGuide] = useState(false)
   if (way.kind === 'installed') return <p className="field-help">It’s on your home screen.</p>
@@ -106,7 +106,7 @@ function AddButton({ way, onInstalled }: { way: InstallWay; onInstalled?: () => 
   }
   return (
     <>
-      <button type="button" className="button" disabled={busy} onClick={add}>
+      <button type="button" className={big ? 'button install-button' : 'button'} disabled={busy} onClick={add}>
         Add to home screen
       </button>
       {guide && <Guide ios={way.kind === 'ios'} onClose={() => setGuide(false)} />}
@@ -115,12 +115,13 @@ function AddButton({ way, onInstalled }: { way: InstallWay; onInstalled?: () => 
 }
 
 /**
- * The one-time card on Home: shown only where adding takes a tap or two (a browser offering install, or an iPhone), and
- * never again on this device once the runner says Not now. Account always has the option.
+ * The banner at the top of Home and of a plan: shown wherever adding takes a tap or two (a browser offering install, or
+ * an iPhone), until the app is on the home screen. Not now quiets it on this device for two weeks; Account always has
+ * the option.
  */
 export function InstallCard() {
   const way = useInstallWay()
-  const [dismissed, setDismissed] = useState(loadInstallDismissed)
+  const [dismissed, setDismissed] = useState(() => loadInstallDismissed())
   if (dismissed || (way.kind !== 'prompt' && way.kind !== 'ios')) return null
   const dismiss = () => {
     saveInstallDismissed()
@@ -128,13 +129,14 @@ export function InstallCard() {
   }
   return (
     <section className="panel install-card" aria-labelledby="install-card">
-      <img className="install-icon" src="/app-icon-192.png" alt="" width="48" height="48" />
+      <img className="install-icon" src="/app-icon-192.png" alt="" width="64" height="64" />
       <div className="install-body">
         <h2 id="install-card" className="home-card-heading">
           Put Taperday on your home screen
         </h2>
+        <p className="install-pitch">One tap opens your plan, full screen like an app, with today’s run waiting.</p>
         <div className="install-actions">
-          <AddButton way={way} onInstalled={dismiss} />
+          <AddButton way={way} onInstalled={dismiss} big />
           <button type="button" className="link-button" onClick={dismiss}>
             Not now
           </button>

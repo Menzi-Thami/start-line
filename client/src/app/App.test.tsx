@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { formatDate } from '../lib/format'
 import { lastPlanRequest, planFixture, server } from '../test/server'
 import { App } from './App'
@@ -420,6 +420,20 @@ describe('a shared plan', () => {
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
     expect(wizard()).not.toBeInTheDocument()
     expect(lastPlanRequest.body).toMatchObject({ planFrom: '2026-10-08', strengthDays: ['Monday'], version: null })
+  })
+
+  it('offers, above the plan, to put Taperday on an iPhone’s home screen', async () => {
+    const iphone = vi
+      .spyOn(window.navigator, 'userAgent', 'get')
+      .mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1')
+    onTestFinished(() => iphone.mockRestore())
+    window.history.replaceState(null, '', `/${link}`)
+    setup()
+
+    const plan = await screen.findByRole('heading', { name: 'Parkrun PB' })
+    const banner = screen.getByRole('region', { name: 'Put Taperday on your home screen' })
+    expect(banner.compareDocumentPosition(plan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(banner).getByRole('button', { name: 'Add to home screen' })).toBeInTheDocument()
   })
 
   it('replans from today and keeps the replan in the link', async () => {

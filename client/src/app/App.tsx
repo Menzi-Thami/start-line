@@ -9,6 +9,7 @@ import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { SignInWait } from '../features/account/SignInWait'
+import { InstallCard } from '../features/install/InstallApp'
 import { ActivityPage } from '../features/activities/ActivityPage'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { MyRuns } from '../features/activities/MyRuns'
@@ -730,6 +731,7 @@ export function App() {
               )}
             </div>
 
+            {showPlan && <InstallCard />}
             {showPlan && (
               <PlanView
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}

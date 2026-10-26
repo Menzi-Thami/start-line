@@ -77,3 +77,69 @@ public sealed class RunnerConsentTests
     public void A_notice_needs_a_version() =>
         Should.Throw<DomainException>(() => Register().AcceptPrivacyNotice(" ", SignedUpAt));
 }
+
+public sealed class RunnerCalendarTests
+{
+    private const string First = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
+    private const string Second = "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB";
+
+    private static Runner Register() => Runner.Register(
+        "oid-3", null, "Lerato", "Africa/Johannesburg", Units.Kilometres, false, "2026-10-09", new DateTimeOffset(2026, 10, 9, 8, 0, 0, TimeSpan.Zero));
+
+    [Fact]
+    public void A_runner_has_no_calendar_link_until_they_ask_for_one() => Register().CalendarToken.ShouldBeNull();
+
+    [Fact]
+    public void Issuing_gives_the_new_secret_the_first_time_and_the_same_one_after()
+    {
+        var runner = Register();
+
+        runner.IssueCalendarToken(First).ShouldBe(First);
+        runner.IssueCalendarToken(Second).ShouldBe(First);
+        runner.CalendarToken.ShouldBe(First);
+    }
+
+    [Fact]
+    public void Resetting_replaces_the_secret_so_the_old_link_stops()
+    {
+        var runner = Register();
+        runner.IssueCalendarToken(First);
+
+        runner.ResetCalendarToken(Second);
+
+        runner.CalendarToken.ShouldBe(Second);
+    }
+
+    [Fact]
+    public void A_reset_can_also_be_the_first_link()
+    {
+        var runner = Register();
+
+        runner.ResetCalendarToken(First);
+
+        runner.CalendarToken.ShouldBe(First);
+    }
+
+    [Fact]
+    public void A_reset_to_the_same_secret_is_refused()
+    {
+        var runner = Register();
+        runner.IssueCalendarToken(First);
+
+        Should.Throw<DomainException>(() => runner.ResetCalendarToken(First));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("too-short")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAAAAAA")]
+    [InlineData("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")]
+    public void A_secret_that_could_be_guessed_or_wont_fit_is_refused(string token)
+    {
+        var runner = Register();
+
+        Should.Throw<DomainException>(() => runner.IssueCalendarToken(token));
+        Should.Throw<DomainException>(() => runner.ResetCalendarToken(token));
+        runner.CalendarToken.ShouldBeNull();
+    }
+}

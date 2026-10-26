@@ -7,8 +7,8 @@ import { followWake, SCENE_MS, SCENES, SLOW_AFTER_MS, TIP_MS, TIPS, type WakeSte
 import { WAKE_TRIES } from '../features/account/useRunner'
 import { api } from '../lib/api-client'
 import { ownerOf, readSnapshot, saveSnapshot } from '../lib/home-snapshot'
-import type { Runner } from '../lib/types'
-import { server, stravaOff } from '../test/server'
+import type { GeneratePlanRequest, Runner } from '../lib/types'
+import { lastPlanRequest, planFixture, server, stravaOff } from '../test/server'
 import { App } from './App'
 import { AuthContext, type Auth } from './auth-context'
 
@@ -233,6 +233,117 @@ describe('Home from the copy kept on this device', () => {
 
     expect(await screen.findByText(/Checking your account/)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
+  })
+})
+
+describe('their plan from the copy kept on this device', () => {
+  afterEach(() => window.localStorage.clear())
+
+  const owner = ownerOf({ name: 'Thandi', email: 'thandi@example.com' })
+  const inputs: GeneratePlanRequest = {
+    raceSlug: null,
+    raceName: 'Parkrun PB',
+    distanceKm: 5,
+    raceDate: '2026-12-13',
+    goalTime: '00:24:30',
+    runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'],
+    longRunDay: 'Sunday',
+    currentWeeklyKm: null,
+    experience: 'Regular',
+    strengthDays: [],
+    planFrom: '2026-10-08',
+  }
+  const current = { id: 'plan-1', name: 'Parkrun PB', inputs }
+  const summary = { id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' }
+  const sleepingAccount = () =>
+    server.use(
+      http.get('*/api/v1/me', async () => {
+        await delay('infinite')
+        return HttpResponse.json(thandi)
+      }),
+    )
+
+  it('opens a runner who comes back straight on their plan, with no wait', async () => {
+    saveSnapshot(owner, { runner: thandi, current, plan: { id: 'plan-1', plan: planFixture } })
+    sleepingAccount()
+    window.history.replaceState(null, '', '/')
+
+    renderApp(signedIn())
+
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(screen.getByText(/Showing your plan .* while Taperday catches up/)).toBeInTheDocument()
+    expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
+    // The plan's own link, as opening it from Home gives.
+    expect(window.location.search).toContain('goal=1470')
+    expect(window.location.search).toContain('from=2026-10-08')
+  })
+
+  it('then brings it up to date from the account, coach and all, and Home is a tap away', async () => {
+    saveSnapshot(owner, { runner: thandi, current, plan: { id: 'plan-1', plan: planFixture } })
+    const coached = { ...planFixture, weeks: planFixture.weeks.map((w, i) => (i === 0 ? { ...w, plannedKm: w.plannedKm + 1 } : w)) }
+    let answer: (() => void) | undefined
+    let coachCalls = 0
+    server.use(
+      http.get('*/api/v1/me', async () => {
+        await new Promise<void>((resolve) => (answer = resolve))
+        return HttpResponse.json(thandi)
+      }),
+      http.get('*/api/v1/me/plans', () => HttpResponse.json([summary])),
+      http.get('*/api/v1/me/plans/:id', () => HttpResponse.json({ ...current, createdAt: '2026-10-08T09:00:00Z', status: 'Active', plan: planFixture })),
+      http.post('*/api/v1/me/plans/:id/coach', () => {
+        coachCalls++
+        return HttpResponse.json({ ...current, createdAt: '2026-10-08T09:00:00Z', status: 'Active', plan: coached, coaching: [] })
+      }),
+    )
+    window.history.replaceState(null, '', '/')
+    const user = userEvent.setup()
+
+    renderApp(signedIn())
+    expect(await screen.findByText(/while Taperday catches up/)).toBeInTheDocument()
+    await waitFor(() => expect(answer).toBeDefined())
+    answer!()
+
+    await waitFor(() => expect(screen.queryByText(/while Taperday catches up/)).not.toBeInTheDocument(), { timeout: 3000 })
+    expect(coachCalls).toBe(1)
+    expect(screen.getByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    // Kept on this device as the coach has it, for next time.
+    expect(readSnapshot(owner)?.plan?.plan).toEqual(coached)
+
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    window.history.back()
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+  })
+
+  it('still opens on Home for a runner whose copy has no plan to show', async () => {
+    // Home never loaded the plan itself on this device, so there's nothing to open it from.
+    saveSnapshot(owner, { runner: thandi, current })
+    sleepingAccount()
+    window.history.replaceState(null, '', '/')
+
+    renderApp(signedIn())
+
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    expect(screen.queryByText(/Showing your plan/)).not.toBeInTheDocument()
+  })
+
+  it('never opens over a plan link, or for someone else signed in on the same device', async () => {
+    saveSnapshot(owner, { runner: thandi, current, plan: { id: 'plan-1', plan: planFixture } })
+    sleepingAccount()
+    window.history.replaceState(null, '', '/?km=10&date=2027-01-10&name=Spring+10K&goal=3000&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08')
+    const { unmount } = renderApp(signedIn())
+
+    await waitFor(() => expect(lastPlanRequest.body).toMatchObject({ raceName: 'Spring 10K' }))
+    expect(screen.queryByText(/Showing your plan/)).not.toBeInTheDocument()
+    expect(window.location.search).toContain('name=Spring+10K')
+    unmount()
+
+    window.history.replaceState(null, '', '/')
+    renderApp(signedIn({ account: { name: 'Sipho', email: 'sipho@example.com' } }))
+
+    expect(await screen.findByText(/Checking your account/)).toBeInTheDocument()
+    expect(screen.queryByText(/Showing your plan/)).not.toBeInTheDocument()
   })
 })
 

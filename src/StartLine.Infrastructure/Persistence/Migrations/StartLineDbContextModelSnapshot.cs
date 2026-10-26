@@ -538,6 +538,12 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CalendarToken")
+                        .IsConcurrencyToken()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
                     b.Property<DateTimeOffset>("ConsentedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -589,6 +595,10 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CalendarToken")
+                        .IsUnique()
+                        .HasFilter("[CalendarToken] IS NOT NULL");
 
                     b.HasIndex("IdentitySubject")
                         .IsUnique();

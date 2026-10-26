@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calendarLinks } from './calendar-links'
+import { calendarLinks, personalCalendarLinks } from './calendar-links'
 import type { GeneratePlanRequest } from './types'
 
 const request: GeneratePlanRequest = {
@@ -43,5 +43,23 @@ describe('calendarLinks', () => {
 
   it('asks for miles when the runner uses them', () => {
     expect(new URL(calendarLinks(request, 'mi', 'x', 'https://api.example.com').feed).searchParams.get('units')).toBe('mi')
+  })
+})
+
+describe('personalCalendarLinks', () => {
+  const links = personalCalendarLinks('abc_DEF-123', 'Comrades Marathon', 'https://api.example.com/')
+
+  it('points at the runner’s own feed, which follows their current plan', () => {
+    expect(links.feed).toBe('https://api.example.com/api/v1/calendar/abc_DEF-123.ics')
+    expect(links.personal).toBe(true)
+    expect(calendarLinks(request, 'km', 'x', 'https://api.example.com').personal).toBe(false)
+  })
+
+  it('subscribes Apple, Google and Outlook to it the same way', () => {
+    expect(links.apple).toBe('webcal://api.example.com/api/v1/calendar/abc_DEF-123.ics')
+    expect(new URL(links.google).searchParams.get('cid')).toBe(links.apple)
+    const outlook = new URL(links.outlook)
+    expect(outlook.searchParams.get('url')).toBe(links.feed)
+    expect(outlook.searchParams.get('name')).toBe('Taperday: Comrades Marathon')
   })
 })

@@ -24,6 +24,10 @@ export const stravaOff: StravaStatus = {
 /** Reminders as they are until the VAPID keys are configured: not offered. */
 export const remindersOff: Reminders = { available: false, publicKey: null, devices: [] }
 
+/** The secret in the runner's personal calendar link, and the one a reset gives. */
+export const calendarToken = 'personal-calendar-token-0123456789abcdefghij'
+export const newCalendarToken = 'new-calendar-token-0123456789abcdefghijklmn'
+
 export const lastPlanRequest: { body: unknown } = { body: undefined }
 
 export const handlers = [
@@ -42,6 +46,9 @@ export const handlers = [
   // A saved plan's check-ins; none by default.
   http.get('*/api/v1/me/plans/:id/check-ins', () => HttpResponse.json([])),
   http.get('*/api/v1/me/reminders', () => HttpResponse.json(remindersOff)),
+  // The runner's personal calendar link, and a new one when it's reset.
+  http.get('*/api/v1/me/calendar', () => HttpResponse.json({ token: calendarToken })),
+  http.post('*/api/v1/me/calendar/reset', () => HttpResponse.json({ token: newCalendarToken })),
   http.get('*/api/v1/predictions', ({ request }) => {
     const url = new URL(request.url)
     return HttpResponse.json({ distanceKm: Number(url.searchParams.get('toKm')), predictedTime: '01:51:20', paceSecondsPerKm: 316.6 })

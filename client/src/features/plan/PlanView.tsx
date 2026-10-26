@@ -288,7 +288,13 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
             <button type="button" className="menu-item" onClick={downloadCalendar}>
               Download a calendar file <span className="menu-note">.ics, one-off</span>
             </button>
-            {calendar && <p className="menu-help">Subscribing keeps your calendar in step with your plan.</p>}
+            {calendar && (
+              <p className="menu-help">
+                {calendar.personal
+                  ? 'Your calendar stays in step with your plan, even when it changes.'
+                  : 'Subscribing keeps your calendar in step with your plan.'}
+              </p>
+            )}
           </div>
         </details>
         <div className="pills pills-compact" role="radiogroup" aria-label="Units">

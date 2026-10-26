@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../../app/App'
 import { AuthContext, type Auth } from '../../app/auth-context'
 import type { CoachNote, Runner, SavedPlanSummary } from '../../lib/types'
-import { planFixture, server } from '../../test/server'
+import { calendarToken, newCalendarToken, planFixture, server } from '../../test/server'
 
 const TOKEN = 'test-token'
 const link = '?km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08'
@@ -423,6 +423,63 @@ describe('a signed-up runner', () => {
 
     expect(await screen.findByRole('button', { name: 'Make this my plan' }, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'How did it go?' })).not.toBeInTheDocument()
+  })
+
+  it('subscribes their calendar to their own feed, which follows their plan through every change', async () => {
+    accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/')
+    const user = renderWith(signedIn())
+    await openTheirPlan(user)
+
+    await user.click(screen.getByText('Add to calendar'))
+
+    await waitFor(() =>
+      expect(screen.getByRole('link', { name: /Apple Calendar/ })).toHaveAttribute('href', expect.stringMatching(new RegExp(`^webcal://.*/api/v1/calendar/${calendarToken}\\.ics$`))),
+    )
+    const outlook = new URL(screen.getByRole('link', { name: /Outlook/ }).getAttribute('href')!)
+    expect(outlook.searchParams.get('url')).toMatch(new RegExp(`/api/v1/calendar/${calendarToken}\\.ics$`))
+    expect(screen.getByText('Your calendar stays in step with your plan, even when it changes.')).toBeInTheDocument()
+  })
+
+  it('subscribes a calendar to the plan’s own link when the plan isn’t theirs', async () => {
+    accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/?km=10&date=2027-01-10&name=Spring+10K&goal=3000&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08')
+    const user = renderWith(signedIn())
+    await screen.findByRole('button', { name: 'Make this my plan' }, { timeout: 3000 })
+
+    await user.click(screen.getByText('Add to calendar'))
+
+    expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain('/api/v1/plans/calendar.ics?')
+    expect(screen.getByText('Subscribing keeps your calendar in step with your plan.')).toBeInTheDocument()
+  })
+
+  it('gets a new calendar link from Account, and their plan then offers that one', async () => {
+    let resets = 0
+    accountApi({ runner: thandi, plans: [current] })
+    server.use(
+      http.post('*/api/v1/me/calendar/reset', ({ request }) => {
+        if (request.headers.get('Authorization') !== `Bearer ${TOKEN}`) return HttpResponse.json({}, { status: 401 })
+        resets++
+        return HttpResponse.json({ token: newCalendarToken })
+      }),
+    )
+    window.history.replaceState(null, '', '/')
+    const user = renderWith(signedIn())
+    await openTheirPlan(user)
+    await user.click(screen.getByText('Add to calendar'))
+    await waitFor(() => expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain(calendarToken))
+
+    await user.click(screen.getByRole('button', { name: 'Account' }))
+    const row = (await screen.findByRole('heading', { name: 'Calendar link' })).closest('.section') as HTMLElement
+    expect(within(row).getByText(/the old link stops working/)).toBeInTheDocument()
+    await user.click(within(row).getByRole('button', { name: 'Get a new link' }))
+
+    expect(await within(row).findByText('Done. The old link no longer works.')).toBeInTheDocument()
+    expect(resets).toBe(1)
+    window.history.back()
+    await screen.findByRole('heading', { name: 'Parkrun PB' }, { timeout: 3000 })
+    await user.click(screen.getByText('Add to calendar'))
+    expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain(`/api/v1/calendar/${newCalendarToken}.ics`)
   })
 
   it('asks before a plan for another race replaces theirs', async () => {

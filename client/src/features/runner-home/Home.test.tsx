@@ -72,6 +72,24 @@ describe('Home', () => {
     expect(rows.join(' ')).not.toMatch(/Strength/)
   })
 
+  it('puts the race date, distance and where they are in the plan under the greeting', () => {
+    renderHome(withPlan)
+
+    expect(screen.getByText('5 km')).toBeInTheDocument()
+    expect(screen.getByText('Week 2 of 9 · Base')).toBeInTheDocument()
+  })
+
+  it('leads today’s card with the run and marks it done, with why one tap away', async () => {
+    const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 6.5)] })
+
+    const today = screen.getByRole('region', { name: 'Today' })
+    expect(within(today).getByText('Done')).toBeInTheDocument()
+    const why = within(today).getByText('Why this run')
+    expect(why.closest('details')).not.toHaveAttribute('open')
+    await user.click(why)
+    expect(why.closest('details')).toHaveAttribute('open')
+  })
+
   it('keeps the tab in the address, so a shared link or Back opens the same one', async () => {
     const { openTab } = renderHome()
 

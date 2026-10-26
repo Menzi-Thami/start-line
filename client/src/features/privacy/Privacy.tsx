@@ -155,6 +155,10 @@ export function PrivacyPolicy() {
             can fit plans and emails to you.
           </li>
           <li>
+            <strong>Your picture, if you add one:</strong> a small square image shown only to you in the app. Remove it in Account at any
+            time; deleting your account deletes it too.
+          </li>
+          <li>
             <strong>Your plans:</strong> the race, goal and days you chose, so we can show your plan again.
           </li>
           <li>

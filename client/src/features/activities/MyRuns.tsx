@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { emptyProgress, uploadAll, type BulkProgress, type BulkResult } from '../../lib/bulk-upload'
-import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
+import { formatDate, formatDistance, formatDuration, formatPace, localToday, type Units } from '../../lib/format'
 import type { Activity, ActivitySummary } from '../../lib/types'
 import { KIND_LABEL } from './activity-copy'
 import { BulkSummary } from './BulkSummary'
@@ -16,9 +16,33 @@ interface Props {
 }
 
 /** Upload runs from a Garmin watch (one, a few, or a whole account export), and every run uploaded so far, newest first. */
+type Range = 'all' | 'week' | 'month'
+
+const RANGES: readonly { id: Range; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'week', label: 'This week' },
+  { id: 'month', label: 'Last 30 days' },
+]
+
+const daysBefore = (iso: string, n: number) => {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
+/** The runs in a range, by each run's own date: this week is from Monday; the last 30 days include today. */
+function inRange(runs: readonly ActivitySummary[], range: Range): readonly ActivitySummary[] {
+  if (range === 'all') return runs
+  const today = localToday()
+  const day = new Date(`${today}T00:00:00Z`).getUTCDay()
+  const from = range === 'week' ? daysBefore(today, (day + 6) % 7) : daysBefore(today, 29)
+  return runs.filter((r) => r.localDate >= from && r.localDate <= today)
+}
+
 export function MyRuns({ units, onOpen }: Props) {
   const auth = useAuth()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
+  const [range, setRange] = useState<Range>('all')
   const [bulk, setBulk] = useState<{ running: boolean; progress: BulkProgress; result: BulkResult | null; error: string | null } | null>(null)
   const [singleError, setSingleError] = useState<string | null>(null)
   const stop = useRef<AbortController | null>(null)
@@ -150,8 +174,24 @@ export function MyRuns({ units, onOpen }: Props) {
       )}
 
       {list.kind === 'ready' && list.runs.length > 0 && (
-        <ul className="weeks runs" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-5)' }}>
-          {list.runs.map((run) => (
+        <div className="run-filters" role="group" aria-label="Show runs from">
+          {RANGES.map((r) => (
+            <button key={r.id} type="button" className="chip-button" aria-pressed={range === r.id} onClick={() => setRange(r.id)}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {list.kind === 'ready' && list.runs.length > 0 && inRange(list.runs, range).length === 0 && (
+        <p className="field-help" style={{ marginTop: 'var(--space-4)' }}>
+          No runs {range === 'week' ? 'this week' : 'in the last 30 days'} yet.
+        </p>
+      )}
+
+      {list.kind === 'ready' && list.runs.length > 0 && (
+        <ul className="weeks runs" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-4)' }}>
+          {inRange(list.runs, range).map((run) => (
             <li className="week saved-plan" key={run.id}>
               <div>
                 <span className="week-name">{run.plannedTitle ?? KIND_LABEL[run.kind]}</span>

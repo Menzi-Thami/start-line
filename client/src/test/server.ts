@@ -51,6 +51,8 @@ export const handlers = [
   // The runner's personal calendar link, and a new one when it's reset.
   http.get('*/api/v1/me/calendar', () => HttpResponse.json({ token: calendarToken })),
   http.post('*/api/v1/me/calendar/reset', () => HttpResponse.json({ token: newCalendarToken })),
+  // No picture by default: the app shows initials.
+  http.get('*/api/v1/me/photo', () => new HttpResponse(null, { status: 204 })),
   http.get('*/api/v1/predictions', ({ request }) => {
     const url = new URL(request.url)
     return HttpResponse.json({ distanceKm: Number(url.searchParams.get('toKm')), predictedTime: '01:51:20', paceSecondsPerKm: 316.6 })

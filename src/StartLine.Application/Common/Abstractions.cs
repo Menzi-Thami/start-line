@@ -37,6 +37,8 @@ public interface IApplicationDbContext
 
     DbSet<TickPrompt> TickPrompts { get; }
 
+    DbSet<RunnerPhoto> RunnerPhotos { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
 

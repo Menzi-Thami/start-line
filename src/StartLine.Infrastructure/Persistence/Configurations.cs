@@ -283,6 +283,20 @@ internal sealed class PushSubscriptionConfiguration : IEntityTypeConfiguration<P
     }
 }
 
+/// <summary>The runner's own picture, one at most, going with the runner.</summary>
+internal sealed class RunnerPhotoConfiguration : IEntityTypeConfiguration<RunnerPhoto>
+{
+    public void Configure(EntityTypeBuilder<RunnerPhoto> builder)
+    {
+        builder.ToTable("RunnerPhotos");
+        builder.HasKey(p => p.RunnerId);
+        builder.Property(p => p.RunnerId).ValueGeneratedNever();
+        builder.Property(p => p.ContentType).HasMaxLength(16).IsUnicode(false);
+        builder.Property(p => p.Data).HasMaxLength(RunnerPhoto.MaxBytes);
+        builder.HasOne<Runner>().WithOne().HasForeignKey<RunnerPhoto>(p => p.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class TickPromptConfiguration : IEntityTypeConfiguration<TickPrompt>
 {
     public void Configure(EntityTypeBuilder<TickPrompt> builder)

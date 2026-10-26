@@ -334,21 +334,22 @@ describe('their plan from the copy kept on this device', () => {
 
     renderApp(signedIn())
 
-    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: 'My runs' }))
     expect(screen.getByRole('main')).toHaveClass('view-enter')
   })
 
-  it('still opens on Home for a runner whose copy has no plan to show', async () => {
-    // Home never loaded the plan itself on this device, so there's nothing to open it from.
+  it('opens on their plan, built from its answers, when the copy here has only which plan it is', async () => {
+    // Home never loaded the plan itself on this device, so it's built afresh: that needs the API, not the sleeping database.
     saveSnapshot(owner, { runner: thandi, current })
     sleepingAccount()
     window.history.replaceState(null, '', '/')
 
     renderApp(signedIn())
 
-    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
-    expect(screen.queryByText(/Showing your plan/)).not.toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
+    expect(window.location.search).toContain('goal=1470')
   })
 
   it('never opens over a plan link, or for someone else signed in on the same device', async () => {

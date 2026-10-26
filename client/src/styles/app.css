@@ -3505,16 +3505,41 @@ a.menu-item {
   margin-bottom: var(--space-2);
 }
 
-.upload-ways {
+/* How to get a run file out of each watch or app: one row each, tap to open. */
+.export-guide {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
+  margin: var(--space-3) 0 var(--space-4);
+  border-top: 1px solid var(--line);
 }
 
-.upload-way {
+.export-way {
+  border-bottom: 1px solid var(--line);
+}
+
+.export-way > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
   font-weight: 700;
-  margin-bottom: var(--space-1);
+  cursor: pointer;
+}
+
+.export-way[open] {
+  padding-bottom: var(--space-3);
+}
+
+.export-way .field-help + .field-help,
+.export-steps + .field-help {
+  margin-top: var(--space-2);
+}
+
+.export-steps {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
 }
 
 .bulk-progress,

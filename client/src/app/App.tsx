@@ -10,6 +10,7 @@ import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { FindingPlan } from '../features/account/FindingPlan'
+import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
 import { SignInWait } from '../features/account/SignInWait'
@@ -935,6 +936,7 @@ export function App() {
           <button type="button" className="link-button" onClick={() => go('privacy')}>
             Privacy policy
           </button>
+          <a href={`mailto:${PRIVACY_CONTACT.email}`}>{PRIVACY_CONTACT.email}</a>
         </p>
       </footer>
     </div>

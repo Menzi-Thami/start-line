@@ -5457,3 +5457,9 @@ button.plan-calendar-day {
     display: none;
   }
 }
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}

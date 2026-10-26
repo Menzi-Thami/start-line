@@ -93,7 +93,7 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: typeof message.body === 'string' ? message.body : 'Open Taperday for today’s plan.',
-      icon: '/app-icon-192.png',
+      icon: '/home-icon-192.png',
       tag: typeof message.tag === 'string' ? message.tag : undefined,
       data: { url: pageOf(message.url) },
     }),

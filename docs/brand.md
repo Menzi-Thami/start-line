@@ -47,11 +47,21 @@ The wordmark can't shrink to a square, so square places use one of two marks. Ne
 Three bars stepping down and a race-day dot, near-black on a volt rounded square (`client/public/favicon.svg`).
 It carries the idea at the tiniest sizes: the browser tab, the home-screen icon and social avatars.
 
+On a home screen (and on reminders) it fills the whole square, so the phone rounds the corners itself, and the bars sit
+inside Android's round crop (the maskable safe zone):
+
+| File | Use |
+|---|---|
+| `client/public/home-icon.svg` | Source: the favicon's mark on a full-bleed volt square |
+| `client/public/apple-touch-icon.png` | iPhone and iPad home screen (180 px) |
+| `client/public/home-icon-192.png`, `home-icon-512.png` | The web app manifest (any and maskable), reminders and the install banner |
+
 ### App icon (td)
 
 The initials in the wordmark's own colours: **t** in ink `#f2f2f2` for "taper", **d** in volt `#d7ff3e` for "day", on
 near-black `#0a0a0b`. Use it wherever another service lists Taperday as an app beside others, such as Strava's
-connected apps, where a square picture of the name reads better than a chart.
+connected apps, where a square picture of the name reads better than a chart. Not on Taperday's own home-screen icon:
+that's the taper.
 
 | File | Use |
 |---|---|

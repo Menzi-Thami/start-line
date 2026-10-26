@@ -72,6 +72,32 @@ function SyncLine({ strava, runs, onOpenAccount, onOpenRuns }: Pick<Props, 'stra
   )
 }
 
+/** A share as a ring, filling from empty to its real value; the words beside it say the same. */
+function PercentRing({ percent }: { percent: number }) {
+  const r = 42
+  const circumference = 2 * Math.PI * r
+  const fraction = Math.max(0, Math.min(1, percent / 100))
+  return (
+    <svg className="overview-ring" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r={r} className="home-ring-track" />
+      {fraction > 0 && (
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          className="home-ring-fill"
+          strokeDasharray={`${fraction * circumference} ${circumference}`}
+          style={{ '--ring-empty': `0 ${circumference}` } as React.CSSProperties}
+          transform="rotate(-90 50 50)"
+        />
+      )}
+      <text x="50" y="50" className="overview-ring-label mono" textAnchor="middle" dominantBaseline="central">
+        {percent}%
+      </text>
+    </svg>
+  )
+}
+
 function Meter({ value, max, label }: { value: number; max: number; label: string }) {
   const fraction = max > 0 ? Math.min(1, value / max) : 0
   return (
@@ -172,14 +198,17 @@ export function Overview({ plan, units, today, currentWeek, week, runs, bests, s
           {kept.percent == null ? (
             <p>Your first planned run hasn’t come round yet.</p>
           ) : (
-            <>
+            <div className="overview-kept">
+              <PercentRing percent={kept.percent} />
+              <div>
               <p className="overview-figure">
                 <span className="mono">{kept.percent}%</span> of planned runs
               </p>
               <p className="field-help">
                 {kept.done} of the {kept.due} runs so far. A missed day here and there is normal; it’s the weeks that add up.
               </p>
-            </>
+              </div>
+            </div>
           )}
         </section>
       </div>

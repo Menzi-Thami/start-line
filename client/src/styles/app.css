@@ -5031,3 +5031,356 @@ select.input option {
   gap: var(--space-4);
   margin-top: var(--space-2) !important;
 }
+
+/* ---------- The app's bottom bar, on a phone (app/TabBar.tsx) ---------- */
+.tab-bar {
+  position: fixed;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding: 6px var(--space-2) max(6px, env(safe-area-inset-bottom));
+  background: rgb(10 10 11 / 0.92);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+}
+
+/* Room under the page for the bar, so the footer and last card aren't hidden behind it. */
+.page:has(> .tab-bar) {
+  padding-bottom: calc(var(--space-8) + 64px + env(safe-area-inset-bottom));
+}
+
+.tab-bar-item {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: var(--tap);
+  padding: 4px 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+}
+
+.tab-bar-item svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tab-bar-item[aria-current='page'] {
+  color: var(--accent);
+}
+
+.tab-bar-item:active {
+  transform: scale(0.94);
+}
+
+/* ---------- A plan week at a glance (features/plan/WeekGlance.tsx) ---------- */
+.week-glance {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+}
+
+.week-glance-figures {
+  display: flex;
+  gap: var(--space-6);
+}
+
+.week-glance-figures p {
+  display: grid;
+  margin: 0;
+}
+
+.week-glance-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.week-day {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.week-day-name {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.week-day-dot {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.week-day.is-rest .week-day-dot {
+  border-color: transparent;
+  color: var(--muted);
+}
+
+.week-day.is-missed .week-day-dot {
+  opacity: 0.5;
+}
+
+.week-day.is-done .week-day-dot {
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: pop-in var(--dur-emphasis) var(--ease-spring) both;
+}
+
+.week-day.is-today .week-day-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ---------- The plan so far, as a ring (features/dashboard/Overview.tsx) ---------- */
+.overview-kept {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.overview-ring {
+  width: 92px;
+  height: 92px;
+  flex: none;
+}
+
+.overview-ring .home-ring-track,
+.overview-ring .home-ring-fill {
+  fill: none;
+  stroke-width: 10;
+}
+
+.overview-ring-label {
+  fill: var(--ink);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* ---------- My runs: All, this week, last 30 days ---------- */
+.run-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+}
+
+.chip-button {
+  min-height: 2.25rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-2);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+}
+
+.chip-button[aria-pressed='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.chip-button:active {
+  transform: scale(0.96);
+}
+
+/*
+ * ---------- A big screen ----------
+ * Home, the plan and the run pages use the width: no narrow column in a sea of black. Questions stay narrow, as short
+ * lines read best. Home puts today's run beside the week, and the weekly figures and charts get room to be useful.
+ */
+@media (min-width: 64rem) {
+  .page:has(.home),
+  .page:has(.plan),
+  .page:has(.runs),
+  .page:has(.overview-grid) {
+    max-width: 72rem;
+  }
+
+  .week-glance {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: var(--space-6);
+  }
+}
+
+/* ---------- The runner: picture or initials (features/account/Avatar.tsx) ---------- */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tab-bar-item .avatar {
+  font-size: 0.6rem !important;
+  box-shadow: 0 0 0 1.5px currentColor;
+}
+
+.photo-picker {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.photo-picker .field-help {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.photo-picker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* ---------- The plan by month (features/plan/PlanCalendar.tsx) ---------- */
+.plan-calendar {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+}
+
+.plan-calendar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.plan-calendar-head h3 {
+  margin: 0;
+  font-size: var(--text-md, 1rem);
+}
+
+.plan-calendar-nav {
+  width: var(--tap);
+  height: var(--tap);
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: none;
+  color: var(--ink);
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.plan-calendar-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.plan-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  justify-items: center;
+}
+
+.plan-calendar-dow {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.plan-calendar-day {
+  display: grid;
+  place-items: center;
+  width: min(2.6rem, 100%);
+  aspect-ratio: 1;
+  border: 1.5px solid transparent;
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+button.plan-calendar-day {
+  cursor: pointer;
+}
+
+.plan-calendar-day.is-run {
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.plan-calendar-day.is-strength {
+  border-style: dashed;
+  border-color: var(--line-strong);
+  color: var(--ink-2);
+}
+
+.plan-calendar-day.is-done {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.plan-calendar-day.is-race {
+  border-color: var(--coral);
+  color: var(--coral);
+}
+
+.plan-calendar-day.is-today {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+@media (min-width: 64rem) {
+  .plan-calendar-day {
+    width: min(3.2rem, 100%);
+  }
+}

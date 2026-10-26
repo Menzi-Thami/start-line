@@ -5,6 +5,7 @@ import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange
 import { planProgress } from '../../lib/plan-day'
 import { runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CoachNote, LoggedRun, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
+import { Avatar } from '../account/Avatar'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { offersTick } from '../coaching/ran-this'
@@ -13,7 +14,6 @@ import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
-import { Runner as RunnerFigure } from '../shared/Runner'
 import { Calculators } from './Calculators'
 import { change, todayInPlan, trainingTotals, weeklyBars, type Change, type WeekBar } from './home-math'
 import { YourWeek } from './YourWeek'
@@ -37,6 +37,8 @@ interface Props {
   onPlanLoaded?: (plan: HomePlan) => void
   /** When Home is showing the copy kept on this device while the account loads: when that copy was saved. */
   catchingUpFrom?: string | null
+  /** The runner's own picture, if they added one; their initials otherwise. */
+  photo?: string | null
 }
 
 type HomePlan = { id: string; plan: TrainingPlan }
@@ -454,6 +456,7 @@ export function Home({
   initialPlan,
   onPlanLoaded,
   catchingUpFrom,
+  photo = null,
 }: Props) {
   const [tab, setTab] = useState<HomeTab>(tabFromUrl)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -513,7 +516,7 @@ export function Home({
   return (
     <div className="home">
       <header className="home-hello">
-        <RunnerFigure pose="sprint" size={40} className="home-hello-runner" />
+        <Avatar name={runner.displayName} photo={photo} size={48} />
         <div>
           <h1 className="home-title">Welcome back, {runner.displayName}</h1>
           <p className="home-lede">

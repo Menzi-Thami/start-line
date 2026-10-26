@@ -10,6 +10,8 @@ import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { FindingPlan } from '../features/account/FindingPlan'
+import { useMediaQuery } from '../lib/use-media-query'
+import { TabBar, type TabBarItem } from './TabBar'
 import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
 import { ActivityPage } from '../features/activities/ActivityPage'
@@ -88,6 +90,13 @@ export function App() {
   // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
   const [initial, setInitial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
   const [view, setView] = useState<View>(viewFromUrl)
+  // On a phone the app's navigation sits in a bar at the bottom, as an installed app's does; wider, it stays in the header.
+  const phone = useMediaQuery('(max-width: 47.99rem)')
+  // Plan or Strength, as last picked from the bar, and the plan tab it asked for.
+  const [navPick, setNavPick] = useState<'plan' | 'strength'>('plan')
+  const [planTabAsk, setPlanTabAsk] = useState<{ id: string; seq: number } | undefined>(undefined)
+  // The runner's own picture, if they added one; initials show until it arrives, or without one.
+  const [photo, setPhoto] = useState<string | null>(null)
   // Moving to another page fades its content in. The page you load on is left alone: there's nothing to move from, and
   // the intro has its own entrance.
   const [shownView, setShownView] = useState(view)
@@ -376,6 +385,19 @@ export function App() {
     else window.history.replaceState(null, '', url)
   }
 
+  // The bottom bar (and the header's Plan link). Plan and Strength open the runner's own plan, on This week or Strength;
+  // without a plan they open the builder. A plan already on screen just changes tab.
+  const pickFromBar = (item: TabBarItem) => {
+    if (item === 'home') return go('home')
+    if (item === 'runs') return go('runs')
+    if (item === 'account') return go('account')
+    setNavPick(item === 'strength' ? 'strength' : 'plan')
+    setPlanTabAsk((asked) => ({ id: item === 'strength' ? 'strength' : 'week', seq: (asked?.seq ?? 0) + 1 }))
+    if (view === 'build' && plan.kind === 'ready') return
+    if (ownPlan) openOwnPlan()
+    else go('build')
+  }
+
   const go = (next: View) => {
     // Going somewhere on purpose means the app no longer opens the current plan by itself.
     landing.current = true
@@ -513,6 +535,22 @@ export function App() {
   }
 
   const state = runner.state
+  // The runner's picture, once per account: nothing to fetch until they're known, and initials until it arrives.
+  const readyId = state.kind === 'ready' ? state.runner.id : null
+  useEffect(() => {
+    if (!readyId) return
+    let cancelled = false
+    auth
+      .getToken()
+      .then((token) => (token ? api.me.photo(token) : undefined))
+      .then((found) => {
+        if (!cancelled) setPhoto(found?.dataUrl ?? null)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [readyId, auth])
   // Home shows for a registered runner, or, while the account is still loading, from the copy kept on this device.
   const homeRunner = state.kind === 'ready' ? state.runner : state.kind === 'loading' ? (copy?.runner ?? null) : null
   const signedUp = (saved: Runner) => {
@@ -527,6 +565,10 @@ export function App() {
   const opening = showBuilder && !editing && !initial && !landed && !justSignedUp && state.kind === 'ready' && currentPlan.current !== null
 
   // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
+  // Which bar item is current: Plan and Strength both show the plan, so the one last picked is lit.
+  const barCurrent: TabBarItem | null =
+    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : view === 'build' && plan.kind === 'ready' ? navPick : null
+
   const gate: Gate | undefined =
     state.kind === 'signed-out'
       ? {
@@ -592,11 +634,16 @@ export function App() {
             {/* Signed in but still waiting on the account: Sign out stays reachable, so a slow server never traps anyone. */}
             {(state.kind === 'ready' || state.kind === 'needs-sign-up' || state.kind === 'error' || (state.kind === 'loading' && auth.account !== null)) && (
               <>
-                {state.kind === 'ready' && (
+                {state.kind === 'ready' && !phone && (
                   <>
                     <button type="button" className="nav-link" aria-current={view === 'home' ? 'page' : undefined} onClick={() => go('home')}>
                       Home
                     </button>
+                    {ownPlan && (
+                      <button type="button" className="nav-link" aria-current={view === 'build' && plan.kind === 'ready' ? 'page' : undefined} onClick={() => pickFromBar('plan')}>
+                        Plan
+                      </button>
+                    )}
                     <button type="button" className="nav-link" aria-current={view === 'runs' ? 'page' : undefined} onClick={() => go('runs')}>
                       My runs
                     </button>
@@ -679,6 +726,7 @@ export function App() {
         {view === 'home' && homeRunner && (
           <Home
             runner={homeRunner}
+            photo={photo}
             units={units}
             today={today}
             current={ownPlan}
@@ -721,6 +769,8 @@ export function App() {
             onSaved={runner.setRunner}
             onOpenRuns={() => go('runs')}
             onNewCalendarLink={calendarLink.replace}
+            photo={photo}
+            onPhotoChange={setPhoto}
             onDeleted={() => {
               go('build')
               auth.signOut()
@@ -820,6 +870,7 @@ export function App() {
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
                 reveal={revealPlan}
+                openTab={planTabAsk}
                 units={units}
                 onUnitsChange={changeUnits}
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
@@ -872,6 +923,8 @@ export function App() {
           </>
         )}
       </main>
+
+      {phone && state.kind === 'ready' && <TabBar current={barCurrent} onPick={pickFromBar} account={{ name: state.runner.displayName, photo }} />}
 
       <footer className="footer">
         <p>

@@ -210,7 +210,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
       {weeks.map((week) => {
         const completed = week.sessions.filter((s) => done.has(sessionKey(s))).length
         return (
-          <details className="week" key={week.number} open={week.number === openWeek}>
+          <details className="week" id={`plan-week-${week.number}`} key={week.number} open={week.number === openWeek}>
             <summary>
               <span>
                 <span className="week-name">Week {week.number}</span>

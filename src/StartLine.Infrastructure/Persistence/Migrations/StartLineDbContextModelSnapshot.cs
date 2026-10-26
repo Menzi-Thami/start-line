@@ -632,6 +632,27 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("Runners", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Runners.RunnerPhoto", b =>
+                {
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(16)");
+
+                    b.Property<byte[]>("Data")
+                        .IsRequired()
+                        .HasMaxLength(98304)
+                        .HasColumnType("varbinary(max)");
+
+                    b.HasKey("RunnerId");
+
+                    b.ToTable("RunnerPhotos", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Sync.ProviderConnection", b =>
                 {
                     b.Property<Guid>("Id")
@@ -849,6 +870,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
                         .WithMany()
                         .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Runners.RunnerPhoto", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithOne()
+                        .HasForeignKey("StartLine.Domain.Runners.RunnerPhoto", "RunnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

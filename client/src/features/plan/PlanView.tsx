@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { CalendarLinks } from '../../lib/calendar-links'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
 import { ranKmByWeek, runsByDate } from '../../lib/plan-runs'
+import { prefersMotion } from '../../lib/motion'
 import { loadDone, saveDone } from '../../lib/storage'
+import { revealDelta, tabFade, type TabFade } from '../../lib/tab-scroll'
 import type { CoachNote as CoachNoteType, ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
 import { CoachNote } from '../coaching/CoachNote'
 import { latestPaced } from '../coaching/fitness'
@@ -88,6 +90,8 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const tabListRef = useRef<HTMLDivElement>(null)
+  const [tabsFade, setTabsFade] = useState<TabFade>('none')
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
@@ -166,6 +170,37 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
   }
 
   const index = tabs.findIndex((t) => t.id === tab)
+
+  // The row of tabs scrolls sideways when they don't all fit. Fade the edge that has more beyond it, so a tab cut off
+  // at the side reads as "more this way" rather than as a mistake.
+  const syncTabsFade = useCallback(() => {
+    const list = tabListRef.current
+    if (list) setTabsFade(tabFade(list.scrollLeft, list.clientWidth, list.scrollWidth))
+  }, [])
+
+  useEffect(() => {
+    syncTabsFade()
+    window.addEventListener('resize', syncTabsFade)
+    const list = tabListRef.current
+    const observer = typeof ResizeObserver === 'undefined' || !list ? null : new ResizeObserver(syncTabsFade)
+    if (list) observer?.observe(list)
+    return () => {
+      window.removeEventListener('resize', syncTabsFade)
+      observer?.disconnect()
+    }
+  }, [syncTabsFade, tabs.length])
+
+  // Choosing a tab (a tap, an arrow key or a swipe on the plan) brings it into view if the row has it hidden.
+  useEffect(() => {
+    const list = tabListRef.current
+    const selected = list?.querySelector<HTMLElement>('[aria-selected="true"]')
+    if (!list || !selected || typeof list.scrollBy !== 'function') return
+    const delta = revealDelta(list.getBoundingClientRect(), selected.getBoundingClientRect())
+    // An end of the row with nothing beyond it has no fade, and nowhere further to scroll to.
+    const atStart = list.scrollLeft <= 0
+    const atEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth
+    if ((delta < 0 && !atStart) || (delta > 0 && !atEnd)) list.scrollBy({ left: delta, behavior: prefersMotion() ? 'smooth' : 'auto' })
+  }, [tab])
 
   const showTab = (next: number, focus = false) => {
     const target = tabs[(next + tabs.length) % tabs.length]!
@@ -310,25 +345,27 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
         </span>
       </div>
 
-      <div className="tabs" role="tablist" aria-label="Your plan" onKeyDown={onTabKey}>
-        {tabs.map((t, i) => (
-          <button
-            key={t.id}
-            ref={(el) => {
-              tabRefs.current[i] = el
-            }}
-            type="button"
-            role="tab"
-            id={`plan-tab-${t.id}`}
-            className="tab"
-            aria-selected={tab === t.id}
-            aria-controls={`plan-panel-${t.id}`}
-            tabIndex={tab === t.id ? 0 : -1}
-            onClick={() => showTab(i)}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="tabs tabs-frame">
+        <div ref={tabListRef} className="tabs-scroll" data-fade={tabsFade} role="tablist" aria-label="Your plan" onKeyDown={onTabKey} onScroll={syncTabsFade}>
+          {tabs.map((t, i) => (
+            <button
+              key={t.id}
+              ref={(el) => {
+                tabRefs.current[i] = el
+              }}
+              type="button"
+              role="tab"
+              id={`plan-tab-${t.id}`}
+              className="tab"
+              aria-selected={tab === t.id}
+              aria-controls={`plan-panel-${t.id}`}
+              tabIndex={tab === t.id ? 0 : -1}
+              onClick={() => showTab(i)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="tab-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>

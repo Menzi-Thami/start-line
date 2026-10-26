@@ -246,7 +246,7 @@ select {
   stroke: var(--accent);
   stroke-linecap: round;
   stroke-dashoffset: var(--ring-offset);
-  animation: ring-draw 1.6s cubic-bezier(0.3, 0.8, 0.3, 1) 0.4s both;
+  animation: ring-draw 1.6s var(--ease-fill) 0.4s both;
 }
 
 @keyframes ring-draw {
@@ -712,7 +712,7 @@ select {
   width: 22px;
   border-radius: 2px;
   background: var(--line-strong);
-  transition: background-color 200ms ease;
+  transition: background-color var(--dur-base) var(--ease-standard);
 }
 
 .wizard-bar li:last-child {
@@ -744,11 +744,11 @@ select {
 }
 
 .slide-forward {
-  animation: slide-from-right 340ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: slide-from-right var(--dur-slide) var(--ease-glide) both;
 }
 
 .slide-back {
-  animation: slide-from-left 340ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: slide-from-left var(--dur-slide) var(--ease-glide) both;
 }
 
 @keyframes slide-from-right {
@@ -852,7 +852,7 @@ select {
   border-radius: var(--radius-lg);
   background: var(--glass);
   border: 1px solid var(--line);
-  transition: border-color 200ms ease, transform 200ms ease;
+  transition: border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-standard);
 }
 
 .bento-card:hover {
@@ -939,7 +939,7 @@ select {
   height: 8px;
   border-radius: 999px;
   transform-origin: 0 50%;
-  animation: bar-grow 1s cubic-bezier(0.3, 0.8, 0.3, 1) 0.3s both;
+  animation: bar-grow 1s var(--ease-fill) 0.3s both;
 }
 
 @keyframes bar-grow {
@@ -961,7 +961,7 @@ select {
   border-radius: 4px 4px 1px 1px;
   background: var(--accent);
   transform-origin: 50% 100%;
-  animation: bar-rise 0.9s cubic-bezier(0.3, 0.8, 0.3, 1) both;
+  animation: bar-rise 0.9s var(--ease-fill) both;
 }
 
 .mini-build .is-easier {
@@ -1068,7 +1068,7 @@ select {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: border-color 160ms ease, transform 160ms ease;
+  transition: border-color var(--dur-quick) var(--ease-standard), transform var(--dur-quick) var(--ease-standard);
 }
 
 .choice:hover {
@@ -1177,7 +1177,7 @@ select {
   transform-origin: 50% 0;
   animation: bib-hang 4.6s ease-in-out infinite alternate;
   box-shadow: 0 14px 30px rgb(0 0 0 / 0.45);
-  transition: box-shadow 160ms ease;
+  transition: box-shadow var(--dur-quick) var(--ease-standard);
 }
 
 .race-bib:hover .bib-card,
@@ -1326,7 +1326,7 @@ select {
 
 .segment {
   position: relative;
-  transition: transform 200ms cubic-bezier(0.3, 1.6, 0.5, 1), border-color 160ms ease;
+  transition: transform var(--dur-base) var(--ease-spring), border-color var(--dur-quick) var(--ease-standard);
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -1346,7 +1346,7 @@ select {
   border-color: var(--accent);
   box-shadow: var(--glow);
   transform: translateY(-3px);
-  animation: spring-pick 380ms cubic-bezier(0.3, 1.6, 0.5, 1);
+  animation: spring-pick 380ms var(--ease-spring);
 }
 
 @keyframes spring-pick {
@@ -1416,7 +1416,7 @@ select {
   border: 1px solid var(--line-strong);
   background: rgba(255, 255, 255, 0.06);
   font-weight: 800;
-  transition: transform 160ms cubic-bezier(0.3, 1.6, 0.5, 1), background-color 160ms ease, box-shadow 160ms ease;
+  transition: transform var(--dur-quick) var(--ease-spring), background-color var(--dur-quick) var(--ease-standard), box-shadow var(--dur-quick) var(--ease-standard);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1564,7 +1564,7 @@ select {
   stroke: var(--accent);
   stroke-linecap: round;
   stroke-dashoffset: var(--ring-offset);
-  animation: plan-ring 1.2s cubic-bezier(0.3, 0.8, 0.3, 1) 0.2s both;
+  animation: plan-ring 1.2s var(--ease-fill) 0.2s both;
 }
 
 @keyframes plan-ring {
@@ -1620,7 +1620,7 @@ select {
   height: 6px;
   border-radius: 999px;
   background: var(--accent);
-  transition: width 1.1s cubic-bezier(0.3, 0.8, 0.3, 1);
+  transition: width 1.1s var(--ease-fill);
 }
 
 .course-flag {
@@ -1638,7 +1638,7 @@ select {
   position: absolute;
   bottom: 10px;
   transform: translateX(-50%);
-  transition: left 1.1s cubic-bezier(0.3, 0.8, 0.3, 1);
+  transition: left 1.1s var(--ease-fill);
 }
 
 .is-rest .course-runner {
@@ -1874,14 +1874,14 @@ a.menu-item {
   color: var(--ink-2);
   font-weight: 700;
   cursor: pointer;
-  transition: background-color 200ms ease, color 200ms ease;
+  transition: background-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard);
 }
 
 .tab:hover {
   color: var(--ink);
 }
 
-/* Four tabs fit across a phone without scrolling sideways. */
+/* A couple of tabs fit across a phone, so they share the width. */
 @media (max-width: 30rem) {
   .tabs {
     gap: 0;
@@ -1894,9 +1894,85 @@ a.menu-item {
   }
 }
 
+/*
+ * The plan has up to six tabs, more than a phone holds. They sit in a frame (the glass pill) around a row that scrolls
+ * sideways: every tab keeps its whole label, and the edge with more tabs beyond it fades. The fade width matches
+ * TAB_FADE_PX in lib/tab-scroll.ts, which keeps a chosen tab clear of it.
+ */
+.tabs-frame {
+  padding: 0;
+  overflow: hidden;
+}
+
+.tabs-scroll {
+  --fade-start: 0px;
+  --fade-end: 0px;
+
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-1);
+  padding: 5px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+}
+
+.tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs-scroll[data-fade='start'],
+.tabs-scroll[data-fade='both'] {
+  --fade-start: 28px;
+}
+
+.tabs-scroll[data-fade='end'],
+.tabs-scroll[data-fade='both'] {
+  --fade-end: 28px;
+}
+
+.tabs-scroll .tab {
+  flex: 1 0 auto;
+}
+
+@media (max-width: 30rem) {
+  .tabs-scroll {
+    gap: 0;
+  }
+
+  .tabs-scroll .tab {
+    padding: 0 var(--space-2);
+  }
+}
+
 .tab[aria-selected='true'] {
   background: var(--accent);
   color: var(--on-accent);
+}
+
+/*
+ * A page arriving: the content fades in and rises a few pixels when the view changes. The rise moves `top` rather than
+ * a transform, because a transform would make the page the container of anything fixed to the screen (the sign-up
+ * celebration, the install guide) for the length of the animation. Reduced motion switches it off with the rest.
+ */
+.view-enter {
+  position: relative;
+  animation: view-in var(--dur-page) var(--ease-out);
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    top: 8px;
+  }
+
+  to {
+    opacity: 1;
+    top: 0;
+  }
 }
 
 /* Clips the sideways slide between tabs without trapping focus rings. */
@@ -2218,8 +2294,8 @@ a.menu-item {
   min-height: 2px;
   border-radius: 4px 4px 0 0;
   background: var(--accent);
-  animation: volume-grow 700ms cubic-bezier(0.3, 0.8, 0.3, 1) both;
-  transition: opacity 120ms ease;
+  animation: volume-grow 700ms var(--ease-fill) both;
+  transition: opacity var(--dur-fast) var(--ease-standard);
 }
 
 .volume-week.is-cutback .volume-bar {
@@ -3105,7 +3181,7 @@ a.menu-item {
   gap: var(--space-4);
   background: rgb(10 10 11 / 0.86);
   backdrop-filter: blur(10px);
-  animation: fade-in 200ms ease both;
+  animation: fade-in var(--dur-base) var(--ease-standard) both;
 }
 
 .dash-off-track {
@@ -4372,7 +4448,7 @@ select.input option {
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.6),
     0 0 0 1px rgba(0, 0, 0, 0.4);
-  animation: datepick-open 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: datepick-open 0.18s var(--ease-emphasis);
 }
 
 @keyframes datepick-open {
@@ -4503,8 +4579,8 @@ select.input option {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition:
-    background-color 0.12s ease,
-    transform 0.12s ease;
+    background-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
 }
 
 .datepick-day:hover:not(:disabled) {
@@ -4590,7 +4666,7 @@ select.input option {
     z-index: 60;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
-    animation: datepick-fade 0.2s ease;
+    animation: datepick-fade var(--dur-base) var(--ease-standard);
   }
 
   .datepick-panel {
@@ -4605,7 +4681,7 @@ select.input option {
     padding: var(--space-3) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom));
     border-bottom: 0;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    animation: datepick-sheet 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+    animation: datepick-sheet var(--dur-emphasis) var(--ease-emphasis);
   }
 
   .datepick-grab {

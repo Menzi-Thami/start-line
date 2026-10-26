@@ -493,6 +493,14 @@ describe('a shared plan', () => {
     expect(document.querySelector('.sparks')).toBeNull()
   })
 
+  it('opens straight onto the page it loads on, without fading it in', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    expect(screen.getByRole('main')).not.toHaveClass('view-enter')
+  })
+
   it('splits the plan into tabs and opens on this week', async () => {
     window.history.replaceState(null, '', `/${link}`)
     const { user } = setup()

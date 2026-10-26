@@ -179,6 +179,12 @@ export const api = {
     calendar: (token: string) => request<CalendarLink>('/api/v1/me/calendar', {}, token),
     /** A new calendar secret: the old link stops working. */
     resetCalendar: (token: string) => request<CalendarLink>('/api/v1/me/calendar/reset', { method: 'POST' }, token),
+    /** The runner's own picture as a data URL, or undefined when they haven't added one (the app shows their initials). */
+    photo: (token: string) => request<{ dataUrl: string } | undefined>('/api/v1/me/photo', {}, token),
+    /** Adds or replaces the runner's picture: a small JPEG data URL, already shrunk on the device. */
+    setPhoto: (token: string, dataUrl: string) =>
+      request<{ dataUrl: string }>('/api/v1/me/photo', { method: 'PUT', body: JSON.stringify({ dataUrl }) }, token),
+    removePhoto: (token: string) => request<void>('/api/v1/me/photo', { method: 'DELETE' }, token),
     plans: (token: string) => request<SavedPlanSummary[]>('/api/v1/me/plans', {}, token),
     plan: (token: string, id: string) => request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}`, {}, token),
     /** Saves as the runner's current plan. With a plan already, replaceCurrent must be true (the API answers 409 plan_active otherwise). */

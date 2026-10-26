@@ -5,10 +5,14 @@ import type { Runner } from '../../lib/types'
 import { InstallSection } from '../install/InstallApp'
 import { RemindersSection } from '../reminders/Reminders'
 import { StravaSection } from '../sync/StravaSection'
+import { PhotoPicker } from './PhotoPicker'
 import { ProfileForm } from './ProfileForm'
 import { RunSources } from './RunSources'
 
 interface Props {
+  /** The runner's picture, if they added one; the picker shows their initials otherwise. */
+  photo?: string | null
+  onPhotoChange?: (photo: string | null) => void
   runner: Runner
   onSaved: (runner: Runner) => void
   onDeleted: () => void
@@ -23,7 +27,7 @@ interface Props {
 }
 
 /** Profile, where runs come from, a copy of everything we hold, and the way out. */
-export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink }: Props) {
+export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [newCalendarLink, setNewCalendarLink] = useState(false)
@@ -71,6 +75,13 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         Account
       </h2>
       <p className="plan-focus">Signed in as {runner.email ?? runner.displayName}.</p>
+
+      {onPhotoChange && (
+        <div className="section">
+          <h3>Your picture</h3>
+          <PhotoPicker name={runner.displayName} photo={photo} onChange={onPhotoChange} />
+        </div>
+      )}
 
       <div className="section">
         <h3>Your details</h3>

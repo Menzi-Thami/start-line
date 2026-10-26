@@ -879,3 +879,14 @@
     transform: translate(-50%, 8px);
   }
 }
+
+/* A big screen: today's run beside the week, and the three running figures in a row (the page widens in app.css). */
+@media (min-width: 64rem) {
+  .home-top {
+    grid-template-columns: 3fr 2fr;
+  }
+
+  .home-tiles {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

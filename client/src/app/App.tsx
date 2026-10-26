@@ -9,6 +9,7 @@ import { useCalendarLink } from '../features/account/useCalendarLink'
 import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
+import { FindingPlan } from '../features/account/FindingPlan'
 import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
 import { ActivityPage } from '../features/activities/ActivityPage'
@@ -310,7 +311,7 @@ export function App() {
         ? { inputs: fromRequest(copy.current.inputs), plan: copy.plan.plan, savedAt: copy.savedAt }
         : null
     const own = found ? fromRequest(found.inputs) : null
-    // After this render, not inside it: the plan (or Home) takes over from the "opening" placeholder.
+    // After this render, not inside it: the plan (or Home) takes over from the page shown while the account answered.
     void Promise.resolve().then(() => {
       setLanded(true)
       if (copied?.inputs) {
@@ -740,14 +741,17 @@ export function App() {
 
         {(view === 'build' || view === 'sign-up') && (
           <>
-            {/* Wait to hear who the runner is, so a returning runner never sees the sign-up screen flash past. */}
-            {showBuilder && state.kind === 'loading' && <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />}
-            {showBuilder && state.kind !== 'loading' && opening && (
-              // "Opening" only once a plan is known to exist; until then it's still the account being checked.
-              <p className="loading-line">{currentPlan.current ? 'Opening your plan…' : 'Checking your account…'}</p>
+            {/*
+              Signed in, the account still answering (the database may be waking): the page stays usable under one line, and
+              the runner's plan opens by itself once it's found. The builder runs ungated meanwhile, so the sign-up screen
+              never flashes past a returning runner.
+            */}
+            {showBuilder && auth.account && (state.kind === 'loading' || opening) && (
+              <FindingPlan name={auth.account.name || null} onRetry={runner.refresh} onSignOut={auth.signOut} />
             )}
 
-            {showBuilder && state.kind !== 'loading' && !opening && (
+            {/* Never swapped out while the account answers, so nothing the runner did meanwhile is lost. */}
+            {showBuilder && (
               <BuilderForm
                 key={builderKey}
                 races={races}

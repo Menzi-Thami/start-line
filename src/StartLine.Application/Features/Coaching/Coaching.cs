@@ -5,6 +5,7 @@ using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Account;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Plans;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Coaching;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
@@ -51,7 +52,7 @@ internal static class CoachCalls
 
 /// <summary>
 /// Opens the runner's saved plan with the coach's calls applied. On or after a week's Monday, the coach makes that
-/// week's call from how last week went (check-ins and recorded runs) and keeps it. Only the current week is ever
+/// week's call from how last week went (check-ins, ticks included, and uploaded runs; never synced Strava runs) and keeps it. Only the current week is ever
 /// decided: weeks the runner didn't open the plan for ran as written.
 /// </summary>
 public sealed record CoachMyPlanCommand(Guid Id) : IRequest<SavedPlanDto>;
@@ -139,41 +140,31 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
         var checkIns = await db.SessionCheckIns.AsNoTracking()
             .Where(c => c.SavedPlanId == saved.Id && c.Date >= from && c.Date < to)
             .ToListAsync(cancellationToken);
+        // Uploads only: the call is kept for good, and a synced Strava run may stay seven days at most, along with anything
+        // worked out from it. A runner who ran it ticks the session, and that check-in is theirs to keep.
         var runs = await db.Activities.AsNoTracking()
-            .Visible(time.GetUtcNow())
-            .Where(a => a.RunnerId == runner.Id && a.LocalDate >= from && a.LocalDate < to)
+            .Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.LocalDate >= from && a.LocalDate < to)
             .ToListAsync(cancellationToken);
 
-        var evidence = lastWeek.Sessions
-            .Where(s => SessionCheckIn.IsCheckable(s.Type))
-            .Select(s =>
-            {
-                var checkIn = checkIns.FirstOrDefault(c => c.Date == s.Date && c.SessionType == s.Type);
-                var run = runs.FirstOrDefault(a => a.LocalDate == s.Date && a.PlannedSession?.SessionType == s.Type);
-                return new RunEvidence(s, checkIn?.Answers, run?.DistanceKm, run?.ComparedWithPlan?.Pace, run?.HeartRateDriftPercent);
-            })
-            .ToList();
+        var evidence = CoachEvidence.ForWeek(lastWeek.Sessions, checkIns, runs);
 
         var call = WeeklyCoach.Decide(week.StartDate, evidence, calls.FirstOrDefault(c => c.WeekStart == lastWeek.StartDate));
         return await WithFitnessAsync(call, runner, plan, evidence, calls, cancellationToken);
     }
 
     /// <summary>
-    /// What the runner could race this week, from the best efforts in their recent runs. Without any, how last week's
-    /// hard sessions felt nudges the paces instead. Kept with the call, because a Strava run only stays seven days.
+    /// What the runner could race this week, from the best efforts in their recent uploaded runs. Without any, how last
+    /// week's hard sessions felt nudges the paces instead. Kept with the call, so never worked out from a Strava run: those
+    /// stay seven days at most, and so must anything derived from them.
     /// </summary>
     private async Task<CoachDecision> WithFitnessAsync(
         CoachDecision call, Runner runner, TrainingPlan plan, IReadOnlyList<RunEvidence> lastWeek, IReadOnlyList<CoachDecision> calls, CancellationToken cancellationToken)
     {
         var since = call.WeekStart.AddDays(-Fitness.WindowDays);
         var runs = await db.Activities.AsNoTracking()
-            .Visible(time.GetUtcNow())
-            .Where(a => a.RunnerId == runner.Id && a.LocalDate >= since && a.LocalDate < call.WeekStart)
+            .Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.LocalDate >= since && a.LocalDate < call.WeekStart)
             .ToListAsync(cancellationToken);
-        var fitness = Fitness.Estimate(
-            plan.RaceDistance,
-            call.WeekStart,
-            runs.SelectMany(a => a.BestEfforts.Select(e => new Effort(a.LocalDate, e.DistanceMetres, e.Elapsed))));
+        var fitness = Fitness.Estimate(plan.RaceDistance, call.WeekStart, CoachEvidence.Efforts(runs));
         var previousFactor = calls.LastOrDefault(c => c.WeekStart < call.WeekStart)?.PaceFactor ?? 1;
         return call with
         {

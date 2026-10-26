@@ -44,7 +44,8 @@ public enum BodyArea
 
 /// <summary>
 /// What the runner said about one session: did they run it and how did it feel. Effort is the runner's own 1–10 scale
-/// (1 barely moving, 10 all out). The distance and time are for runs no watch or app recorded.
+/// (1 barely moving, 10 all out); a plain tick ("done", nothing more) leaves it out. The distance and time are for runs
+/// no watch or app recorded.
 /// </summary>
 public sealed record CheckInAnswers(
     CheckInStatus Status,
@@ -99,6 +100,13 @@ public sealed class SessionCheckIn
 
     public CheckInAnswers Answers => new(Status, Effort, Pain, PainArea, DistanceKm, Duration, Note);
 
+    /// <summary>
+    /// A run that happened is rated 1–10. "Done" on its own is a tick: the runner says they ran it and nothing more, so it
+    /// may come without an effort until they add one. A run cut short or swapped for an easy one always says how it felt.
+    /// </summary>
+    public static bool EffortIsValid(CheckInStatus status, int? effort) =>
+        effort is (>= MinEffort and <= MaxEffort) || (effort is null && status == CheckInStatus.Done);
+
     /// <summary>Whether a session can be checked in on at all: runs can, strength and the race itself can't.</summary>
     public static bool IsCheckable(SessionType type) => type is not (SessionType.Strength or SessionType.Race);
 
@@ -129,7 +137,7 @@ public sealed class SessionCheckIn
         }
 
         var skipped = answers.Status == CheckInStatus.Skipped;
-        if (skipped ? answers.Effort is not null : answers.Effort is not (>= MinEffort and <= MaxEffort))
+        if (skipped ? answers.Effort is not null : !EffortIsValid(answers.Status, answers.Effort))
         {
             throw new DomainException(skipped
                 ? "A skipped run has no effort to rate."

@@ -4,7 +4,8 @@ namespace StartLine.Domain.Coaching;
 
 /// <summary>
 /// The coach's call for one week of a saved plan, kept once it's made. The plan is generated from its answers and
-/// these calls, so the weeks already run never change after the fact, even when the runs behind a call have gone.
+/// these calls, so the weeks already run never change after the fact. Kept for good, so made only from what Taperday may
+/// keep for good: check-ins and uploaded runs (<see cref="CoachEvidence"/>).
 /// </summary>
 public sealed class CoachWeek
 {

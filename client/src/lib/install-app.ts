@@ -30,10 +30,36 @@ export function setUpInstall(): void {
     installed = true
     offer = null
     changed()
+    // Where notifications are already allowed (Android, after installing from our button), say hello straight away.
+    if ('Notification' in window && Notification.permission === 'granted') void showWelcomeNotification()
   })
   if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     // A failed registration changes nothing: the site works exactly as it would without one.
     window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js').catch(() => undefined))
+  }
+}
+
+const WELCOMED_KEY = 'taperday:welcome-notified'
+
+/**
+ * The one-off "Taperday is on your home screen" notification, shown by this device's service worker (no server push
+ * needed). Once per device; quietly does nothing where notifications aren't allowed or there's no service worker.
+ */
+export async function showWelcomeNotification(): Promise<boolean> {
+  try {
+    if (window.localStorage.getItem(WELCOMED_KEY)) return false
+    if (!('Notification' in window) || Notification.permission !== 'granted' || !('serviceWorker' in navigator)) return false
+    const registration = await navigator.serviceWorker.ready
+    await registration.showNotification('Taperday is on your home screen', {
+      body: 'Tap the icon any time for today’s run. Your reminders and run check-ins will come here too.',
+      icon: '/home-icon-192.png',
+      tag: 'taperday-welcome',
+      data: { url: '/' },
+    })
+    window.localStorage.setItem(WELCOMED_KEY, new Date().toISOString())
+    return true
+  } catch {
+    return false
   }
 }
 

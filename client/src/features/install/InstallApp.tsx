@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useInstallWay, type InstallWay } from '../../lib/install-app'
+import { runningInstalled, useInstallWay, type InstallWay } from '../../lib/install-app'
+import { InstalledWelcome } from './InstalledWelcome'
 
 
 /** Safari's Share icon, as it looks in the toolbar, so it's easy to spot. */
@@ -120,6 +121,8 @@ function AddButton({ way, onInstalled, big = false }: { way: InstallWay; onInsta
  */
 export function InstallCard() {
   const way = useInstallWay()
+  // Opened from the home screen: the install banner's place goes to the first-run welcome instead.
+  if (way.kind === 'installed') return runningInstalled() ? <InstalledWelcome /> : null
   if (way.kind !== 'prompt' && way.kind !== 'ios') return null
   return (
     <section className="panel install-card" aria-labelledby="install-card">

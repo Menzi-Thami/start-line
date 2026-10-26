@@ -1,21 +1,7 @@
 import { useEffect, useState } from 'react'
-import { isUp } from '../../lib/api-client'
 import { Runner } from '../shared/Runner'
-import { followWake, SCENE_MS, sceneAt, SLOW_AFTER_MS, TIP_MS, TIPS, WAKE_CHECK_MS, type WakeStep } from './wait-film'
-
-function useWakeStep(): WakeStep {
-  const [step, setStep] = useState<WakeStep>('server')
-
-  useEffect(() => {
-    let stopped = false
-    void followWake(isUp, () => new Promise((resolve) => setTimeout(resolve, WAKE_CHECK_MS)), setStep, () => stopped)
-    return () => {
-      stopped = true
-    }
-  }, [])
-
-  return step
-}
+import { SCENE_MS, sceneAt, SLOW_AFTER_MS, TIP_MS, TIPS, type WakeStep } from './wait-film'
+import { useWakeStep } from './useWakeStep'
 
 const STATUS: Record<WakeStep, string> = {
   server: 'Waking Taperday up',

@@ -220,7 +220,7 @@ describe('Home from the copy kept on this device', () => {
     expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
   })
 
-  it('still shows the wait to a runner this device hasn’t seen, with nothing to show yet', async () => {
+  it('shows a runner this device hasn’t seen the page at once, finding their plan meanwhile', async () => {
     server.use(
       http.get('*/api/v1/me', async () => {
         await delay('infinite')
@@ -231,7 +231,9 @@ describe('Home from the copy kept on this device', () => {
 
     renderApp(signedIn())
 
-    expect(await screen.findByText(/Checking your account/)).toBeInTheDocument()
+    // No waiting screen: one line says their plan is on its way, and the page under it works.
+    expect(await screen.findByText(/Finding your plan/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
   })
 })
@@ -339,6 +341,31 @@ describe('their plan from the copy kept on this device', () => {
     expect(screen.getByRole('main')).toHaveClass('view-enter')
   })
 
+  it('opens their plan by itself once the account answers, keeping the page usable until then', async () => {
+    let answer: (() => void) | undefined
+    server.use(
+      http.get('*/api/v1/me', async () => {
+        await new Promise<void>((resolve) => (answer = resolve))
+        return HttpResponse.json(thandi)
+      }),
+      http.get('*/api/v1/me/plans', () => HttpResponse.json([summary])),
+      http.get('*/api/v1/me/plans/:id', () => HttpResponse.json({ ...current, createdAt: '2026-10-08T09:00:00Z', status: 'Active', plan: planFixture })),
+      http.get('*/api/v1/me/activities', () => HttpResponse.json([])),
+    )
+    window.history.replaceState(null, '', '/')
+
+    renderApp(signedIn())
+
+    expect(await screen.findByText(/Signed in as Thandi/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
+
+    await waitFor(() => expect(answer).toBeDefined())
+    answer!()
+
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' }, { timeout: 3000 })).toBeInTheDocument()
+    expect(screen.queryByText(/Finding your plan/)).not.toBeInTheDocument()
+  })
+
   it('opens on their plan, built from its answers, when the copy here has only which plan it is', async () => {
     // Home never loaded the plan itself on this device, so it's built afresh: that needs the API, not the sleeping database.
     saveSnapshot(owner, { runner: thandi, current })
@@ -366,7 +393,7 @@ describe('their plan from the copy kept on this device', () => {
     window.history.replaceState(null, '', '/')
     renderApp(signedIn({ account: { name: 'Sipho', email: 'sipho@example.com' } }))
 
-    expect(await screen.findByText(/Checking your account/)).toBeInTheDocument()
+    expect(await screen.findByText(/Finding your plan/)).toBeInTheDocument()
     expect(screen.queryByText(/Showing your plan/)).not.toBeInTheDocument()
   })
 })

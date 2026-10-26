@@ -14,7 +14,8 @@
 .home-hello-runner {
   color: var(--accent);
   flex: none;
-  animation: home-bob 0.42s ease-in-out infinite;
+  /* A few strides as the page arrives, then still: a loop beside the greeting would pull the eye from the day's run. */
+  animation: home-bob 0.42s ease-in-out 8;
 }
 
 @keyframes home-bob {
@@ -79,6 +80,30 @@
   color: var(--muted);
 }
 
+/* The race at a glance: date, distance, and the week and phase of the plan, as small pills that wrap cleanly. */
+.home-race-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.home-race-line span {
+  padding: 3px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+
+.home-race-line span:last-child {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .home-heading {
   margin: 0 0 var(--space-3);
   font-size: 1.15rem;
@@ -127,6 +152,62 @@
   margin-top: var(--space-2);
 }
 
+/* Done today: the card takes the volt edge and the chip arrives with a small spring. */
+.home-today:has(.is-done) {
+  border-color: var(--accent);
+}
+
+.home-done-chip {
+  animation: done-pop var(--dur-emphasis) var(--ease-spring) both;
+}
+
+@keyframes done-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* How to run it and why: one tap away, so the card leads with what, how far and how fast. */
+.home-today-more {
+  width: 100%;
+}
+
+.home-today-more > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--accent-strong);
+  cursor: pointer;
+  list-style: none;
+}
+
+.home-today-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-today-more > summary::after {
+  content: '';
+  width: 0.45em;
+  height: 0.45em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--dur-base) var(--ease-standard);
+}
+
+.home-today-more[open] > summary::after {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+.home-today-more[open] > :not(summary) {
+  position: relative;
+  animation: view-in var(--dur-page) var(--ease-out);
+}
+
 .home-week-body {
   display: flex;
   align-items: center;
@@ -152,7 +233,15 @@
 .home-ring-fill {
   stroke: var(--accent);
   stroke-linecap: round;
-  transition: stroke-dasharray 0.8s var(--ease-out);
+  transition: stroke-dasharray var(--dur-fill) var(--ease-out);
+  animation: ring-fill var(--dur-fill) var(--ease-fill) 0.15s both;
+}
+
+/* From empty to the week's real distance; --ring-empty is set on the ring itself. */
+@keyframes ring-fill {
+  from {
+    stroke-dasharray: var(--ring-empty);
+  }
 }
 
 /* Your running: three figures, side by side where there's room. */
@@ -653,6 +742,12 @@
   color: var(--accent);
   font-weight: 700;
   text-align: right;
+  animation: done-pop var(--dur-emphasis) var(--ease-spring) both;
+}
+
+/* A done run's distance in volt, so the week reads at a glance. */
+.home-week-run.is-done .home-week-run-km {
+  color: var(--accent);
 }
 
 .home-week-run.is-today {

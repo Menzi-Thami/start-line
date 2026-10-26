@@ -19,6 +19,8 @@ import { setUpInstall } from './lib/install-app'
 wakeApi()
 // Taperday can be added to a home screen: catch the browser's offer before React starts, and register the service worker.
 setUpInstall()
+// A printed plan shows every session in full, folded or not.
+window.addEventListener('beforeprint', () => document.querySelectorAll('details.session-more').forEach((d) => ((d as HTMLDetailsElement).open = true)))
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing #root element')

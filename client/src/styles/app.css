@@ -2693,6 +2693,25 @@ a.menu-item {
   max-width: 10rem;
 }
 
+/* "Ran this? Tick it": a run from Strava waiting for the runner's own tick. */
+.ran-this {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  border: 1px solid var(--line);
+}
+
+.ran-this-line {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--ink-2);
+}
+
+.ran-this .field-error {
+  margin: var(--space-2) 0 0;
+}
+
 /* ---------- The coach's note on "This week" ---------- */
 .coach-note {
   margin: var(--space-3) 0 var(--space-4);
@@ -2752,7 +2771,8 @@ a.menu-item {
 
 @media print {
   .check-in-open,
-  .check-in-form {
+  .check-in-form,
+  .ran-this {
     display: none;
   }
 }

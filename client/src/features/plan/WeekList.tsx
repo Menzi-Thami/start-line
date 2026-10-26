@@ -5,6 +5,7 @@ import type { ActivitySummary, PaceZone, PaceZoneRange, PlanWeek, Session } from
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
 import { CheckInCard } from '../coaching/CheckInCard'
+import { RanThis } from '../coaching/RanThis'
 import { reviewLine, reviewWeek } from '../coaching/week-review'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { ExerciseList } from '../strength/ExerciseList'
@@ -54,13 +55,15 @@ function RunMark({ run, units, unplanned, onOpenRun }: { run: ActivitySummary; u
   )
 }
 
-function SessionItem({ session, pace, units, done, onDoneChange, coach }: {
+function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns }: {
   session: Session
   pace: PaceZoneRange | undefined
   units: Units
   done: Set<string>
   onDoneChange: (update: DoneUpdate) => void
   coach?: SessionCoach
+  /** The runner's runs on the session's day, for "Ran this? Tick it" when Strava has one. */
+  dayRuns?: readonly ActivitySummary[]
 }) {
   // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
   const [bursts, setBursts] = useState(0)
@@ -117,8 +120,11 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach }: {
         </label>
       )}
       {coach && session.type !== 'Strength' && session.type !== 'Race' && (
-        // A check-in that says the run happened ticks it off too, and a skipped one unticks it.
-        <CheckInCard session={session} coach={coach} onDone={(ran) => onDoneChange((current) => withSessionDone(current, session, ran))} />
+        <>
+          <RanThis session={session} coach={coach} runs={dayRuns} onTicked={() => onDoneChange((current) => withSessionDone(current, session, true))} />
+          {/* A check-in that says the run happened ticks it off too, and a skipped one unticks it. */}
+          <CheckInCard session={session} coach={coach} onDone={(ran) => onDoneChange((current) => withSessionDone(current, session, ran))} />
+        </>
       )}
     </div>
   )
@@ -173,6 +179,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
                     done={done}
                     onDoneChange={onDoneChange}
                     coach={coach}
+                    dayRuns={runs?.get(date)}
                   />
                 ))}
                 {marks.length > 0 && (

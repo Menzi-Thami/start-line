@@ -11,6 +11,7 @@ using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Sync;
 using StartLine.Domain.Activities;
+using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
 using StartLine.Domain.Sync;
 using ValidationException = StartLine.Application.Common.Exceptions.ValidationException;
@@ -182,7 +183,11 @@ public sealed record AccountExportDto(
     IReadOnlyList<ConnectionExportDto> Connections,
     IReadOnlyList<CheckInExportDto> CheckIns,
     IReadOnlyList<CoachExportDto> Coaching,
-    IReadOnlyList<ReminderDeviceDto> Reminders);
+    IReadOnlyList<ReminderDeviceDto> Reminders,
+    IReadOnlyList<TickPromptExportDto> TickPrompts);
+
+/// <summary>A session the runner was asked to tick, after a run from Strava matched it: the session, and nothing of the run.</summary>
+public sealed record TickPromptExportDto(Guid PlanId, DateOnly Date, SessionType SessionType);
 
 /// <summary>A coach's call as exported with the account: which plan and week it was for, then the call.</summary>
 public sealed record CoachExportDto(Guid PlanId, CoachNoteDto Call);
@@ -233,6 +238,10 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .Where(s => s.RunnerId == runner.Id)
             .OrderBy(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
+        var asked = await db.TickPrompts.AsNoTracking()
+            .Where(p => planIds.Contains(p.SavedPlanId))
+            .OrderBy(p => p.Date)
+            .ToListAsync(cancellationToken);
         return new AccountExportDto(
             RunnerDto.From(runner),
             [.. plans.Select(SavedPlanExportDto.From)],
@@ -240,7 +249,8 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             [.. connections.Select(ConnectionExportDto.From)],
             [.. checkIns.Select(c => new CheckInExportDto(c.SavedPlanId, CheckInDto.From(c)))],
             [.. coachWeeks.Select(w => new CoachExportDto(w.SavedPlanId, CoachNoteDto.From(w.ToDecision())))],
-            [.. reminders.Select(ReminderDeviceDto.From)]);
+            [.. reminders.Select(ReminderDeviceDto.From)],
+            [.. asked.Select(p => new TickPromptExportDto(p.SavedPlanId, p.Date, p.SessionType))]);
     }
 }
 

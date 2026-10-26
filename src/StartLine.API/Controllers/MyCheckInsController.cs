@@ -47,7 +47,7 @@ public sealed class MyCheckInsController(IDispatcher dispatcher) : ControllerBas
     }
 }
 
-/// <param name="Effort">1 (very easy) to 10 (all out). Required unless the run was skipped.</param>
+/// <param name="Effort">1 (very easy) to 10 (all out). Required for a run cut short or swapped; none for a skipped run; optional on a plain "Done", a tick.</param>
 /// <param name="DistanceKm">For a run no watch or app recorded.</param>
 public sealed record CheckInRequest(
     CheckInStatus Status,

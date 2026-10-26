@@ -112,7 +112,7 @@ describe('reminders in Account', () => {
 
     const toggle = await screen.findByRole('switch', { name: 'Reminders on this device' })
     expect(toggle).not.toBeChecked()
-    expect(screen.getByText(/never includes your recorded runs\s+or anything from Strava/)).toBeInTheDocument()
+    expect(screen.getByText(/asks whether to tick it.+never includes your recorded runs\./s)).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: '06:30' } })
     expect(puts).toHaveLength(0)
     await userEvent.click(toggle)

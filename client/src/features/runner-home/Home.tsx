@@ -4,9 +4,12 @@ import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
 import { runsByDate, weekEnd } from '../../lib/plan-runs'
-import type { ActivitySummary, CoachNote, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, CoachNote, LoggedRun, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import type { CurrentPlan } from '../account/useCurrentPlan'
-import { useCheckIns } from '../coaching/useCheckIns'
+import { CheckInCard } from '../coaching/CheckInCard'
+import { offersTick } from '../coaching/ran-this'
+import { RanThis } from '../coaching/RanThis'
+import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
@@ -83,6 +86,62 @@ function useHomePlan(
   }
 }
 
+/**
+ * The runs behind "Your running": sessions ticked off, at the plan's distance, and uploads. Never Strava runs, which stay
+ * 7 days. Null until it has loaded; loaded again when a tick or check-in changes it.
+ */
+function useRunningLog(version: number): LoggedRun[] | null {
+  const auth = useAuth()
+  const [log, setLog] = useState<LoggedRun[] | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    auth
+      .getToken()
+      .then((token) => (token ? api.me.running(token) : null))
+      .then((runs) => !cancelled && runs && setLog(runs))
+      // Without it the totals wait; everything else on Home still works.
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [auth, version])
+  return log
+}
+
+const dayName = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' })
+
+/** The session a "ran it?" notification opened Home on (`tick=2026-10-20.Tempo`), if any. */
+function tickFromUrl(): { date: string; type: string } | null {
+  const [date, type] = (new URLSearchParams(window.location.search).get('tick') ?? '').split('.')
+  return date && type ? { date, type } : null
+}
+
+/**
+ * The session a "ran it?" notification was about, when it isn't today's (today's is on the Today card): "Ran this? Tick
+ * it", then the usual check-in once it's ticked.
+ */
+function TickCard({ plan, today, coach, runs }: { plan: TrainingPlan | null; today: string; coach?: SessionCoach; runs: ActivitySummary[] }) {
+  const [wanted] = useState(tickFromUrl)
+  const [ticked, setTicked] = useState(false)
+  const session = wanted && plan?.weeks.flatMap((w) => w.sessions).find((s) => s.date === wanted.date && s.type === wanted.type)
+  if (!session || !coach || session.date === today || !(ticked || offersTick(session, coach, runs))) return null
+  return (
+    <section className="panel home-card" aria-labelledby="home-tick">
+      <h2 id="home-tick" className="home-card-heading">
+        {dayName.format(new Date(`${session.date}T00:00:00Z`))}’s {session.title}
+      </h2>
+      {ticked ? (
+        <>
+          <p>Ticked off. It counts towards your running now.</p>
+          <CheckInCard session={session} coach={coach} />
+        </>
+      ) : (
+        <RanThis session={session} coach={coach} runs={runs} onTicked={() => setTicked(true)} />
+      )}
+    </section>
+  )
+}
+
 const clock = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: '2-digit' })
 
 /** "from 9:14", or "from Tuesday" when the copy is from another day. */
@@ -128,12 +187,6 @@ function Tile({ label, value, unit, sub, children }: { label: string; value: str
 
 /** A distance's number alone, for a tile that shows its unit apart: "91.3". */
 const amount = (km: number, units: Units) => formatDistance(km, units).split(' ')[0]!
-
-const hoursAndMinutes = (seconds: number) => {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.round((seconds % 3600) / 60)
-  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
-}
 
 /**
  * This week as a ring: distance run against the plan's distance. Purely a picture; the words beside it say the same.
@@ -183,13 +236,13 @@ function RaceLine({ plan, week, units }: { plan: TrainingPlan; week: PlanWeek | 
  * Today's session from the runner's plan. The card and its button stay put while the plan loads, so a tap on "Open your
  * plan" always lands, however quickly it comes.
  */
-function TodayCard({ plan, today, units, runs, onOpenPlan }: { plan: TrainingPlan | null; today: string; units: Units; runs: ActivitySummary[]; onOpenPlan: () => void }) {
+function TodayCard({ plan, today, units, runs, coach, onOpenPlan }: { plan: TrainingPlan | null; today: string; units: Units; runs: ActivitySummary[]; coach?: SessionCoach; onOpenPlan: () => void }) {
   return (
     <section className="panel home-card home-today" aria-labelledby="home-today">
       <h2 id="home-today" className="home-card-heading">
         Today
       </h2>
-      {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} /> : <p className="field-help">Getting today’s session…</p>}
+      {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : <p className="field-help">Getting today’s session…</p>}
       <button type="button" className="button" onClick={onOpenPlan}>
         Open your plan
       </button>
@@ -197,7 +250,7 @@ function TodayCard({ plan, today, units, runs, onOpenPlan }: { plan: TrainingPla
   )
 }
 
-function TodaysRuns({ plan, today, units, runs }: { plan: TrainingPlan; today: string; units: Units; runs: ActivitySummary[] }) {
+function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; today: string; units: Units; runs: ActivitySummary[]; coach?: SessionCoach }) {
   const progress = planProgress(plan, today)
   const day = todayInPlan(plan, today)
   const byZone = new Map(plan.paces.map((p) => [p.zone, p]))
@@ -205,7 +258,13 @@ function TodaysRuns({ plan, today, units, runs }: { plan: TrainingPlan; today: s
     const zone = s.zone ? byZone.get(s.zone) : undefined
     return zone ? formatPaceRange(zone.fastestSecondsPerKm, zone.slowestSecondsPerKm, units) : null
   }
-  const doneToday = runs.some((r) => r.localDate === today && r.kind !== 'Other')
+  // Done is the runner's own word once their check-ins are in: a tick or check-in, or a run they uploaded. A run Strava sent
+  // alone doesn't make it done; the card asks them to tick it instead.
+  const ranToday = runs.some((r) => r.localDate === today && r.kind !== 'Other' && (!coach || r.source.kind !== 'Strava'))
+  const isDone = (s: Session) => {
+    const checkIn = coach?.get(s)
+    return checkIn ? checkIn.status !== 'Skipped' : ranToday
+  }
 
   const body = (() => {
     if (progress.kind === 'before') return <p>Your plan starts {formatDate(plan.startDate, 'long')}. Easy running until then.</p>
@@ -227,10 +286,10 @@ function TodaysRuns({ plan, today, units, runs }: { plan: TrainingPlan; today: s
     }
     // The facts first: what, how far, how fast and whether it's done. How to run it and why sit one tap away.
     return day.runs.map((s) => (
-      <div key={`${s.date}|${s.type}`} className={`home-today-run${doneToday ? ' is-done' : ''}`}>
+      <div key={`${s.date}|${s.type}`} className={`home-today-run${isDone(s) ? ' is-done' : ''}`}>
         <p className="home-today-title">
           {s.title}
-          {doneToday && <span className="chip chip-good home-done-chip">Done</span>}
+          {isDone(s) && <span className="chip chip-good home-done-chip">Done</span>}
         </p>
         <p className="mono home-today-meta">
           {s.distanceKm > 0 ? formatDistance(s.distanceKm, units) : ''}
@@ -244,6 +303,9 @@ function TodaysRuns({ plan, today, units, runs }: { plan: TrainingPlan; today: s
             <p className="home-today-why">Why: {s.purpose}</p>
           </details>
         )}
+        {coach && <RanThis session={s} coach={coach} runs={runs} />}
+        {/* Once it's ticked or checked in on, the usual check-in: how it felt, or a change of mind. */}
+        {coach?.get(s) && <CheckInCard session={s} coach={coach} />}
       </div>
     ))
   })()
@@ -277,7 +339,7 @@ function WeeklyChart({ bars, units, averageKm }: { bars: WeekBar[]; units: Units
         ))}
       </div>
       <figcaption className="field-help">
-        Bars: ran. Outline: planned. Line: 4-week average.
+        Bars: ticked and uploaded runs. Outline: planned. Line: 4-week average.
       </figcaption>
       <table className="visually-hidden">
         <caption>Weekly distance, last 12 weeks</caption>
@@ -397,8 +459,26 @@ export function Home({
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const { plan, coaching } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
-  const totals = trainingTotals(runs, today)
-  const bars = weeklyBars(runs, today, plan)
+  // A tick or check-in made here changes the totals, so they're fetched again after each.
+  const [logVersion, setLogVersion] = useState(0)
+  const log = useRunningLog(logVersion)
+  const coach: SessionCoach | undefined = checkIns.ready
+    ? {
+        today,
+        units,
+        get: checkIns.get,
+        save: async (session, answers) => {
+          await checkIns.save(session, answers)
+          setLogVersion((v) => v + 1)
+        },
+        remove: async (session) => {
+          await checkIns.remove(session)
+          setLogVersion((v) => v + 1)
+        },
+      }
+    : undefined
+  const totals = trainingTotals(log ?? [], today)
+  const bars = weeklyBars(log ?? [], today, plan)
   const week = plan?.weeks.find((w) => w.startDate <= today && today <= weekEnd(w)) ?? null
   const soFar = week ? weekSoFar(week, runs, runsByDate(runs)) : null
   const progress = plan ? planProgress(plan, today) : null
@@ -473,9 +553,10 @@ export function Home({
       </div>
 
       <div {...panel('today')}>
+        <TickCard plan={plan} today={today} coach={coach} runs={runs} />
         <div className="home-top">
           {current ? (
-            <TodayCard plan={plan} today={today} units={units} runs={runs} onOpenPlan={onOpenPlan} />
+            <TodayCard plan={plan} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} />
           ) : (
             <section className="panel home-card" aria-labelledby="home-goal">
               <h2 id="home-goal" className="home-card-heading">
@@ -530,21 +611,23 @@ export function Home({
             Your running
           </h2>
           <div className="home-tiles">
-            <Tile label="This month" value={amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} runs · ${hoursAndMinutes(totals.month.seconds)}`}>
+            <Tile label="This month" value={amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} ${totals.month.runs === 1 ? 'run' : 'runs'}`}>
               <ChangeLine
                 value={change(totals.month.km, totals.previousMonth.km)}
                 units={units}
                 against={`${formatDate(totals.previousMonth.from, 'dayMonth')}–${formatDate(totals.previousMonth.to, 'dayMonth')}`}
               />
             </Tile>
-            <Tile label="This year" value={amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} runs · ${hoursAndMinutes(totals.year.seconds)}`} />
+            <Tile label="This year" value={amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} ${totals.year.runs === 1 ? 'run' : 'runs'}`} />
             <Tile label="Weekly average" value={amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
               <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />
             </Tile>
           </div>
-          {fromStrava && (
-            <p className="field-help">Runs from Strava stay on Taperday for 7 days, as Strava asks, so these totals count uploads and this week’s Strava runs.</p>
-          )}
+          <p className="field-help">
+            {log === null && 'Adding up your running… '}
+            Counted from the runs you’ve uploaded and the sessions you’ve ticked off, each ticked one at its planned distance.
+            {fromStrava && ' Runs from Strava stay on Taperday for 7 days, as Strava asks, so they count here once you tick their session.'}
+          </p>
         </section>
 
         <section className="section home-section" aria-labelledby="home-weeks">

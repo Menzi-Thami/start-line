@@ -5002,3 +5002,32 @@ select.input option {
 .plan-reveal > :nth-child(n + 5) {
   animation-delay: 180ms;
 }
+
+/* Just signed in, the plan still on its way: one line over a page that stays usable. */
+.finding-plan {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--glass);
+  animation: view-in var(--dur-page) var(--ease-out);
+  position: relative;
+}
+
+.finding-plan .wait-spinner {
+  margin-top: 3px;
+}
+
+.finding-plan p {
+  margin: 0;
+}
+
+.finding-plan-actions {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-2) !important;
+}

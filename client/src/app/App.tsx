@@ -10,6 +10,7 @@ import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { SignInWait } from '../features/account/SignInWait'
+import { InstallCard } from '../features/install/InstallApp'
 import { ActivityPage } from '../features/activities/ActivityPage'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { MyRuns } from '../features/activities/MyRuns'
@@ -782,6 +783,7 @@ export function App() {
               )}
             </div>
 
+            {showPlan && <InstallCard />}
             {showPlan && catchingUpFrom && <CatchingUp what="plan" savedAt={catchingUpFrom} today={today} />}
 
             {/* The calendar menu: the runner's own plan subscribes to their personal feed, which follows the plan through

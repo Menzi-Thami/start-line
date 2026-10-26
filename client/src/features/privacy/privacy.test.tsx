@@ -50,7 +50,7 @@ describe('the privacy policy', () => {
     const policy = screen.getByRole('article', { name: 'Privacy policy' })
     expect(window.location.search).toBe('?view=privacy')
     expect(within(policy).getByText(/run by Thamsanqa Menzi/)).toBeInTheDocument()
-    expect(within(policy).getAllByRole('link', { name: 'paulmenzi@outlook.com' })[0]).toHaveAttribute('href', 'mailto:paulmenzi@outlook.com')
+    expect(within(policy).getAllByRole('link', { name: 'hello@taperday.run' })[0]).toHaveAttribute('href', 'mailto:hello@taperday.run')
     expect(within(policy).getByText(/Heart rate, only if you agree/)).toBeInTheDocument()
     expect(within(policy).getByText(/7 days at a time/)).toBeInTheDocument()
     expect(within(policy).getByText(/We never keep the files you upload, your route or GPS positions/)).toBeInTheDocument()

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Account;
+using StartLine.Application.Features.Calendar;
 
 namespace StartLine.API.Controllers;
 
@@ -45,6 +46,23 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
         Response.Headers.ContentDisposition = "attachment; filename=taperday-my-data.json";
         return Ok(export);
     }
+
+    /// <summary>
+    /// The secret for the runner's personal calendar feed (GET /api/v1/calendar/{token}.ics), made the first time it's asked
+    /// for. The feed always shows their current plan, so a calendar subscribed to it follows every change.
+    /// </summary>
+    [HttpGet("calendar")]
+    [ProducesResponseType<CalendarLinkDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> Calendar(CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new GetMyCalendarLinkQuery(), cancellationToken));
+
+    /// <summary>A new calendar secret. The old link stops working straight away, wherever it was added.</summary>
+    [HttpPost("calendar/reset")]
+    [ProducesResponseType<CalendarLinkDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ResetCalendar(CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new ResetMyCalendarLinkCommand(), cancellationToken));
 
     /// <summary>Deletes the runner and all their plans. Safe to repeat.</summary>
     [HttpDelete]

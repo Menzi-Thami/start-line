@@ -39,7 +39,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 
 | # | Topic | Status | Where / note |
 |---|---|---|---|
-| 17 | Secrets management | Covered | No secrets in the repo or `appsettings`. Runtime secrets in App Service settings; Strava tokens encrypted with a Key Vault-wrapped key. The VAPID private key for reminders is an App Service setting too, and devices' push endpoints (which work as keys to push to that device) are encrypted the same way as Strava tokens, kept out of logs and redacted in traces (`PushTraces`). |
+| 17 | Secrets management | Covered | No secrets in the repo or `appsettings`. Runtime secrets in App Service settings; Strava tokens encrypted with a Key Vault-wrapped key. The VAPID private key for reminders is an App Service setting too, and devices' push endpoints (which work as keys to push to that device) are encrypted the same way as Strava tokens, kept out of logs and redacted in traces (`PushTraces`). A runner's personal calendar link carries a secret token (32 random bytes) because calendar apps can't sign in: it's issued only when the runner's own plan is open, reset from Account, never exported, gone with the account, and redacted from traces like the webhook path (`SecretPaths`). |
 | 18 | .env in .gitignore | Covered | No `.env`; dev uses LocalDB trusted auth. gitleaks history scan is clean. |
 | 19 | API key rotation | Partial | Tokens rotate on refresh. App-level secrets (Strava client secret, webhook secret) are rotated by hand; see [To do](#to-do). |
 | 20 | Secret scanning | Covered | gitleaks runs in CI on every push. |

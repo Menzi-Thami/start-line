@@ -111,6 +111,12 @@ touches another host, so the API, sign-in and anyone's data are never stored by 
 drop an old cache. `sw.js` and the manifest are served `no-cache` (`staticwebapp.config.json`). The Add to home screen option
 is a one-time card on Home and a section in Account (`features/install`).
 
+A plan's own calendar feed (`GET /api/v1/plans/calendar.ics?{inputs}`) is that plan as built, forever. A signed-in runner's
+own plan subscribes instead to their personal feed, `GET /api/v1/calendar/{token}.ics` (`Features/Calendar`): anonymous, as
+calendar apps can't sign in, keyed by `Runner.CalendarToken` (made by `GET /me/calendar`, replaced by `POST /me/calendar/reset`),
+and it serves whatever plan is current, built through `PlanCoach` as opening it would, so changes, coach's calls and replans
+all reach the calendar. The token is a secret: never exported or logged, and redacted from traces (`SecretPaths`).
+
 Reminders are opt-in Web Push (`Domain/Notifications`, `Application/Features/Notifications`, `Infrastructure/Push`), per
 device, turned on in Account. `Reminders.DueDay` decides when from the plan as written and the runner's own clock: the day's run at their time
 (distance, pace, the plan's words), race day, and on a Monday a new week if they asked (last week's check-ins, this week,

@@ -26,6 +26,10 @@ internal sealed class RunnerConfiguration : IEntityTypeConfiguration<Runner>
         builder.Property(r => r.TimeZone).HasMaxLength(Runner.MaxTimeZoneLength).IsRequired();
         builder.Property(r => r.Units).HasConversion<string>().HasMaxLength(16);
         builder.Property(r => r.PrivacyNoticeVersion).HasMaxLength(32).IsRequired();
+        // The calendar feed finds its runner by this secret alone. A concurrency token too, so two first requests at
+        // once can't each hand out a link when only the last one saved would work.
+        builder.Property(r => r.CalendarToken).HasMaxLength(Runner.MaxCalendarTokenLength).IsUnicode(false).IsConcurrencyToken();
+        builder.HasIndex(r => r.CalendarToken).IsUnique().HasFilter("[CalendarToken] IS NOT NULL");
         builder.HasMany<SavedPlan>().WithOne().HasForeignKey(p => p.RunnerId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany<Activity>().WithOne().HasForeignKey(a => a.RunnerId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany<ProviderConnection>().WithOne().HasForeignKey(c => c.RunnerId).OnDelete(DeleteBehavior.Cascade);

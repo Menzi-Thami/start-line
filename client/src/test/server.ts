@@ -42,6 +42,8 @@ export const handlers = [
   // Signed-in views list uploaded runs; none by default. Tests that need runs override this.
   http.get('*/api/v1/me/activities', () => HttpResponse.json([])),
   http.get('*/api/v1/me/activities/bests', () => HttpResponse.json([])),
+  // The runs behind Home's long-term totals (ticks and uploads); none by default.
+  http.get('*/api/v1/me/running', () => HttpResponse.json([])),
   http.get('*/api/v1/me/sync/strava', () => HttpResponse.json(stravaOff)),
   // A saved plan's check-ins; none by default.
   http.get('*/api/v1/me/plans/:id/check-ins', () => HttpResponse.json([])),

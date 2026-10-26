@@ -96,9 +96,16 @@ export function CheckInCard({ session, coach, onDone }: Props) {
         {existing ? (
           <p className="check-in-summary">
             <span>{checkInSummary(existing)}</span>
-            <button type="button" className="link-button" onClick={start} aria-label={`Change how ${session.title} went`}>
-              Change
-            </button>
+            {existing.status === 'Done' && existing.effort === null ? (
+              // A tick from a run Strava sent: how it felt is the part the coach can use.
+              <button type="button" className="link-button" onClick={start} aria-label={`Add how ${session.title} felt`}>
+                Add how it felt
+              </button>
+            ) : (
+              <button type="button" className="link-button" onClick={start} aria-label={`Change how ${session.title} went`}>
+                Change
+              </button>
+            )}
           </p>
         ) : (
           <button type="button" className="button button-quiet check-in-open" onClick={start}>

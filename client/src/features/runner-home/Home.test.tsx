@@ -1,15 +1,17 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ActivitySummary, PersonalBest, Runner, TrainingPlan } from '../../lib/types'
-import { stravaOff } from '../../test/server'
+import { AuthContext, accountsOff } from '../../app/auth-context'
+import type { ActivitySummary, LoggedRun, PersonalBest, Runner, TrainingPlan } from '../../lib/types'
+import { server, stravaOff } from '../../test/server'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import plan5k from '../../test/fixtures/plan-5k.json'
 import { Home } from './Home'
 
 const thandi = { id: 'runner-1', displayName: 'Thandi', maxHeartRate: 190 } as Runner
 
-const run = (localDate: string, distanceKm: number, source: 'Upload' | 'Strava' = 'Upload'): ActivitySummary =>
+const run = (localDate: string, distanceKm: number, source: 'Upload' | 'Strava' = 'Upload', plannedSessionType: string | null = null): ActivitySummary =>
   ({
     id: `${localDate}`,
     startedAt: `${localDate}T06:00:00Z`,
@@ -19,7 +21,7 @@ const run = (localDate: string, distanceKm: number, source: 'Upload' | 'Strava' 
     movingSeconds: distanceKm * 360,
     paceSecondsPerKm: 360,
     plannedTitle: null,
-    plannedSessionType: null,
+    plannedSessionType,
     pace: null,
     averageHeartRate: null,
     source: { kind: source, viewUrl: null },
@@ -27,9 +29,12 @@ const run = (localDate: string, distanceKm: number, source: 'Upload' | 'Strava' 
 
 const tenK: PersonalBest = { name: '10K', distanceMetres: 10000, seconds: 3258, paceSecondsPerKm: 325.8, localDate: '2026-10-18', activityId: 'nelson' } as PersonalBest
 
-const renderHome = (props: Partial<Parameters<typeof Home>[0]> = {}) => {
+const signedIn = { ...accountsOff, enabled: true, getToken: () => Promise.resolve('token') }
+
+const renderHome = (props: Partial<Parameters<typeof Home>[0]> = {}, { signIn = false } = {}) => {
   const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenAccount: vi.fn() }
-  render(<Home runner={thandi} units="km" today="2026-10-23" current={null} runs={[]} {...handlers} {...props} />)
+  const home = <Home runner={thandi} units="km" today="2026-10-23" current={null} runs={[]} {...handlers} {...props} />
+  render(signIn ? <AuthContext.Provider value={signedIn}>{home}</AuthContext.Provider> : home)
   const user = userEvent.setup()
   return { ...handlers, user, openTab: (name: 'Today' | 'Tools') => user.click(screen.getByRole('tab', { name })) }
 }
@@ -126,20 +131,72 @@ describe('Home', () => {
     expect(screen.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true')
   })
 
-  it('shows their running this month, this year and week by week, from their own runs', async () => {
-    renderHome({ runs: [run('2026-10-18', 42.2), run('2026-10-02', 10), run('2026-09-05', 12)] })
+  it('shows their running this month, this year and week by week, from their uploads and ticked sessions', async () => {
+    const log: LoggedRun[] = [
+      { date: '2026-10-18', distanceKm: 42.2, source: 'Uploaded' },
+      { date: '2026-10-02', distanceKm: 10, source: 'Ticked' },
+      { date: '2026-09-05', distanceKm: 12, source: 'Uploaded' },
+    ]
+    server.use(http.get('*/api/v1/me/running', () => HttpResponse.json(log)))
+    renderHome({}, { signIn: true })
 
     const running = screen.getByRole('region', { name: 'Your running' })
-    expect(within(running).getByText('52.2')).toBeInTheDocument()
+    expect(await within(running).findByText('52.2')).toBeInTheDocument()
+    expect(within(running).getByText(/each ticked one at its planned distance/)).toBeInTheDocument()
     expect(within(running).getByText('64.2')).toBeInTheDocument()
     expect(within(running).getByText(/40.2 km \(335%\) more than 1 Sept–23 Sept/)).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Weekly distance, last 12 weeks' })).toBeInTheDocument()
   })
 
-  it('says plainly that Strava runs only stay for a week', async () => {
-    renderHome({ runs: [run('2026-10-21', 8, 'Strava')] })
+  it('never counts a Strava run in the kept totals, and says plainly why', async () => {
+    renderHome({ runs: [run('2026-10-21', 8, 'Strava')] }, { signIn: true })
 
-    expect(screen.getByText(/Runs from Strava stay on Taperday for 7 days/)).toBeInTheDocument()
+    const running = screen.getByRole('region', { name: 'Your running' })
+    expect(await within(running).findByText(/they count here once you tick their session/)).toBeInTheDocument()
+    expect(within(running).queryByText('8')).not.toBeInTheDocument()
+    expect(within(running).getAllByText('0').length).toBeGreaterThan(0)
+  })
+
+  it('offers "Ran this? Tick it" on today’s session when Strava has a run for it, and ticks it as a plain done', async () => {
+    const saved = { id: 'plan-1', name: 'Spring 5K', plan: plan5k, coaching: [] }
+    const puts: { url: string; body: unknown }[] = []
+    server.use(
+      http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json(saved)),
+      http.put('*/api/v1/me/plans/:id/check-ins/:date/:type', async ({ request }) => {
+        const body = (await request.json()) as { status: string; effort: number | null }
+        puts.push({ url: new URL(request.url).pathname, body })
+        return HttpResponse.json({ date: '2026-10-20', sessionType: 'Fartlek', status: body.status, effort: body.effort, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: '2026-10-20T08:00:00Z' })
+      }),
+    )
+    const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 6.8, 'Strava', 'Fartlek')] }, { signIn: true })
+
+    const todayCard = screen.getByRole('region', { name: 'Today' })
+    const tick = await within(todayCard).findByRole('button', { name: 'Ran this? Tick it' })
+    // Strava's run alone doesn't make it done: that's the runner's tick.
+    expect(todayCard.querySelector('.home-done-chip')).toBeNull()
+    await user.click(tick)
+
+    expect(puts).toEqual([{ url: '/api/v1/me/plans/plan-1/check-ins/2026-10-20/Fartlek', body: { status: 'Done', effort: null } }])
+    expect(await within(todayCard).findByRole('button', { name: 'Add how Fartlek felt' })).toBeInTheDocument()
+    expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
+    expect(within(todayCard).queryByRole('button', { name: 'Ran this? Tick it' })).not.toBeInTheDocument()
+  })
+
+  it('never offers the tick for an uploaded run, or before the check-ins have loaded', async () => {
+    server.use(http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json({ id: 'plan-1', name: 'Spring 5K', plan: plan5k, coaching: [] })))
+    renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 6.8, 'Upload', 'Fartlek')] })
+
+    expect(await within(screen.getByRole('region', { name: 'Today' })).findByText('Fartlek')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ran this? Tick it' })).not.toBeInTheDocument()
+  })
+
+  it('opens from a "ran it?" notification on that session, ready to tick', async () => {
+    window.history.replaceState(null, '', '/?view=home&tick=2026-10-18.LongRun')
+    server.use(http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json({ id: 'plan-1', name: 'Spring 5K', plan: plan5k, coaching: [] })))
+    renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-18', 6.2, 'Strava', 'LongRun')] }, { signIn: true })
+
+    const card = await screen.findByRole('region', { name: 'Sunday’s Long run' })
+    expect(within(card).getByRole('button', { name: 'Ran this? Tick it' })).toBeInTheDocument()
   })
 
   it('shows personal bests, each opening the run it came from', async () => {

@@ -25,8 +25,12 @@ public interface IPushSettings
 /// <summary>Where one device's pushes go, in the clear: only ever in memory, on the way to the push service.</summary>
 public sealed record PushAddress(string Endpoint, string P256dh, string Auth);
 
-/// <summary>What the service worker shows: a title, a line, and the page a tap opens. <c>Tag</c> lets a repeat replace, not stack.</summary>
-public sealed record PushMessage(string Title, string Body, string Url, string Tag);
+/// <summary>
+/// What the service worker shows: a title, a line, and the page a tap opens. <c>Tag</c> lets a repeat replace, not stack.
+/// <c>Tick</c>, on a "ran it?" prompt only, is the key for its "Tick it" button (<see cref="CheckIns.ITickTokens"/>), where
+/// the browser shows buttons on a notification.
+/// </summary>
+public sealed record PushMessage(string Title, string Body, string Url, string Tag, string? Tick = null);
 
 /// <summary>
 /// The browsers' push services (Google, Apple, Mozilla, Microsoft), as much as Taperday uses. Implemented with a Web Push

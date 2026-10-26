@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Account;
+using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.Calendar;
 
 namespace StartLine.API.Controllers;
@@ -36,6 +37,16 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AcceptPrivacy([FromBody] AcceptPrivacyNoticeCommand request, CancellationToken cancellationToken) =>
         Ok(await dispatcher.Send(request, cancellationToken));
+
+    /// <summary>
+    /// The runs behind the runner's long-term totals, this year and the last 13 weeks at least: sessions they ticked off,
+    /// at the plan's distance, and runs they uploaded, at their own. Never a synced Strava run, which is kept 7 days only.
+    /// </summary>
+    [HttpGet("running")]
+    [ProducesResponseType<IReadOnlyList<LoggedRunDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Running(CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new GetRunningLogQuery(), cancellationToken));
 
     /// <summary>Everything stored about the runner, as a downloadable file.</summary>
     [HttpGet("export")]

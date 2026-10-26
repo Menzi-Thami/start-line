@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StartLine.Application.Common;
 using StartLine.Application.Features.Activities;
+using StartLine.Application.Features.CheckIns;
 using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Races;
 using StartLine.Application.Features.Sync;
@@ -100,6 +101,7 @@ public static class DependencyInjection
         services.AddSingleton<IValidateOptions<PushOptions>, PushOptionsValidator>();
         services.AddSingleton<IPushSettings, PushSettings>();
         services.AddSingleton<IPushAddressProtector, DataProtectionPushAddressProtector>();
+        services.AddSingleton<ITickTokens, DataProtectionTickTokens>();
         services.AddSingleton<ReminderSignal>();
         services.AddTransient<MarkPushRequests>();
         // No request logging: the URL is a device's push endpoint, a secret (PushTraces keeps it out of traces too).

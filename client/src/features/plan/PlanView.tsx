@@ -21,12 +21,16 @@ import { PlanProgress } from './PlanProgress'
 import { OutlookCard } from './OutlookCard'
 import { VolumeChart } from './VolumeChart'
 import { WeekDays, WeekList } from './WeekList'
+import { PlanCalendar } from './PlanCalendar'
+import { WeekGlance } from './WeekGlance'
 import { WeekTotals } from './WeekTotals'
 
 interface Props {
   plan: TrainingPlan
   /** Just built: the race, the plan's shape and its weeks appear in turn, once, rather than all at once. */
   reveal?: boolean
+  /** A tab to switch to, from the app's own navigation (Strength in the bottom bar). A new seq switches again. */
+  openTab?: { id: string; seq: number }
   units: Units
   onUnitsChange: (units: Units) => void
   shareUrl: string
@@ -87,7 +91,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, reveal = false, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal }: Props) {
+export function PlanView({ plan, reveal = false, openTab, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -203,6 +207,14 @@ export function PlanView({ plan, reveal = false, units, onUnitsChange, shareUrl,
     const atEnd = list.scrollLeft + list.clientWidth >= list.scrollWidth
     if ((delta < 0 && !atStart) || (delta > 0 && !atEnd)) list.scrollBy({ left: delta, behavior: prefersMotion() ? 'smooth' : 'auto' })
   }, [tab])
+
+  // The app's own navigation can ask for a tab (Strength in the bottom bar); each ask switches once.
+  const [askedSeq, setAskedSeq] = useState<number | null>(null)
+  if (openTab && openTab.seq !== askedSeq) {
+    setAskedSeq(openTab.seq)
+    const asked = tabs.find((t) => t.id === openTab.id)
+    if (asked && asked.id !== tab) setTab(asked.id)
+  }
 
   const showTab = (next: number, focus = false) => {
     const target = tabs[(next + tabs.length) % tabs.length]!
@@ -422,6 +434,7 @@ export function PlanView({ plan, reveal = false, units, onUnitsChange, shareUrl,
                   onUseGoal={onUseGoal}
                 />
               )}
+              <WeekGlance week={shown.week} done={done} runs={byDate} today={today} units={units} />
               <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
               <p className="field-help">
                 Ticks are saved on this device.{' '}
@@ -434,6 +447,7 @@ export function PlanView({ plan, reveal = false, units, onUnitsChange, shareUrl,
         </div>
 
         <div {...panel('all')}>
+          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={done} />
           <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
           <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} today={today} />
         </div>

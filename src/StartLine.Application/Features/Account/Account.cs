@@ -184,7 +184,8 @@ public sealed record AccountExportDto(
     IReadOnlyList<CheckInExportDto> CheckIns,
     IReadOnlyList<CoachExportDto> Coaching,
     IReadOnlyList<ReminderDeviceDto> Reminders,
-    IReadOnlyList<TickPromptExportDto> TickPrompts);
+    IReadOnlyList<TickPromptExportDto> TickPrompts,
+    RunnerPhotoDto? Photo);
 
 /// <summary>A session the runner was asked to tick, after a run from Strava matched it: the session, and nothing of the run.</summary>
 public sealed record TickPromptExportDto(Guid PlanId, DateOnly Date, SessionType SessionType);
@@ -238,6 +239,7 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .Where(s => s.RunnerId == runner.Id)
             .OrderBy(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
+        var photo = await db.RunnerPhotos.AsNoTracking().SingleOrDefaultAsync(p => p.RunnerId == runner.Id, cancellationToken);
         var asked = await db.TickPrompts.AsNoTracking()
             .Where(p => planIds.Contains(p.SavedPlanId))
             .OrderBy(p => p.Date)
@@ -250,7 +252,8 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             [.. checkIns.Select(c => new CheckInExportDto(c.SavedPlanId, CheckInDto.From(c)))],
             [.. coachWeeks.Select(w => new CoachExportDto(w.SavedPlanId, CoachNoteDto.From(w.ToDecision())))],
             [.. reminders.Select(ReminderDeviceDto.From)],
-            [.. asked.Select(p => new TickPromptExportDto(p.SavedPlanId, p.Date, p.SessionType))]);
+            [.. asked.Select(p => new TickPromptExportDto(p.SavedPlanId, p.Date, p.SessionType))],
+            photo is null ? null : RunnerPhotoDto.From(photo));
     }
 }
 

@@ -75,6 +75,29 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
     public async Task<IActionResult> ResetCalendar(CancellationToken cancellationToken) =>
         Ok(await dispatcher.Send(new ResetMyCalendarLinkCommand(), cancellationToken));
 
+    /// <summary>The runner's picture as a data URL, or 204 when they haven't added one (the app shows their initials).</summary>
+    [HttpGet("photo")]
+    [ProducesResponseType<RunnerPhotoDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> Photo(CancellationToken cancellationToken) =>
+        await dispatcher.Send(new GetMyPhotoQuery(), cancellationToken) is { } photo ? Ok(photo) : NoContent();
+
+    /// <summary>Adds or replaces the runner's picture: a JPEG, PNG or WebP data URL of at most 96 KB.</summary>
+    [HttpPut("photo")]
+    [ProducesResponseType<RunnerPhotoDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> SetPhoto(SetMyPhotoCommand command, CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(command, cancellationToken));
+
+    /// <summary>Removes the runner's picture. Safe to repeat.</summary>
+    [HttpDelete("photo")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeletePhoto(CancellationToken cancellationToken)
+    {
+        await dispatcher.Send(new DeleteMyPhotoCommand(), cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Deletes the runner and all their plans. Safe to repeat.</summary>
     [HttpDelete]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

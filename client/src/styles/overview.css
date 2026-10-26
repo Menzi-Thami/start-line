@@ -179,6 +179,17 @@
   width: 100%;
   height: 56px;
   overflow: visible;
+  /* The trend draws itself in from the left, once, ending on this week's point. */
+  animation: spark-wipe var(--dur-fill) var(--ease-fill) 0.1s both;
+}
+
+@keyframes spark-wipe {
+  from {
+    clip-path: inset(-8px 100% -8px -8px);
+  }
+  to {
+    clip-path: inset(-8px -8px -8px -8px);
+  }
 }
 
 .sparkline-line {

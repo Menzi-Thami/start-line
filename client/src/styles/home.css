@@ -18,6 +18,11 @@
   animation: home-bob 0.42s ease-in-out 8;
 }
 
+/* Its legs and arms stop with it. */
+.home-hello-runner .limb {
+  animation-iteration-count: 12;
+}
+
 @keyframes home-bob {
   50% {
     transform: translateY(-3px);

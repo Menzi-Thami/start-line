@@ -40,12 +40,3 @@ export function loadUnits(): 'km' | 'mi' {
 export function saveUnits(units: 'km' | 'mi'): void {
   write('startline:units', units)
 }
-
-/** The runner said "Not now" to adding Taperday to their home screen on this device; Account still offers it. */
-export function loadInstallDismissed(): boolean {
-  return read('startline:install-dismissed') === '1'
-}
-
-export function saveInstallDismissed(): void {
-  write('startline:install-dismissed', '1')
-}

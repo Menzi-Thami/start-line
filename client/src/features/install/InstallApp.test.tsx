@@ -30,7 +30,7 @@ describe('adding Taperday to the home screen', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('on an iPhone, the one button opens the two taps with an arrow to Share, and Not now is remembered on this device', async () => {
+  it('on an iPhone, the one button opens the two taps with an arrow to Share, and the banner stays', async () => {
     asIphone()
     const { unmount, container } = render(<InstallCard />)
 
@@ -42,33 +42,21 @@ describe('adding Taperday to the home screen', () => {
     await userEvent.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('button', { name: 'Not now' }))
-    expect(screen.queryByRole('region', { name: 'Put Taperday on your home screen' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Put Taperday on your home screen' })).toBeInTheDocument()
 
     unmount()
     render(<InstallCard />)
-    expect(screen.queryByRole('region', { name: 'Put Taperday on your home screen' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Put Taperday on your home screen' })).toBeInTheDocument()
   })
 
-  it('asks again two weeks after Not now, and treats an old "never again" as expired', () => {
+  it('always shows until it’s installed: no Not now, and an old Not now from before is ignored', () => {
     asIphone()
-    const twoWeeks = 14 * 24 * 60 * 60 * 1000
-    const banner = () => screen.queryByRole('region', { name: 'Put Taperday on your home screen' })
-
-    window.localStorage.setItem('startline:install-dismissed', new Date(Date.now() - twoWeeks + 60_000).toISOString())
-    const { unmount } = render(<InstallCard />)
-    expect(banner()).not.toBeInTheDocument()
-    unmount()
-
-    window.localStorage.setItem('startline:install-dismissed', new Date(Date.now() - twoWeeks - 60_000).toISOString())
-    const second = render(<InstallCard />)
-    expect(banner()).toBeInTheDocument()
-    expect(screen.getByText(/full screen like an app/)).toBeInTheDocument()
-    second.unmount()
-
     window.localStorage.setItem('startline:install-dismissed', '1')
     render(<InstallCard />)
-    expect(banner()).toBeInTheDocument()
+
+    expect(screen.getByRole('region', { name: 'Put Taperday on your home screen' })).toBeInTheDocument()
+    expect(screen.getByText(/full screen like an app/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Not now' })).not.toBeInTheDocument()
   })
 
   it('installs in one tap where the browser offers it, then says it’s on the home screen', async () => {

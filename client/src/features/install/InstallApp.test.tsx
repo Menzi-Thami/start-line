@@ -50,6 +50,27 @@ describe('adding Taperday to the home screen', () => {
     expect(screen.queryByRole('region', { name: 'Put Taperday on your home screen' })).not.toBeInTheDocument()
   })
 
+  it('asks again two weeks after Not now, and treats an old "never again" as expired', () => {
+    asIphone()
+    const twoWeeks = 14 * 24 * 60 * 60 * 1000
+    const banner = () => screen.queryByRole('region', { name: 'Put Taperday on your home screen' })
+
+    window.localStorage.setItem('startline:install-dismissed', new Date(Date.now() - twoWeeks + 60_000).toISOString())
+    const { unmount } = render(<InstallCard />)
+    expect(banner()).not.toBeInTheDocument()
+    unmount()
+
+    window.localStorage.setItem('startline:install-dismissed', new Date(Date.now() - twoWeeks - 60_000).toISOString())
+    const second = render(<InstallCard />)
+    expect(banner()).toBeInTheDocument()
+    expect(screen.getByText(/full screen like an app/)).toBeInTheDocument()
+    second.unmount()
+
+    window.localStorage.setItem('startline:install-dismissed', '1')
+    render(<InstallCard />)
+    expect(banner()).toBeInTheDocument()
+  })
+
   it('installs in one tap where the browser offers it, then says it’s on the home screen', async () => {
     const prompt = vi.fn(() => Promise.resolve())
     render(

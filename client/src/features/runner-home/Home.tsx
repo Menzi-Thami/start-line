@@ -413,6 +413,8 @@ export function Home({
         </p>
       )}
 
+      <InstallCard />
+
       <div className="tabs home-tabs" role="tablist" aria-label="Home" onKeyDown={onTabKey}>
         {HOME_TABS.map((t, i) => (
           <button
@@ -483,7 +485,6 @@ export function Home({
           <YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />
         )}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
-        <InstallCard />
 
         <section className="section home-section" aria-labelledby="home-training">
           <h2 id="home-training" className="home-heading">

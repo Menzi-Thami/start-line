@@ -82,9 +82,13 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns 
         <span className="session-title">{session.title}</span>
         {numbers.length > 0 && <span className="session-numbers">{numbers.join(' · ')}</span>}
       </div>
-      <p className="session-detail">{session.detail}</p>
-      <SessionSteps steps={session.steps} units={units} />
-      <p className="session-why">Why: {session.purpose}</p>
+      {/* Compact: the session's name and numbers lead; how to run it and why open from the chevron (and always print). */}
+      <details className="session-more">
+        <summary>How to run it</summary>
+        <p className="session-detail">{session.detail}</p>
+        <SessionSteps steps={session.steps} units={units} />
+        <p className="session-why">Why: {session.purpose}</p>
+      </details>
       {session.exercises.length > 0 && (
         <div className="strength-moves">
           <p className="strength-moves-head">

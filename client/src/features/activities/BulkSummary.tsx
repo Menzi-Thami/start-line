@@ -39,13 +39,20 @@ interface Props {
   onStop: () => void
 }
 
+/** Every file looked at so far, whatever became of it. A zip is read as it goes, so there's no total to count towards. */
+const checked = (progress: BulkProgress) => Object.values(progress).reduce((sum, n) => sum + n, 0)
+
 /** Progress while files go up, then one plain summary and the files that need a look. */
 export function BulkSummary({ running, progress, result, error, onStop }: Props) {
   if (running) {
     return (
       <div className="bulk-progress" aria-live="polite">
         <p>
-          <strong>Reading your files…</strong> {plural(progress.Imported, 'run')} added so far.
+          <span className="wait-spinner" aria-hidden="true" />
+          <span>
+            <strong>Reading your files…</strong> {plural(progress.Imported, 'run')} added so far
+            {checked(progress) > progress.Imported && `, from ${plural(checked(progress), 'file')} checked`}.
+          </span>
         </p>
         <button type="button" className="button button-quiet" onClick={onStop}>
           Stop

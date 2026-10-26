@@ -107,7 +107,7 @@ export function PrivacyUpdate({ runner, onAccepted, onOpenAccount }: UpdateProps
         </label>
         <HeartRateConsentField checked={heartRate} onChange={setHeartRate} />
         <div className="submit-row" style={{ marginTop: 'var(--space-4)' }}>
-          <button type="button" className="button button-primary" disabled={status.kind === 'saving'} onClick={() => void accept()}>
+          <button type="button" className="button button-primary" disabled={status.kind === 'saving'} aria-busy={status.kind === 'saving'} onClick={() => void accept()}>
             {status.kind === 'saving' ? 'Saving…' : 'Accept and carry on'}
           </button>
           <button type="button" className="link-button" onClick={onOpenAccount}>

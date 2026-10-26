@@ -151,11 +151,11 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
       )}
 
       <div className="submit-row" style={{ marginTop: 'var(--space-4)' }}>
-        <button type="submit" className="button button-primary" disabled={status.kind === 'saving'}>
+        <button type="submit" className="button button-primary" disabled={status.kind === 'saving'} aria-busy={status.kind === 'saving'}>
           {status.kind === 'saving' ? 'Saving…' : signingUp ? submitLabel : 'Save changes'}
         </button>
         <span aria-live="polite">
-          {status.kind === 'saved' && !signingUp && <span className="field-help">Saved.</span>}
+          {status.kind === 'saved' && !signingUp && <span className="chip chip-good pop-in">Saved</span>}
           {status.kind === 'error' && <span className="field-error">{status.message}</span>}
         </span>
       </div>

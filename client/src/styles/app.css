@@ -185,12 +185,13 @@ select {
   align-items: center;
   gap: var(--space-6);
   position: relative;
-  /* Speed lines stream past behind the headline. */
+  /* Speed lines stream past behind the headline for a few passes as the page arrives, then hold still, so they set the
+   * pace without competing with the words. One pass ends where it began, so the stop doesn't jump. */
   background:
     repeating-linear-gradient(0deg, transparent 0 37px, rgba(215, 255, 62, 0.05) 37px 38px),
     repeating-linear-gradient(90deg, transparent 0 140px, rgba(255, 255, 255, 0.035) 140px 220px, transparent 220px 380px);
   background-size: 100% 100%, 760px 100%;
-  animation: speed-lines 3.2s linear infinite;
+  animation: speed-lines 3.2s linear 3;
   border-bottom: 0;
   padding: var(--space-5) 0 var(--space-6);
 }
@@ -309,6 +310,11 @@ select {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   animation: ticker 40s linear infinite;
+}
+
+/* The band keeps moving, as a stadium ticker does, but holds still under a pointer so it can be read. */
+.ticker:hover .ticker-track {
+  animation-play-state: paused;
 }
 
 .ticker-track span {
@@ -1177,7 +1183,7 @@ select {
   padding: var(--space-4) var(--space-4) var(--space-5);
   border-radius: var(--radius-md);
   transform-origin: 50% 0;
-  animation: bib-hang 4.6s ease-in-out infinite alternate;
+  animation: bib-hang 4.6s ease-in-out both;
   box-shadow: 0 14px 30px rgb(0 0 0 / 0.45);
   transition: box-shadow var(--dur-quick) var(--ease-standard);
 }
@@ -1187,12 +1193,22 @@ select {
   animation: bib-swing 0.8s cubic-bezier(0.3, 0.1, 0.3, 1) infinite alternate;
 }
 
+/* Pinned on, it sways and comes to rest: the runner is reading the race list, so it shouldn't keep moving. */
 @keyframes bib-hang {
-  from {
+  0% {
     transform: rotate(-2.5deg);
   }
-  to {
+  30% {
     transform: rotate(2.5deg);
+  }
+  60% {
+    transform: rotate(-1.2deg);
+  }
+  80% {
+    transform: rotate(0.5deg);
+  }
+  100% {
+    transform: rotate(0deg);
   }
 }
 
@@ -3850,6 +3866,15 @@ a.menu-item {
   height: 8px;
   border-radius: 999px;
   background: var(--effort-easy);
+  transform-origin: 0 50%;
+  animation: grow-across var(--dur-fill) var(--ease-fill) both;
+}
+
+/* A bar arriving: from nothing to its real length, once, as the page opens. */
+@keyframes grow-across {
+  from {
+    transform: scaleX(0);
+  }
 }
 
 .split-quickest .split-bar {
@@ -3925,6 +3950,8 @@ a.menu-item {
   display: block;
   height: 100%;
   border-radius: 999px;
+  transform-origin: 0 50%;
+  animation: grow-across var(--dur-fill) var(--ease-fill) 0.1s both;
 }
 
 .hr-zone-fill[data-zone='1'] {

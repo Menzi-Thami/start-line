@@ -10,6 +10,8 @@ export interface CalendarLinks {
   outlook: string
   /** The feed itself, for anything else that subscribes by URL. */
   feed: string
+  /** The runner's personal feed, which follows their current plan through every change, rather than this plan's link. */
+  personal: boolean
 }
 
 /**
@@ -26,12 +28,25 @@ export function calendarLinks(request: GeneratePlanRequest, units: Units, name: 
   }
   if (units === 'mi') query.append('units', 'mi')
 
-  const feed = `${apiBase.replace(/\/$/, '')}/api/v1/plans/calendar.ics?${query}`
+  return subscribe(`${apiBase.replace(/\/$/, '')}/api/v1/plans/calendar.ics?${query}`, name, false)
+}
+
+/**
+ * Links to the runner's personal feed (GET /api/v1/calendar/{token}.ics), for their own current plan. The feed always
+ * shows whatever plan is current, the coach's calls and a replan included, in the units chosen in Account, so a calendar
+ * subscribed once never goes out of date.
+ */
+export function personalCalendarLinks(token: string, name: string, apiBase: string): CalendarLinks {
+  return subscribe(`${apiBase.replace(/\/$/, '')}/api/v1/calendar/${encodeURIComponent(token)}.ics`, name, true)
+}
+
+function subscribe(feed: string, name: string, personal: boolean): CalendarLinks {
   const webcal = feed.replace(/^https?:\/\//, 'webcal://')
   return {
     apple: webcal,
     google: `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcal)}`,
     outlook: `https://outlook.live.com/calendar/0/addfromweb?url=${encodeURIComponent(feed)}&name=${encodeURIComponent(`Taperday: ${name}`)}`,
     feed,
+    personal,
   }
 }

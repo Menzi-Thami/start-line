@@ -58,6 +58,7 @@ export type PaceVerdict = Schemas['PaceVerdict']
 export type StravaStatus = Schemas['StravaStatusDto']
 export type StravaDisconnected = Schemas['StravaDisconnectedDto']
 export type Reminders = Schemas['RemindersDto']
+export type CalendarLink = Schemas['CalendarLinkDto']
 export type ReminderDevice = Schemas['ReminderDeviceDto']
 export type TurnOnRemindersRequest = Schemas['TurnOnRemindersCommand']
 

@@ -5,6 +5,7 @@ import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
+import { useCalendarLink } from '../features/account/useCalendarLink'
 import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
@@ -20,7 +21,7 @@ import { Replan } from '../features/plan/Replan'
 import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
 import { useSyncedRuns } from '../features/sync/useSyncedRuns'
 import { api, ApiError, apiOrigin } from '../lib/api-client'
-import { calendarLinks } from '../lib/calendar-links'
+import { calendarLinks, personalCalendarLinks } from '../lib/calendar-links'
 import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/home-snapshot'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
@@ -228,6 +229,8 @@ export function App() {
   const savedOnScreen =
     plan.kind === 'ready' && currentPlan.current && samePlan(toRequest(plan.inputs), currentPlan.current.inputs) ? currentPlan.current.id : null
   const checkIns = useCheckIns(savedOnScreen)
+  // On the runner's own plan, the calendar menu subscribes to their personal feed, which follows every change to it.
+  const calendarLink = useCalendarLink(owner, savedOnScreen !== null)
 
   // The runner's own plan opens as the coach has it: on or after Monday the coach makes this week's call, and its note
   // shows on "This week". A plan from a link, or anyone else's, is the plan as written.
@@ -644,6 +647,7 @@ export function App() {
             stravaConnecting={stravaConnecting}
             onSaved={runner.setRunner}
             onOpenRuns={() => go('runs')}
+            onNewCalendarLink={calendarLink.replace}
             onDeleted={() => {
               go('build')
               auth.signOut()
@@ -730,6 +734,8 @@ export function App() {
               )}
             </div>
 
+            {/* The calendar menu: the runner's own plan subscribes to their personal feed, which follows the plan through
+                every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}
             {showPlan && (
               <PlanView
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
@@ -737,7 +743,11 @@ export function App() {
                 units={units}
                 onUnitsChange={changeUnits}
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
-                calendar={calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())}
+                calendar={
+                  savedOnScreen && calendarLink.token
+                    ? personalCalendarLinks(calendarLink.token, plan.plan.race.name, apiOrigin())
+                    : calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())
+                }
                 today={today}
                 runs={state.kind === 'ready' ? runs : undefined}
                 bests={state.kind === 'ready' ? synced.bests : undefined}

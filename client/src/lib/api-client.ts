@@ -4,6 +4,7 @@ import type {
   Activity,
   ActivitySummary,
   BulkImport,
+  CalendarLink,
   CheckIn,
   CheckInRequest,
   GeneratePlanRequest,
@@ -173,6 +174,10 @@ export const api = {
       request<Runner>('/api/v1/me/privacy', { method: 'PUT', body: JSON.stringify(body) }, token),
     exportData: (token: string) => request<unknown>('/api/v1/me/export', {}, token),
     remove: (token: string) => request<void>('/api/v1/me', { method: 'DELETE' }, token),
+    /** The secret for the runner's personal calendar feed, made the first time it's asked for. */
+    calendar: (token: string) => request<CalendarLink>('/api/v1/me/calendar', {}, token),
+    /** A new calendar secret: the old link stops working. */
+    resetCalendar: (token: string) => request<CalendarLink>('/api/v1/me/calendar/reset', { method: 'POST' }, token),
     plans: (token: string) => request<SavedPlanSummary[]>('/api/v1/me/plans', {}, token),
     plan: (token: string, id: string) => request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}`, {}, token),
     /** Saves as the runner's current plan. With a plan already, replaceCurrent must be true (the API answers 409 plan_active otherwise). */

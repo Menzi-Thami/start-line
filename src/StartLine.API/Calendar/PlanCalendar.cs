@@ -22,19 +22,7 @@ internal static class PlanCalendar
         var unit = miles ? "mi" : "km";
         var paces = plan.Paces.ToDictionary(p => p.Zone);
         var stamp = now.UtcDateTime.ToString("yyyyMMdd'T'HHmmss'Z'", CultureInfo.InvariantCulture);
-        var lines = new List<string>
-        {
-            "BEGIN:VCALENDAR",
-            "VERSION:2.0",
-            "PRODID:-//Taperday//Training plan//EN",
-            "CALSCALE:GREGORIAN",
-            "METHOD:PUBLISH",
-            $"X-WR-CALNAME:{Escape($"Taperday: {plan.Race.Name}")}",
-            // How often a subscribed calendar should check for changes. Apple and Outlook honour these; Google
-            // refreshes on its own schedule.
-            "REFRESH-INTERVAL;VALUE=DURATION:P1D",
-            "X-PUBLISHED-TTL:P1D",
-        };
+        var lines = Header($"Taperday: {plan.Race.Name}");
 
         foreach (var week in plan.Weeks)
         {
@@ -65,6 +53,31 @@ internal static class PlanCalendar
             }
         }
 
+        return Finish(lines);
+    }
+
+    /// <summary>
+    /// A valid calendar with no runs, for a personal feed whose runner has no current plan: the subscription stays, and
+    /// fills in again when they make one.
+    /// </summary>
+    public static string Empty() => Finish(Header("Taperday"));
+
+    private static List<string> Header(string name) =>
+    [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Taperday//Training plan//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        $"X-WR-CALNAME:{Escape(name)}",
+        // How often a subscribed calendar should check for changes. Apple and Outlook honour these; Google
+        // refreshes on its own schedule.
+        "REFRESH-INTERVAL;VALUE=DURATION:P1D",
+        "X-PUBLISHED-TTL:P1D",
+    ];
+
+    private static string Finish(List<string> lines)
+    {
         lines.Add("END:VCALENDAR");
 
         var ics = new StringBuilder();

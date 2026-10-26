@@ -19,6 +19,12 @@ public sealed class Runner
     public const int MaxEmailLength = 254;
     public const int MaxTimeZoneLength = 64;
 
+    /// <summary>Longest calendar link secret kept. The app issues 43 characters (32 random bytes, base64url).</summary>
+    public const int MaxCalendarTokenLength = 64;
+
+    /// <summary>Shortest accepted, so a link can't be guessed: 24 characters of base64url is 144 bits.</summary>
+    public const int MinCalendarTokenLength = 24;
+
     private Runner()
     {
     }
@@ -56,6 +62,12 @@ public sealed class Runner
 
     /// <summary>When the runner last gave or withdrew heart-rate consent.</summary>
     public DateTimeOffset? HeartRateConsentChangedAt { get; private set; }
+
+    /// <summary>
+    /// The secret in the runner's personal calendar link, which always shows their current plan. Calendar apps can't sign
+    /// in, so whoever has the link can read the plan: it's issued only when asked for, and a reset stops the old link working.
+    /// </summary>
+    public string? CalendarToken { get; private set; }
 
     public DateTimeOffset CreatedAt { get; private set; }
 
@@ -152,4 +164,28 @@ public sealed class Runner
         WeeklyEmails = weeklyEmails;
         MaxHeartRate = maxHeartRate;
     }
+
+    /// <summary>The runner's calendar link secret: the one they have, or this new one when they have none yet.</summary>
+    public string IssueCalendarToken(string token)
+    {
+        CalendarToken ??= Checked(token);
+        return CalendarToken;
+    }
+
+    /// <summary>Replaces the calendar link secret, so the old link stops working.</summary>
+    public void ResetCalendarToken(string token)
+    {
+        var next = Checked(token);
+        if (string.Equals(next, CalendarToken, StringComparison.Ordinal))
+        {
+            throw new DomainException("A new calendar link needs a new secret.");
+        }
+
+        CalendarToken = next;
+    }
+
+    private static string Checked(string token) =>
+        token is { Length: >= MinCalendarTokenLength and <= MaxCalendarTokenLength } && !token.Any(char.IsWhiteSpace)
+            ? token
+            : throw new DomainException($"A calendar link secret is {MinCalendarTokenLength} to {MaxCalendarTokenLength} characters, with no spaces.");
 }

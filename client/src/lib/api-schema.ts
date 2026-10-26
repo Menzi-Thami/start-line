@@ -4,6 +4,52 @@
  */
 
 export interface paths {
+    "/api/v1/calendar/{token}.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/calendar": string;
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/calendar": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me": {
         parameters: {
             query?: never;
@@ -192,6 +238,102 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CalendarLinkDto"];
+                        "application/json": components["schemas"]["CalendarLinkDto"];
+                        "text/json": components["schemas"]["CalendarLinkDto"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/calendar/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CalendarLinkDto"];
+                        "application/json": components["schemas"]["CalendarLinkDto"];
+                        "text/json": components["schemas"]["CalendarLinkDto"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -1024,7 +1166,6 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Whether reminders can be turned on (and the key a browser subscribes with), and the runner's devices that have them. */
         get: {
             parameters: {
                 query?: never;
@@ -1063,7 +1204,6 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Turns reminders on for this device, or changes its time. */
         put: {
             parameters: {
                 query?: never;
@@ -1142,7 +1282,6 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Turns reminders off for one device and forgets its push address. Safe to repeat. */
         delete: {
             parameters: {
                 query?: never;
@@ -1613,6 +1752,7 @@ export interface components {
             connections: components["schemas"]["ConnectionExportDto"][];
             checkIns: components["schemas"]["CheckInExportDto"][];
             coaching: components["schemas"]["CoachExportDto"][];
+            reminders: components["schemas"]["ReminderDeviceDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -1694,6 +1834,9 @@ export interface components {
             status: components["schemas"]["ImportStatus"];
             message: null | string;
             activity: null | components["schemas"]["ActivitySummaryDto"];
+        };
+        CalendarLinkDto: {
+            token: string;
         };
         CheckInDto: {
             /** Format: date */

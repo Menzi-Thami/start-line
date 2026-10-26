@@ -316,6 +316,27 @@ describe('their plan from the copy kept on this device', () => {
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
   })
 
+  it('fades a page in when the runner moves to it', async () => {
+    saveSnapshot(owner, { runner: thandi, current })
+    server.use(
+      http.get('*/api/v1/me', () => HttpResponse.json(thandi)),
+      http.get('*/api/v1/me/plans', () => HttpResponse.json([summary])),
+      http.get('*/api/v1/me/plans/:id', () => HttpResponse.json({ ...current, createdAt: '2026-10-08T09:00:00Z', status: 'Active', plan: planFixture })),
+      http.post('*/api/v1/me/plans/:id/coach', () =>
+        HttpResponse.json({ ...current, createdAt: '2026-10-08T09:00:00Z', status: 'Active', plan: planFixture, coaching: [] }),
+      ),
+      http.get('*/api/v1/me/activities', () => HttpResponse.json([])),
+    )
+    window.history.replaceState(null, '', '/')
+    const user = userEvent.setup()
+
+    renderApp(signedIn())
+
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'My runs' }))
+    expect(screen.getByRole('main')).toHaveClass('view-enter')
+  })
+
   it('still opens on Home for a runner whose copy has no plan to show', async () => {
     // Home never loaded the plan itself on this device, so there's nothing to open it from.
     saveSnapshot(owner, { runner: thandi, current })

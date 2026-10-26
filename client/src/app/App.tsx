@@ -87,6 +87,14 @@ export function App() {
   // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
   const [initial, setInitial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
   const [view, setView] = useState<View>(viewFromUrl)
+  // Moving to another page fades its content in. The page you load on is left alone: there's nothing to move from, and
+  // the intro has its own entrance.
+  const [shownView, setShownView] = useState(view)
+  const [navigated, setNavigated] = useState(false)
+  if (view !== shownView) {
+    setShownView(view)
+    setNavigated(true)
+  }
   const [openRun, setOpenRun] = useState<OpenRun | null>(runFromUrl)
   // Strava's answer when the runner comes back from connecting, read once and handled when they're signed in.
   const [stravaCallback] = useState(() => readStravaCallback(window.location))
@@ -590,7 +598,7 @@ export function App() {
         )}
       </header>
 
-      <main>
+      <main key={view} className={navigated ? 'view-enter' : undefined}>
         {auth.error && (
           <div className="callout" role="alert">
             <p>

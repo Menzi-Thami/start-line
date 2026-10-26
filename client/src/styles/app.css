@@ -1881,7 +1881,7 @@ a.menu-item {
   color: var(--ink);
 }
 
-/* Four tabs fit across a phone without scrolling sideways. */
+/* A couple of tabs fit across a phone, so they share the width. */
 @media (max-width: 30rem) {
   .tabs {
     gap: 0;
@@ -1894,9 +1894,85 @@ a.menu-item {
   }
 }
 
+/*
+ * The plan has up to six tabs, more than a phone holds. They sit in a frame (the glass pill) around a row that scrolls
+ * sideways: every tab keeps its whole label, and the edge with more tabs beyond it fades. The fade width matches
+ * TAB_FADE_PX in lib/tab-scroll.ts, which keeps a chosen tab clear of it.
+ */
+.tabs-frame {
+  padding: 0;
+  overflow: hidden;
+}
+
+.tabs-scroll {
+  --fade-start: 0px;
+  --fade-end: 0px;
+
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-1);
+  padding: 5px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent 100%);
+}
+
+.tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs-scroll[data-fade='start'],
+.tabs-scroll[data-fade='both'] {
+  --fade-start: 28px;
+}
+
+.tabs-scroll[data-fade='end'],
+.tabs-scroll[data-fade='both'] {
+  --fade-end: 28px;
+}
+
+.tabs-scroll .tab {
+  flex: 1 0 auto;
+}
+
+@media (max-width: 30rem) {
+  .tabs-scroll {
+    gap: 0;
+  }
+
+  .tabs-scroll .tab {
+    padding: 0 var(--space-2);
+  }
+}
+
 .tab[aria-selected='true'] {
   background: var(--accent);
   color: var(--on-accent);
+}
+
+/*
+ * A page arriving: the content fades in and rises a few pixels when the view changes. The rise moves `top` rather than
+ * a transform, because a transform would make the page the container of anything fixed to the screen (the sign-up
+ * celebration, the install guide) for the length of the animation. Reduced motion switches it off with the rest.
+ */
+.view-enter {
+  position: relative;
+  animation: view-in var(--dur-page) var(--ease-out);
+}
+
+@keyframes view-in {
+  from {
+    opacity: 0;
+    top: 8px;
+  }
+
+  to {
+    opacity: 1;
+    top: 0;
+  }
 }
 
 /* Clips the sideways slide between tabs without trapping focus rings. */

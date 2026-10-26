@@ -28,6 +28,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
+    public DbSet<TickPrompt> TickPrompts => Set<TickPrompt>();
+
     /// <summary>The Data Protection key ring that encrypts Strava tokens. Wrapped by Key Vault in Azure.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

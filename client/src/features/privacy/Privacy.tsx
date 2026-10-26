@@ -20,7 +20,8 @@ export function PrivacyNoticeSummary() {
         <li>Heart rate only if you agree below. It’s health information, so it’s your choice.</li>
         <li>
           Reminders only if you turn them on in Account: your device’s push address, kept encrypted. They say what your plan has for the
-          day and, on Mondays, the week ahead and how many runs you checked in. Never your recorded runs or anything from Strava.
+          day and, on Mondays, the week ahead and how many runs you checked in. If a run from Strava matches a planned session, one asks
+          whether to tick that session. Never your recorded runs.
         </li>
         <li>Sign-in is handled by Microsoft, so we never see a password. We don’t sell your data, show ads or use AI.</li>
         <li>You can download everything we hold, or delete it all, from Account at any time.</li>
@@ -166,7 +167,9 @@ export function PrivacyPolicy() {
           </li>
           <li>
             <strong>Strava, if you connect it:</strong> your Strava athlete id, what you allowed us to read, and the access tokens, which
-            are encrypted.
+            are encrypted. When a run from Strava matches a planned session, we note that we asked you to tick it (the session only,
+            nothing from the run) and forget that note within 7 days. A session you tick is your own check-in and stays with your plan;
+            your running totals count ticked sessions and uploads, never runs from Strava.
           </li>
           <li>
             <strong>Reminders, only if you turn them on:</strong> for each device you turn them on for, the push address and keys your
@@ -213,8 +216,8 @@ export function PrivacyPolicy() {
             Your browser’s push service, only if you turn reminders on: Google (Chrome, Edge on Android, Android), Apple (Safari, iPhone and
             iPad), Mozilla (Firefox) or Microsoft (Edge on Windows) carries each reminder to your device. A reminder says what your plan has for
             the day, such as “Today: Easy run, 6 km at 5:50–6:20/km”, your race plan and goal pace on race day, and, if you want the Monday
-            note, the week ahead and how many of last week’s runs you checked in. Never your recorded runs, heart rate or anything from
-            Strava.
+            note, the week ahead and how many of last week’s runs you checked in. If a run from Strava matches a planned session you haven’t
+            checked in on, one asks whether to tick that session, such as “Ran Tuesday’s Tempo?”. Never your recorded runs or heart rate.
           </li>
         </ul>
         <p>

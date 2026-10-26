@@ -26,7 +26,34 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
   worker pass. Reading "refreshed at least every 7 days" as compliant is Taperday's interpretation, sent to Strava
   for confirmation before going past single-athlete mode.
 - **5.4: no combining Strava Data with other customer data.** Uploads and synced runs are never merged: an upload
-  of a synced run replaces the copy, and a synced copy of an uploaded run is skipped.
+  of a synced run replaces the copy, and a synced copy of an uploaded run is skipped. The long-term totals on Home
+  ("Your running": this month, this year, the weekly average and the 12-week chart) are built only from what Taperday
+  may keep (see below), so a synced run is never added into them. The 7-day views (a plan day's run mark, This week's
+  ring, Overview) still show synced runs while they're cached, apart from the kept totals.
+- **5.3 and 5.5: derived data.** Anything "derived from, aggregated from ... or generated using Strava Data" is held to
+  the same 7 days, and none of it goes in a lasting index. So nothing Taperday keeps for good is worked out from a synced
+  run:
+  - **The coach's weekly call** (`CoachWeek`, kept for good so a plan never changes after the fact) is made only from
+    check-ins and uploaded runs (`CoachEvidence`): no synced run counts as evidence, and the fitness estimate behind a
+    call's paces uses uploads' best efforts only. Calls made before 26 Oct 2026 may have used a synced run.
+  - **The running totals** (`RunningLog`, `GET /me/running`) count ticked sessions at their planned distance (the
+    runner's own distance if they gave one; half for a run cut short, as the coach counts it) and uploads at their
+    measured distance. A day with an upload counts the upload and none of that day's ticks, so nothing counts twice.
+- **The tick: the runner's own data.** A synced run doesn't count for good; the runner's word that they ran the session
+  does. When a run that matches a planned session arrives, the plan shows "Ran this? Tick it" on that session (and on
+  Home's Today card) until it's checked in on. A tap saves a plain "Done" check-in with no effort, through the usual
+  check-in API; the usual check-in follows to add how it felt. **Taperday never ticks a session itself**: a tick is
+  always a tap by the runner, in the app or on the notification below.
+- **The "ran it?" push.** For runners with reminders on, a synced run that matches a planned session with no check-in
+  sends one push (`TickPrompter`, from the sync pass): "Ran Tuesday's Tempo?", which opens Home on that session ready
+  to tick (`/?view=home&tick=2026-10-20.Tempo`). Where the browser shows notification buttons (Android, desktop
+  Chrome and Edge), "Tick it" posts the push's key to `POST /api/v1/ticks` (anonymous, as a service worker can't sign
+  in; the key is Data Protection-encrypted, names one session of one runner's plan, and expires after 3 days). iPhone
+  web push has no buttons, so a tap opens the app. Never about a run more than 2 days old (a backfill asks nothing) and
+  at most once per session. What's kept is a `TickPrompt`: the plan, the session's date and type, and nothing else (no
+  distance, time, Strava id or run), forgotten 7 days after the session's day, and listed in the account export. The
+  push says the run's distance and time of day ("Strava says you ran 10.2 km this morning") only with
+  `Push:IncludeRunData` on; by default it names the session alone and says a run from Strava matches it.
 - **5.7: location.** Streams are requested as `time,distance,altitude,heartrate`; `latlng` is never asked for.
   Heart rate from Strava is kept only for runners who gave Taperday's separate heart-rate consent; for everyone else
   it's dropped before the run is recorded, like any upload.
@@ -34,12 +61,12 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
   call, so they never wait for the rate limit. Disconnecting revokes at Strava, deletes every synced run and says so
   on screen (the written confirmation).
 - **2.3 / 6.1: display.** A runner's Strava runs are only ever shown to that runner.
-- **Reminders carry no Strava Data by default.** A push goes through a third party (the browser's push service, though
+- **Reminders carry no run data by default.** A push goes through a third party (the browser's push service, though
   Web Push encrypts it end to end) and shows on a lock screen, so with `Push:IncludeRunData` off (the default) a
   reminder never reads runs: it's built from the plan as the runner wrote it, without the coach's calls (which come
-  partly from synced runs), and from check-ins. Turning it on adds the coach's call, coached distances and paces, and
-  last week's distance run. **Ask Strava first** whether pushing a runner their own data to their own device is allowed
-  (with the 7-day cache question).
+  partly from uploaded runs), and from check-ins. Turning it on adds the coach's call, coached distances and paces,
+  last week's distance run, and the distance in the "ran it?" prompt. **Ask Strava first** whether pushing a runner
+  their own data to their own device is allowed (with the 7-day cache question).
 - **5.3: AI.** Taperday sends nothing to any AI service.
 - **Brand.** Official, unmodified "Connect with Strava" button and "Powered by Strava" logo (`client/public/strava/`,
   from developers.strava.com/guidelines), smaller than Taperday's own name; every synced run links back with
@@ -96,7 +123,10 @@ on Strava's page is refused with an explanation.
 | Webhook verification and events | `Application/Features/Sync/StravaWebhook.cs` |
 | The work itself | `Application/Features/Sync/StravaSyncRunner.cs` |
 | HTTP client, options, Data Protection, worker | `Infrastructure/Sync` |
+| Coach and totals: what may be kept | `Domain/Coaching/CoachEvidence.cs`, `Domain/Coaching/RunningLog.cs` |
+| "Ran it?" prompt, its note and the tick key | `Domain/Notifications/TickPrompt.cs`, `Application/Features/Notifications/TickPrompter.cs`, `Application/Features/CheckIns/Ticks.cs`, `Infrastructure/Push/TickTokens.cs` |
 | Client: account section, brand marks, callback, polling | `client/src/features/sync` |
+| Client: "Ran this? Tick it", the notification's button | `client/src/features/coaching/RanThis.tsx`, `client/public/sw.js` |
 | Client: Overview tab | `client/src/features/dashboard` |
 
 Tests never call Strava: `tests/StartLine.Integration.Tests/FakeStravaApi.cs` stands in for it, and
@@ -137,8 +167,11 @@ Open actions are in `security-posture.md` → To do.
    ```
    It answers `{"id": 123456}`: set `Strava__SubscriptionId` to that id. Until it's set, events are ignored (catch-up
    still works).
+   The "ran it?" push needs reminders on (VAPID keys in App Service, `docs/deploy.md`) and the runner to have turned
+   them on in Account; it carries the run's distance only with `Push__IncludeRunData` = `true`.
 6. Upgrade the app's capacity to 10 athletes from the same settings page when ready. Before asking Strava to review
-   it for more, email developers@strava.com about Policy 5.4 and 6.2 (the 7-day cache and plan matching).
+   it for more, email developers@strava.com about Policy 5.3, 5.4, 5.5 and 6.2 (the 7-day cache, plan matching, and the
+   design that keeps only what the runner ticks).
 
 ## Strava changes already announced
 

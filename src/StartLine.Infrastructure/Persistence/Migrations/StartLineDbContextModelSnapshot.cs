@@ -413,6 +413,32 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("PushSubscriptions", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Notifications.TickPrompt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("SavedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("SessionType")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date");
+
+                    b.HasIndex("SavedPlanId", "Date", "SessionType")
+                        .IsUnique();
+
+                    b.ToTable("TickPrompts", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -805,6 +831,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
                         .WithMany()
                         .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Notifications.TickPrompt", b =>
+                {
+                    b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SavedPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

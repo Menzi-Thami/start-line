@@ -39,7 +39,7 @@ public enum CoachReason
 }
 
 /// <summary>
-/// One planned run and what's known about how it went: what the runner said, and what a watch or app recorded.
+/// One planned run and what's known about how it went: what the runner said, and what their uploaded run recorded.
 /// Either can be missing.
 /// </summary>
 public sealed record RunEvidence(
@@ -54,7 +54,8 @@ public sealed record RunEvidence(
 
 /// <summary>
 /// The coach's call for one week, made once on or after its Monday from how the week before went, then kept: the
-/// same decisions always give the same plan, even after the runs behind them have gone from a 7-day Strava cache.
+/// same decisions always give the same plan. Being kept, it's made only from check-ins and uploaded runs, never from a
+/// synced Strava run (<see cref="CoachEvidence"/>).
 /// <see cref="DoseStep"/> is -1 (one hard session, and a smaller one), 0 or +1 (a bigger hard session).
 /// <see cref="Fitness"/> is the race time recorded runs pointed to that week; <see cref="PaceFactor"/> the nudge to
 /// the paces from how hard sessions felt, for a runner without them (1 is no nudge).

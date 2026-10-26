@@ -8,12 +8,18 @@
 // Reminders, if the runner turned them on in Account: a push carries the whole message ({ title, body, url, tag }), so
 // showing it needs nothing fetched. A tap opens Taperday on today's run, and only ever a page of Taperday's own.
 //
+// "Ran it?" prompts (a run from Strava matched a planned session) also carry `tick`, a key for that one session. Where
+// the browser shows buttons on a notification (Android, desktop Chrome and Edge), "Tick it" posts the key to the API
+// named when the worker was registered (`sw.js?api=`), and nowhere else; on iPhone a tap opens the app, ready to tick.
+// The key is never stored: it lives in the notification until it's tapped or dismissed.
+//
 // Bump VERSION to drop everything stored by an older worker.
 
 const VERSION = 'taperday-v2'
 const SHELL = '/'
 const MAX_ASSETS = 60
 const OPENS_AT = '/?view=home'
+const API = apiOrigin(self.location.href)
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -95,16 +101,56 @@ self.addEventListener('push', (event) => {
       body: typeof message.body === 'string' ? message.body : 'Open Taperday for today’s plan.',
       icon: '/home-icon-192.png',
       tag: typeof message.tag === 'string' ? message.tag : undefined,
-      data: { url: pageOf(message.url) },
+      ...tickOptions(message),
     }),
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = pageOf(event.notification.data && event.notification.data.url)
-  event.waitUntil(openPage(url))
+  const data = event.notification.data || {}
+  const url = pageOf(data.url)
+  event.waitUntil(event.action === 'tick' && typeof data.tick === 'string' ? tick(data.tick, url, event.notification.tag) : openPage(url))
 })
+
+// What a notification carries: the page a tap opens and, on a "ran it?" prompt, its key and the "Tick it" button.
+function tickOptions(message) {
+  const url = pageOf(message.url)
+  if (typeof message.tick !== 'string' || !message.tick) return { data: { url } }
+  return { data: { url, tick: message.tick }, actions: [{ action: 'tick', title: 'Tick it' }] }
+}
+
+// Ticks the session straight from the notification, then says so. If that can't be done (offline, or the key has
+// expired), the app opens on the session instead, so the runner can tick it there.
+async function tick(token, url, tag) {
+  try {
+    const response = await fetch(`${API}/api/v1/ticks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+    if (!response.ok) return openPage(url)
+    return self.registration.showNotification('Ticked off', {
+      body: 'Open Taperday to say how it felt.',
+      icon: '/home-icon-192.png',
+      tag,
+      data: { url },
+    })
+  } catch {
+    return openPage(url)
+  }
+}
+
+// The API's origin, from the worker's own address: an https origin, or this host when the API sits behind it.
+function apiOrigin(href) {
+  try {
+    const named = new URL(href).searchParams.get('api')
+    const api = named ? new URL(named) : null
+    return api && (api.protocol === 'https:' || api.origin === self.location.origin) ? api.origin : self.location.origin
+  } catch {
+    return self.location.origin
+  }
+}
 
 // Only a page on this host: a push can't send the runner anywhere else.
 function pageOf(url) {

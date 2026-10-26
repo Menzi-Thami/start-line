@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using StartLine.Application.Common;
 using StartLine.Application.Features.Activities;
+using StartLine.Application.Features.Notifications;
 using StartLine.Domain.Activities;
 using StartLine.Domain.Common;
+using StartLine.Domain.Notifications;
 using StartLine.Domain.Sync;
 
 namespace StartLine.Application.Features.Sync;
@@ -25,6 +27,7 @@ internal sealed partial class StravaSyncRunner(
     StravaRateGate gate,
     StravaTokens tokens,
     ActivityImporter importer,
+    TickPrompter prompter,
     TimeProvider time,
     ILogger<StravaSyncRunner> logger) : IStravaSync
 {
@@ -35,6 +38,9 @@ internal sealed partial class StravaSyncRunner(
     public const int MaxPages = 5;
 
     public static readonly TimeSpan RefreshInterval = TimeSpan.FromDays(1);
+
+    // Runs recorded or refreshed by the job in hand: once they're saved, the runner may be asked to tick their session.
+    private readonly List<Activity> synced = [];
 
     public async Task<DateTimeOffset?> RunDueAsync(CancellationToken cancellationToken)
     {
@@ -57,6 +63,7 @@ internal sealed partial class StravaSyncRunner(
 
     private async Task RunOneAsync(SyncJob job, CancellationToken cancellationToken)
     {
+        synced.Clear();
         var now = time.GetUtcNow();
         // Deleting needs no call to Strava, so it never waits for the rate limit.
         if (gate.BlockedUntil() is { } blocked && job.Kind is not (SyncJobKind.DeleteActivity or SyncJobKind.Deauthorize))
@@ -106,6 +113,10 @@ internal sealed partial class StravaSyncRunner(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        foreach (var run in synced)
+        {
+            await prompter.OfferAsync(run, cancellationToken);
+        }
     }
 
     private async Task<ProviderConnection?> ConnectionAsync(Guid runnerId, CancellationToken cancellationToken) =>
@@ -146,6 +157,7 @@ internal sealed partial class StravaSyncRunner(
         if (existing is not null)
         {
             existing.RefreshFrom(fresh);
+            synced.Add(existing);
         }
         else if (await db.Activities.AnyAsync(a => a.RunnerId == job.RunnerId && a.StartedAt == fresh.StartedAt, cancellationToken))
         {
@@ -159,6 +171,7 @@ internal sealed partial class StravaSyncRunner(
         else
         {
             db.Activities.Add(fresh);
+            synced.Add(fresh);
         }
 
         connection.MarkSynced(now);
@@ -274,6 +287,15 @@ internal sealed partial class StravaSyncRunner(
             db.Activities.RemoveRange(lapsed);
             await db.SaveChangesAsync(cancellationToken);
             LogDropped(logger, lapsed.Count);
+        }
+
+        // Being asked to tick a session is noted only while a synced run could still ask again, then forgotten.
+        var askedBefore = DateOnly.FromDateTime(now.UtcDateTime).AddDays(-(int)TickPrompts.KeptFor.TotalDays);
+        var asked = await db.TickPrompts.Where(p => p.Date < askedBefore).ToListAsync(cancellationToken);
+        if (asked.Count > 0)
+        {
+            db.TickPrompts.RemoveRange(asked);
+            await db.SaveChangesAsync(cancellationToken);
         }
 
         // A run that couldn't be fetched is mentioned for a week, then forgotten.

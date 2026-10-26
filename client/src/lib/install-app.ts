@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiOrigin } from './api-client'
 
 /**
  * Taperday as an app on the home screen. Android and desktop Chrome and Edge offer a one-tap install (the
@@ -18,6 +19,12 @@ let installed = false
 const listeners = new Set<() => void>()
 const changed = () => listeners.forEach((listener) => listener())
 
+/**
+ * The service worker's address. It names the API, the one place its "Tick it" button may post a notification's key to,
+ * since the worker can't read the build's settings itself.
+ */
+export const serviceWorkerUrl = (): string => `/sw.js?api=${encodeURIComponent(apiOrigin())}`
+
 /** Starts listening for the browser's install offer, and registers the service worker in a built site. Called once, at start. */
 export function setUpInstall(): void {
   window.addEventListener('beforeinstallprompt', (event) => {
@@ -35,7 +42,7 @@ export function setUpInstall(): void {
   })
   if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     // A failed registration changes nothing: the site works exactly as it would without one.
-    window.addEventListener('load', () => void navigator.serviceWorker.register('/sw.js').catch(() => undefined))
+    window.addEventListener('load', () => void navigator.serviceWorker.register(serviceWorkerUrl()).catch(() => undefined))
   }
 }
 

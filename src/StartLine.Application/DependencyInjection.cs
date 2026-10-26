@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<StravaTokens>();
         services.AddScoped<IStravaSync, StravaSyncRunner>();
         services.AddScoped<IReminderRunner, ReminderRunner>();
+        services.AddScoped<TickPrompter>();
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
         services.AddScoped(typeof(IPipelineBehaviour<,>), typeof(ValidationBehaviour<,>));
         return services;

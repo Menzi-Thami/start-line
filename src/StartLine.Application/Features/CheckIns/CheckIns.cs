@@ -48,6 +48,23 @@ internal static class OwnPlan
     }
 }
 
+/// <summary>The sessions of a saved plan a check-in can be on.</summary>
+internal static class PlanSessions
+{
+    /// <summary>
+    /// The session on that day, from the plan as the coach has it: a step down turns a hard session into an easy run, and
+    /// that's what was run. Throws <see cref="DomainException"/> when there's no such run that day.
+    /// </summary>
+    public static async Task<PlannedSession> RequireAsync(
+        IApplicationDbContext db, PlanBuilder builder, SavedPlan plan, DateOnly date, SessionType type, CancellationToken cancellationToken)
+    {
+        var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
+        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls).Weeks.SelectMany(w => w.Sessions);
+        return sessions.FirstOrDefault(s => s.Date == date && s.Type == type)
+            ?? throw new DomainException("That run isn't in your plan on that day. Your plan may have changed: reload it and try again.");
+    }
+}
+
 /// <summary>Every check-in on one of the runner's saved plans, oldest first.</summary>
 public sealed record ListCheckInsQuery(Guid PlanId) : IRequest<IReadOnlyList<CheckInDto>>;
 
@@ -90,7 +107,8 @@ internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInComman
         RuleFor(c => c.Status).IsInEnum();
         RuleFor(c => c.Pain).IsInEnum();
         RuleFor(c => c.PainArea).IsInEnum();
-        RuleFor(c => c.Effort).NotNull().When(c => c.Status != CheckInStatus.Skipped).WithMessage("Say how hard it felt, from 1 to 10.");
+        // "Done" alone is a tick, and may say how it felt later. A run cut short or swapped always says.
+        RuleFor(c => c.Effort).NotNull().When(c => c.Status is not (CheckInStatus.Skipped or CheckInStatus.Done)).WithMessage("Say how hard it felt, from 1 to 10.");
         RuleFor(c => c.Effort).InclusiveBetween(SessionCheckIn.MinEffort, SessionCheckIn.MaxEffort).When(c => c.Effort is not null);
         RuleFor(c => c.DistanceKm).GreaterThan(0).LessThanOrEqualTo(SessionCheckIn.MaxDistanceKm).When(c => c.DistanceKm is not null);
         RuleFor(c => c.Duration).Must(d => d > TimeSpan.Zero && d <= SessionCheckIn.MaxDuration).When(c => c.Duration is not null)
@@ -110,14 +128,7 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
             throw new ConflictException("plan_archived", "This is a past plan. Make it your plan again to check in on its runs.");
         }
 
-        // The plan as the coach has it: a step down turns a hard session into an easy run, and that's what was run.
-        var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
-        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls).Weeks.SelectMany(w => w.Sessions);
-        if (!sessions.Any(s => s.Date == request.Date && s.Type == request.SessionType))
-        {
-            throw new DomainException("That run isn't in your plan on that day. Your plan may have changed: reload it and try again.");
-        }
-
+        await PlanSessions.RequireAsync(db, builder, plan, request.Date, request.SessionType, cancellationToken);
         var answers = new CheckInAnswers(request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note);
         var checkIn = await db.SessionCheckIns.SingleOrDefaultAsync(
             c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType, cancellationToken);

@@ -501,6 +501,14 @@ describe('a shared plan', () => {
     expect(screen.getByRole('main')).not.toHaveClass('view-enter')
   })
 
+  it('reveals a plan that has just been built, its parts in turn', async () => {
+    window.history.replaceState(null, '', `/${link}`)
+    setup()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+
+    expect(document.querySelector('section.plan')).toHaveClass('plan-reveal')
+  })
+
   it('splits the plan into tabs and opens on this week', async () => {
     window.history.replaceState(null, '', `/${link}`)
     const { user } = setup()

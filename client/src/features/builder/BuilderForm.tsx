@@ -588,7 +588,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               ) : (
                 <span />
               )}
-              <button type="submit" className="button button-primary" disabled={busy}>
+              <button type="submit" className="button button-primary" disabled={busy} aria-busy={busy}>
                 {step < LAST_STEP ? 'Continue' : busy ? 'Building your plan…' : 'Build my plan'}
               </button>
             </div>

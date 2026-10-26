@@ -124,7 +124,12 @@ export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, aut
     )
   }
 
-  if (status.kind === 'saved') return <span className="chip chip-good">Saved</span>
+  if (status.kind === 'saved')
+    return (
+      <span className="chip chip-good pop-in" role="status">
+        Saved
+      </span>
+    )
 
   if (status.kind === 'confirming' && current) {
     const update = sameRace(request, current.inputs)
@@ -145,7 +150,7 @@ export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, aut
 
   return (
     <>
-      <button type="button" className="button button-quiet" onClick={save} disabled={status.kind === 'saving'}>
+      <button type="button" className="button button-quiet" onClick={save} disabled={status.kind === 'saving'} aria-busy={status.kind === 'saving'}>
         {status.kind === 'saving' ? 'Saving…' : current ? 'Make this my plan' : 'Save plan'}
       </button>
       {status.kind === 'error' && (

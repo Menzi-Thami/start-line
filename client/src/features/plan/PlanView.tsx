@@ -25,6 +25,8 @@ import { WeekTotals } from './WeekTotals'
 
 interface Props {
   plan: TrainingPlan
+  /** Just built: the race, the plan's shape and its weeks appear in turn, once, rather than all at once. */
+  reveal?: boolean
   units: Units
   onUnitsChange: (units: Units) => void
   shareUrl: string
@@ -85,7 +87,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal }: Props) {
+export function PlanView({ plan, reveal = false, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -246,7 +248,7 @@ export function PlanView({ plan, units, onUnitsChange, shareUrl, today, toolbarE
   })
 
   return (
-    <section className="plan" aria-labelledby="plan-title">
+    <section className={`plan${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
       <p className="plan-kicker">Your plan</p>
       <h2 className="plan-title" id="plan-title" ref={headingRef} tabIndex={-1}>
         {plan.race.name}

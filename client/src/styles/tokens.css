@@ -66,6 +66,26 @@
   --column: 44rem;
   --tap: 44px;
   --focus: 0 0 0 3px var(--paper), 0 0 0 5px var(--accent);
+
+  /*
+   * Motion. Durations: --dur-fast for press and hover feedback, --dur-quick and --dur-base for small state changes,
+   * --dur-page for content arriving, --dur-emphasis for sheets and panels opening, --dur-slide for the tab slide.
+   * Easings: --ease-standard for colour and opacity, --ease-out for things arriving, --ease-emphasis for panels and
+   * sheets, --ease-glide for the tab slide, --ease-fill for progress filling to its real value, --ease-spring for the
+   * small overshoot on a selection. Reduced motion is handled once, by the global rule in app.css.
+   */
+  --dur-fast: 120ms;
+  --dur-quick: 160ms;
+  --dur-base: 200ms;
+  --dur-page: 220ms;
+  --dur-emphasis: 260ms;
+  --dur-slide: 340ms;
+  --ease-standard: ease;
+  --ease-out: ease-out;
+  --ease-emphasis: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-glide: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-fill: cubic-bezier(0.3, 0.8, 0.3, 1);
+  --ease-spring: cubic-bezier(0.3, 1.6, 0.5, 1);
 }
 
 /* Paper is white: printing goes back to dark ink on light, whatever the screen shows. */

@@ -123,7 +123,7 @@ export function InstallCard() {
   if (way.kind !== 'prompt' && way.kind !== 'ios') return null
   return (
     <section className="panel install-card" aria-labelledby="install-card">
-      <img className="install-icon" src="/app-icon-192.png" alt="" width="64" height="64" />
+      <img className="install-icon" src="/home-icon-192.png" alt="" width="64" height="64" />
       <div className="install-body">
         <h2 id="install-card" className="home-card-heading">
           Put Taperday on your home screen

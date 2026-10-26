@@ -30,6 +30,17 @@ public sealed class SessionCheckInTests
         Should.Throw<DomainException>(() => CheckIn(new CheckInAnswers(CheckInStatus.CutShort, effort)));
 
     [Fact]
+    public void A_plain_done_is_a_tick_and_needs_no_effort_until_the_runner_adds_one()
+    {
+        var checkIn = CheckIn(new CheckInAnswers(CheckInStatus.Done, null));
+
+        checkIn.Effort.ShouldBeNull();
+        checkIn.Answer(new CheckInAnswers(CheckInStatus.Done, 6));
+        checkIn.Effort.ShouldBe(6);
+        Should.Throw<DomainException>(() => CheckIn(new CheckInAnswers(CheckInStatus.SwappedForEasy, null)));
+    }
+
+    [Fact]
     public void A_skipped_run_has_no_effort_distance_or_time()
     {
         CheckIn(new CheckInAnswers(CheckInStatus.Skipped, null)).Effort.ShouldBeNull();

@@ -69,7 +69,8 @@
 
   /*
    * Motion. Durations: --dur-fast for press and hover feedback, --dur-quick and --dur-base for small state changes,
-   * --dur-page for content arriving, --dur-emphasis for sheets and panels opening, --dur-slide for the tab slide.
+   * --dur-page for content arriving, --dur-emphasis for sheets and panels opening, --dur-slide for the tab slide,
+   * --dur-fill for a ring or bar filling to its real value.
    * Easings: --ease-standard for colour and opacity, --ease-out for things arriving, --ease-emphasis for panels and
    * sheets, --ease-glide for the tab slide, --ease-fill for progress filling to its real value, --ease-spring for the
    * small overshoot on a selection. Reduced motion is handled once, by the global rule in app.css.
@@ -80,6 +81,7 @@
   --dur-page: 220ms;
   --dur-emphasis: 260ms;
   --dur-slide: 340ms;
+  --dur-fill: 800ms;
   --ease-standard: ease;
   --ease-out: ease-out;
   --ease-emphasis: cubic-bezier(0.2, 0.8, 0.2, 1);

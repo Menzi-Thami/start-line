@@ -6,6 +6,7 @@ import { formatDate, formatDistance, formatDuration, formatPace, type Units } fr
 import type { Activity, ActivitySummary } from '../../lib/types'
 import { KIND_LABEL } from './activity-copy'
 import { BulkSummary } from './BulkSummary'
+import { ExportGuide } from './ExportGuide'
 
 type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] } | { kind: 'error'; message: string }
 
@@ -87,22 +88,8 @@ export function MyRuns({ units, onOpen }: Props) {
 
       <div className="panel upload">
         <h3>Add runs from a file</h3>
-        <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Most watches and apps export one of these.</p>
-        <div className="upload-ways">
-          <div>
-            <p className="upload-way">Garmin</p>
-            <p className="field-help">
-              On the Garmin Connect <strong>website</strong>, open the run and choose <strong>Export Original</strong> (one run), or, for your whole
-              history, <strong>Data Management → Export Your Data</strong> and upload the zip Garmin emails you.
-            </p>
-          </div>
-          <div>
-            <p className="upload-way">Strava, COROS, Suunto, Polar, Apple</p>
-            <p className="field-help">
-              Export the run (a .fit, .gpx or .tcx) and upload it.
-            </p>
-          </div>
-        </div>
+        <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Runs you add this way stay on Taperday for good. How to get the file:</p>
+        <ExportGuide />
         <label className={running ? 'button button-primary is-busy' : 'button button-primary'}>
           {running ? 'Reading your files…' : 'Upload runs'}
           <input

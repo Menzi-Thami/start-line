@@ -228,8 +228,8 @@ export function PrivacyPolicy() {
       <section className="section">
         <h3>On your device</h3>
         <p>
-          Your browser keeps your sign-in for the session, and your unit choice and ticked sessions on your device. There are no tracking
-          cookies.
+          Your browser keeps your sign-in on your device: until you close it, or until you sign out if you chose to stay signed in. It also
+          keeps your unit choice and ticked sessions. There are no tracking cookies.
         </p>
         <p>
           If you turn reminders on, your device shows them as notifications, which can appear on your lock screen. Turn them off in Account, or

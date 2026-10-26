@@ -11,8 +11,12 @@ const toAccount = (info: AccountInfo) => ({ name: info.name || info.username, em
 let redirecting = false
 
 /**
- * Signs runners in with the External ID tenant. Tokens are cached in sessionStorage (never localStorage,
- * which any injected script could read) and requested per call, so they're always fresh.
+ * Signs runners in with the External ID tenant. The sign-in is kept in localStorage, so the installed app still knows the
+ * runner next time it opens and goes straight to their plan from the device's copy, with no sign-in and no wait for the
+ * database. MSAL keeps it past closing the app only for a runner who said yes to "Stay signed in?" (External ID asks by
+ * default); otherwise it's encrypted with a key held in a session cookie and is gone once the browser closes, as before.
+ * Either way signing out clears it. Tokens are requested per call, so they're always fresh. Storage an injected script
+ * could read is a risk either way; the strict Content-Security-Policy (no inline or outside scripts) is the defence.
  */
 export function AuthProvider({ config, children }: { config: AuthConfig | null; children: ReactNode }) {
   const msal = useMemo(
@@ -26,7 +30,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
               redirectUri: window.location.origin,
               postLogoutRedirectUri: window.location.origin,
             },
-            cache: { cacheLocation: 'sessionStorage' },
+            cache: { cacheLocation: 'localStorage' },
           })
         : null,
     [config],

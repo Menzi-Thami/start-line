@@ -135,7 +135,11 @@ const hoursAndMinutes = (seconds: number) => {
   return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`
 }
 
-/** This week as a ring: distance run against the plan's distance. Purely a picture; the words beside it say the same. */
+/**
+ * This week as a ring: distance run against the plan's distance. Purely a picture; the words beside it say the same.
+ * It fills from empty to the real distance when it appears, then moves from old to new when a run arrives. Nothing
+ * runs to a made-up value first, and a week with nothing run stays empty.
+ */
 function WeekRing({ ran, planned }: { ran: number; planned: number }) {
   const r = 42
   const circumference = 2 * Math.PI * r
@@ -143,15 +147,35 @@ function WeekRing({ ran, planned }: { ran: number; planned: number }) {
   return (
     <svg className="home-ring" viewBox="0 0 100 100" aria-hidden="true">
       <circle cx="50" cy="50" r={r} className="home-ring-track" />
-      <circle
-        cx="50"
-        cy="50"
-        r={r}
-        className="home-ring-fill"
-        strokeDasharray={`${fraction * circumference} ${circumference}`}
-        transform="rotate(-90 50 50)"
-      />
+      {fraction > 0 && (
+        <circle
+          cx="50"
+          cy="50"
+          r={r}
+          className="home-ring-fill"
+          strokeDasharray={`${fraction * circumference} ${circumference}`}
+          style={{ '--ring-empty': `0 ${circumference}` } as React.CSSProperties}
+          transform="rotate(-90 50 50)"
+        />
+      )}
     </svg>
+  )
+}
+
+const PHASES: Record<PlanWeek['phase'], string> = { Base: 'Base', Build: 'Build', Peak: 'Peak', Taper: 'Taper', RaceWeek: 'Race week' }
+
+/** The race at a glance under the greeting: when, how far, and where the runner is in the plan. */
+function RaceLine({ plan, week, units }: { plan: TrainingPlan; week: PlanWeek | null; units: Units }) {
+  return (
+    <p className="home-race-line mono">
+      <span>{formatDate(plan.race.date)}</span>
+      <span>{formatDistance(plan.race.distanceKm, units)}</span>
+      {week && (
+        <span>
+          Week {week.number} of {plan.weeks.length} · {PHASES[week.phase]}
+        </span>
+      )}
+    </p>
   )
 }
 
@@ -201,19 +225,25 @@ function TodaysRuns({ plan, today, units, runs }: { plan: TrainingPlan; today: s
         </>
       )
     }
+    // The facts first: what, how far, how fast and whether it's done. How to run it and why sit one tap away.
     return day.runs.map((s) => (
-      <div key={`${s.date}|${s.type}`} className="home-today-run">
+      <div key={`${s.date}|${s.type}`} className={`home-today-run${doneToday ? ' is-done' : ''}`}>
         <p className="home-today-title">
           {s.title}
-          {doneToday && <span className="chip chip-good">Done</span>}
+          {doneToday && <span className="chip chip-good home-done-chip">Done</span>}
         </p>
         <p className="mono home-today-meta">
           {s.distanceKm > 0 ? formatDistance(s.distanceKm, units) : ''}
           {pace(s) ? ` · ${pace(s)}` : ''}
         </p>
         <p className="field-help">{s.detail}</p>
-        <SessionSteps steps={s.steps} units={units} />
-        <p className="home-today-why">Why: {s.purpose}</p>
+        {(s.steps.length > 0 || s.purpose) && (
+          <details className="home-today-more">
+            <summary>{s.steps.length > 0 ? 'How to run it, and why' : 'Why this run'}</summary>
+            <SessionSteps steps={s.steps} units={units} />
+            <p className="home-today-why">Why: {s.purpose}</p>
+          </details>
+        )}
       </div>
     ))
   })()
@@ -413,6 +443,7 @@ export function Home({
                 ? `It’s race day: ${plan.race.name}.`
                 : 'Every run counts. Here’s yours.'}
           </p>
+          {plan && progress && progress.kind !== 'after' && <RaceLine plan={plan} week={week} units={units} />}
         </div>
       </header>
 
@@ -473,6 +504,9 @@ export function Home({
                   <p className="field-help">
                     of {formatDistance(soFar.plannedKm, units)} planned · {soFar.doneRuns} of {soFar.plannedRuns} runs
                   </p>
+                  {soFar.plannedKm > 0 && soFar.ranKm > soFar.plannedKm && (
+                    <p className="field-help">{formatDistance(soFar.ranKm - soFar.plannedKm, units)} past the plan this week</p>
+                  )}
                 </div>
               </div>
             ) : (

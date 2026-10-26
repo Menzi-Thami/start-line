@@ -1,4 +1,4 @@
-import { onIos, runningInstalled } from './install-app'
+import { onIos, runningInstalled, serviceWorkerUrl } from './install-app'
 
 /**
  * Web Push on this device, for reminders. Android and desktop browsers can take pushes in the browser itself; an iPhone
@@ -60,7 +60,7 @@ export async function deviceKeyOf(endpoint: string): Promise<string> {
 async function registration(): Promise<ServiceWorkerRegistration> {
   const existing = await navigator.serviceWorker.getRegistration()
   if (existing) return existing
-  if (import.meta.env.PROD) return navigator.serviceWorker.register('/sw.js')
+  if (import.meta.env.PROD) return navigator.serviceWorker.register(serviceWorkerUrl())
   throw new PushError('Reminders work on the built site, where Taperday’s service worker runs.')
 }
 

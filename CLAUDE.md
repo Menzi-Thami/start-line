@@ -39,7 +39,9 @@ requests (the free Actions minutes are kept for deploys; see `docs/deploy.md`), 
 - `Domain/Running` — `Distance`, `Pace`, `RaceTimePredictor` (Riegel), `TrainingPaces` (zones from goal).
 - `Domain/Activities` — an uploaded run: `Track` (moving time, interpolation), `Splits`, `Halves`, `BestEfforts`,
   `PlannedSessionMatch`. Read from Garmin .fit by `Infrastructure/Activities`; see `docs/activity-import.md`.
-  Synced from Strava as a 7-day rolling cache (`ActivityOrigin`, `StravaCache`); see `docs/strava-sync.md`.
+  Synced from Strava as a 7-day rolling cache (`ActivityOrigin`, `StravaCache`); see `docs/strava-sync.md`. Nothing kept
+  for good is worked out from a synced run: the coach's calls use check-ins and uploads only (`CoachEvidence`), Home's totals
+  count ticked sessions and uploads (`RunningLog`), and a Strava run counts only once the runner ticks its session.
 - `Domain/Sync` — `ProviderConnection` (encrypted tokens), `SyncJob` (retries), `RateLimit`. Worked by
   `Application/Features/Sync/StravaSyncRunner` behind `IStravaApi`; tests use `FakeStravaApi`, never Strava.
 - `Domain/Plans/SavedPlan` — a runner has **one current plan** (a filtered unique index enforces it). A new plan for the
@@ -105,9 +107,11 @@ them, so every plan of every version has them and `GeneratorV1SnapshotTests` lea
 hash. A new kind of session needs its steps and a case in `SessionStepsTests`.
 
 Taperday installs as an app (a PWA): `client/public/manifest.webmanifest`, the icons beside it, and `client/public/sw.js`,
-registered only in a production build (`lib/install-app.ts`). The worker keeps **only the app's own files**: the page
-network-first (so a deploy always shows; the last copy only offline) and the hashed `/assets/*` cache-first. It never
-touches another host, so the API, sign-in and anyone's data are never stored by it; keep it that way. Bump its `VERSION` to
+registered only in a production build (`lib/install-app.ts`, as `sw.js?api=<API origin>`). The worker keeps **only the
+app's own files**: the page network-first (so a deploy always shows; the last copy only offline) and the hashed
+`/assets/*` cache-first. It never caches another host, so the API, sign-in and anyone's data are never stored by it; keep
+it that way. Its one request elsewhere is a notification's "Tick it", which posts that push's key to the API it was
+registered with (https only). Bump its `VERSION` to
 drop an old cache. `sw.js` and the manifest are served `no-cache` (`staticwebapp.config.json`). The Add to home screen option
 is a one-time card on Home and a section in Account (`features/install`).
 
@@ -123,6 +127,8 @@ device, turned on in Account. `Reminders.DueDay` decides when from the plan as w
 today). What comes from runs (the coach's call, made via `PlanCoach` as opening the plan would, coached numbers, distance
 run) is added only with `Push:IncludeRunData`, off by default, so no Strava data is pushed unless that's turned on. A day's reminder is marked sent before it's sent (with a rowversion), so it goes once at most; one missed while
 the app slept goes out later that day. `ReminderWorker` sleeps until the next one is due and is woken by
-`ReminderScheduleInterceptor` when a plan, time zone or device changes: it never polls the database. Push endpoints are
+`ReminderScheduleInterceptor` when a plan, time zone or device changes: it never polls the database. A synced Strava run that matches a planned session with no check-in sends one "Ran Tuesday's Tempo?" push
+(`TickPrompter`, at most once per session, never for a run over 2 days old), noted as a `TickPrompt` (the session only,
+forgotten after 7 days). Push endpoints are
 secrets: encrypted like Strava tokens, never logged, redacted in traces (`PushTraces`), and only push-service hosts are
 accepted. VAPID keys come from App Service settings (`docs/deploy.md`); without them reminders stay hidden.

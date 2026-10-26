@@ -282,3 +282,19 @@ internal sealed class PushSubscriptionConfiguration : IEntityTypeConfiguration<P
         builder.HasIndex(s => s.RunnerId);
     }
 }
+
+internal sealed class TickPromptConfiguration : IEntityTypeConfiguration<TickPrompt>
+{
+    public void Configure(EntityTypeBuilder<TickPrompt> builder)
+    {
+        builder.ToTable("TickPrompts");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.SessionType).HasConversion<string>().HasMaxLength(24);
+
+        // Asked once per session, at most: two sync passes at once can't both ask. The plan going takes these with it.
+        builder.HasIndex(p => new { p.SavedPlanId, p.Date, p.SessionType }).IsUnique();
+        builder.HasIndex(p => p.Date);
+        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(p => p.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

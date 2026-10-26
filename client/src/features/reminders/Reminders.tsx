@@ -105,8 +105,9 @@ export function RemindersSection() {
       <h3 id={ids.heading}>Reminders</h3>
       <p>
         A notification on the days your plan has a run, at the time you choose: the session with its distance and pace, and your race plan on race
-        day. On Mondays it can also give you the week ahead and how many of last week’s runs you checked in. It never includes your recorded runs
-        or anything from Strava. Off until you turn it on, and you can turn it off at any time.
+        day. On Mondays it can also give you the week ahead and how many of last week’s runs you checked in. When a run from Strava matches a
+        session, it asks whether to tick it, with a Tick it button where your phone shows one. It never includes your recorded runs. Off until
+        you turn it on, and you can turn it off at any time.
       </p>
 
       {state.kind === 'loading' && <p className="loading-line">Checking reminders…</p>}

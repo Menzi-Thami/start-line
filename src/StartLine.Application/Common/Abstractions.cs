@@ -35,6 +35,8 @@ public interface IApplicationDbContext
 
     DbSet<PushSubscription> PushSubscriptions { get; }
 
+    DbSet<TickPrompt> TickPrompts { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
 

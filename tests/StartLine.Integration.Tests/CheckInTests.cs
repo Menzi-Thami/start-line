@@ -126,15 +126,27 @@ public sealed class CheckInTests : IClassFixture<CheckInClockFactory>
     }
 
     [Fact]
-    public async Task A_run_that_happened_needs_an_effort()
+    public async Task A_run_cut_short_needs_an_effort()
+    {
+        var client = await Runner();
+        var (plan, date, type) = await TenKPlan(client);
+
+        var response = await client.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan}/check-ins/{date}/{type}"), new { status = "CutShort" });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await Json(response)).GetProperty("errors").TryGetProperty("Effort", out _).ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task A_plain_done_is_a_tick_with_no_effort()
     {
         var client = await Runner();
         var (plan, date, type) = await TenKPlan(client);
 
         var response = await client.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan}/check-ins/{date}/{type}"), new { status = "Done" });
 
-        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        (await Json(response)).GetProperty("errors").TryGetProperty("Effort", out _).ShouldBeTrue();
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await Json(response)).GetProperty("effort").ValueKind.ShouldBe(JsonValueKind.Null);
     }
 
     [Fact]

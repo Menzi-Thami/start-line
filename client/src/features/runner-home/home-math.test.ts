@@ -1,23 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { ActivitySummary, TrainingPlan } from '../../lib/types'
+import type { LoggedRun, TrainingPlan } from '../../lib/types'
 import { fuelling, heartRateZones, splits } from './calculator-math'
 import { change, todayInPlan, trainingTotals, weeklyBars } from './home-math'
 
-const run = (localDate: string, distanceKm: number, kind: ActivitySummary['kind'] = 'Run'): ActivitySummary =>
-  ({
-    id: `${localDate}-${distanceKm}`,
-    startedAt: `${localDate}T06:00:00Z`,
-    localDate,
-    kind,
-    distanceKm,
-    movingSeconds: distanceKm * 360,
-    paceSecondsPerKm: 360,
-    plannedTitle: null,
-    plannedSessionType: null,
-    pace: null,
-    averageHeartRate: null,
-    source: { kind: 'Upload', viewUrl: null },
-  }) as unknown as ActivitySummary
+// From the runner's kept log: uploads at their own distance, ticked sessions at the plan's. Strava runs are never in it.
+const run = (date: string, distanceKm: number, source: LoggedRun['source'] = 'Uploaded'): LoggedRun => ({ date, distanceKm, source })
 
 // Friday 23 October 2026.
 const today = '2026-10-23'
@@ -25,18 +12,17 @@ const today = '2026-10-23'
 describe('training totals', () => {
   const runs = [
     run('2026-10-02', 10),
-    run('2026-10-18', 42.2),
-    run('2026-10-20', 5, 'Other'), // a walk: not running distance
+    run('2026-10-18', 42.2, 'Ticked'),
     run('2026-09-05', 12),
     run('2026-09-30', 8), // last month, but after the 23rd: not in the fair comparison
     run('2026-01-03', 20),
     run('2025-12-31', 15), // last year
   ]
 
-  it('counts this month, the same days of last month, and the year so far, runs only', () => {
+  it('counts this month, the same days of last month, and the year so far, ticks and uploads alike', () => {
     const totals = trainingTotals(runs, today)
 
-    expect(totals.month).toEqual({ km: 52.2, runs: 2, seconds: 52.2 * 360 })
+    expect(totals.month).toEqual({ km: 52.2, runs: 2 })
     expect(totals.previousMonth).toMatchObject({ km: 12, runs: 1, from: '2026-09-01', to: '2026-09-23' })
     expect(totals.year.km).toBe(92.2) // 10 + 42.2 + 12 + 8 + 20
   })

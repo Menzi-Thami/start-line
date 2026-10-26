@@ -8,6 +8,7 @@ import type {
   CheckIn,
   CheckInRequest,
   GeneratePlanRequest,
+  LoggedRun,
   PersonalBest,
   Prediction,
   Race,
@@ -226,6 +227,8 @@ export const api = {
     deleteActivity: (token: string, id: string) =>
       request<void>(`/api/v1/me/activities/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
     bests: (token: string) => request<PersonalBest[]>('/api/v1/me/activities/bests', {}, token),
+    /** The runs behind the long-term totals: sessions ticked off (at the plan's distance) and uploads. Never Strava runs. */
+    running: (token: string) => request<LoggedRun[]>('/api/v1/me/running', {}, token),
     reminders: {
       get: (token: string) => request<Reminders>('/api/v1/me/reminders', {}, token),
       turnOn: (token: string, body: TurnOnRemindersRequest) =>

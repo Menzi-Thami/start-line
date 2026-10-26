@@ -1,25 +1,24 @@
 import { addDays } from '../../lib/format'
-import type { ActivitySummary, Session, TrainingPlan } from '../../lib/types'
+import type { LoggedRun, Session, TrainingPlan } from '../../lib/types'
 import { mondayOf } from '../dashboard/dashboard-math'
 import { trainingKm } from '../plan/plan-math'
 
 const round1 = (km: number) => Math.round(km * 10) / 10
 
-/** Running distance only: an "Other" activity (a walk, a gym session) isn't a run. */
-const isRun = (run: ActivitySummary) => run.kind !== 'Other'
-
 export interface Totals {
   km: number
   runs: number
-  seconds: number
 }
 
-function totalOf(runs: readonly ActivitySummary[], from: string, to: string): Totals {
-  const inRange = runs.filter((r) => isRun(r) && r.localDate >= from && r.localDate <= to)
+/**
+ * The runs between two dates, from the runner's kept log: sessions they ticked off, at the plan's distance, and runs they
+ * uploaded. Never a Strava run: those stay 7 days, and so must anything worked out from them.
+ */
+function totalOf(runs: readonly LoggedRun[], from: string, to: string): Totals {
+  const inRange = runs.filter((r) => r.date >= from && r.date <= to)
   return {
     km: round1(inRange.reduce((sum, r) => sum + r.distanceKm, 0)),
     runs: inRange.length,
-    seconds: inRange.reduce((sum, r) => sum + r.movingSeconds, 0),
   }
 }
 
@@ -46,7 +45,7 @@ export interface TrainingTotals {
 
 const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate()
 
-export function trainingTotals(runs: readonly ActivitySummary[], today: string): TrainingTotals {
+export function trainingTotals(runs: readonly LoggedRun[], today: string): TrainingTotals {
   const year = Number(today.slice(0, 4))
   const month = Number(today.slice(5, 7))
   const day = Number(today.slice(8, 10))
@@ -77,7 +76,7 @@ export interface WeekBar {
 }
 
 /** Distance run in each of the last <paramref name="weeks"/> weeks, this one included, oldest first. */
-export function weeklyBars(runs: readonly ActivitySummary[], today: string, plan: TrainingPlan | null, weeks = 12): WeekBar[] {
+export function weeklyBars(runs: readonly LoggedRun[], today: string, plan: TrainingPlan | null, weeks = 12): WeekBar[] {
   const monday = mondayOf(today)
   return Array.from({ length: weeks }, (_, i) => {
     const weekStart = addDays(monday, -7 * (weeks - 1 - i))

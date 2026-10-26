@@ -47,7 +47,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 | 24 | JWT expiry | Covered | Access tokens are short-lived and validated by `Microsoft.Identity.Web`; expiry and signature are checked on every call. |
 | 25 | Refresh tokens | Covered | Handled by MSAL on the client; Strava refresh tokens rotate and are re-encrypted on use. |
 | 26–27 | OAuth 2.0 / OpenID Connect | Covered | Entra External ID (auth code + PKCE) for sign-in; Strava OAuth for sync. |
-| 28 | Session fixation | Covered | No server session. MSAL caches tokens in `sessionStorage`, not `localStorage`. |
+| 28 | Session fixation | Covered | No server session. MSAL caches tokens in `localStorage` so the installed app stays signed in; they persist past the browser session only when the runner chose "Stay signed in?", and are otherwise encrypted with a key in a session cookie (`msal.cache.encryption`). Sign-out clears them. |
 | 29 | MFA | Partial | Available in the Entra External ID tenant; enabling it is a tenant setting, not code. |
 | 30–31 | Brute force / account enumeration | Partial | Sign-in (email code) is handled by Entra, which has its own protections. The API's own rate limiter adds a per-IP cap. |
 | 32 | Timing attacks | Covered | The webhook secret and verify token are compared in constant time (`CryptographicOperations.FixedTimeEquals`). |
@@ -90,7 +90,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 | 232–233 | GDPR / PII handling | Covered | Data export (profile, plans, runs, connections — never tokens) and full account delete. Consent to the privacy notice is required before anything is stored. The published policy is at `/?view=privacy`; a new notice version (`PrivacyNotice.CurrentVersion`) must be accepted before anything new is saved, uploaded or connected. |
 | 234 | Audit logs | Gap | There's no dedicated, tamper-evident log of security events (sign-ins, deletes, connects). See [To do](#to-do). |
 | 235 | Data residency | Covered | API and database are in South Africa North. |
-| 238 | Cookie consent | N/A | Taperday sets no tracking cookies; it uses `sessionStorage` for the sign-in token only. |
+| 238 | Cookie consent | N/A | Taperday sets no tracking cookies; it keeps the sign-in in `localStorage`, with MSAL's functional `msal.cache.encryption` session cookie. |
 | Reminders | Covered | Off unless the runner turns them on in Account, per device. Kept: the device's push address and keys (encrypted), the time, the Monday choice and the last day reminded. A reminder says only the plan's session name, built from the plan as written (not the coach's run-based adjustments), never runs or heart rate, so lock screens show nothing sensitive. The one push a Strava run sends, "Ran Tuesday's Tempo?", names the session only (its distance only with `Push:IncludeRunData`), and what's kept of it is the session it asked about, for 7 days. Turning off, the push service reporting the device gone, or deleting the account removes it; the export lists devices without their addresses. |
 | Location data | Covered | GPS positions are never stored, from any source: FIT, GPX, TCX or Strava. They're used only to measure distance, then discarded. |
 | Heart rate | Covered | Health information (POPIA special personal information), so kept only with its own, optional consent (`Runner.HeartRateConsent`). Without it every reading is dropped before a run is recorded, from any source, and anything held from before is hidden; withdrawing deletes what's stored. No medical claims. |

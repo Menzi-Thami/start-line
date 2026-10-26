@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AccountPage } from '../features/account/AccountPage'
-import { Home } from '../features/runner-home/Home'
+import { CatchingUp, Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
+import { useCalendarLink } from '../features/account/useCalendarLink'
 import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { SignInWait } from '../features/account/SignInWait'
+import { InstallCard } from '../features/install/InstallApp'
 import { ActivityPage } from '../features/activities/ActivityPage'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { MyRuns } from '../features/activities/MyRuns'
@@ -20,7 +22,7 @@ import { Replan } from '../features/plan/Replan'
 import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
 import { useSyncedRuns } from '../features/sync/useSyncedRuns'
 import { api, ApiError, apiOrigin } from '../lib/api-client'
-import { calendarLinks } from '../lib/calendar-links'
+import { calendarLinks, personalCalendarLinks } from '../lib/calendar-links'
 import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/home-snapshot'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
@@ -228,6 +230,12 @@ export function App() {
   const savedOnScreen =
     plan.kind === 'ready' && currentPlan.current && samePlan(toRequest(plan.inputs), currentPlan.current.inputs) ? currentPlan.current.id : null
   const checkIns = useCheckIns(savedOnScreen)
+  // On the runner's own plan, the calendar menu subscribes to their personal feed, which follows every change to it.
+  const calendarLink = useCalendarLink(owner, savedOnScreen !== null)
+
+  // The runner's plan from the copy on this device, opened at once on a return visit while the account loads. It gives
+  // way to this visit's plan as soon as that's on screen.
+  const [fromCopy, setFromCopy] = useState<{ plan: TrainingPlan; savedAt: string } | null>(null)
 
   // The runner's own plan opens as the coach has it: on or after Monday the coach makes this week's call, and its note
   // shows on "This week". A plan from a link, or anyone else's, is the plan as written.
@@ -246,10 +254,13 @@ export function App() {
         coachRequested.current = coached.plan
         setPlan((current) => (current.kind === 'ready' && current.plan === shownPlan ? { ...current, plan: coached.plan } : current))
         setCoachNotes({ planId: savedOnScreen, notes: coached.coaching ?? [] })
+        // Kept on this device too, so next time the plan opens as it is now.
+        savePlan({ id: savedOnScreen, plan: coached.plan })
       })
-      // Without the coach, the plan on screen is the plan as written: nothing the runner needs is lost.
-      .catch(() => undefined)
-  }, [savedOnScreen, shownPlan, auth])
+      // Without the coach, the plan on screen is the plan as written: nothing the runner needs is lost. A plan from the
+      // copy on this device is then simply the plan, no longer catching up.
+      .catch(() => setFromCopy((copied) => (copied?.plan === shownPlan ? null : copied)))
+  }, [savedOnScreen, shownPlan, auth, savePlan])
   const notes = coachNotes && coachNotes.planId === savedOnScreen ? coachNotes.notes : undefined
 
   // Back from Strava: finish connecting, then show the account page with what happened.
@@ -268,24 +279,64 @@ export function App() {
       .catch((failure: unknown) => setStravaNotice(failure instanceof Error ? failure.message : 'Connecting Strava didn’t work. Try again.'))
   }, [stravaCallback, runner.state.kind, auth])
 
-  // Signed in with a plan: open on Home, with the plan a tap away, not on the builder. Once per visit, and never over a
-  // plan link they opened.
+  // Signed in with a plan: open on Home, with the plan a tap away, not on the builder; or, coming back to a device that
+  // kept their plan, on the plan itself. Once per visit, and never over a plan link they opened.
   // The plan this visit found, or until then the one last seen on this device, so Home opens without waiting.
   const ownPlan = currentPlan.current !== undefined ? currentPlan.current : (copy?.current ?? undefined)
   const found = ownPlan
   // A runner this device already knows opens on Home from the copy too, plan or no plan, so the waiting film only plays
   // when there's nothing to show yet: a first sign-in here, or a brand new account.
   const knownHere = copy?.runner !== undefined
+  const latestPlan = currentPlan.current
   useEffect(() => {
     if (landing.current || !(found || knownHere) || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
     landing.current = true
-    // After this render, not inside it: Home takes over from the "opening" placeholder.
+    // A runner coming back with their plan kept on this device opens straight on it, as opening it from Home would show
+    // it, while the account loads. Only before this visit has found their plan: after that, Home opens it for real.
+    const copied =
+      latestPlan === undefined && copy?.current && copy.plan?.id === copy.current.id
+        ? { inputs: fromRequest(copy.current.inputs), plan: copy.plan.plan, savedAt: copy.savedAt }
+        : null
+    // After this render, not inside it: Home (or the plan) takes over from the "opening" placeholder.
     void Promise.resolve().then(() => {
       setLanded(true)
+      if (copied?.inputs) {
+        const inputs = copied.inputs
+        setFromCopy({ plan: copied.plan, savedAt: copied.savedAt })
+        setBuilderKey((k) => k + 1)
+        setPlan({ kind: 'ready', plan: copied.plan, inputs })
+        window.history.replaceState(null, '', `?${toSearchParams(inputs)}`)
+        return
+      }
       setView('home')
       window.history.replaceState(null, '', '?view=home')
     })
-  }, [found, knownHere, initial, view, plan.kind, editing])
+  }, [found, knownHere, initial, view, plan.kind, editing, copy, latestPlan])
+
+  // Once the account says which plan is current, the copy gives way to it, as opening the plan from Home would: the same
+  // plan is brought up to date by the coach (above), a plan changed on another device is built afresh, and a plan deleted
+  // elsewhere sends the runner Home, which offers a new one. Anything else on screen is left alone.
+  const copyChecked = useRef<TrainingPlan | null>(null)
+  useEffect(() => {
+    const showingCopy = fromCopy && view === 'build' && plan.kind === 'ready' && plan.plan === fromCopy.plan
+    if (!showingCopy || latestPlan === undefined || copyChecked.current === fromCopy.plan) return
+    copyChecked.current = fromCopy.plan
+    if (latestPlan === null) {
+      void Promise.resolve().then(() => {
+        setPlan({ kind: 'idle' })
+        setView('home')
+        window.history.replaceState(null, '', '?view=home')
+      })
+    } else if (!samePlan(toRequest(plan.inputs), latestPlan.inputs)) {
+      // The copy stays on screen, still catching up, until the new plan arrives.
+      const inputs = fromRequest(latestPlan.inputs)
+      if (inputs) fetchPlan(inputs)
+    }
+  }, [fromCopy, latestPlan, view, plan, fetchPlan])
+  const catchingUpFrom =
+    fromCopy && plan.kind === 'ready' && plan.plan === fromCopy.plan && (runner.state.kind === 'loading' || runner.state.kind === 'ready')
+      ? fromCopy.savedAt
+      : null
 
   // A shared link builds its plan straight away.
   useEffect(() => {
@@ -346,11 +397,12 @@ export function App() {
     window.scrollTo?.({ top: 0 })
   }
 
-  // Home, from the Taperday wordmark: the runner's Home when they're signed in, and never a half-edited form. Signed
-  // out, the builder (or the plan from their link, which lives only in that link) is home.
+  // Home, from the Taperday wordmark: the runner's Home when they're signed in (or, while the account loads, the Home kept
+  // on this device), and never a half-edited form. Signed out, the builder (or the plan from their link, which lives only
+  // in that link) is home.
   const goHome = () => {
     setEditing(false)
-    go(runner.state.kind === 'ready' ? 'home' : 'build')
+    go(runner.state.kind === 'ready' || (runner.state.kind === 'loading' && copy?.runner) ? 'home' : 'build')
   }
 
   // The runner's own plan, from Home. Back comes back to Home.
@@ -644,6 +696,7 @@ export function App() {
             stravaConnecting={stravaConnecting}
             onSaved={runner.setRunner}
             onOpenRuns={() => go('runs')}
+            onNewCalendarLink={calendarLink.replace}
             onDeleted={() => {
               go('build')
               auth.signOut()
@@ -730,6 +783,11 @@ export function App() {
               )}
             </div>
 
+            {showPlan && <InstallCard />}
+            {showPlan && catchingUpFrom && <CatchingUp what="plan" savedAt={catchingUpFrom} today={today} />}
+
+            {/* The calendar menu: the runner's own plan subscribes to their personal feed, which follows the plan through
+                every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}
             {showPlan && (
               <PlanView
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
@@ -737,7 +795,11 @@ export function App() {
                 units={units}
                 onUnitsChange={changeUnits}
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
-                calendar={calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())}
+                calendar={
+                  savedOnScreen && calendarLink.token
+                    ? personalCalendarLinks(calendarLink.token, plan.plan.race.name, apiOrigin())
+                    : calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())
+                }
                 today={today}
                 runs={state.kind === 'ready' ? runs : undefined}
                 bests={state.kind === 'ready' ? synced.bests : undefined}

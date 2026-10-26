@@ -18,12 +18,15 @@ interface Props {
   stravaNotice?: string | null
   /** Strava just sent the runner back and the connection is still being saved. */
   stravaConnecting?: boolean
+  /** A new calendar link was made here, so the plan's calendar menu offers it rather than the old one. */
+  onNewCalendarLink?: (token: string) => void
 }
 
 /** Profile, where runs come from, a copy of everything we hold, and the way out. */
-export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false }: Props) {
+export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink }: Props) {
   const auth = useAuth()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [newCalendarLink, setNewCalendarLink] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'error'; message: string }>({ kind: 'idle' })
 
   const withToken = async (action: (token: string) => Promise<void>) => {
@@ -47,6 +50,13 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       link.download = 'taperday-my-data.json'
       link.click()
       URL.revokeObjectURL(url)
+    })
+
+  const resetCalendarLink = () =>
+    withToken(async (token) => {
+      const link = await api.me.resetCalendar(token)
+      onNewCalendarLink?.(link.token)
+      setNewCalendarLink(true)
     })
 
   const deleteEverything = () =>
@@ -74,6 +84,21 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <InstallSection />
 
       <RemindersSection />
+
+      <div className="section">
+        <h3>Calendar link</h3>
+        <p>
+          Added your plan to a calendar? It follows your plan, even when it changes. If someone else has the link, get a new
+          one: the old link stops working, so add your plan to your calendar again from the plan.
+        </p>
+        {newCalendarLink ? (
+          <p role="status">Done. The old link no longer works.</p>
+        ) : (
+          <button type="button" className="button button-quiet" onClick={() => void resetCalendarLink()} disabled={status.kind === 'busy'}>
+            Get a new link
+          </button>
+        )}
+      </div>
 
       <div className="section">
         <h3>Your data</h3>

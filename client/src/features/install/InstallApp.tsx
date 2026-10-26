@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useInstallWay, type InstallWay } from '../../lib/install-app'
-import { loadInstallDismissed, saveInstallDismissed } from '../../lib/storage'
 
 
 /** Safari's Share icon, as it looks in the toolbar, so it's easy to spot. */
@@ -116,17 +115,12 @@ function AddButton({ way, onInstalled, big = false }: { way: InstallWay; onInsta
 
 /**
  * The banner at the top of Home and of a plan: shown wherever adding takes a tap or two (a browser offering install, or
- * an iPhone), until the app is on the home screen. Not now quiets it on this device for two weeks; Account always has
- * the option.
+ * an iPhone), every time, until the app is on the home screen. There's no Not now: once it's installed it goes for
+ * good, and opening Taperday from the home screen never shows it. Account has the same button.
  */
 export function InstallCard() {
   const way = useInstallWay()
-  const [dismissed, setDismissed] = useState(() => loadInstallDismissed())
-  if (dismissed || (way.kind !== 'prompt' && way.kind !== 'ios')) return null
-  const dismiss = () => {
-    saveInstallDismissed()
-    setDismissed(true)
-  }
+  if (way.kind !== 'prompt' && way.kind !== 'ios') return null
   return (
     <section className="panel install-card" aria-labelledby="install-card">
       <img className="install-icon" src="/app-icon-192.png" alt="" width="64" height="64" />
@@ -136,10 +130,7 @@ export function InstallCard() {
         </h2>
         <p className="install-pitch">One tap opens your plan, full screen like an app, with today’s run waiting.</p>
         <div className="install-actions">
-          <AddButton way={way} onInstalled={dismiss} big />
-          <button type="button" className="link-button" onClick={dismiss}>
-            Not now
-          </button>
+          <AddButton way={way} big />
         </div>
       </div>
     </section>

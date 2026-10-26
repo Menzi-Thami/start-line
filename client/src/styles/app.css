@@ -855,9 +855,11 @@ select {
   transition: border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-standard);
 }
 
-.bento-card:hover {
-  border-color: rgba(215, 255, 62, 0.5);
-  transform: translateY(-3px);
+@media (hover: hover) {
+  .bento-card:hover {
+    border-color: rgba(215, 255, 62, 0.5);
+    transform: translateY(-3px);
+  }
 }
 
 .bento-wide {
@@ -1425,9 +1427,12 @@ select {
   color: var(--ink);
 }
 
-.button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
+/* The lift is for a mouse: on a phone a tap would leave the button raised until the next tap somewhere else. */
+@media (hover: hover) {
+  .button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+  }
 }
 
 .button:active {
@@ -1444,15 +1449,45 @@ select {
   box-shadow: var(--glow);
 }
 
-.button-primary:hover {
-  background: var(--accent-strong);
-  border-color: var(--accent-strong);
+@media (hover: hover) {
+  .button-primary:hover {
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+  }
 }
 
 .button[disabled] {
   opacity: 0.6;
-  cursor: progress;
+  cursor: not-allowed;
   transform: none;
+}
+
+/* Working: the button says what it's doing ("Saving…") and spins, so a second press is clearly not needed. */
+.button[aria-busy='true'] {
+  cursor: progress;
+}
+
+.button[aria-busy='true']::before {
+  content: '';
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: wait-spin 0.8s linear infinite;
+}
+
+/* A confirmation arriving: "Saved" springs in beside the action that caused it. */
+.pop-in {
+  animation: pop-in var(--dur-emphasis) var(--ease-spring) both;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
 }
 
 .button-quiet {
@@ -1874,7 +1909,7 @@ a.menu-item {
   color: var(--ink-2);
   font-weight: 700;
   cursor: pointer;
-  transition: background-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard);
+  transition: background-color var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
 }
 
 .tab:hover {
@@ -1951,6 +1986,11 @@ a.menu-item {
 .tab[aria-selected='true'] {
   background: var(--accent);
   color: var(--on-accent);
+}
+
+/* A press lands at once, before the new tab's content does. */
+.tab:active:not([aria-selected='true']) {
+  transform: scale(0.96);
 }
 
 /*
@@ -3645,6 +3685,13 @@ a.menu-item {
   border-top: 1px solid var(--line);
 }
 
+.bulk-progress > p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+
 .bulk-progress {
   display: flex;
   flex-wrap: wrap;
@@ -4899,4 +4946,32 @@ select.input option {
 
 .week-review-label {
   font-weight: 700;
+}
+
+/*
+ * A plan just built: its parts arrive in turn (the race, its facts, the progress ring, then the rest) over well under
+ * half a second, so the runner sees what was made for them without waiting for it. Each part fades and rises as a
+ * page does (the sticky tab row only fades). Only after a real build: a plan opened from the device's copy is simply
+ * there. Reduced motion turns it off.
+ */
+.plan-reveal > :not(.tabs) {
+  position: relative;
+  animation: view-in var(--dur-emphasis) var(--ease-out) both;
+}
+
+/* The tab row is sticky, and a rise would need it positioned otherwise, so it only fades in. */
+.plan-reveal > .tabs {
+  animation: fade-in var(--dur-emphasis) var(--ease-out) both;
+}
+
+.plan-reveal > :nth-child(3) {
+  animation-delay: 60ms;
+}
+
+.plan-reveal > :nth-child(4) {
+  animation-delay: 120ms;
+}
+
+.plan-reveal > :nth-child(n + 5) {
+  animation-delay: 180ms;
 }

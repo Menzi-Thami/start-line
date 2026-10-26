@@ -274,6 +274,8 @@ describe('their plan from the copy kept on this device', () => {
     expect(screen.getByText(/Showing your plan .* while Taperday catches up/)).toBeInTheDocument()
     expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
+    // The copy is simply there: no reveal, as there's nothing new to show.
+    expect(document.querySelector('section.plan')).not.toHaveClass('plan-reveal')
     // The plan's own link, as opening it from Home gives.
     expect(window.location.search).toContain('goal=1470')
     expect(window.location.search).toContain('from=2026-10-08')

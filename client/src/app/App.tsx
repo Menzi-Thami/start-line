@@ -110,6 +110,8 @@ export function App() {
   const [builderKey, setBuilderKey] = useState(0)
   // True while the wizard is open over a plan (or about to produce one). A built plan replaces the wizard.
   const [editing, setEditing] = useState(false)
+  // A plan that has just arrived from the API reveals its parts in turn; one opened from the device's copy is simply there.
+  const [revealPlan, setRevealPlan] = useState(false)
   const [freshBuild, setFreshBuild] = useState(false)
   // The starting-gun intro: once per visit, only when landing on the builder, never for reduced motion.
   const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen())
@@ -154,6 +156,7 @@ export function App() {
       .plan(toRequest(withDate), controller.signal)
       .then((result) => {
         setPlan({ kind: 'ready', plan: result, inputs: withDate })
+        setRevealPlan(true)
         setEditing(false)
         window.scrollTo?.({ top: 0 })
       })
@@ -313,6 +316,7 @@ export function App() {
         setFromCopy({ plan: copied.plan, savedAt: copied.savedAt })
         setBuilderKey((k) => k + 1)
         setPlan({ kind: 'ready', plan: copied.plan, inputs })
+        setRevealPlan(false)
         window.history.replaceState(null, '', `?${toSearchParams(inputs)}`)
         return
       }
@@ -800,6 +804,7 @@ export function App() {
               <PlanView
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
+                reveal={revealPlan}
                 units={units}
                 onUnitsChange={changeUnits}
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}

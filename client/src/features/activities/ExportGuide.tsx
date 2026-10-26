@@ -1,6 +1,7 @@
 /**
  * How to get a run out of a watch or app as a file Taperday can read, one short set of steps per source. Garmin and
- * Apple Watch come first because most runners have one. Runs added from a file are the runner's own, so they stay on
+ * Apple Watch come first because most runners have one, then Samsung and Huawei. Menu names move between app versions
+ * and regions, so the steps say what to look for rather than promising an exact path. Runs added from a file are the runner's own, so they stay on
  * Taperday for good (a run synced from Strava only stays seven days).
  */
 export function ExportGuide() {
@@ -44,6 +45,41 @@ export function ExportGuide() {
             Export the run as .fit and upload it here.
           </li>
         </ol>
+      </details>
+
+      <details className="export-way">
+        <summary>Samsung Galaxy Watch</summary>
+        <ol className="export-steps">
+          <li>
+            In the <strong>Samsung Health</strong> app, open the run and tap its <strong>map</strong>.
+          </li>
+          <li>
+            Tap <strong>⋮</strong> and choose <strong>Export to GPX</strong> (the wording varies a little between versions).
+          </li>
+          <li>Upload the .gpx file. It carries your distance, time and route, but Samsung leaves heart rate out.</li>
+        </ol>
+        <p className="field-help">
+          Or let Samsung Health sync to Strava (in the Strava app: Settings → Applications, Services, and Devices) and export the run from Strava’s
+          website, below.
+        </p>
+      </details>
+
+      <details className="export-way">
+        <summary>Huawei Watch</summary>
+        <p className="field-help">Huawei Health can’t save a workout as a file, but it can pass your runs to Strava, and Strava can:</p>
+        <ol className="export-steps">
+          <li>
+            In the <strong>Huawei Health</strong> app, go to <strong>Me → Privacy management → Data sharing and authorisation</strong>.
+          </li>
+          <li>
+            Choose <strong>Strava</strong> and sign in. New runs then appear on Strava (older ones don’t carry over).
+          </li>
+          <li>Export the run from Strava’s website (see Strava, below) and upload it.</li>
+        </ol>
+        <p className="field-help">
+          Strava isn’t offered in every country’s Huawei Health. If it’s missing, an Android app such as Health Sync can copy Huawei workouts to
+          Strava instead (it may cost after a trial).
+        </p>
       </details>
 
       <details className="export-way">

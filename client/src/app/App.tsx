@@ -290,13 +290,14 @@ export function App() {
       .catch((failure: unknown) => setStravaNotice(failure instanceof Error ? failure.message : 'Connecting Strava didn’t work. Try again.'))
   }, [stravaCallback, runner.state.kind, auth])
 
-  // Signed in with a plan: open on Home, with the plan a tap away, not on the builder; or, coming back to a device that
-  // kept their plan, on the plan itself. Once per visit, and never over a plan link they opened.
-  // The plan this visit found, or until then the one last seen on this device, so Home opens without waiting.
+  // Signed in with a plan: open inside it, not on the builder or Home. From the plan this device kept when there is one,
+  // straight away; otherwise built afresh from its answers, which needs only the API, never the sleeping database. Signed
+  // in without a plan: Home, which offers one. Once per visit, and never over a plan link they opened.
+  // The plan this visit found, or until then the one last seen on this device, so the plan opens without waiting.
   const ownPlan = currentPlan.current !== undefined ? currentPlan.current : (copy?.current ?? undefined)
   const found = ownPlan
-  // A runner this device already knows opens on Home from the copy too, plan or no plan, so the waiting film only plays
-  // when there's nothing to show yet: a first sign-in here, or a brand new account.
+  // A runner this device already knows opens from the copy too, plan or no plan, so the waiting film only plays when
+  // there's nothing to show yet: a first sign-in here, or a brand new account.
   const knownHere = copy?.runner !== undefined
   const latestPlan = currentPlan.current
   useEffect(() => {
@@ -308,7 +309,8 @@ export function App() {
       latestPlan === undefined && copy?.current && copy.plan?.id === copy.current.id
         ? { inputs: fromRequest(copy.current.inputs), plan: copy.plan.plan, savedAt: copy.savedAt }
         : null
-    // After this render, not inside it: Home (or the plan) takes over from the "opening" placeholder.
+    const own = found ? fromRequest(found.inputs) : null
+    // After this render, not inside it: the plan (or Home) takes over from the "opening" placeholder.
     void Promise.resolve().then(() => {
       setLanded(true)
       if (copied?.inputs) {
@@ -320,9 +322,18 @@ export function App() {
         window.history.replaceState(null, '', `?${toSearchParams(inputs)}`)
         return
       }
+      if (own) {
+        // No copy of the plan here (a first sign-in on this device, say): build it from its answers, as Home's "Open your
+        // plan" would. Home stays a tap away.
+        setBuilderKey((k) => k + 1)
+        build(own)
+        return
+      }
       setView('home')
       window.history.replaceState(null, '', '?view=home')
     })
+    // build is a fresh function each render; what it does doesn't change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [found, knownHere, initial, view, plan.kind, editing, copy, latestPlan])
 
   // Once the account says which plan is current, the copy gives way to it, as opening the plan from Home would: the same

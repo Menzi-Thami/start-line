@@ -289,11 +289,8 @@ describe('a signed-up runner', () => {
     expect(screen.queryByRole('button', { name: 'My plans' })).not.toBeInTheDocument()
   })
 
-  // Signed in with a plan, they open on Home; their plan is a tap away.
-  const openTheirPlan = async (user: ReturnType<typeof renderWith>) => {
-    await user.click(await screen.findByRole('button', { name: 'Open your plan' }, { timeout: 3000 }))
-    return screen.findByRole('heading', { name: 'Parkrun PB' })
-  }
+  // Signed in with a plan, they open inside it; Home is a tap away.
+  const openTheirPlan = async (_user: ReturnType<typeof renderWith>) => screen.findByRole('heading', { name: 'Parkrun PB' }, { timeout: 3000 })
 
   it('asks before deleting their plan, then takes them home, where nothing of it is left', async () => {
     const db = accountApi({
@@ -352,28 +349,24 @@ describe('a signed-up runner', () => {
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
     expect(window.location.search).toContain('goal=1470')
-
-    // And back again from the plan to Home.
-    window.history.back()
-    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' }, { timeout: 3000 })).toBeInTheDocument()
   })
 
-  it('opens on Home after signing in, with today’s run and their plan a tap away', async () => {
+  it('opens inside their plan after signing in, with Home and today’s run a tap away', async () => {
     // Tuesday 13 October: hills day in week 1.
     vi.setSystemTime(new Date(2026, 9, 13, 7, 0))
     accountApi({ runner: thandi, plans: [current] })
     window.history.replaceState(null, '', '/')
     const user = renderWith(signedIn())
 
-    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' }, { timeout: 3000 })).toBeInTheDocument()
-    expect(window.location.search).toBe('?view=home')
-    const today = await screen.findByRole('region', { name: 'Today' }, { timeout: 3000 })
-    expect(await within(today).findByText('Hill repeats', {}, { timeout: 3000 })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
-
     await openTheirPlan(user)
     expect(await screen.findByRole('button', { name: 'Delete plan' })).toBeInTheDocument()
     expect(window.location.search).toContain('goal=1470')
+    expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' }, { timeout: 3000 })).toBeInTheDocument()
+    const today = await screen.findByRole('region', { name: 'Today' }, { timeout: 3000 })
+    expect(await within(today).findByText('Hill repeats', {}, { timeout: 3000 })).toBeInTheDocument()
   })
 
   it('checks in on a run of their plan: how it felt, and it’s ticked off', async () => {

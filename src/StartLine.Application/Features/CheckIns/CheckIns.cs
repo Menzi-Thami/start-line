@@ -7,6 +7,7 @@ using StartLine.Application.Features.Account;
 using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Plans;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Coaching;
 using StartLine.Domain.Common;
 using StartLine.Domain.Plans;
@@ -23,12 +24,17 @@ public sealed record CheckInDto(
     double? DistanceKm,
     TimeSpan? Duration,
     string? Note,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    Guid? Id = null,
+    SessionType? ActualSessionType = null,
+    bool DistanceUnreported = false,
+    Guid? ActivityId = null,
+    bool IsAdditional = false)
 {
     public static CheckInDto From(SessionCheckIn c)
     {
         ArgumentNullException.ThrowIfNull(c);
-        return new(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.PainArea, c.DistanceKm, c.Duration, c.Note, c.UpdatedAt);
+        return new(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.PainArea, c.DistanceKm, c.Duration, c.Note, c.UpdatedAt, c.Id, c.ActualSessionType, c.DistanceUnreported, c.ActivityId, c.IsAdditional);
     }
 }
 
@@ -95,7 +101,11 @@ public sealed record SaveCheckInCommand(
     BodyArea? PainArea = null,
     double? DistanceKm = null,
     TimeSpan? Duration = null,
-    string? Note = null) : IRequest<CheckInDto>;
+    string? Note = null,
+    SessionType? ActualSessionType = null,
+    bool DistanceUnreported = false,
+    Guid? ActivityId = null,
+    Guid? EntryId = null) : IRequest<CheckInDto>;
 
 internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInCommand>
 {
@@ -104,6 +114,7 @@ internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInComman
         // A day of slack for time zones ahead of UTC, as with the plan's own date.
         RuleFor(c => c.Date).Must(d => d <= timeProvider.Today().AddDays(1)).WithMessage("You can check in on a run once its day has come.");
         RuleFor(c => c.SessionType).IsInEnum().Must(SessionCheckIn.IsCheckable).WithMessage("Only runs can be checked in on.");
+        RuleFor(c => c.ActualSessionType).IsInEnum();
         RuleFor(c => c.Status).IsInEnum();
         RuleFor(c => c.Pain).IsInEnum();
         RuleFor(c => c.PainArea).IsInEnum();
@@ -117,7 +128,7 @@ internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInComman
     }
 }
 
-internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder)
+internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time)
     : IRequestHandler<SaveCheckInCommand, CheckInDto>
 {
     public async Task<CheckInDto> Handle(SaveCheckInCommand request, CancellationToken cancellationToken)
@@ -128,17 +139,72 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
             throw new ConflictException("plan_archived", "This is a past plan. Make it your plan again to check in on its runs.");
         }
 
-        await PlanSessions.RequireAsync(db, builder, plan, request.Date, request.SessionType, cancellationToken);
-        var answers = new CheckInAnswers(request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note);
-        var checkIn = await db.SessionCheckIns.SingleOrDefaultAsync(
-            c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType, cancellationToken);
+        var additional = request.EntryId is not null;
+        if (additional)
+        {
+            if (request.EntryId == Guid.Empty || request.Status == CheckInStatus.Skipped ||
+                (request.DistanceKm is null && request.Duration is null && request.ActivityId is null))
+            {
+                throw new DomainException("An additional run needs a distance, a time or an imported activity.");
+            }
+
+            var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs));
+            if (request.Date < built.StartDate || request.Date > built.RaceDate)
+            {
+                throw new DomainException("Choose a day within this plan for your additional run.");
+            }
+        }
+        else
+        {
+            await PlanSessions.RequireAsync(db, builder, plan, request.Date, request.SessionType, cancellationToken);
+        }
+
+        if (request.ActivityId is { } activityId)
+        {
+            var activity = await db.Activities.AsNoTracking().Visible(time.GetUtcNow())
+                .SingleOrDefaultAsync(a => a.Id == activityId && a.RunnerId == plan.RunnerId, cancellationToken)
+                ?? throw new NotFoundException("Activity", activityId.ToString());
+            if (activity.LocalDate != request.Date)
+            {
+                throw new DomainException("Choose an imported run from the same day.");
+            }
+
+            if (await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == plan.Id && c.ActivityId == activityId &&
+                (additional ? c.Id != request.EntryId : c.IsAdditional || c.Date != request.Date || c.SessionType != request.SessionType), cancellationToken))
+            {
+                throw new ConflictException("run_already_logged", "That imported run is already logged. Change or remove its existing entry first.");
+            }
+        }
+
+        var answers = new CheckInAnswers(request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm,
+            request.Duration, request.Note, request.ActualSessionType, request.DistanceUnreported, request.ActivityId);
+        var checkIn = additional
+            ? await db.SessionCheckIns.SingleOrDefaultAsync(c => c.Id == request.EntryId && c.SavedPlanId == plan.Id && c.IsAdditional, cancellationToken)
+            : await db.SessionCheckIns.SingleOrDefaultAsync(c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType && !c.IsAdditional, cancellationToken);
         if (checkIn is null)
         {
-            checkIn = SessionCheckIn.Create(plan.Id, request.Date, request.SessionType, answers);
+            if (additional && await db.SessionCheckIns.AnyAsync(c => c.Id == request.EntryId, cancellationToken))
+            {
+                throw new NotFoundException("Run entry", request.EntryId.ToString()!);
+            }
+
+            if (additional && await db.SessionCheckIns.CountAsync(c => c.SavedPlanId == plan.Id && c.IsAdditional, cancellationToken) >= 1000)
+            {
+                throw new ConflictException("run_limit", "This plan already has 1,000 additional runs.");
+            }
+
+            checkIn = additional
+                ? SessionCheckIn.CreateAdditional(request.EntryId!.Value, plan.Id, request.Date, request.SessionType, answers)
+                : SessionCheckIn.Create(plan.Id, request.Date, request.SessionType, answers);
             db.SessionCheckIns.Add(checkIn);
         }
         else
         {
+            if (additional && (checkIn.Date != request.Date || checkIn.SessionType != request.SessionType))
+            {
+                throw new ConflictException("run_entry_changed", "Remove this entry before changing its day.");
+            }
+
             checkIn.Answer(answers);
         }
 
@@ -156,10 +222,29 @@ internal sealed class DeleteCheckInHandler(IApplicationDbContext db, CurrentRunn
     {
         var plan = await OwnPlan.FindAsync(db, current, request.PlanId, cancellationToken);
         var checkIn = await db.SessionCheckIns.SingleOrDefaultAsync(
-            c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType, cancellationToken);
+            c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType && !c.IsAdditional, cancellationToken);
         if (checkIn is not null)
         {
             db.SessionCheckIns.Remove(checkIn);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return true;
+    }
+}
+
+/// <summary>Removes only an additional run owned by this plan's runner.</summary>
+public sealed record DeleteAdditionalRunCommand(Guid PlanId, Guid Id) : IRequest<bool>;
+
+internal sealed class DeleteAdditionalRunHandler(IApplicationDbContext db, CurrentRunner current) : IRequestHandler<DeleteAdditionalRunCommand, bool>
+{
+    public async Task<bool> Handle(DeleteAdditionalRunCommand request, CancellationToken cancellationToken)
+    {
+        var plan = await OwnPlan.FindAsync(db, current, request.PlanId, cancellationToken);
+        var entry = await db.SessionCheckIns.SingleOrDefaultAsync(c => c.SavedPlanId == plan.Id && c.Id == request.Id && c.IsAdditional, cancellationToken);
+        if (entry is not null)
+        {
+            db.SessionCheckIns.Remove(entry);
             await db.SaveChangesAsync(cancellationToken);
         }
 

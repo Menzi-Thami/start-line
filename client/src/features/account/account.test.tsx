@@ -387,7 +387,7 @@ describe('a signed-up runner', () => {
     expect((await screen.findAllByText('Done · felt 7/10, hard')).length).toBeGreaterThan(0)
     expect(db.checkIns).toEqual([{ path: 'plan-1/2026-10-13/Hills', body: expect.objectContaining({ status: 'Done', effort: 7 }) }])
     // Only the hills, of this week's runs, are ticked off.
-    expect(screen.getAllByRole('checkbox', { name: 'Done' }).filter((box) => (box as HTMLInputElement).checked)).toHaveLength(1)
+    expect(screen.getAllByRole('checkbox', { name: 'Complete' }).filter((box) => (box as HTMLInputElement).checked)).toHaveLength(1)
   })
 
   it('opens on this week’s coach’s note', async () => {

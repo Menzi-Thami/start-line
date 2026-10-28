@@ -272,7 +272,7 @@ public sealed class TickPromptTests
 
         (await Json(await runner.Client.GetAsync(Url("/api/v1/me/activities")))).GetArrayLength().ShouldBeGreaterThan(0);
 
-        var call = (await Json(await runner.Client.PostAsync(Url($"/api/v1/me/plans/{runner.Plan}/coach"), null))).GetProperty("coaching").EnumerateArray().ShouldHaveSingleItem();
+        var call = (await Json(await runner.Client.GetAsync(Url($"/api/v1/me/plans/{runner.Plan}/coach/proposal")))).GetProperty("proposed").GetProperty("coaching").EnumerateArray().ShouldHaveSingleItem();
         call.GetProperty("verdict").GetString().ShouldBe("NotEnoughToGoOn");
         call.GetProperty("fitness").ValueKind.ShouldBe(JsonValueKind.Null);
     }

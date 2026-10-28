@@ -248,27 +248,29 @@ describe('Home', () => {
     expect(within(running).getAllByText('0').length).toBeGreaterThan(0)
   })
 
-  it('offers "Ran this? Tick it" on today’s session when Strava has a run for it, and ticks it as a plain done', async () => {
+  it('offers quick completion on today’s session and can use a linked Strava run', async () => {
     const saved = { id: 'plan-1', name: 'Spring 5K', plan: plan5k, coaching: [] }
     const puts: { url: string; body: unknown }[] = []
     server.use(
       http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json(saved)),
       http.put('*/api/v1/me/plans/:id/check-ins/:date/:type', async ({ request }) => {
-        const body = (await request.json()) as { status: string; effort: number | null }
+        const body = (await request.json()) as { status: string; effort: number | null; activityId?: string; distanceUnreported: boolean }
         puts.push({ url: new URL(request.url).pathname, body })
-        return HttpResponse.json({ date: '2026-10-20', sessionType: 'Fartlek', status: body.status, effort: body.effort, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: '2026-10-20T08:00:00Z' })
+        return HttpResponse.json({ date: '2026-10-20', sessionType: 'Fartlek', status: body.status, effort: body.effort, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: '2026-10-20T08:00:00Z', activityId: body.activityId, distanceUnreported: body.distanceUnreported, isAdditional: false })
       }),
     )
     const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 6.8, 'Strava', 'Fartlek')] }, { signIn: true })
 
     const todayCard = screen.getByRole('region', { name: 'Today' })
-    const tick = await within(todayCard).findByRole('button', { name: 'Ran this? Tick it' })
+    const tick = await within(todayCard).findByRole('checkbox', { name: 'Complete' })
     // Strava's run alone doesn't make it done: that's the runner's tick.
     expect(todayCard.querySelector('.home-done-chip')).toBeNull()
     await user.click(tick)
 
-    expect(puts).toEqual([{ url: '/api/v1/me/plans/plan-1/check-ins/2026-10-20/Fartlek', body: { status: 'Done', effort: null } }])
-    expect(await within(todayCard).findByRole('button', { name: 'Add how Fartlek felt' })).toBeInTheDocument()
+    await user.selectOptions(within(todayCard).getByLabelText('Run details'), '2026-10-20')
+    await user.click(within(todayCard).getByRole('button', { name: 'Save check-in' }))
+    expect(puts).toEqual([{ url: '/api/v1/me/plans/plan-1/check-ins/2026-10-20/Fartlek', body: expect.objectContaining({ status: 'Done', effort: null, activityId: '2026-10-20', distanceUnreported: true }) }])
+    expect(await within(todayCard).findByRole('button', { name: 'Change how Fartlek went' })).toBeInTheDocument()
     expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
     expect(within(todayCard).queryByRole('button', { name: 'Ran this? Tick it' })).not.toBeInTheDocument()
   })

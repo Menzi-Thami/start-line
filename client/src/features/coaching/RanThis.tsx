@@ -28,7 +28,7 @@ export function RanThis({ session, coach, runs, onTicked }: Props) {
     setBusy(true)
     setError(null)
     try {
-      await coach.save(session, { status: 'Done', effort: null })
+      await coach.save(session, { status: 'Done', effort: null, distanceUnreported: false })
       onTicked?.()
     } catch (failure) {
       setError(failure instanceof ApiError ? failure.message : 'That didn’t save. Try again.')

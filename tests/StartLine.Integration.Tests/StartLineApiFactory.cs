@@ -50,6 +50,7 @@ public class StartLineApiFactory : WebApplicationFactory<Program>
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        TestDatabaseSafety.RequireDisposableLocal(ConnectionString);
         builder.UseEnvironment("Testing");
         builder.ConfigureAppConfiguration((_, config) =>
         {

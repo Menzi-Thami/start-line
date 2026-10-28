@@ -80,4 +80,31 @@ public sealed class SessionCheckInTests
         checkIn.Pain.ShouldBe(PainLevel.None);
         checkIn.PainArea.ShouldBeNull();
     }
+    [Fact]
+    public void Actual_work_and_time_do_not_replace_the_prescribed_session_identity()
+    {
+        var entry = CheckIn(new CheckInAnswers(CheckInStatus.Done, 3, DistanceKm: 10,
+            Duration: TimeSpan.FromHours(1), ActualSessionType: SessionType.LongRun));
+        entry.SessionType.ShouldBe(SessionType.Tempo);
+        entry.ActualSessionType.ShouldBe(SessionType.LongRun);
+        entry.DistanceKm.ShouldBe(10);
+    }
+
+    [Fact]
+    public void Time_only_entries_do_not_invent_distance_and_imports_are_links_only()
+    {
+        var timed = new CheckInAnswers(CheckInStatus.Done, null, Duration: TimeSpan.FromMinutes(42), DistanceUnreported: true);
+        RunningLog.KmOf(CheckIn(timed).Answers, 8).ShouldBeNull();
+        Should.Throw<DomainException>(() => CheckIn(timed with { DistanceKm = 10 }));
+        var linked = new CheckInAnswers(CheckInStatus.Done, null, ActivityId: Guid.NewGuid(), DistanceUnreported: true);
+        CheckIn(linked).ActivityId.ShouldBe(linked.ActivityId);
+        Should.Throw<DomainException>(() => CheckIn(linked with { DistanceKm = 10 }));
+    }
+
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    public void Non_finite_distances_are_refused(double km) =>
+        Should.Throw<DomainException>(() => CheckIn(new CheckInAnswers(CheckInStatus.Done, null, DistanceKm: km)));
+
 }

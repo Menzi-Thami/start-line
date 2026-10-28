@@ -3,6 +3,7 @@ import { formatDuration } from '../../lib/format'
 import type { CoachNote as Note, CoachReason, CoachVerdict } from '../../lib/types'
 
 interface Props {
+  preview?: boolean
   note: Note
   /** Rebuilds the plan from today after an injury. Offered, never done for the runner. */
   onInjuryReplan?: () => Promise<void>
@@ -46,10 +47,10 @@ function change(note: Note): string | null {
 }
 
 /**
- * The coach's note for a week: what it saw last week and what it changed. Small changes are made for the runner; a
+ * The coach's note for a week: what it saw last week and what it changed. Changes are shown after the runner applies a proposal; a
  * replan after an injury is only ever offered.
  */
-export function CoachNote({ note, onInjuryReplan, fasterGoal, onUseGoal }: Props) {
+export function CoachNote({ note, onInjuryReplan, fasterGoal, onUseGoal, preview = false }: Props) {
   const changed = change(note)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -69,12 +70,12 @@ export function CoachNote({ note, onInjuryReplan, fasterGoal, onUseGoal }: Props
 
   return (
     <section className={`coach-note is-${note.verdict.toLowerCase()}`} aria-label="Coach’s note">
-      <p className="coach-note-kicker">Coach’s note</p>
+      <p className="coach-note-kicker">{preview ? 'Proposed coaching · not applied' : 'Coach’s note'}</p>
       <h3>{TITLES[note.verdict]}</h3>
       {note.reasons.map((reason) => (
         <p key={reason}>{WHY[reason]}</p>
       ))}
-      {changed && <p className="coach-note-change">{changed}</p>}
+      {changed && <p className="coach-note-change">{preview ? `If applied: ${changed}` : changed}</p>}
       {note.verdict === 'Thriving' && fasterGoal !== undefined && (
         <>
           <p>Your recent runs say {formatDuration(fasterGoal)} is within reach. Aim for it if you’d like the plan to ask more of you.</p>

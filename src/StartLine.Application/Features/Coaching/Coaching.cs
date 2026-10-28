@@ -1,8 +1,12 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Account;
+using StartLine.Application.Features.CheckIns;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Plans;
 using StartLine.Domain.Activities;
@@ -51,9 +55,8 @@ internal static class CoachCalls
 }
 
 /// <summary>
-/// Opens the runner's saved plan with the coach's calls applied. On or after a week's Monday, the coach makes that
-/// week's call from how last week went (check-ins, ticks included, and uploaded runs; never synced Strava runs) and keeps it. Only the current week is ever
-/// decided: weeks the runner didn't open the plan for ran as written.
+/// Opens the runner's saved plan with already accepted coaching calls. Reading a plan never accepts a new call;
+/// review and apply endpoints make proposed weekly changes explicit.
 /// </summary>
 public sealed record CoachMyPlanCommand(Guid Id) : IRequest<SavedPlanDto>;
 
@@ -79,39 +82,42 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
 }
 
 /// <summary>
-/// The coach's calls on a saved plan, oldest first, with this week's made and kept first when it's due. Opening the plan
-/// does this, and so does a Monday reminder that carries the call, so both say the same.
+/// Reads accepted calls, previews the current week's proposal without saving, and persists a call only after explicit
+/// application. Reminders and plan readers use the same accepted calls.
 /// </summary>
 internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, TimeProvider time)
 {
-    public async Task<IReadOnlyList<CoachDecision>> CallsAsync(SavedPlan saved, Runner runner, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<CoachDecision>> CallsAsync(SavedPlan saved, Runner runner, CancellationToken cancellationToken, bool preview = false)
     {
         ArgumentNullException.ThrowIfNull(saved);
         ArgumentNullException.ThrowIfNull(runner);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls);
-
-        if (saved.Status == SavedPlanStatus.Active && await DecideThisWeekAsync(saved, runner, plan, calls, cancellationToken) is { } call)
+        if (!preview || saved.Status != SavedPlanStatus.Active)
         {
-            db.CoachWeeks.Add(CoachWeek.From(saved.Id, call));
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            catch (DbUpdateException)
-            {
-                // The same plan opened on two devices at once (or by a reminder): the other one made this week's call
-                // first, and it stands. Anything else is a real failure.
-                if (!await db.CoachWeeks.AsNoTracking().AnyAsync(w => w.SavedPlanId == saved.Id && w.WeekStart == call.WeekStart, cancellationToken))
-                {
-                    throw;
-                }
-            }
-
-            calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
+            return calls;
         }
 
-        return calls;
+        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls);
+        var call = await DecideThisWeekAsync(saved, runner, plan, calls, cancellationToken);
+        return call is null ? calls : [.. calls, call];
+    }
+
+    public async Task AcceptAsync(Guid planId, CoachDecision call, CancellationToken cancellationToken)
+    {
+        db.CoachWeeks.Add(CoachWeek.From(planId, call));
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            if (await db.CoachWeeks.AsNoTracking().AnyAsync(w => w.SavedPlanId == planId && w.WeekStart == call.WeekStart, cancellationToken))
+            {
+                throw new ConflictException("coaching_changed", "Your coaching changed on another device. Review the latest suggestion before applying it.");
+            }
+
+            throw;
+        }
     }
 
     private async Task<CoachDecision?> DecideThisWeekAsync(
@@ -171,5 +177,52 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
             Fitness = fitness,
             PaceFactor = fitness is null ? Fitness.PaceFactor(previousFactor, lastWeek) : 1,
         };
+    }
+}
+
+/// <summary>A read-only preview and a fingerprint of exactly the plan the runner reviewed.</summary>
+public sealed record CoachingProposalDto(string Token, bool HasChanges, bool CanApply, SavedPlanDto Proposed);
+
+public sealed record ReviewCoachingCommand(Guid Id, string? AcceptToken = null) : IRequest<CoachingProposalDto>;
+
+internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, PlanCoach coach, TimeProvider time)
+    : IRequestHandler<ReviewCoachingCommand, CoachingProposalDto>
+{
+    public async Task<CoachingProposalDto> Handle(ReviewCoachingCommand request, CancellationToken cancellationToken)
+    {
+        var saved = await OwnPlan.FindAsync(db, current, request.Id, cancellationToken);
+        var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
+        var existing = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
+        var proposed = await coach.CallsAsync(saved, runner, cancellationToken, preview: true);
+        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var plan = builder.Build(query, proposed);
+        var original = builder.Build(query, existing);
+        var today = CoachCalls.LocalToday(runner, time);
+        var completedToday = await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id && c.Date == today && !c.IsAdditional && c.Status != CheckInStatus.Skipped, cancellationToken);
+        var originalPast = original.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date < today || completedToday && s.Date == today);
+        var proposedPast = plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date < today || completedToday && s.Date == today);
+        if (JsonSerializer.Serialize(originalPast) != JsonSerializer.Serialize(proposedPast))
+        {
+            // Weekly calls fit a whole week. Never rewrite sessions whose days have passed or were already completed;
+            // the existing replan flow can rebuild from next Monday without touching this week's history.
+            proposed = existing;
+            plan = original;
+        }
+
+        var dto = new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, plan, saved.Status, [.. proposed.Select(CoachNoteDto.From)]);
+        var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(dto))));
+        var changed = JsonSerializer.Serialize(original) != JsonSerializer.Serialize(plan);
+        var pending = proposed.LastOrDefault(c => !existing.Any(e => e.WeekStart == c.WeekStart));
+        if (request.AcceptToken is not null)
+        {
+            if (request.AcceptToken != token || pending is null || saved.Status != SavedPlanStatus.Active)
+            {
+                throw new ConflictException("coaching_changed", "Your running or plan has changed. Review the latest suggestion before applying it.");
+            }
+
+            await coach.AcceptAsync(saved.Id, pending, cancellationToken);
+        }
+
+        return new(token, changed, pending is not null, dto);
     }
 }

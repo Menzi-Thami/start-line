@@ -5,10 +5,12 @@ import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
 import { allowsSwipe, horizontalSwipe } from '../../lib/swipe'
-import { runsByDate, weekEnd } from '../../lib/plan-runs'
+import { ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CoachNote, LoggedRun, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import { Avatar } from '../account/Avatar'
 import type { CurrentPlan } from '../account/useCurrentPlan'
+import { PlanAdjustment } from '../coaching/PlanAdjustment'
+import { RunLog } from '../coaching/RunLog'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { offersTick } from '../coaching/ran-this'
 import { RanThis } from '../coaching/RanThis'
@@ -278,7 +280,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   }
   // Done is the runner's own word once their check-ins are in: a tick or check-in, or a run they uploaded. A run Strava sent
   // alone doesn't make it done; the card asks them to tick it instead.
-  const ranToday = runs.some((r) => r.localDate === today && r.kind !== 'Other' && (!coach || r.source.kind !== 'Strava'))
+  const ranToday = runs.some((r) => !coach?.entries?.some((c) => c.isAdditional && c.activityId === r.id) && r.localDate === today && r.kind !== 'Other' && (!coach || r.source.kind !== 'Strava'))
   const isDone = (s: Session) => {
     const checkIn = coach?.get(s)
     return checkIn ? checkIn.status !== 'Skipped' : ranToday
@@ -321,9 +323,8 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
             <p className="home-today-why">Why: {s.purpose}</p>
           </details>
         )}
-        {coach && <RanThis session={s} coach={coach} runs={runs} />}
         {/* Once it's ticked or checked in on, the usual check-in: how it felt, or a change of mind. */}
-        {coach?.get(s) && <CheckInCard session={s} coach={coach} />}
+        {coach && <CheckInCard session={s} coach={coach} runs={runs} completion done={isDone(s)} />}
       </div>
     ))
   })()
@@ -331,6 +332,8 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   return (
     <>
       {body}
+      {coach && <RunLog plan={plan} coach={coach} runs={runs} />}
+      {coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}
       {day.strength.map((s) => (
         <section className="home-today-strength" aria-label="Strength session" key={`${s.date}|${s.type}`}>
           <p className="wait-tip-label">Strength session</p>
@@ -436,6 +439,7 @@ export function Home({
   catchingUpFrom,
   photo = null,
 }: Props) {
+  const auth = useAuth()
   const [tab, setTab] = useState<HomeTab>(tabFromUrl)
   const [toolsOpened, setToolsOpened] = useState(() => tab === 'tools')
   const [tabDirection, setTabDirection] = useState<'forward' | 'back' | null>(null)
@@ -451,6 +455,13 @@ export function Home({
         today,
         units,
         get: checkIns.get,
+        entries: checkIns.entries,
+        adjustments: current ? {
+          review: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, current.id) },
+          apply: async (proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your training.'); await api.me.applyCoaching(token, current.id, proposalToken); retryPlan() },
+        } : undefined,
+        saveAdditional: async (id, session, answers) => { await checkIns.saveAdditional(id, session, answers); setLogVersion((v) => v + 1) },
+        removeAdditional: async (id) => { await checkIns.removeAdditional(id); setLogVersion((v) => v + 1) },
         save: async (session, answers) => {
           await checkIns.save(session, answers)
           setLogVersion((v) => v + 1)
@@ -464,12 +475,19 @@ export function Home({
   const totals = trainingTotals(log ?? [], today)
   const bars = weeklyBars(log ?? [], today, plan)
   const week = plan?.weeks.find((w) => w.startDate <= today && today <= weekEnd(w)) ?? null
-  const soFar = week ? weekSoFar(week, runs, runsByDate(runs)) : null
+  const additionalIds = new Set(checkIns.entries.filter((c) => c.isAdditional && c.activityId).map((c) => c.activityId))
+  const plannedActivityRuns = runs.filter((r) => !additionalIds.has(r.id))
+  const completedActivityRuns = plannedActivityRuns.filter((r) => r.source.kind !== 'Strava' || checkIns.entries.some((c) => !c.isAdditional && c.activityId === r.id))
+  const soFar = week ? weekSoFar(week, plannedActivityRuns, runsByDate(plannedActivityRuns)) : null
+  if (soFar && week) {
+    soFar.ranKm = ranKmByWeek([week], runs, today, checkIns.entries).get(week.number) ?? 0
+    soFar.doneRuns = week.sessions.filter((s) => s.type !== 'Race' && s.type !== 'Strength' && (checkIns.get(s) ? checkIns.get(s)!.status !== 'Skipped' : completedActivityRuns.some((r) => r.localDate === s.date))).length
+  }
   const progress = plan ? planProgress(plan, today) : null
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
   const goalSeconds = plan ? parseTimeSpan(plan.goalTime) : null
   const fromStrava = runs.some((r) => r.source.kind === 'Strava')
-  const ranDates = new Set(runs.filter((r) => r.kind !== 'Other').map((r) => r.localDate))
+  const ranDates = new Set([...completedActivityRuns.filter((r) => r.kind !== 'Other').map((r) => r.localDate), ...checkIns.entries.filter((c) => !c.isAdditional && c.status !== 'Skipped').map((c) => c.date)])
 
   const showTab = (next: HomeTab, focus = false) => {
     if (next === tab) return

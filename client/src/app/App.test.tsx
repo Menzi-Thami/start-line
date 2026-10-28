@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
@@ -98,14 +98,54 @@ describe('the home page', () => {
 })
 
 describe('building a plan', () => {
-  it('shows the film on review and opens the finished plan without waiting for a scene', async () => {
+  it('replaces the completed wizard with the film only while generating, then opens the ready plan', async () => {
+    let finish!: () => void
+    const pending = new Promise<void>((resolve) => { finish = resolve })
+    server.use(http.post('*/api/v1/plans', async () => {
+      await pending
+      return HttpResponse.json(planFixture)
+    }))
     const { user } = setup()
     expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
     await answerEverything(user)
-    expect(screen.getByRole('complementary', { name: 'Running tips' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
     await buildIt(user)
+    expect(screen.getByRole('heading', { name: 'Building your plan…' })).toHaveFocus()
+    expect(screen.getByRole('complementary', { name: 'Running tips' })).toBeVisible()
+    expect(wizard()).toBeNull()
+    expect(screen.queryByRole('button', { name: /pause|play animation/i })).toBeNull()
+    await act(async () => { finish() })
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
     expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+  })
+
+  it('restores the same answers after a build failure and shows the loading screen again on retry', async () => {
+    let finish!: () => void
+    const pending = new Promise<void>((resolve) => { finish = resolve })
+    server.use(http.post('*/api/v1/plans', async () => {
+      await pending
+      return HttpResponse.json({}, { status: 500 })
+    }))
+    const { user } = setup()
+    await answerEverything(user)
+    await buildIt(user)
+    expect(wizard()).toBeNull()
+    await act(async () => { finish() })
+    expect(await screen.findByText('We couldn’t build that plan.')).toBeVisible()
+    expect(screen.getByRole('form', { name: 'Build your plan' })).toBeVisible()
+    expect(screen.getByRole('form', { name: 'Build your plan' })).toHaveTextContent('Comrades')
+    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+    let retry!: () => void
+    const retryPending = new Promise<void>((resolve) => { retry = resolve })
+    server.use(http.post('*/api/v1/plans', async () => {
+      await retryPending
+      return HttpResponse.json(planFixture)
+    }))
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(screen.getByRole('heading', { name: 'Building your plan…' })).toHaveFocus()
+    expect(wizard()).toBeNull()
+    await act(async () => { retry() })
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeVisible()
   })
 
   it('advances only one question when Continue is double-clicked', async () => {

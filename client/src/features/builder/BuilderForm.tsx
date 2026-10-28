@@ -6,7 +6,6 @@ import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
 import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
-import { PlanTheatre } from './PlanTheatre'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 
 export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } | { kind: 'error'; message: string }
@@ -224,8 +223,6 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
 }
 
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
-  // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
-  const [creatingPlan] = useState(() => initial === null)
   const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
   const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))
@@ -262,8 +259,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
 
   // Move focus to each new screen so keyboard and screen-reader users land on it, but not on first load.
   useEffect(() => {
-    if (direction) titleRef.current?.focus()
-  }, [step, direction, gateKey])
+    if (direction && !busy) titleRef.current?.focus()
+  }, [step, direction, gateKey, busy])
 
   const catalogue = races.kind === 'ready' ? races.races : []
   const chosenRace = catalogue.find((r) => r.slug === draft.race)
@@ -603,7 +600,6 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     />
                   </details>
                   <p className="field-help">Your plan also lives in its link, so you can share it with anyone.</p>
-                  {creatingPlan && <PlanTheatre />}
                 </>
               )}
             </section>

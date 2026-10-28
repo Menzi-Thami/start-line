@@ -18,6 +18,7 @@ import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
+import { PlanTheatre } from '../features/builder/PlanTheatre'
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { RaceStartIntro } from '../features/home/RaceStartIntro'
 import { PlanView } from '../features/plan/PlanView'
@@ -804,45 +805,46 @@ export function App() {
               the runner's plan opens by itself once it's found. The builder runs ungated meanwhile, so the sign-up screen
               never flashes past a returning runner.
             */}
-            {showBuilder && auth.account && (state.kind === 'loading' || opening) && (
+            {showBuilder && plan.kind !== 'loading' && auth.account && (state.kind === 'loading' || opening) && (
               <FindingPlan name={auth.account.name || null} onRetry={runner.refresh} onSignOut={auth.signOut} />
             )}
 
             {/* Never swapped out while the account answers, so nothing the runner did meanwhile is lost. */}
             {showBuilder && (
-              <BuilderForm
-                key={builderKey}
-                races={races}
-                onRetryRaces={retryRaces}
-                initial={builderInitial}
-                units={units}
-                busy={plan.kind === 'loading'}
-                serverErrors={fieldErrors}
-                today={today}
-                onSubmit={buildFromWizard}
-                onCancel={plan.kind === 'ready' ? backToPlan : undefined}
-                gate={gate}
-                intro={
-                  <>
-                    <Hero
-                      races={races.kind === 'ready' ? races.races : []}
-                      today={today}
-                      units={units}
-                      lede={
-                        auth.enabled
-                          ? 'A plan for any distance, up to an ultra.'
-                          : 'A plan for any distance, up to an ultra. Free.'
-                      }
-                    />
-                    <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
-                  </>
-                }
-              />
+              <div hidden={plan.kind === 'loading'}>
+                <BuilderForm
+                  key={builderKey}
+                  races={races}
+                  onRetryRaces={retryRaces}
+                  initial={builderInitial}
+                  units={units}
+                  busy={plan.kind === 'loading'}
+                  serverErrors={fieldErrors}
+                  today={today}
+                  onSubmit={buildFromWizard}
+                  onCancel={plan.kind === 'ready' ? backToPlan : undefined}
+                  gate={gate}
+                  intro={
+                    <>
+                      <Hero
+                        races={races.kind === 'ready' ? races.races : []}
+                        today={today}
+                        units={units}
+                        lede={
+                          auth.enabled
+                            ? 'A plan for any distance, up to an ultra.'
+                            : 'A plan for any distance, up to an ultra. Free.'
+                        }
+                      />
+                      <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
+                    </>
+                  }
+                />
+              </div>
             )}
 
-            <div aria-live="polite" aria-busy={plan.kind === 'loading'}>
-              {plan.kind === 'loading' &&
-                (showBuilder ? <p className="visually-hidden">Building your plan…</p> : <p className="loading-line">Building your plan…</p>)}
+            {plan.kind === 'loading' && <PlanTheatre />}
+            <div aria-live="polite">
               {plan.kind === 'error' && view === 'build' && (
                 <div className="error-panel" style={{ marginTop: 'var(--space-7)' }} role="alert">
                   <strong>We couldn’t build that plan.</strong>

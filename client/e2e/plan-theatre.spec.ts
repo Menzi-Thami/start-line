@@ -10,11 +10,29 @@ async function reviewPlan(page: Page) {
   await expect(page.getByText('Step 5 of 5')).toBeVisible()
 }
 
-test('review tips work by keyboard, fit each screen and never hold back a ready plan @phone', async ({ page }, info) => {
+/** Hold a real API response so the loading screen can be inspected without adding a production delay. */
+async function holdBuild(page: Page) {
+  let release!: () => void
+  const pending = new Promise<void>((resolve) => { release = resolve })
+  await page.route('**/api/v1/plans', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    const response = await route.fetch()
+    await pending
+    await route.fulfill({ response })
+  })
+  return release
+}
+
+test('submitted options open a dedicated loading screen with keyboard tips at every width @phone', async ({ page }, info) => {
   await reviewPlan(page)
   const theatre = page.getByRole('complementary', { name: 'Running tips' })
+  await expect(theatre).toHaveCount(0)
+  const release = await holdBuild(page)
+  await page.getByRole('button', { name: 'Build my plan' }).click()
+  await expect(page.getByRole('form', { name: 'Build your plan' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Building your plan…' })).toBeFocused()
   await expect(theatre).toBeVisible()
-  await expect(theatre.getByText('Motion reduced')).toBeVisible()
+  await expect(page.getByRole('button', { name: /pause|play animation/i })).toHaveCount(0)
   const first = await theatre.getByRole('status').innerText()
   await theatre.getByRole('button', { name: 'Next tip' }).focus()
   await page.keyboard.press('Enter')
@@ -23,27 +41,31 @@ test('review tips work by keyboard, fit each screen and never hold back a ready 
     await page.setViewportSize({ width, height: 900 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await theatre.getByRole('button', { name: 'Next tip' }).click()
-    await theatre.evaluate((node) => node.scrollIntoView({ block: 'center' }))
-    await theatre.screenshot({ path: info.outputPath(`plan-theatre-${width}.png`) })
+    await page.locator('.plan-loading').screenshot({ path: info.outputPath(`plan-loading-${width}.png`) })
   }
-  await page.getByRole('button', { name: 'Build my plan' }).click()
+  release()
   await expect(page.getByRole('heading', { name: 'Two Oceans Ultra', exact: true })).toBeVisible()
   await expect(theatre).toHaveCount(0)
 })
 
-test('the film can be paused and responds when reduced motion changes', async ({ page }) => {
+test('the loading film plays automatically without playback controls and responds to reduced motion', async ({ page }) => {
   await reviewPlan(page)
+  const release = await holdBuild(page)
   await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.getByRole('button', { name: 'Build my plan' }).click()
   const theatre = page.getByRole('complementary', { name: 'Running tips' })
-  await theatre.getByRole('button', { name: 'Pause animation' }).click()
+  await expect(theatre).toBeVisible()
+  await expect(theatre.locator('.wait-caption')).toHaveText('Recovery is training')
+  await expect(page.getByRole('button', { name: /pause|play animation/i })).toHaveCount(0)
+  await expect(theatre.locator('.wait-caption')).toHaveText('On your marks', { timeout: 6000 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(theatre).toHaveClass(/is-motion-reduced/)
   const caption = await theatre.locator('.wait-caption').textContent()
   await page.waitForTimeout(4200)
   await expect(theatre.locator('.wait-caption')).toHaveText(caption!)
-  await expect(theatre.locator('.wait-film')).toHaveCSS('animation-play-state', 'paused')
-  await theatre.getByRole('button', { name: 'Play animation' }).click()
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await expect(theatre.getByText('Motion reduced')).toBeVisible()
   expect(await theatre.evaluate((node) => node.getAnimations({ subtree: true }).filter((a) => a.playState === 'running').length)).toBe(0)
+  release()
+  await expect(page.getByRole('heading', { name: 'Two Oceans Ultra', exact: true })).toBeVisible()
 })
 
 test('strength has its own workout cards and stays out of the run count @phone', async ({ page }) => {

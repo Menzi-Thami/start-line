@@ -269,7 +269,15 @@ button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(
 .session-strength .session-head { flex-wrap: wrap; }
 .home-today-strength { display: grid; gap: var(--space-2); }
 
-/* The runner's film belongs to plan creation; tips stay put until the reader asks for the next one. */
+/* A dedicated generation screen; tips stay put until the reader asks for the next one. */
+.plan-loading {
+  max-width: 52rem;
+  min-height: 65svh;
+  margin-inline: auto;
+  padding-block: clamp(var(--space-5), 8vh, var(--space-8));
+}
+.plan-loading h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.1; }
+.plan-loading h1:focus { outline: none; }
 .plan-theatre {
   display: grid;
   gap: var(--space-4);
@@ -285,10 +293,10 @@ button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(
 .plan-theatre-tip { min-height: 6em; color: var(--ink-2); }
 .plan-theatre-controls { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin-top: var(--space-2); align-items: center; }
 .plan-theatre-controls .link-button { min-height: 44px; }
-.plan-theatre.is-paused .wait-film,
-.plan-theatre.is-paused .wait-film *,
-.plan-theatre.is-paused .wait-film *::before,
-.plan-theatre.is-paused .wait-film *::after { animation-play-state: paused !important; }
+.plan-theatre.is-motion-reduced .wait-film,
+.plan-theatre.is-motion-reduced .wait-film *,
+.plan-theatre.is-motion-reduced .wait-film *::before,
+.plan-theatre.is-motion-reduced .wait-film *::after { animation: none !important; }
 @media (min-width: 640px) {
   .plan-theatre { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
 }

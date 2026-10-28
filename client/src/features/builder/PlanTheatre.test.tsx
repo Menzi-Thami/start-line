@@ -27,16 +27,11 @@ describe('the film during plan creation', () => {
     expect(screen.getByRole('status')).toHaveTextContent(TIPS[1]!)
   })
 
-  it('can pause and resume the decorative film', async () => {
-    vi.useFakeTimers()
-    const { container } = render(<PlanTheatre />)
-    fireEvent.click(screen.getByRole('button', { name: 'Pause animation' }))
-    await act(() => vi.advanceTimersByTimeAsync(SCENE_MS * 3))
-    expect(screen.getByText('Recovery is training')).toBeInTheDocument()
-    expect(container.querySelector('.plan-theatre')).toHaveClass('is-paused')
-    fireEvent.click(screen.getByRole('button', { name: 'Play animation' }))
-    await act(() => vi.advanceTimersByTimeAsync(SCENE_MS))
-    expect(screen.getByText('On your marks')).toBeInTheDocument()
+  it('focuses the loading heading and offers no playback controls', () => {
+    render(<PlanTheatre />)
+    expect(screen.getByRole('heading', { name: 'Building your plan…' })).toHaveFocus()
+    expect(screen.queryByRole('button', { name: /pause|play animation/i })).toBeNull()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
   })
 
   it('keeps the scene still for reduced motion while tips remain usable', async () => {

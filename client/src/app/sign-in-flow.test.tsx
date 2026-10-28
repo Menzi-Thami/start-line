@@ -317,7 +317,8 @@ describe('their plan from the copy kept on this device', () => {
     await user.click(screen.getByRole('button', { name: 'Home' }))
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
     window.history.back()
-    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(await screen.findByRole('tablist', { name: 'Your plan' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
   })
 
   it('fades a page in when the runner moves to it', async () => {

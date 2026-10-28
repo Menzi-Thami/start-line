@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { AccountPage } from '../features/account/AccountPage'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { CatchingUp, Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
@@ -13,11 +12,10 @@ import { FindingPlan } from '../features/account/FindingPlan'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
+import { ScrollProgress } from './ScrollProgress'
 import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
-import { ActivityPage } from '../features/activities/ActivityPage'
 import { useCheckIns } from '../features/coaching/useCheckIns'
-import { MyRuns } from '../features/activities/MyRuns'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { RaceStartIntro } from '../features/home/RaceStartIntro'
@@ -34,6 +32,10 @@ import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
 import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
+
+const AccountPage = lazy(() => import('../features/account/AccountPage').then((module) => ({ default: module.AccountPage })))
+const ActivityPage = lazy(() => import('../features/activities/ActivityPage').then((module) => ({ default: module.ActivityPage })))
+const MyRuns = lazy(() => import('../features/activities/MyRuns').then((module) => ({ default: module.MyRuns })))
 
 type PlanState =
   | { kind: 'idle' }
@@ -662,7 +664,9 @@ export function App() {
         )}
       </header>
 
+      <ScrollProgress />
       <main key={view} className={navigated ? 'view-enter' : undefined}>
+        <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
         {auth.error && (
           <div className="callout" role="alert">
             <p>
@@ -924,6 +928,7 @@ export function App() {
         )}
           </>
         )}
+        </Suspense>
       </main>
 
       {phone && state.kind === 'ready' && <TabBar current={barCurrent} onPick={pickFromBar} account={{ name: state.runner.displayName, photo }} />}

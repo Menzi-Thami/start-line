@@ -32,6 +32,7 @@ interface Props {
   onOpenPlan: () => void
   onBuildPlan: () => void
   onOpenRun: (id: string) => void
+  onOpenRuns: () => void
   onOpenAccount: () => void
   /** The plan as last seen on this device, shown until this visit's has loaded. */
   initialPlan?: HomePlan | null
@@ -94,22 +95,27 @@ function useHomePlan(
  * The runs behind "Your running": sessions ticked off, at the plan's distance, and uploads. Never Strava runs, which stay
  * 7 days. Null until it has loaded; loaded again when a tick or check-in changes it.
  */
-function useRunningLog(version: number): LoggedRun[] | null {
+function useRunningLog(version: number): { log: LoggedRun[] | null; failed: boolean } {
   const auth = useAuth()
   const [log, setLog] = useState<LoggedRun[] | null>(null)
+  const [failedVersion, setFailedVersion] = useState<number | null>(null)
   useEffect(() => {
     let cancelled = false
     auth
       .getToken()
       .then((token) => (token ? api.me.running(token) : null))
-      .then((runs) => !cancelled && runs && setLog(runs))
-      // Without it the totals wait; everything else on Home still works.
-      .catch(() => undefined)
+      .then((runs) => {
+        if (!cancelled) {
+          if (runs) { setLog(runs); setFailedVersion(null) }
+          else setFailedVersion(version)
+        }
+      })
+      .catch(() => { if (!cancelled) setFailedVersion(version) })
     return () => {
       cancelled = true
     }
   }, [auth, version])
-  return log
+  return { log, failed: failedVersion === version }
 }
 
 const dayName = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' })
@@ -295,14 +301,14 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
           {s.title}
           {isDone(s) && <span className="chip chip-good home-done-chip">Done</span>}
         </p>
-        <p className="mono home-today-meta">
-          {s.distanceKm > 0 ? formatDistance(s.distanceKm, units) : ''}
-          {pace(s) ? ` · ${pace(s)}` : ''}
-        </p>
-        <p className="field-help">{s.detail}</p>
-        {(s.steps.length > 0 || s.purpose) && (
+        <dl className="home-workout-facts">
+          {s.distanceKm > 0 && <div><dt>Distance</dt><dd className="mono">{formatDistance(s.distanceKm, units)}</dd></div>}
+          {pace(s) && <div><dt>Target pace</dt><dd className="mono">{pace(s)}</dd></div>}
+        </dl>
+        {(s.steps.length > 0 || s.purpose || s.detail) && (
           <details className="home-today-more">
-            <summary>{s.steps.length > 0 ? 'How to run it, and why' : 'Why this run'}</summary>
+            <summary>{s.steps.length > 0 ? 'How to run it, and why' : s.purpose ? 'Why this run' : 'How to run it'}</summary>
+            <p className="field-help">{s.detail}</p>
             <SessionSteps steps={s.steps} units={units} />
             <p className="home-today-why">Why: {s.purpose}</p>
           </details>
@@ -454,6 +460,7 @@ export function Home({
   onOpenPlan,
   onBuildPlan,
   onOpenRun,
+  onOpenRuns,
   onOpenAccount,
   initialPlan,
   onPlanLoaded,
@@ -469,7 +476,7 @@ export function Home({
   const checkIns = useCheckIns(current?.id ?? null)
   // A tick or check-in made here changes the totals, so they're fetched again after each.
   const [logVersion, setLogVersion] = useState(0)
-  const log = useRunningLog(logVersion)
+  const { log, failed: logFailed } = useRunningLog(logVersion)
   const coach: SessionCoach | undefined = checkIns.ready
     ? {
         today,
@@ -552,20 +559,6 @@ export function Home({
             </p>
           </div>
         </header>
-        {plan && progress && (
-          <section className="home-race-card" aria-labelledby="home-race-name">
-            <p className="home-card-heading">Your finish line</p>
-            <h2 id="home-race-name">{plan.race.name}</h2>
-            <RaceLine plan={plan} week={week} units={units} />
-            <div className="home-countdown-row">
-              <p className="home-countdown">
-                {progress.daysToGo > 0 ? <><span className="mono">{progress.daysToGo}</span><span className="home-countdown-label">days to go</span></> : <span className="home-race-state">{progress.kind === 'race' ? 'It’s race day' : 'Race complete'}</span>}
-              </p>
-              <button type="button" className="home-race-open" aria-label="Open your training plan" onClick={onOpenPlan}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></button>
-            </div>
-            <div className="home-race-track" aria-hidden="true"><span style={{ width: `${progress.fraction * 100}%` }} /></div>
-          </section>
-        )}
       </div>
 
       {catchingUpFrom && <CatchingUp what="page" savedAt={catchingUpFrom} today={today} />}
@@ -642,6 +635,20 @@ export function Home({
             {week && <WeekRuns week={week} today={today} units={units} ranOn={(date) => ranDates.has(date)} />}
           </section>
         </div>
+        {plan && progress && (
+          <section className="home-race-card" aria-labelledby="home-race-name">
+            <p className="home-card-heading">Your finish line</p>
+            <h2 id="home-race-name">{plan.race.name}</h2>
+            <RaceLine plan={plan} week={week} units={units} />
+            <div className="home-countdown-row">
+              <p className="home-countdown">
+                {progress.daysToGo > 0 ? <><span className="mono">{progress.daysToGo}</span><span className="home-countdown-label">days to go</span></> : <span className="home-race-state">{progress.kind === 'race' ? 'It’s race day' : 'Race complete'}</span>}
+              </p>
+              <button type="button" className="home-race-open" aria-label="Open your training plan" onClick={onOpenPlan}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></button>
+            </div>
+            <div className="home-race-track" aria-hidden="true"><span style={{ width: `${progress.fraction * 100}%` }} /></div>
+          </section>
+        )}
         {plan && week && progress?.kind !== 'race' && (
           <YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />
         )}
@@ -651,21 +658,32 @@ export function Home({
           <h2 id="home-training" className="home-heading">
             Your running
           </h2>
-          <div className="home-tiles">
-            <Tile label="This month" value={amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} ${totals.month.runs === 1 ? 'run' : 'runs'}`}>
-              <ChangeLine
-                value={change(totals.month.km, totals.previousMonth.km)}
-                units={units}
-                against={`${formatDate(totals.previousMonth.from, 'dayMonth')}–${formatDate(totals.previousMonth.to, 'dayMonth')}`}
-              />
-            </Tile>
-            <Tile label="This year" value={amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} ${totals.year.runs === 1 ? 'run' : 'runs'}`} />
-            <Tile label="Weekly average" value={amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
-              <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />
-            </Tile>
-          </div>
+          {logFailed ? (
+            <div className="home-data-state" role="alert">
+              <p>Your running totals couldn’t load. Try again when you’re ready.</p>
+              <button type="button" className="button" onClick={() => setLogVersion((v) => v + 1)}>Retry running totals</button>
+            </div>
+          ) : log === null ? (
+            <div className="skeleton-stack" role="status" aria-label="Loading running totals"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>
+          ) : (
+            <>
+              <div className="home-tiles">
+                <Tile label="This month" value={amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} ${totals.month.runs === 1 ? 'run' : 'runs'}`}>
+                  <ChangeLine
+                    value={change(totals.month.km, totals.previousMonth.km)}
+                    units={units}
+                    against={`${formatDate(totals.previousMonth.from, 'dayMonth')}–${formatDate(totals.previousMonth.to, 'dayMonth')}`}
+                  />
+                </Tile>
+                <Tile label="This year" value={amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} ${totals.year.runs === 1 ? 'run' : 'runs'}`} />
+                <Tile label="Weekly average" value={amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
+                  <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />
+                </Tile>
+              </div>
+              {log.length === 0 && <div className="home-data-state"><p>Your first run starts the story. Upload a run or tick a completed session in your plan to build your totals.</p><button type="button" className="link-button" onClick={onOpenRuns}>Add your runs →</button></div>}
+            </>
+          )}
           <p className="field-help">
-            {log === null && 'Adding up your running… '}
             Counted from the runs you’ve uploaded and the sessions you’ve ticked off, each ticked one at its planned distance.
             {fromStrava && ' Runs from Strava stay on Taperday for 7 days, as Strava asks, so they count here once you tick their session.'}
           </p>
@@ -675,7 +693,7 @@ export function Home({
           <h2 id="home-weeks" className="home-heading">
             The last 12 weeks
           </h2>
-          <WeeklyChart bars={bars} units={units} averageKm={totals.weeklyAverageKm} />
+          {log === null || logFailed ? <p className="field-help">Your history will appear when your running totals load.</p> : bars.some((bar) => bar.km > 0 || (bar.plannedKm ?? 0) > 0) ? <WeeklyChart bars={bars} units={units} averageKm={totals.weeklyAverageKm} /> : <p className="field-help">Each uploaded run and ticked session adds to this view. Your weekly pattern will take shape here.</p>}
         </section>
 
         <section className="section home-section home-records" aria-labelledby="home-bests">
@@ -683,7 +701,7 @@ export function Home({
             Personal bests
           </h2>
           {headline.length === 0 ? (
-            <p className="field-help">Your fastest 5K, 10K, half and full show here, from any run, race or not.</p>
+            <div className="home-data-state"><p className="field-help">Your fastest 5K, 10K, half and full show here, from any run, race or not.</p><button type="button" className="link-button" onClick={onOpenRuns}>View or upload runs →</button></div>
           ) : (
             <ul className="home-bests">
               {headline.map((best) => (

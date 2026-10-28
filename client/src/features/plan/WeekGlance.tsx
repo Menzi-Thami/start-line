@@ -40,9 +40,10 @@ export function WeekGlance({ week, done, runs, today, units }: Props) {
       <ol className="week-strip">
         {days.map((date) => {
           const sessions = week.sessions.filter((s) => s.date === date)
-          const ticked = sessions.length > 0 && sessions.every((s) => done.has(sessionKey(s)))
-          const ran = (runs?.get(date)?.length ?? 0) > 0
-          const state = ticked || ran ? 'done' : sessions.length === 0 ? 'rest' : date < today ? 'missed' : 'ahead'
+          const ran = runs?.get(date)?.some((r) => r.kind !== 'Other') ?? false
+          // A recorded run can complete running work only. Strength needs its own session/set ticks.
+          const completed = sessions.length > 0 && sessions.every((s) => done.has(sessionKey(s)) || (s.type !== 'Strength' && ran))
+          const state = completed || (sessions.length === 0 && ran) ? 'done' : sessions.length === 0 ? 'rest' : date < today ? 'missed' : 'ahead'
           return (
             <li key={date} className={`week-day is-${state}${date === today ? ' is-today' : ''}`} aria-current={date === today ? 'date' : undefined}>
               <span className="week-day-name">{formatDate(date, 'weekday').slice(0, 3)}</span>

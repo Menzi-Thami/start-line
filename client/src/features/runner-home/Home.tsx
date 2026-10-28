@@ -291,8 +291,8 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
     if (day.runs.length === 0) {
       return (
         <>
-          <p className="home-today-title">Rest day</p>
-          <p>Legs up. Rest is when the training turns into fitness.</p>
+          <p className="home-today-title">{day.strength.length > 0 ? 'No run today' : 'Rest day'}</p>
+          <p>{day.strength.length > 0 ? 'Your running takes a break. Your strength session is below.' : 'Legs up. Rest is when the training turns into fitness.'}</p>
           {day.next && (
             <p className="field-help">
               Next: {day.next.title}, {formatDate(day.next.date)}
@@ -331,7 +331,14 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   return (
     <>
       {body}
-      {day.strength.length > 0 && <p className="field-help">Plus {day.strength[0]!.title.toLowerCase()}.</p>}
+      {day.strength.map((s) => (
+        <section className="home-today-strength" aria-label="Strength session" key={`${s.date}|${s.type}`}>
+          <p className="wait-tip-label">Strength session</p>
+          <p className="home-today-title">{s.title}</p>
+          <p className="field-help">{s.detail}</p>
+          <p className="field-help">Open your plan for the exercises and set tracking.</p>
+        </section>
+      ))}
     </>
   )
 }

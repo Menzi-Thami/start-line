@@ -98,6 +98,16 @@ describe('the home page', () => {
 })
 
 describe('building a plan', () => {
+  it('shows the film on review and opens the finished plan without waiting for a scene', async () => {
+    const { user } = setup()
+    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+    await answerEverything(user)
+    expect(screen.getByRole('complementary', { name: 'Running tips' })).toBeInTheDocument()
+    await buildIt(user)
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+  })
+
   it('advances only one question when Continue is double-clicked', async () => {
     const { user } = setup()
     await user.click(await screen.findByRole('radio', { name: /Comrades/ }))

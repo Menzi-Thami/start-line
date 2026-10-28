@@ -1,5 +1,7 @@
 # Launch QA — 28 October 2026
 
+Subsequent Basic SQL, account-loading, plan-film and strength-display work is tracked in the [follow-up](basic-sql-followup.md).
+
 Five independent personas used real Chrome against the production client build and real local API, starting in fresh browser contexts. First success means generating and viewing an actual training plan. The mobile persona used 375×812 touch emulation, 400 ms latency and 51,200 bytes/s download/upload throughput. These are controlled persona exercises, not a study of five human customers.
 
 The initial impatient persona stopped at the first error. Its later recovery was recorded separately, not counted as baseline success. All five final reruns reached first success with no remaining reported usability findings.
@@ -40,7 +42,7 @@ The literal persona additionally verified real anonymous strength editing: Monda
 
 JSON observations preserve original workspace paths for the complete raw screenshots. The selected before/after images linked above are committed alongside this report.
 
-## Validation and launch limits
+## Initial validation and launch limits
 
 - Frontend TypeScript, lint, all 488 tests across 54 files, and production build pass. npm audit reports zero vulnerabilities. Main JavaScript: approximately 436 kB before gzip / 134 kB gzip; auth remains a separate lazy chunk.
 - Strict backend build: zero warnings/errors. API production publish passes. Formatting and model/migration checks pass; no schema change. EF tooling currently warns that 10.0.12 is older than runtime 10.0.13.

@@ -19,8 +19,8 @@ const strengthSession = planFixture.weeks[0]!.sessions.find((s) => s.type === 'S
 const mount = (value = auth) => render(<AuthContext.Provider value={value}><App /></AuthContext.Provider>)
 
 // Controlled account contract, not live Entra or SQL: the server state outlives every mounted app/storage reset.
-function account() {
-  let inputs: GeneratePlanRequest = { raceSlug: null, raceName: 'Parkrun PB', distanceKm: 5, raceDate: '2026-12-13', goalTime: '00:24:30', runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'], longRunDay: 'Sunday', currentWeeklyKm: null, experience: 'Regular', planFrom: '2026-10-08', strengthDays: [] }
+function account(savedInputs: Partial<GeneratePlanRequest> = {}) {
+  let inputs: GeneratePlanRequest = { raceSlug: null, raceName: 'Parkrun PB', distanceKm: 5, raceDate: '2026-12-13', goalTime: '00:24:30', runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'], longRunDay: 'Sunday', currentWeeklyKm: null, experience: 'Regular', planFrom: '2026-10-08', strengthDays: [], ...savedInputs }
   let failSave = false
   const writes: { plan: GeneratePlanRequest; replaceCurrent: boolean }[] = []
   const planFor = (request: GeneratePlanRequest) => ({ ...planFixture, weeks: planFixture.weeks.map((week) => ({ ...week, sessions: [...week.sessions.filter((s) => s.type !== 'Strength'), ...(request.strengthDays?.length && week.phase !== 'RaceWeek' ? [{ ...strengthSession, date: week.startDate }] : [])] })) })
@@ -55,17 +55,21 @@ async function addStrength(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('adding strength to an existing account plan', () => {
-  it('saves once and restores strength after sign-out and a new sign-in with no device snapshot', async () => {
+  it.each([
+    { label: 'a historical v1 plan', inputs: {} },
+    { label: 'a v2 plan with a past custom start', inputs: { version: 2, startOn: '2026-10-12' } },
+    { label: 'a replanned v2 plan', inputs: { version: 2, startOn: '2026-10-12', replanFrom: '2026-10-19', setback: 'MissedTraining' as const, recentWeeklyKm: 20 } },
+  ])('saves $label once and restores strength after sign-out and a new sign-in with no device snapshot', async ({ inputs }) => {
     vi.setSystemTime(new Date(2026, 9, 21, 9))
-    const db = account()
+    const db = account(inputs)
     const user = userEvent.setup()
     const first = mount()
     await addStrength(user)
     expect(screen.getByText(/Changes aren’t saved to your account yet/)).toBeInTheDocument()
     await user.dblClick(screen.getByRole('button', { name: 'Save changes' }))
     await waitFor(() => expect(db.writes).toHaveLength(1))
-    // A null version is the historical v1 contract; adding strength must not upgrade it to v2.
-    expect(db.writes[0]).toMatchObject({ replaceCurrent: true, plan: { strengthDays: ['Monday'], raceName: 'Parkrun PB', planFrom: '2026-10-08', version: null } })
+    // Null is the historical v1 contract. Custom starts and replan metadata must survive strength-only edits too.
+    expect(db.writes[0]).toMatchObject({ replaceCurrent: true, plan: { strengthDays: ['Monday'], raceName: 'Parkrun PB', planFrom: '2026-10-08', version: inputs.version ?? null, startOn: inputs.startOn ?? null, replanFrom: inputs.replanFrom ?? null, setback: inputs.setback ?? null, recentWeeklyKm: inputs.recentWeeklyKm ?? null } })
     await screen.findByRole('button', { name: 'Delete plan' })
     await user.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(auth.signOut).toHaveBeenCalled()

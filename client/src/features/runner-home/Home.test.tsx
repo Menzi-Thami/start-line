@@ -45,6 +45,18 @@ const withPlan = { current, initialPlan: { id: 'plan-1', plan: plan5k as unknown
 beforeEach(() => window.history.replaceState(null, '', '/?view=home'))
 
 describe('Home', () => {
+  it('shows strength-only training separately from running and never completes it from an uploaded run', () => {
+    renderHome({ ...withPlan, today: '2026-10-19', runs: [run('2026-10-19', 5)] })
+    const today = screen.getByRole('region', { name: 'Today' })
+    expect(within(today).getByText('No run today')).toBeInTheDocument()
+    expect(within(today).queryByText('Rest day')).toBeNull()
+    const strength = within(today).getByRole('region', { name: 'Strength session' })
+    expect(strength).toHaveTextContent('Strength & mobility')
+    expect(within(strength).queryByText('Target pace')).toBeNull()
+    expect(within(strength).queryByText('Distance')).toBeNull()
+    expect(within(strength).queryByText('Done')).toBeNull()
+  })
+
   it('recovers a failed plan request without keeping a loading skeleton on screen', async () => {
     let failed = true
     server.use(http.post('*/api/v1/me/plans/:id/coach', () => failed ? new HttpResponse(null, { status: 503 }) : HttpResponse.json({ id: 'plan-1', plan: plan5k, coaching: [] })))

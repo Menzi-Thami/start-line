@@ -197,11 +197,7 @@ export function App() {
     // so trying a different goal doesn't fill My plans with near-copies.
     setFreshBuild(plan.kind !== 'ready')
     setEditing(true)
-    const current = currentPlan.current
-    const original = current ? fromRequest(current.inputs) : null
-    // Adding strength alone must not restart the running plan or upgrade a historical generator version.
-    const strengthOnly = current && original && samePlan({ ...toRequest(inputs), strengthDays: current.inputs.strengthDays, planFrom: current.inputs.planFrom, version: current.inputs.version }, current.inputs)
-    build(strengthOnly && original ? { ...inputs, planFrom: original.planFrom, version: original.version } : inputs)
+    build(inputs)
   }
 
   const changeAnswers = () => {

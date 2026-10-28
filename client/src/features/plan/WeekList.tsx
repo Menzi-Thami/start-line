@@ -68,16 +68,18 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns 
   // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
   const [bursts, setBursts] = useState(0)
   const isDone = done.has(sessionKey(session))
-  const zone = session.zone ? ZONES[session.zone] : undefined
-  const numbers = [
+  const strength = session.type === 'Strength'
+  const zone = !strength && session.zone ? ZONES[session.zone] : undefined
+  const numbers = strength ? [`${session.exercises.length} exercises`] : [
     session.distanceKm > 0 ? formatDistance(session.distanceKm, units) : null,
     pace && zone ? `${zone.name} ${formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}` : null,
   ].filter(Boolean)
   const sets = setsDone(done, session)
 
   return (
-    <div className={`session${isDone ? ' is-done' : ''}`}>
+    <div className={`session${strength ? ' session-strength' : ''}${isDone ? ' is-done' : ''}`}>
       <div className="session-head">
+        {strength && <span className="chip">Strength</span>}
         {zone && <span className="effort-dot" style={{ background: zone.colour }} aria-hidden="true" />}
         <span className="session-title">{session.title}</span>
         {numbers.length > 0 && <span className="session-numbers">{numbers.join(' · ')}</span>}

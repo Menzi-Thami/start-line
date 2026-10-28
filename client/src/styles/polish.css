@@ -257,6 +257,13 @@ button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(
 }
 
 /* Daily focus: work first, supporting context quieter and closer together. */
+.screen-recovery { margin-block: var(--space-4); }
+.screen-recovery h2 { font-family: var(--font-display); }
+button.home-bar { padding: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; min-width: 0; }
+button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.home-bar.is-selected { background: var(--accent-soft); }
+.home-bar.is-selected .home-bar-ran { opacity: 1; }
+.home-chart-detail { min-height: 3em; margin-block: var(--space-3); font-size: var(--text-sm); color: var(--ink-2); }
 .home-top { align-items: start; }
 .home-panel { padding-top: var(--space-3); }
 .home-today { border-color: rgba(215, 255, 62, 0.35); background: linear-gradient(140deg, var(--accent-soft), transparent 65%), var(--glass); }

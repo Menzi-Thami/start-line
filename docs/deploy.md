@@ -134,6 +134,19 @@ Keep this setting to stay within the free offer; opting into continued use or sw
 decision. Do not repeatedly deploy to try to wake a database that has exhausted its monthly allowance.
 Once SQL is available again, run the current `main` deploy and check both migration success and `/health/ready`.
 
+Reviewed failed runs on 28 October 2026:
+
+| Run | Commit | Failed step | Status |
+|---|---|---|---|
+| [#87](https://github.com/Menzi-Thami/start-line/actions/runs/40652724346) | `15803d4` / PR #102 | Build website | Supplied log confirms TS2769; fixed by `49f4882` in PR #103. |
+| [#88](https://github.com/Menzi-Thami/start-line/actions/runs/40654775545) | `85028cf` / PR #103 | Migrate database | Website build passed; migration failure is consistent with the owner's reported exhausted SQL free allowance. |
+| [#89](https://github.com/Menzi-Thami/start-line/actions/runs/40658110835) | `54bff8c` / PR #104 | Migrate database | Same failed step; restore SQL availability before a new deploy. |
+
+Failed-step names were verified from the GitHub website's job annotations. Detailed logs require signed-in
+access and were unavailable to this environment; the quota diagnosis is based on the owner's Azure report.
+Past red runs remain historical failures after their cause is fixed. A successful new run on current `main`
+establishes recovery; rerunning the old build-failing revision does not include the fix.
+
 ## Deploying the code by hand
 
 Only needed if the workflow is broken.

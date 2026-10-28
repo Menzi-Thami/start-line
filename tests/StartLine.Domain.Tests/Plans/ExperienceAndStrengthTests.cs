@@ -153,7 +153,7 @@ public class ExperienceAndStrengthTests
         }
     }
 
-    public static TheoryData<Exercise> EveryExercise() => [.. Enum.GetValues<Exercise>()];
+    public static TheoryData<Exercise> EveryExercise() => new(Enum.GetValues<Exercise>());
 
     [Fact]
     public void Rejects_more_than_three_strength_days() =>

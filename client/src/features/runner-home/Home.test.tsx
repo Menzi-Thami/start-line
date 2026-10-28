@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -45,6 +45,18 @@ const withPlan = { current, initialPlan: { id: 'plan-1', plan: plan5k as unknown
 beforeEach(() => window.history.replaceState(null, '', '/?view=home'))
 
 describe('Home', () => {
+  it('swipes between views without stealing gestures from calculator controls', async () => {
+    renderHome()
+    const panel = screen.getByRole('tabpanel', { name: 'Today' })
+    fireEvent.touchStart(panel, { touches: [{ clientX: 200, clientY: 100 }] })
+    fireEvent.touchEnd(panel, { changedTouches: [{ clientX: 80, clientY: 105 }] })
+    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')
+    await screen.findByRole('region', { name: 'Calculators' })
+    const control = screen.getByRole('button', { name: 'Race times', exact: true })
+    fireEvent.touchStart(control, { touches: [{ clientX: 80, clientY: 100 }] })
+    fireEvent.touchEnd(control, { changedTouches: [{ clientX: 200, clientY: 105 }] })
+    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')
+  })
   it('greets the runner and, without a plan, offers to build one', async () => {
     const { user, onBuildPlan } = renderHome()
 
@@ -63,7 +75,7 @@ describe('Home', () => {
     expect(screen.queryByRole('region', { name: 'Calculators' })).not.toBeInTheDocument()
 
     await openTab('Tools')
-    expect(screen.getByRole('region', { name: 'Calculators' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Calculators' })).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'This week' })).not.toBeInTheDocument()
   })
 
@@ -77,11 +89,18 @@ describe('Home', () => {
     expect(rows.join(' ')).not.toMatch(/Strength/)
   })
 
-  it('puts the race date, distance and where they are in the plan under the greeting', () => {
+  it('puts the real race date, distance and plan phase in the race card', () => {
     renderHome(withPlan)
 
     expect(screen.getByText('5 km')).toBeInTheDocument()
     expect(screen.getByText('Week 2 of 9 · Base')).toBeInTheDocument()
+  })
+
+  it('opens the current plan from the race countdown without inventing a workout action', async () => {
+    const { user, onOpenPlan } = renderHome(withPlan)
+    expect(screen.getByRole('region', { name: 'Parkrun PB' })).toHaveTextContent('51days to go')
+    await user.click(screen.getByRole('button', { name: 'Open your training plan' }))
+    expect(onOpenPlan).toHaveBeenCalledOnce()
   })
 
   it('leads today’s card with the run and marks it done, with why one tap away', async () => {

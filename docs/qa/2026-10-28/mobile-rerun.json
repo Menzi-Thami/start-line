@@ -1,0 +1,186 @@
+{
+  "persona": "mobile",
+  "phase": "after",
+  "status": "passed-with-stated-limitations",
+  "completed": true,
+  "browserExecuted": true,
+  "configuration": {
+    "latencyMs": 400,
+    "downloadBytesPerSecond": 51200,
+    "uploadBytesPerSecond": 51200,
+    "cache": "fresh isolated browser context",
+    "viewportWidth": 375,
+    "viewportHeight": 812,
+    "engine": "official Chrome156, mobile/touch emulation",
+    "reducedMotion": "no-preference"
+  },
+  "checks": [
+    {
+      "id": "cold_start_feedback",
+      "status": "resolved",
+      "evidence": [
+        "/workspace/qa-launch/mobile/after/01-loading-1-5s.png",
+        "/workspace/qa-launch/mobile/after/02-first-content.png"
+      ],
+      "actual": "At1.5s the branded Taperday loader says 'Loading your running plan\u2026'. A passive DOM MutationObserver recorded no .race-intro mount during the slow-start journey.",
+      "initialVisibleText": "Taperday\n\nLoading your running plan\u2026",
+      "introObserved": {
+        "everPresent": false,
+        "appearanceTimesMs": [],
+        "performanceNow": 11653.300000000745
+      }
+    },
+    {
+      "id": "wizard_heading_obscured",
+      "status": "resolved",
+      "evidence": [
+        "/workspace/qa-launch/mobile/after/05-goal.png",
+        "/workspace/qa-launch/mobile/after/06-running-days.png",
+        "/workspace/qa-launch/mobile/after/07-about.png",
+        "/workspace/qa-launch/mobile/after/08-review.png"
+      ],
+      "actual": "All4 settled wizard headings begin at87.6875px; the masthead ends at72px. Headings remain visible below it.",
+      "geometry": [
+        {
+          "screenshot": "05-goal",
+          "tag": "H2",
+          "text": "What\u2019s your goal time?",
+          "top": 87.6875,
+          "bottom": 117.53125,
+          "mastheadBottom": 72,
+          "unobscured": true
+        },
+        {
+          "screenshot": "06-running-days",
+          "tag": "H2",
+          "text": "When can you run?",
+          "top": 87.6875,
+          "bottom": 117.53125,
+          "mastheadBottom": 72,
+          "unobscured": true
+        },
+        {
+          "screenshot": "07-about",
+          "tag": "H2",
+          "text": "About you",
+          "top": 87.6875,
+          "bottom": 117.53125,
+          "mastheadBottom": 72,
+          "unobscured": true
+        },
+        {
+          "screenshot": "08-review",
+          "tag": "H2",
+          "text": "Check and build",
+          "top": 87.6875,
+          "bottom": 117.53125,
+          "mastheadBottom": 72,
+          "unobscured": true
+        }
+      ]
+    },
+    {
+      "id": "preferred_start_mismatch",
+      "status": "resolved-copy-clarification",
+      "evidence": [
+        "/workspace/qa-launch/mobile/after/06-running-days.png",
+        "/workspace/qa-launch/mobile/after/08-review.png",
+        "/workspace/qa-launch/mobile/after/09-first-success.png"
+      ],
+      "actual": "Days explicitly explains that the preferred start may differ from the later structured start for a distant race. Review labels2November2026 as Preferred start and repeats the explanation. Generated Comrades plan retains its existing24-week cap and actual28December2026 start; no generator behavior is claimed changed."
+    }
+  ],
+  "firstSuccess": {
+    "action": "Generated Comrades Marathon plan using real API; opened Strength tab afterward",
+    "msFromNavigationStart": 11166,
+    "buildRequestAndRenderDurationMs": 2321
+  },
+  "timings": {
+    "firstContentMs": 4258,
+    "firstRaceInteractionCompleteMs": 6183,
+    "entireScriptIncludingScreenshotsMs": 12240,
+    "note": "Instrumented automated interaction timings, not human completion-time estimates."
+  },
+  "layout": {
+    "allRecordedDocumentOverflowPx": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "headingVisibility": [
+      {
+        "screenshot": "05-goal",
+        "tag": "H2",
+        "text": "What\u2019s your goal time?",
+        "top": 87.6875,
+        "bottom": 117.53125,
+        "mastheadBottom": 72,
+        "unobscured": true
+      },
+      {
+        "screenshot": "06-running-days",
+        "tag": "H2",
+        "text": "When can you run?",
+        "top": 87.6875,
+        "bottom": 117.53125,
+        "mastheadBottom": 72,
+        "unobscured": true
+      },
+      {
+        "screenshot": "07-about",
+        "tag": "H2",
+        "text": "About you",
+        "top": 87.6875,
+        "bottom": 117.53125,
+        "mastheadBottom": 72,
+        "unobscured": true
+      },
+      {
+        "screenshot": "08-review",
+        "tag": "H2",
+        "text": "Check and build",
+        "top": 87.6875,
+        "bottom": 117.53125,
+        "mastheadBottom": 72,
+        "unobscured": true
+      }
+    ]
+  },
+  "javascriptErrors": [],
+  "requestDiagnostics": [
+    {
+      "ms": 4457,
+      "url": "/health/live",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "remainingUserIssues": [],
+  "limits": [
+    "No physical phone or mobile Safari was tested.",
+    "No live Entra/SQL-backed account was available; this does not validate strength persistence across actual sign-out/sign-in.",
+    "A background /health/live warm-up cancellation, if recorded, did not prevent catalogue loading or real plan generation."
+  ],
+  "screenshots": [
+    "/workspace/qa-launch/mobile/after/01-loading-1-5s.png",
+    "/workspace/qa-launch/mobile/after/02-first-content.png",
+    "/workspace/qa-launch/mobile/after/03-race-selection.png",
+    "/workspace/qa-launch/mobile/after/04-race-chosen.png",
+    "/workspace/qa-launch/mobile/after/05-goal.png",
+    "/workspace/qa-launch/mobile/after/06-running-days.png",
+    "/workspace/qa-launch/mobile/after/07-about.png",
+    "/workspace/qa-launch/mobile/after/08-review.png",
+    "/workspace/qa-launch/mobile/after/09-first-success.png",
+    "/workspace/qa-launch/mobile/after/10-strength-view.png"
+  ],
+  "observations": "/workspace/qa-launch/mobile/after/observations.json",
+  "script": "/workspace/qa-launch/mobile/journey.cjs",
+  "priorApprovalBlock": "Earlier browser attempt was not executed because approval review hit a usage limit; after parent reported recovery, one normal require_escalated retry was approved. No bypass was attempted."
+}

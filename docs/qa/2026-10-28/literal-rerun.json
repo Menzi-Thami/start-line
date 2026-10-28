@@ -1,0 +1,139 @@
+{
+  "persona": "literal-language first-time user",
+  "phase": "post-fix",
+  "firstSuccess": {
+    "completed": true,
+    "pageErrors": [],
+    "screenshot": "/workspace/qa-launch/literal/after/07-first-success.png"
+  },
+  "checks": [
+    {
+      "id": "start-date-review-mismatch",
+      "status": "passed",
+      "evidence": "Step3 now explicitly calls the selection a preferred start and says structured training may start later. Review labels Preferred start and repeats that the built plan confirms the actual start date. Generated plan still starts Nov16 under the existing 20-week cap.",
+      "screenshots": [
+        "/workspace/qa-launch/literal/after/03-running-days.png",
+        "/workspace/qa-launch/literal/after/05-strength-instructions.png",
+        "/workspace/qa-launch/literal/after/07-first-success.png"
+      ]
+    },
+    {
+      "id": "wizard-heading-visible",
+      "status": "passed",
+      "evidence": [
+        {
+          "step": "02-goal-time",
+          "heading": "What\u2019s your goal time?",
+          "headingTop": 117.6875,
+          "headerBottom": 72,
+          "pass": true
+        },
+        {
+          "step": "03-running-days",
+          "heading": "When can you run?",
+          "headingTop": 117.6875,
+          "headerBottom": 72,
+          "pass": true
+        },
+        {
+          "step": "04-about-you",
+          "heading": "About you",
+          "headingTop": 117.6875,
+          "headerBottom": 72,
+          "pass": true
+        },
+        {
+          "step": "05-strength-instructions",
+          "heading": "Check and build",
+          "headingTop": 117.6875,
+          "headerBottom": 72,
+          "pass": true
+        },
+        {
+          "step": "06-strength-selected",
+          "heading": "Check and build",
+          "headingTop": 117.6875,
+          "headerBottom": 72,
+          "pass": true
+        },
+        {
+          "step": "07-first-success",
+          "heading": "Two Oceans Ultra",
+          "headingTop": 161.140625,
+          "headerBottom": 72,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "id": "strength-running-wording",
+      "status": "passed",
+      "evidence": "The first-week strength disclosure now says About this session. This accurately describes its general description/purpose while the exercise cards and set controls remain visible.",
+      "screenshots": [
+        "/workspace/qa-launch/literal/after/07-first-success.png"
+      ]
+    },
+    {
+      "id": "strength-edit-discoverability-and-anonymous-reload",
+      "status": "passed",
+      "evidence": {
+        "actionOpenedReview": true,
+        "mondayPreserved": true,
+        "editedUrl": "http://localhost:5173/?race=two-oceans-ultra-2027&goal=19800&days=tu.th.sa.su&long=su&exp=regular&gym=mo.we&from=2026-10-28&v=2",
+        "strengthQuery": "mo.we",
+        "sessionHeadingsBeforeReload": [
+          "Mon 16 Nov \u00b7 Strength & mobility",
+          "Wed 18 Nov \u00b7 Strength & mobility"
+        ],
+        "sessionHeadingsAfterReload": [
+          "Mon 16 Nov \u00b7 Strength & mobility",
+          "Wed 18 Nov \u00b7 Strength & mobility"
+        ],
+        "completed": true
+      },
+      "screenshots": [
+        "/workspace/qa-launch/literal/after/09-change-strength-action.png",
+        "/workspace/qa-launch/literal/after/10-strength-edit-review.png",
+        "/workspace/qa-launch/literal/after/11-strength-edited.png",
+        "/workspace/qa-launch/literal/after/12-strength-after-reload.png"
+      ]
+    },
+    {
+      "id": "strength-disclosure-scope",
+      "status": "passed",
+      "evidence": "Final browser rerun shows About this session, with no How to do this session copy. The visible exercise instructions no longer conflict with a promise that the disclosure controls the instructions.",
+      "screenshot": "/workspace/qa-launch/literal/after/07-first-success.png"
+    }
+  ],
+  "residualFindings": [],
+  "limitations": [
+    "No live account signup/sign-out/sign-in or server persistence test: auth is disabled. Anonymous gym=mo.we query preservation and rendered strength sessions after reload were verified against the real API.",
+    "No mocks or repository source edits were used in this QA rerun."
+  ],
+  "scripts": [
+    "/workspace/qa-launch/literal/post-journey.cjs",
+    "/workspace/qa-launch/literal/strength-edit-rerun.cjs"
+  ],
+  "resolvedResiduals": [
+    {
+      "id": "strength-disclosure-scope",
+      "severity": "low",
+      "blocksFirstSuccess": false,
+      "actual": "Exercise cards and their instructions still appear outside the collapsed How to do this session disclosure. The original run-specific wording is fixed, but the control only hides the general description/purpose rather than the full exercise instructions.",
+      "suggestion": "If the always-visible exercise cards are intentional, About this session would describe the disclosure scope more precisely.",
+      "screenshot": "/workspace/qa-launch/literal/after/07-first-success.png",
+      "status": "resolved",
+      "resolution": "Disclosure label changed to About this session and verified in the final real-browser first-success screenshot."
+    }
+  ],
+  "finalRerun": {
+    "completed": true,
+    "script": "/workspace/qa-launch/literal/post-journey.cjs",
+    "strengthEditScript": "/workspace/qa-launch/literal/strength-edit-rerun.cjs",
+    "strengthQuery": "mo.we",
+    "sessionHeadingsAfterReload": [
+      "Mon 16 Nov \u00b7 Strength & mobility",
+      "Wed 18 Nov \u00b7 Strength & mobility"
+    ]
+  }
+}

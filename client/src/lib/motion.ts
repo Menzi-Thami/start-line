@@ -10,6 +10,11 @@ export function prefersMotion(): boolean {
 
 const INTRO_KEY = 'taperday:intro-seen'
 
+/** Do not add the intro's delay after a slow initial download. */
+export function introFitsStartup(startupMs: number): boolean {
+  return startupMs < 2500
+}
+
 /** The intro plays once per visit (per tab). Reading has no side effects, so it's safe while rendering. */
 export function introSeen(): boolean {
   try {

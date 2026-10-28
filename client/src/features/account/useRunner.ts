@@ -13,11 +13,9 @@ export type RunnerState =
 
 /**
  * How long the sign-in read keeps trying while the server wakes, on top of the API client's own retry. It's a ceiling,
- * not a wait: the page shows the moment the account loads. The free server sleeps when idle and its database pauses
- * too; the database alone took 47 s to resume when measured (23 Oct 2026), and a cold server adds up to a minute on
- * top. The runner is watching the waiting film (with a way out) the whole time, so giving up early only means trying
- * again. It's a length of time, not a count of tries: a server that's still starting answers fast with an error, and a
- * few of those used up a fixed number of tries inside a minute, before the database was even back.
+ * not a wait: the page shows the moment the account loads. Basic SQL no longer pauses for a free compute allowance,
+ * but the free API host can cold-start or restart during deployment. Slow loads get recovery controls; fast loads
+ * never wait for this ceiling. Time and attempt limits keep a quickly failing server from being retried indefinitely.
  */
 export const WAKE_PATIENCE_MS = 150_000
 

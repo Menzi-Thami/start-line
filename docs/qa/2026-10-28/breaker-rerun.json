@@ -1,0 +1,64 @@
+{
+  "persona": "breaker",
+  "phase": "after",
+  "issues": [],
+  "checks": [
+    {
+      "name": "No-selection first CTA",
+      "passed": true,
+      "actual": []
+    },
+    {
+      "name": "Negative distance retained and blocked",
+      "passed": true,
+      "value": "-5",
+      "alert": "A few things to fix\nEnter a distance greater than 0, using digits and a decimal point.\nEnter the race date."
+    },
+    {
+      "name": "Junk distance retained and blocked",
+      "passed": true,
+      "value": "abc<script>alert(1)</script>",
+      "alert": "A few things to fix\nEnter a distance greater than 0, using digits and a decimal point.\nEnter the race date."
+    },
+    {
+      "name": "Wizard Back preserves goal",
+      "passed": true,
+      "value": "11"
+    },
+    {
+      "name": "Double Continue cannot skip step",
+      "passed": true,
+      "actual": "Step 3 of 5"
+    },
+    {
+      "name": "Negative weekly distance retained and blocked",
+      "passed": true,
+      "value": "-20",
+      "alert": "One thing to fix\nEnter 0 or more, using digits and a decimal point."
+    },
+    {
+      "name": "Double Build creates one request",
+      "passed": true,
+      "requests": 1
+    }
+  ],
+  "screenshots": [
+    "/workspace/qa-launch/breaker/after/01-choose-race-guidance.png",
+    "/workspace/qa-launch/breaker/after/02-negative-distance-validation.png",
+    "/workspace/qa-launch/breaker/after/03-junk-distance-validation.png",
+    "/workspace/qa-launch/breaker/after/04-double-continue.png",
+    "/workspace/qa-launch/breaker/after/05-negative-weekly-validation.png",
+    "/workspace/qa-launch/breaker/after/06-first-success.png"
+  ],
+  "requests": [
+    {
+      "url": "http://localhost:5122/api/v1/plans",
+      "body": "{\"raceSlug\":\"comrades-2027\",\"raceName\":null,\"distanceKm\":null,\"raceDate\":null,\"goalTime\":\"11:00:00\",\"runDays\":[\"Tuesday\",\"Thursday\",\"Saturday\",\"Sunday\"],\"longRunDay\":\"Sunday\",\"currentWeeklyKm\":30,\"experience\":\"Regular\",\"strengthDays\":[],\"planFrom\":\"2026-10-28\",\"startOn\":null,\"version\":2,\"replanFrom\":null,\"setback\":null,\"recentWeeklyKm\":null,\"recentResultKm\":null,\"recentResultTime\":null,\"recentResultDate\":null}"
+    }
+  ],
+  "errors": [],
+  "success": true,
+  "limits": [
+    "Anonymous real API flow only; live sign-in/account persistence not tested."
+  ]
+}

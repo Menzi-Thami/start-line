@@ -1,0 +1,34 @@
+{
+  "persona": "impatient",
+  "phase": "post-fix",
+  "originalIssues": [
+    {
+      "id": "first-continue-validation",
+      "status": "passed",
+      "actualAlerts": [],
+      "screenshot": "/workspace/qa-launch/impatient/after/02-guided-first-action.png"
+    },
+    {
+      "id": "sticky-header-covers-focused-step",
+      "status": "passed",
+      "geometry": {
+        "activeText": "Which race?",
+        "activeTop": 88.3125,
+        "activeBottom": 118.15625,
+        "headerTop": 0,
+        "headerBottom": 72,
+        "scrollY": 715
+      },
+      "screenshot": "/workspace/qa-launch/impatient/after/02-guided-viewport.png"
+    }
+  ],
+  "newIssues": [],
+  "observations": [],
+  "success": true,
+  "consoleErrors": [],
+  "limits": [
+    "Live account sign-in/out is not configured here; this verifies real anonymous plan generation."
+  ],
+  "url": "http://localhost:5173/?race=two-oceans-ultra-2027&goal=21600&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-28&v=2",
+  "successScreenshot": "/workspace/qa-launch/impatient/after/03-first-success.png"
+}

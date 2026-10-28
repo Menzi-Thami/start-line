@@ -1,0 +1,255 @@
+/* Interaction polish extends the established Night run language. */
+.scroll-progress {
+  position: fixed;
+  z-index: 65;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-strong) 65%, var(--coral));
+  box-shadow: 0 0 16px rgba(215, 255, 62, 0.4);
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.back-to-top {
+  position: fixed;
+  z-index: 35;
+  right: clamp(1rem, 3vw, 2.5rem);
+  bottom: 1.5rem;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  color: var(--accent);
+  background: rgba(22, 23, 26, 0.94);
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(12px);
+  cursor: pointer;
+  animation: polish-rise 250ms var(--ease-out) both;
+  transition: transform 180ms ease, border-color 180ms ease;
+}
+.back-to-top svg { width: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.back-to-top:hover { border-color: var(--accent); transform: translateY(-3px); }
+.back-to-top:active { transform: scale(0.94); }
+
+/* Animated placeholders communicate that a plan is loading without layout jumps. */
+.skeleton-stack { display: grid; gap: 0.85rem; width: 100%; padding-block: 0.4rem; }
+.skeleton-line {
+  display: block;
+  width: 73%;
+  height: 1rem;
+  border-radius: 999px;
+  background: linear-gradient(100deg, rgba(255,255,255,0.065) 10%, rgba(255,255,255,0.14) 45%, rgba(255,255,255,0.065) 80%);
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.8s linear infinite;
+}
+.skeleton-line-wide { width: 94%; height: 1.5rem; }
+.skeleton-line-short { width: 48%; }
+@keyframes skeleton-shimmer { to { background-position-x: -220%; } }
+
+/* Both touch selection and keyboard exploration leave a legible marker on the training chart. */
+.volume-plot:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 8px; }
+.volume-week.is-selected .volume-bar { filter: brightness(1.2); box-shadow: 0 0 18px rgba(215, 255, 62, 0.3); }
+.volume-week { cursor: crosshair; }
+
+/* Tablet and desktop are first-class canvases: cards breathe, data can sit side by side. */
+@media (min-width: 48rem) {
+  .page:has(.home) { max-width: min(100% - 2rem, 66rem); }
+  .home { gap: var(--space-4); }
+  .home-hello { padding: var(--space-5) 0 var(--space-3); }
+  .home-title { font-size: clamp(2.1rem, 3.5vw, 3.25rem); max-width: 23ch; }
+  .home-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .home-tile { min-height: 10rem; }
+  .home-card { min-height: 13rem; }
+}
+
+@media (min-width: 75rem) {
+  .page:has(.home) { max-width: 76rem; }
+  .home { gap: var(--space-5); }
+  .home-top { gap: var(--space-5); }
+  .home-title { letter-spacing: -0.045em; }
+  .home-section { padding-block: var(--space-2); }
+}
+
+@media (max-width: 47.99rem) {
+  .back-to-top { bottom: calc(5rem + env(safe-area-inset-bottom)); right: 1rem; width: 2.7rem; height: 2.7rem; }
+  .home-hello { align-items: flex-start; }
+  .home-title { text-wrap: balance; }
+}
+
+/* New pages feel composed: headline first, then the actionable content. */
+.view-enter > :first-child:not(.scroll-progress) {
+  animation: polish-rise 380ms var(--ease-emphasis) both;
+}
+
+@keyframes polish-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Cards have a tactile surface, but never shift while a touch scroll is in progress. */
+.panel,
+.home-card,
+.home-tile,
+.overview-card,
+.week-glance {
+  transition: border-color 220ms var(--ease-standard),
+    box-shadow 280ms var(--ease-standard),
+    background-color 220ms var(--ease-standard),
+    transform 280ms var(--ease-emphasis);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .home-card:hover,
+  .home-tile:hover,
+  .overview-card:hover,
+  .week-glance:hover {
+    border-color: rgba(215, 255, 62, 0.28);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.17), inset 0 1px rgba(255, 255, 255, 0.055);
+    transform: translateY(-3px);
+  }
+  .nav-link,
+  .wordmark-button {
+    transition: color 180ms ease, transform 220ms var(--ease-emphasis);
+  }
+  .wordmark-button:hover { transform: translateY(-2px); }
+}
+
+/* Desktop navigation gets the same clear location cue as the mobile dock. */
+@media (min-width: 48rem) {
+  .masthead-nav .nav-link {
+    position: relative;
+    padding-inline: 0.75rem;
+    border-radius: 999px;
+    text-decoration: none;
+    transition: background-color 180ms ease, color 180ms ease;
+  }
+  .masthead-nav .nav-link[aria-current='page'] {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .masthead-nav .nav-link:hover { background: rgba(255,255,255,0.075); }
+  .masthead-nav .nav-link[aria-current='page']:hover { background: var(--accent-soft); }
+}
+
+/* The primary action gets a passing highlight on hover, rather than a perpetual pulse. */
+.button-primary {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.button-primary::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.4) 48%, transparent 70%);
+  transform: translateX(-130%);
+  pointer-events: none;
+}
+@media (hover: hover) {
+  .button-primary:hover::after { animation: polish-sheen 650ms ease-out forwards; }
+}
+@keyframes polish-sheen { to { transform: translateX(130%); } }
+
+/* Content animation stays lightweight and doesn't hide anything from assistive tech. */
+@media (prefers-reduced-motion: reduce) {
+  .view-enter > :first-child:not(.scroll-progress),
+  .button-primary:hover::after { animation: none !important; }
+  .panel, .home-card, .home-tile, .overview-card, .week-glance { transform: none !important; }
+  .skeleton-line { animation: none !important; }
+}
+
+@media print {
+  .scroll-progress, .back-to-top { display: none; }
+}
+
+/* Compact screens, including 320px phones and enlarged text, must never force a card wider than the page. */
+.home-top { grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); }
+.home-hello > div, .home-top > *, .home-panel > *, .home-week-body > div { min-width: 0; }
+.home-title { overflow-wrap: anywhere; }
+.home-tile-value, .home-best-time { font-variant-numeric: tabular-nums; }
+.home-tile { position: relative; overflow: hidden; }
+.home-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: linear-gradient(var(--accent), transparent);
+  opacity: 0.5;
+}
+.home-card > .button { margin-top: var(--space-3); }
+.home-section { margin-top: var(--space-5); }
+.home-history, .home-records {
+  padding: clamp(1rem, 2vw, 1.5rem);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.home-heading { font-family: var(--font-display); letter-spacing: -0.025em; }
+.home-intro { display: grid; gap: var(--space-5); }
+.home-panel.slide-forward { animation: slide-from-right var(--dur-slide) var(--ease-glide) both; }
+.home-panel.slide-back { animation: slide-from-left var(--dur-slide) var(--ease-glide) both; }
+.home-race-card {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: radial-gradient(ellipse at top right, rgba(255, 90, 54, 0.13), transparent 70%), var(--glass);
+}
+.home-race-card h2 { margin: 0; font-family: var(--font-display); font-size: clamp(1.25rem, 2vw, 1.6rem); letter-spacing: -0.03em; }
+.home-race-card .home-card-heading { color: var(--muted); margin-bottom: var(--space-2); }
+.home-race-card .home-race-line { font-size: 0.7rem; letter-spacing: 0.035em; }
+.home-countdown-row { display: flex; align-items: end; justify-content: space-between; gap: var(--space-4); margin-top: var(--space-4); }
+.home-countdown { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-3); margin: 0; }
+.home-countdown > .mono { font-family: var(--font-display); font-size: clamp(3.5rem, 6vw, 5rem); font-weight: 800; line-height: 1; letter-spacing: -0.06em; }
+.home-countdown-label { color: var(--ink-2); font-size: var(--text-xs); letter-spacing: 0.08em; text-transform: uppercase; }
+.home-race-state { font-family: var(--font-display); font-size: var(--text-2xl); }
+.home-race-open { flex: none; display: grid; place-items: center; width: var(--tap); height: var(--tap); border: 1px solid var(--line-strong); border-radius: 50%; color: var(--accent); background: var(--surface); font-size: var(--text-xl); cursor: pointer; }
+.home-race-open:hover { border-color: var(--accent); background: var(--accent-soft); }
+.home-race-open svg { width: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.home-race-track { height: 3px; background: var(--line); margin-top: var(--space-5); border-radius: 999px; overflow: hidden; }
+.home-race-track > span { display: block; height: 100%; background: var(--accent); }
+.home-week-run { padding-block: var(--space-2); }
+.session { border-color: var(--line-strong); }
+.plan-calendar-key { margin-bottom: 0; }
+.plan-calendar-day { width: 100%; min-height: var(--tap); aspect-ratio: auto; border-radius: var(--radius-sm); }
+.plan-calendar-grid { gap: 3px; }
+.plan-calendar-nav { transition: background-color var(--dur-fast), border-color var(--dur-fast); }
+.plan-calendar-nav:not(:disabled):hover, button.plan-calendar-day:hover { background: var(--accent-soft); border-color: var(--accent); }
+button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(--on-accent); }
+.plan-calendar-day:focus-visible, .plan-calendar-nav:focus-visible, .back-to-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.volume-tooltip { max-width: min(16rem, 80vw); text-wrap: balance; pointer-events: none; }
+
+@media (min-width: 48rem) {
+  .home-intro:has(.home-race-card) { grid-template-columns: 1fr 1fr; align-items: center; gap: var(--space-6); }
+  .home-intro .home-hello { align-items: flex-start; }
+  .home-top { grid-template-columns: 1.2fr 1fr; }
+  .home-panel { gap: var(--space-4); }
+}
+
+@media (min-width: 75rem) {
+  #home-panel-today { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
+  #home-panel-today > * { grid-column: 1 / -1; }
+  #home-panel-today > .home-history { grid-column: 1; }
+  #home-panel-today > .home-records { grid-column: 2; }
+  .home-history, .home-records { align-self: stretch; margin-top: var(--space-3); }
+}
+
+/* Clear the dock on short landscape tablets too. */
+.page:has(> .tab-bar) .back-to-top { bottom: calc(5rem + env(safe-area-inset-bottom)); }
+@media (prefers-reduced-motion: reduce) {
+  .home-panel, .home-panel.slide-forward, .home-panel.slide-back, .back-to-top { animation: none; }
+  .back-to-top:hover, .back-to-top:active { transform: none; }
+}
+@media print {
+  .home-history, .home-records { background: none; }
+  #home-panel-today:not([hidden]) { display: block; }
+}

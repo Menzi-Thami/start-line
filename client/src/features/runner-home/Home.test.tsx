@@ -45,6 +45,27 @@ const withPlan = { current, initialPlan: { id: 'plan-1', plan: plan5k as unknown
 beforeEach(() => window.history.replaceState(null, '', '/?view=home'))
 
 describe('Home', () => {
+  it('recovers a failed plan request without keeping a loading skeleton on screen', async () => {
+    let failed = true
+    server.use(http.post('*/api/v1/me/plans/:id/coach', () => failed ? new HttpResponse(null, { status: 503 }) : HttpResponse.json({ id: 'plan-1', plan: plan5k, coaching: [] })))
+    const { user } = renderHome({ current, today: '2026-10-20' }, { signIn: true })
+    await screen.findByRole('button', { name: 'Retry plan' })
+    expect(screen.queryByRole('status', { name: "Loading today's session" })).toBeNull()
+    failed = false
+    await user.click(screen.getByRole('button', { name: 'Retry plan' }))
+    const today = screen.getByRole('region', { name: 'Today' })
+    expect(await within(today).findByText('Fartlek')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry plan' })).toBeNull()
+  })
+
+  it('keeps a saved plan usable and labels it when the refresh fails', async () => {
+    server.use(http.post('*/api/v1/me/plans/:id/coach', () => new HttpResponse(null, { status: 503 })))
+    renderHome({ ...withPlan, today: '2026-10-20' }, { signIn: true })
+    await screen.findByRole('button', { name: 'Retry plan' })
+    expect(screen.getByText(/Showing the last plan loaded on this device/)).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Today' })).getByText('Fartlek')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open your plan' })).toBeInTheDocument()
+  })
   it('puts today before the countdown and groups the workout facts above its instructions', () => {
     renderHome({ ...withPlan, today: '2026-10-20' })
     const today = screen.getByRole('region', { name: 'Today' })

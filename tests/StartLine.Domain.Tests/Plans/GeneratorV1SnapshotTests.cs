@@ -88,7 +88,7 @@ public sealed class GeneratorV1SnapshotTests
         ["ultra-two-oceans"] = "E9170BACB6C0ECAAC56821359DC683CB1A42874794475D96A842B534E461DA74",
     };
 
-    public static TheoryData<string> CaseNames() => [.. Cases.Keys];
+    public static TheoryData<string> CaseNames() => new(Cases.Keys);
 
     [Theory]
     [MemberData(nameof(CaseNames))]

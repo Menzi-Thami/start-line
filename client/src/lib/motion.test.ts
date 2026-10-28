@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { introSeen, markIntroSeen, prefersMotion } from './motion'
+import { introFitsStartup, introSeen, markIntroSeen, prefersMotion } from './motion'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -24,6 +24,10 @@ describe('prefersMotion', () => {
 })
 
 describe('the intro', () => {
+  it('does not add an intro wait after a slow download', () => {
+    expect(introFitsStartup(100)).toBe(true)
+    expect(introFitsStartup(4000)).toBe(false)
+  })
   it('plays once per visit', () => {
     expect(introSeen()).toBe(false)
     markIntroSeen()

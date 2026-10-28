@@ -101,6 +101,39 @@ later release, once nothing reads them).
 If a setting changes (for example a new domain), update the environment's variables in GitHub (Settings →
 Environments → production) and the CSP in `client/public/staticwebapp.config.json`.
 
+## Investigating a failed deploy
+
+Open **Actions → deploy → latest failed run**, expand the red step, and copy its name and error message.
+Check the commit shown on the run: rerunning an old run uses its old workflow, even after a fix has merged.
+Use **Run workflow → main** to test the current workflow after resolving the cause.
+
+| Failure | What to check |
+|---|---|
+| Job never starts; billing or minutes message | Repository owner's Actions usage and spending limit. This repository previously exhausted its included minutes. |
+| Install .NET | Exact SDK download error. The current workflow uses Microsoft's current install script and an exact version to avoid the old storage URL. |
+| Build API / Build website | First compiler or dependency error. Reproduce with `dotnet publish src/StartLine.API -c Release` or `cd client && npm ci && npm run build`. |
+| Azure login | The `production` environment's Azure IDs and the app registration's federated credential subject described above. |
+| Migrate database | SQL error code: 40613 means waking; 40615 means firewall; authentication or permission errors need the deploy identity's database access checked. |
+| Database reports free monthly allowance exhausted | Wait for the portal's displayed allowance reset or explicitly choose a paid database tier. Retries and workflow changes cannot replenish the allowance. |
+| Deploy API / Deploy website | Azure role assignment, correct app name, or the Static Web Apps deployment token, according to the error. |
+| Smoke test | API startup/application logs and database connectivity; a successful upload alone does not establish a healthy API. |
+
+A cloud coding environment reporting `api.github.com: Forbidden` is a separate network-access problem:
+allow `api.github.com` in that environment's network settings, then save and publish the configuration.
+It prevents reading Actions logs and opening PRs through the API; it does not explain a deploy failing on a GitHub runner.
+Share the run URL and failed-step error, never deployment tokens or connection strings.
+
+The 28 October 07:51 UTC website-build failure (`TS2769`, `Home.test.tsx`, unsupported `exact` in
+`ByRoleOptions`) was fixed in commit `49f4882`, now merged into `main`. It was a TypeScript query-options
+error, not an Azure database error. Build the latest `main` rather than rerunning that historical run.
+
+The free database intentionally uses `freeLimitExhaustionBehavior: AutoPause` in `infra/main.bicep`.
+In Azure Portal → SQL databases → the Taperday database, check the free-offer usage and reset date.
+When the allowance is exhausted, account storage and migrations cannot work until service resumes.
+Keep this setting to stay within the free offer; opting into continued use or switching to a paid tier is a billing
+decision. Do not repeatedly deploy to try to wake a database that has exhausted its monthly allowance.
+Once SQL is available again, run the current `main` deploy and check both migration success and `/health/ready`.
+
 ## Deploying the code by hand
 
 Only needed if the workflow is broken.

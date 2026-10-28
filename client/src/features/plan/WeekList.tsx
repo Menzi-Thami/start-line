@@ -84,7 +84,7 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns 
       </div>
       {/* Compact: the session's name and numbers lead; how to run it and why open from the chevron (and always print). */}
       <details className="session-more">
-        <summary>How to run it</summary>
+        <summary>{session.type === 'Strength' ? 'About this session' : 'How to run it'}</summary>
         <p className="session-detail">{session.detail}</p>
         <SessionSteps steps={session.steps} units={units} />
         <p className="session-why">Why: {session.purpose}</p>

@@ -29,7 +29,7 @@ import { calendarLinks, personalCalendarLinks } from '../lib/calendar-links'
 import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/home-snapshot'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
-import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
+import { introFitsStartup, introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
 import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
@@ -128,7 +128,7 @@ export function App() {
   const [revealPlan, setRevealPlan] = useState(false)
   const [freshBuild, setFreshBuild] = useState(false)
   // The starting-gun intro: once per visit, only when landing on the builder, never for reduced motion.
-  const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen())
+  const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen() && introFitsStartup(window.performance.now()))
   const finishIntro = useCallback(() => setPlayIntro(false), [])
   // Who just made the start list, while their celebration plays.
   const [celebrating, setCelebrating] = useState<string | null>(null)
@@ -197,7 +197,11 @@ export function App() {
     // so trying a different goal doesn't fill My plans with near-copies.
     setFreshBuild(plan.kind !== 'ready')
     setEditing(true)
-    build(inputs)
+    const current = currentPlan.current
+    const original = current ? fromRequest(current.inputs) : null
+    // Adding strength alone must not restart the running plan or upgrade a historical generator version.
+    const strengthOnly = current && original && samePlan({ ...toRequest(inputs), strengthDays: current.inputs.strengthDays, planFrom: current.inputs.planFrom, version: current.inputs.version }, current.inputs)
+    build(strengthOnly && original ? { ...inputs, planFrom: original.planFrom, version: original.version } : inputs)
   }
 
   const changeAnswers = () => {
@@ -875,6 +879,7 @@ export function App() {
                 every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}
             {showPlan && (
               <PlanView
+                onEditStrength={changeAnswers}
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
                 reveal={revealPlan}

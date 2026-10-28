@@ -28,6 +28,36 @@ public sealed class AccountTests(StartLineApiFactory factory) : IClassFixture<St
 
     private static Uri Url(string path) => new(path, UriKind.Relative);
 
+    [Fact]
+    public async Task Added_strength_survives_a_new_authenticated_client_without_replacing_the_running_plan()
+    {
+        var subject = Guid.NewGuid().ToString();
+        var client = await SignedUp(factory.CreateClient().As(subject));
+        var id = await Save(client);
+        var response = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new
+        {
+            replaceCurrent = true,
+            plan = new
+            {
+                raceSlug = "comrades-2027",
+                goalTime = "10:30:00",
+                runDays = new[] { "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday" },
+                longRunDay = "Sunday",
+                currentWeeklyKm = 40,
+                strengthDays = new[] { "Monday" },
+            },
+        });
+        response.EnsureSuccessStatusCode();
+        (await Json(response)).GetProperty("id").GetGuid().ShouldBe(id);
+
+        using var nextSession = factory.CreateClient().As(subject);
+        var saved = await Json(await nextSession.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        saved.GetProperty("inputs").GetProperty("strengthDays").EnumerateArray().Select(d => d.GetString()).ShouldBe(["Monday"]);
+        saved.GetProperty("plan").GetProperty("weeks").EnumerateArray()
+            .SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .Any(s => s.GetProperty("type").GetString() == "Strength").ShouldBeTrue();
+    }
+
     // Every test signs in as a brand-new runner, so tests never see each other's data.
     private HttpClient NewRunner(string? email = null) => factory.CreateClient().As(Guid.NewGuid().ToString(), email);
 

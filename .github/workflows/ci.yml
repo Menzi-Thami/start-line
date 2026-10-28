@@ -1,10 +1,12 @@
 name: ci
 
-# Run by hand only (Actions → ci → Run workflow), or by Deps doctor on the branches it pushes. Pull requests are checked
-# locally with scripts/check.sh before they're merged, so Actions minutes go on deploying, not on re-running the same
-# tests (the free allowance ran out on 25 Oct 2026).
+# Run by hand (Actions → ci → Run workflow), or by Deps doctor on its branches. This launch-QA branch also runs the
+# suite on push so its SQL-backed persistence tests can use the runner's disposable database. Other branches retain
+# manual validation to conserve Actions minutes.
 on:
   workflow_dispatch:
+  push:
+    branches: [feature/launch-qa-strength-persistence]
 
 permissions:
   contents: read
@@ -46,6 +48,10 @@ jobs:
       - run: dotnet format StartLine.slnx --verify-no-changes --no-restore
       - run: dotnet build StartLine.slnx -c Release --no-restore
       - run: dotnet test StartLine.slnx -c Release --no-build --logger trx
+      - name: Verify migrations match the model
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure --no-build --configuration Release
 
   frontend:
     runs-on: ubuntu-latest
@@ -62,7 +68,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      - run: npm test -- --testTimeout=30000 --maxWorkers=1
       - run: npm run build
       - run: npm audit --audit-level=high
 

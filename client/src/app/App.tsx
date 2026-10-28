@@ -230,7 +230,7 @@ export function App() {
   const [justSignedUp, setJustSignedUp] = useState(false)
   const runs = synced.runs
 
-  // The runner's last-seen Home, kept on this device, so it shows at once while the free database wakes. Read once per
+  // The runner's last-seen Home, kept on this device, so it shows at once while the account refreshes. Read once per
   // account; each piece is replaced as this visit's answer arrives, and saved again for next time.
   const owner = auth.account ? ownerOf(auth.account) : null
   const [snapshot, setSnapshot] = useState<{ owner: string; copy: HomeSnapshot | null } | null>(null)
@@ -804,7 +804,7 @@ export function App() {
         {(view === 'build' || view === 'sign-up') && (
           <>
             {/*
-              Signed in, the account still answering (the database may be waking): the page stays usable under one line, and
+              Signed in, the account still answering (the API or network may be slow): the page stays usable under one line, and
               the runner's plan opens by itself once it's found. The builder runs ungated meanwhile, so the sign-up screen
               never flashes past a returning runner.
             */}

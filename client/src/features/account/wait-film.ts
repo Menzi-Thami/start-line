@@ -31,12 +31,12 @@ export const SLOW_AFTER_MS = testing ? 300 : 6000
 /** Between checks of whether the server is up yet. */
 export const WAKE_CHECK_MS = testing ? 20 : 3000
 
-/** How far the wake has got: the server starting, then its database resuming, then only the account left to load. */
+/** How far a slow request has got: API reachable, database ready, then account still loading. */
 export type WakeStep = 'server' | 'database' | 'almost'
 
 /**
  * Follows the wake through the API's health checks: `live` answers once the server is up (it never touches the
- * database), then `ready` once the database is back, after which the account read is moments away. Only ever a hint
+ * database), then `ready` once the database is healthy. Only ever a hint
  * for the screen: a failed check is "not yet", and the page shows the moment the account loads, whatever this says.
  */
 export async function followWake(

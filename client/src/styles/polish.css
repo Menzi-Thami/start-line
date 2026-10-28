@@ -257,6 +257,7 @@ button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(
 }
 
 /* Daily focus: work first, supporting context quieter and closer together. */
+.wizard-title, .plan-title, .week > summary { scroll-margin-top: calc(var(--masthead-h) + var(--space-4)); }
 .screen-recovery { margin-block: var(--space-4); }
 .screen-recovery h2 { font-family: var(--font-display); }
 button.home-bar { padding: 0; border: 0; border-radius: 4px; background: transparent; cursor: pointer; min-width: 0; }

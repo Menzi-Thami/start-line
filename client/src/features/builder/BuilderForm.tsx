@@ -12,6 +12,12 @@ export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } 
 
 const OTHER = 'other'
 
+/** Keep malformed input visible so a minus sign or pasted text can never become valid training data. */
+const decimal = (value: string): number | null => {
+  const text = value.trim()
+  return /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(text) && Number.isFinite(Number(text)) ? Number(text) : null
+}
+
 const SHORTCUTS = [
   { label: '5K', km: 5 },
   { label: '10K', km: 10 },
@@ -134,12 +140,13 @@ function validate(draft: Draft, goalSeconds: number, today: string, raceDate: st
   const found: FieldErrors = {}
   if (!draft.race) found.race = 'Choose a race, or pick "another race" and tell us about it.'
   if (draft.race === OTHER) {
-    if (!(Number(draft.otherKm) > 0)) found.distance = 'Enter the race distance.'
+    if (decimal(draft.otherKm) === null || Number(draft.otherKm) <= 0) found.distance = 'Enter a distance greater than 0, using digits and a decimal point.'
     if (!draft.otherDate) found.date = 'Enter the race date.'
   }
   if (goalSeconds <= 0) found.goal = 'Enter a goal time. Not sure? Use the estimate below.'
   if (draft.runDays.length < 3) found.runDays = 'Pick at least three days. Two runs a week isn’t enough to build on.'
   if (!draft.longRunDay) found.longRunDay = 'Pick which of your days is the long run.'
+  if (draft.currentKm.trim() && decimal(draft.currentKm) === null) found.currentKm = 'Enter 0 or more, using digits and a decimal point.'
   if (draft.start === 'day') {
     const latest = raceDate ? addDays(raceDate, -14) : null
     if (!draft.startOn) found.startOn = 'Pick the day you want to start.'
@@ -154,7 +161,7 @@ const onStep = (errors: FieldErrors, step: number): FieldErrors =>
 
 const dayList = (days: DayOfWeek[]) => WEEK.filter((d) => days.includes(d)).map((d) => SHORT_DAY[d]).join(', ')
 
-/** The day the plan will start, for the summary. */
+/** The preferred start. The generator can start later for a distant race. */
 function startSummary(draft: Draft, today: string): string {
   const day = draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn : nextMonday(today)
   return day ? formatDate(day, 'long') : 'Pick a day'
@@ -182,6 +189,7 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
   return (
     <fieldset className="field" style={{ border: 0, padding: 0 }}>
       <legend className="field-label">When do you want to start?</legend>
+      <p className="field-help">This is your preferred start. For a distant race, structured training may start later; keep running easily until then. Your built plan will show the actual start date.</p>
       <div className="segmented" role="radiogroup" aria-label="When to start">
         {options.map((o) => (
           <label className="segment" key={o.value}>
@@ -273,6 +281,10 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
+    if (step === 0 && !draft.race) {
+      titleRef.current?.focus()
+      return
+    }
     const found = validate(draft, goalSeconds, today, raceDate)
 
     if (step < LAST_STEP) {
@@ -457,7 +469,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                           placeholder={`Or type it, e.g. ${units === 'mi' ? '35' : '56'}`}
                           value={draft.otherKm}
                           aria-invalid={errors.distance ? true : undefined}
-                          onChange={(e) => set('otherKm', e.target.value.replace(/[^\d.]/g, ''))}
+                          onChange={(e) => set('otherKm', e.target.value)}
                         />
                         <FieldError id="distance-error" message={errors.distance} />
                       </div>
@@ -541,7 +553,9 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       className="input"
                       inputMode="decimal"
                       value={draft.currentKm}
-                      onChange={(e) => set('currentKm', e.target.value.replace(/[^\d.]/g, ''))}
+                      onChange={(e) => set('currentKm', e.target.value)}
+                      aria-invalid={errors.currentKm ? true : undefined}
+                      aria-describedby={errors.currentKm ? 'km-error' : undefined}
                       style={{ maxWidth: '10rem' }}
                     />
                     <p className="field-help">We build from here by no more than 10% a week.</p>
@@ -557,13 +571,14 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     {reviewRow('Goal', `${formatDuration(goalSeconds)}${pacePreview ? `. ${pacePreview}` : ''}`, 1)}
                     {recentInputs(draft.recent, today) && reviewRow('Recent race', describeRecent(draft.recent, formatDuration(durationSeconds(draft.recent.time))), 1)}
                     {reviewRow('Days', `${dayList(draft.runDays)}. Long run on ${draft.longRunDay ?? '?'}.`, 2)}
-                    {reviewRow('Start', startSummary(draft, today), 2)}
+                    {reviewRow('Preferred start', startSummary(draft, today), 2)}
                     {reviewRow(
                       'You',
                       `${experience.title} runner${Number(draft.currentKm) > 0 ? `, about ${draft.currentKm} ${units} a week now` : ''}.`,
                       3,
                     )}
                   </dl>
+                  <p className="field-help">For a distant race, your plan may start later than your preferred date. The built plan will confirm when structured training starts.</p>
                   <details className="disclosure" open={draft.strengthDays.length > 0}>
                     <summary>Add strength and mobility sessions</summary>
                     <DayPills
@@ -588,8 +603,9 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               ) : (
                 <span />
               )}
-              <button type="submit" className="button button-primary" disabled={busy} aria-busy={busy}>
-                {step < LAST_STEP ? 'Continue' : busy ? 'Building your plan…' : 'Build my plan'}
+              <button type="submit" className="button button-primary" disabled={busy} aria-busy={busy}
+                onClick={(event) => { if (event.detail > 1) event.preventDefault() }}>
+                {step === 0 && !draft.race ? 'Choose a race' : step < LAST_STEP ? 'Continue' : busy ? 'Building your plan…' : 'Build my plan'}
               </button>
             </div>
           </form>

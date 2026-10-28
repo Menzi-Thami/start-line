@@ -30,7 +30,7 @@ type Status =
 
 /**
  * Saves the plan on screen as the runner's one plan, or says what has to happen first (sign in, finish signing up).
- * With a plan already, it asks first. On the runner's own plan it's where they delete it.
+ * Same-race edits save directly; replacing another race asks first. On the runner's own plan it's where they delete it.
  */
 export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, autoSave = false, current, onSaved }: Props) {
   const auth = useAuth()
@@ -39,8 +39,11 @@ export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, aut
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   // Survives StrictMode's double effect, so an automatic save never happens twice.
   const autoSaved = useRef(false)
+  const saving = useRef(false)
 
   const persist = async (replaceCurrent: boolean) => {
+    if (saving.current) return
+    saving.current = true
     setStatus({ kind: 'saving' })
     try {
       const token = await auth.getToken()
@@ -52,6 +55,8 @@ export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, aut
       // The app didn't know about the runner's plan yet (it couldn't load): reload it, so the button offers to replace it.
       if (error instanceof ApiError && error.code === 'plan_active') onSaved?.()
       setStatus({ kind: 'error', message: error instanceof Error ? error.message : 'That didn’t save. Try again.' })
+    } finally {
+      saving.current = false
     }
   }
 
@@ -112,6 +117,7 @@ export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, aut
     }
     return (
       <>
+        {status.kind === 'saved' && <span className="chip chip-good" role="status">Changes saved to your account</span>}
         <button type="button" className="button button-quiet" onClick={() => setStatus({ kind: 'confirming-delete' })}>
           Delete plan
         </button>
@@ -146,13 +152,15 @@ export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, aut
     )
   }
 
-  const save = () => (current ? setStatus({ kind: 'confirming' }) : void persist(false))
+  const updating = current && sameRace(request, current.inputs)
+  const save = () => (updating ? void persist(true) : current ? setStatus({ kind: 'confirming' }) : void persist(false))
 
   return (
     <>
       <button type="button" className="button button-quiet" onClick={save} disabled={status.kind === 'saving'} aria-busy={status.kind === 'saving'}>
-        {status.kind === 'saving' ? 'Saving…' : current ? 'Make this my plan' : 'Save plan'}
+        {status.kind === 'saving' ? 'Saving…' : updating ? 'Save changes' : current ? 'Make this my plan' : 'Save plan'}
       </button>
+      {updating && status.kind !== 'saving' && <span className="field-help" role="status">Changes aren’t saved to your account yet. Save changes to keep them when you sign in again.</span>}
       {status.kind === 'error' && (
         <span className="field-error" role="alert">
           {status.message}

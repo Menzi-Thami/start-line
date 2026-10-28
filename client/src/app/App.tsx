@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { CatchingUp, Home } from '../features/runner-home/Home'
+import { Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
@@ -260,7 +260,7 @@ export function App() {
 
   // The runner's plan from the copy on this device, opened at once on a return visit while the account loads. It gives
   // way to this visit's plan as soon as that's on screen.
-  const [fromCopy, setFromCopy] = useState<{ plan: TrainingPlan; savedAt: string } | null>(null)
+  const [fromCopy, setFromCopy] = useState<{ plan: TrainingPlan } | null>(null)
 
   // The runner's own plan opens with accepted coaching calls; opening it never accepts a new suggestion. Its note
   // shows on "This week". A plan from a link, or anyone else's, is the plan as written.
@@ -283,7 +283,7 @@ export function App() {
         savePlan({ id: savedOnScreen, plan: coached.plan })
       })
       // Without the coach, the plan on screen is the plan as written: nothing the runner needs is lost. A plan from the
-      // copy on this device is then simply the plan, no longer catching up.
+      // copy on this device stays usable.
       .catch(() => setFromCopy((copied) => (copied?.plan === shownPlan ? null : copied)))
   }, [savedOnScreen, shownPlan, auth, savePlan])
   const notes = coachNotes && coachNotes.planId === savedOnScreen ? coachNotes.notes : undefined
@@ -321,7 +321,7 @@ export function App() {
     // it, while the account loads. Only before this visit has found their plan: after that, Home opens it for real.
     const copied =
       latestPlan === undefined && copy?.current && copy.plan?.id === copy.current.id
-        ? { inputs: fromRequest(copy.current.inputs), plan: copy.plan.plan, savedAt: copy.savedAt }
+        ? { inputs: fromRequest(copy.current.inputs), plan: copy.plan.plan }
         : null
     const own = found ? fromRequest(found.inputs) : null
     // After this render, not inside it: the plan (or Home) takes over from the page shown while the account answered.
@@ -329,7 +329,7 @@ export function App() {
       setLanded(true)
       if (copied?.inputs) {
         const inputs = copied.inputs
-        setFromCopy({ plan: copied.plan, savedAt: copied.savedAt })
+        setFromCopy({ plan: copied.plan })
         setBuilderKey((k) => k + 1)
         setPlan({ kind: 'ready', plan: copied.plan, inputs })
         setRevealPlan(false)
@@ -365,16 +365,11 @@ export function App() {
         window.history.replaceState(null, '', '?view=home')
       })
     } else if (!samePlan(toRequest(plan.inputs), latestPlan.inputs)) {
-      // The copy stays on screen, still catching up, until the new plan arrives.
+      // The saved copy stays on screen until the refreshed plan arrives.
       const inputs = fromRequest(latestPlan.inputs)
       if (inputs) fetchPlan(inputs)
     }
   }, [fromCopy, latestPlan, view, plan, fetchPlan])
-  const catchingUpFrom =
-    fromCopy && plan.kind === 'ready' && plan.plan === fromCopy.plan && (runner.state.kind === 'loading' || runner.state.kind === 'ready')
-      ? fromCopy.savedAt
-      : null
-
   // A shared link builds its plan straight away.
   useEffect(() => {
     if (initial) fetchPlan(initial)
@@ -742,7 +737,6 @@ export function App() {
             strava={synced.strava ?? copy?.strava}
             initialPlan={copy?.plan}
             onPlanLoaded={savePlan}
-            catchingUpFrom={state.kind === 'loading' && copy ? copy.savedAt : null}
             onOpenPlan={openOwnPlan}
             onBuildPlan={startFresh}
             onOpenRun={(id) => showRun(id)}
@@ -869,7 +863,6 @@ export function App() {
             </div>
 
             {showPlan && <InstallCard />}
-            {showPlan && catchingUpFrom && <CatchingUp what="plan" savedAt={catchingUpFrom} today={today} />}
 
             {/* The calendar menu: the runner's own plan subscribes to their personal feed, which follows the plan through
                 every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}

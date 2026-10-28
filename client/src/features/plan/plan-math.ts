@@ -4,7 +4,7 @@ import type { PlanWeek, Session } from '../../lib/types'
 export const trainingKm = (week: PlanWeek) =>
   Math.round(week.sessions.filter((s) => s.type !== 'Race').reduce((sum, s) => sum + s.distanceKm, 0) * 10) / 10
 
-export const sessionKey = (s: Session) => `${s.date}|${s.type}`
+export const sessionKey = (s: Pick<Session, 'date' | 'type'>) => `${s.date}|${s.type}`
 
 /**
  * Which week numbers (by index) to print under the bars: this week's always, the last unless this week is right

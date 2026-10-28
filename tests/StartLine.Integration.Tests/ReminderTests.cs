@@ -411,7 +411,7 @@ public sealed class ReminderWeekTests
     }
 
     [Fact]
-    public async Task With_run_data_Monday_leads_with_the_coachs_call_the_plan_page_then_shows()
+    public async Task With_run_data_Monday_leads_with_the_accepted_coachs_call_the_plan_page_then_shows()
     {
         await using var factory = new RemindersFactory { IncludeRunData = true };
         var client = await factory.SignedUp("Africa/Johannesburg");
@@ -421,6 +421,8 @@ public sealed class ReminderWeekTests
         await ReminderSendingTests.CheckInFirstWeek(factory, client, id, runs, weeks[1]);
 
         factory.Time.SetUtcNow(new DateTimeOffset(weeks[1].ToDateTime(new TimeOnly(5, 30)), TimeSpan.Zero));
+        var preview = await ReminderClients.Json(await client.GetAsync(ReminderClients.Url($"/api/v1/me/plans/{id}/coach/proposal")));
+        (await client.PostAsJsonAsync(ReminderClients.Url($"/api/v1/me/plans/{id}/coach/apply"), new { token = preview.GetProperty("token").GetString() })).EnsureSuccessStatusCode();
         await ReminderSendingTests.RunDue(factory);
 
         var sent = factory.Push.To(endpoint).ShouldHaveSingleItem();

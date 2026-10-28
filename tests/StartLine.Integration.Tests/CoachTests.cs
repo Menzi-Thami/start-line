@@ -70,6 +70,46 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
         }
     }
 
+    private static async Task<JsonElement> AcceptCoaching(HttpClient client, Guid plan)
+    {
+        var preview = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/coach/proposal")));
+        var response = await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{plan}/coach/apply"), new { token = preview.GetProperty("token").GetString() });
+        response.EnsureSuccessStatusCode();
+        return (await Json(response)).GetProperty("proposed");
+    }
+
+    [Fact]
+    public async Task Opening_and_previewing_never_apply_a_training_change()
+    {
+        var (client, plan, original) = await SavedTenK();
+        await CheckInWeekOne(client, plan, original, 9);
+        var opened = await Json(await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null));
+        opened.GetProperty("coaching").GetArrayLength().ShouldBe(0);
+        var preview = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/coach/proposal")));
+        preview.GetProperty("hasChanges").GetBoolean().ShouldBeTrue();
+        var unchanged = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}")));
+        unchanged.GetProperty("plan").ToString().ShouldBe(original.ToString());
+        unchanged.GetProperty("coaching").GetArrayLength().ShouldBe(0);
+        await CheckInWeekOne(client, plan, original, 4);
+        var stale = await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{plan}/coach/apply"), new { token = preview.GetProperty("token").GetString() });
+        stale.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task A_midweek_proposal_cannot_rewrite_workouts_on_past_dates()
+    {
+        await using var factory = new CoachClockFactory();
+        var isolated = new CoachTests(factory);
+        var (client, plan, original) = await isolated.SavedTenK();
+        await CheckInWeekOne(client, plan, original, 9);
+        factory.Time.SetUtcNow(WeekTwoMonday.AddDays(2));
+        var preview = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/coach/proposal")));
+        preview.GetProperty("canApply").GetBoolean().ShouldBeFalse();
+        preview.GetProperty("proposed").GetProperty("plan").ToString().ShouldBe(original.ToString());
+        var apply = await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{plan}/coach/apply"), new { token = preview.GetProperty("token").GetString() });
+        apply.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+    }
+
     private static double WeekKm(JsonElement plan, int index) => plan.GetProperty("weeks")[index].GetProperty("plannedKm").GetDouble();
 
     [Fact]
@@ -78,7 +118,7 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
         var (client, plan, original) = await SavedTenK();
         await CheckInWeekOne(client, plan, original, effort: 9);
 
-        var coached = await Json(await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null));
+        var coached = await AcceptCoaching(client, plan);
 
         var call = coached.GetProperty("coaching").EnumerateArray().ShouldHaveSingleItem();
         call.GetProperty("weekStart").GetString().ShouldBe("2026-10-19");
@@ -94,7 +134,7 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
     {
         var (client, plan, original) = await SavedTenK();
 
-        var coached = await Json(await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null));
+        var coached = await AcceptCoaching(client, plan);
 
         coached.GetProperty("coaching")[0].GetProperty("verdict").GetString().ShouldBe("NotEnoughToGoOn");
         coached.GetProperty("plan").GetProperty("weeks").ToString().ShouldBe(original.GetProperty("weeks").ToString());
@@ -105,7 +145,7 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
     {
         var (client, plan, original) = await SavedTenK();
         await CheckInWeekOne(client, plan, original, effort: 9);
-        (await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null)).EnsureSuccessStatusCode();
+        await AcceptCoaching(client, plan);
 
         // Feeling better about it afterwards doesn't remake this week's call.
         await CheckInWeekOne(client, plan, original, effort: 4);
@@ -126,7 +166,7 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
         var (client, plan, original) = await SavedTenK(replanned);
         await CheckInWeekOne(client, plan, original, effort: 9);
 
-        var coached = await Json(await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null));
+        var coached = await AcceptCoaching(client, plan);
 
         var call = coached.GetProperty("coaching")[0];
         call.GetProperty("verdict").GetString().ShouldBe("OnTrack");
@@ -137,7 +177,7 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
     public async Task The_coachs_calls_go_out_with_the_account_export()
     {
         var (client, plan, _) = await SavedTenK();
-        (await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null)).EnsureSuccessStatusCode();
+        await AcceptCoaching(client, plan);
 
         var export = await Json(await client.GetAsync(Url("/api/v1/me/export")));
 
@@ -159,7 +199,7 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
         content.Add(file, "file", "run.fit");
         (await client.PostAsync(Url("/api/v1/me/activities"), content)).StatusCode.ShouldBe(HttpStatusCode.Created);
 
-        var coached = await Json(await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null));
+        var coached = await AcceptCoaching(client, plan);
 
         var fitness = TimeSpan.Parse(coached.GetProperty("coaching")[0].GetProperty("fitness").GetString()!, System.Globalization.CultureInfo.InvariantCulture);
         fitness.TotalMinutes.ShouldBeInRange(55, 62);
@@ -174,7 +214,7 @@ public sealed class CoachTests : IClassFixture<CoachClockFactory>
         var (client, plan, original) = await SavedTenK();
         await CheckInWeekOne(client, plan, original, effort: 10);
 
-        var coached = await Json(await client.PostAsync(Url($"/api/v1/me/plans/{plan}/coach"), null));
+        var coached = await AcceptCoaching(client, plan);
 
         coached.GetProperty("coaching")[0].GetProperty("paceFactor").GetDouble().ShouldBe(1.02);
         PaceOf(coached.GetProperty("plan"), "Tempo").ShouldBeGreaterThan(PaceOf(original, "Tempo"));

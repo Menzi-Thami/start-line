@@ -300,6 +300,13 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("ActivityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActualSessionType")
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -309,11 +316,17 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<double?>("DistanceKm")
                         .HasColumnType("float");
 
+                    b.Property<bool>("DistanceUnreported")
+                        .HasColumnType("bit");
+
                     b.Property<long?>("Duration")
                         .HasColumnType("bigint");
 
                     b.Property<int?>("Effort")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsAdditional")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Note")
                         .HasMaxLength(280)
@@ -346,8 +359,13 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SavedPlanId", "ActivityId")
+                        .IsUnique()
+                        .HasFilter("[ActivityId] IS NOT NULL");
+
                     b.HasIndex("SavedPlanId", "Date", "SessionType")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsAdditional] = 0");
 
                     b.ToTable("SessionCheckIns", (string)null);
                 });

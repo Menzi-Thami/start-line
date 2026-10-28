@@ -12,7 +12,7 @@ public enum LoggedRunSource
 }
 
 /// <summary>A session the runner checked in on, with the distance the plan asked for that day.</summary>
-public sealed record TickedSession(DateOnly Date, double PlannedKm, CheckInAnswers Answers);
+public sealed record TickedSession(DateOnly Date, double PlannedKm, CheckInAnswers Answers, bool IsAdditional = false);
 
 /// <summary>One run that counts towards the runner's long-term totals.</summary>
 public sealed record LoggedRun(DateOnly Date, double DistanceKm, LoggedRunSource Source);
@@ -35,6 +35,7 @@ public static class RunningLog
         return answers.Status switch
         {
             CheckInStatus.Skipped => null,
+            _ when answers.DistanceUnreported => null,
             _ when answers.DistanceKm is { } given => given,
             CheckInStatus.CutShort => plannedKm * WeeklyCoach.CutShortShare,
             _ => plannedKm,
@@ -52,7 +53,7 @@ public static class RunningLog
         var uploads = runs.Where(a => a.Source == ActivitySource.Upload).ToList();
         var uploadDays = uploads.Select(a => a.LocalDate).ToHashSet();
         var ticked = ticks
-            .Where(t => !uploadDays.Contains(t.Date))
+            .Where(t => t.IsAdditional || !uploadDays.Contains(t.Date))
             .Select(t => KmOf(t.Answers, t.PlannedKm) is { } km && km > 0 ? new LoggedRun(t.Date, km, LoggedRunSource.Ticked) : null)
             .OfType<LoggedRun>();
         return

@@ -128,4 +128,14 @@ public sealed class KeptDataTests
 
         log.Select(r => r.Source).ShouldBe([LoggedRunSource.Uploaded, LoggedRunSource.Ticked]);
     }
+    [Fact]
+    public void A_manual_additional_run_counts_alongside_an_upload_without_completing_the_planned_work()
+    {
+        var answers = new CheckInAnswers(CheckInStatus.Done, null, DistanceKm: 3);
+        var additional = SessionCheckIn.CreateAdditional(Guid.NewGuid(), Guid.NewGuid(), Day, SessionType.Tempo, answers);
+        CoachEvidence.ForWeek([Tempo], [additional], []).ShouldHaveSingleItem().IsKnown.ShouldBeFalse();
+        var total = RunningLog.Of([new TickedSession(Day, 0, answers, IsAdditional: true)], [Run(ActivityOrigin.Upload)]);
+        total.Sum(r => r.DistanceKm).ShouldBe(15, tolerance: 0.01);
+    }
+
 }

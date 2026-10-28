@@ -213,6 +213,66 @@ public sealed class CheckInTests : IClassFixture<CheckInClockFactory>
         using var scope = _factory.Services.CreateScope();
         (await scope.ServiceProvider.GetRequiredService<StartLineDbContext>().SessionCheckIns.CountAsync(c => c.SavedPlanId == plan)).ShouldBe(0);
     }
+    [Fact]
+    public async Task A_different_run_survives_a_new_session_without_rewriting_the_plan()
+    {
+        var subject = Guid.NewGuid().ToString();
+        var client = _factory.CreateClient().As(subject);
+        (await client.PutAsJsonAsync(Url("/api/v1/me"), Profile)).EnsureSuccessStatusCode();
+        var (plan, date, type) = await TenKPlan(client);
+        var before = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}")));
+        (await client.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan}/check-ins/{date}/{type}"),
+            new { status = "Done", actualSessionType = "LongRun", effort = 3, distanceKm = 10, duration = "01:02:03" })).EnsureSuccessStatusCode();
+        var again = _factory.CreateClient().As(subject);
+        var entries = await Json(await again.GetAsync(Url($"/api/v1/me/plans/{plan}/check-ins")));
+        entries[0].GetProperty("actualSessionType").GetString().ShouldBe("LongRun");
+        entries[0].GetProperty("distanceKm").GetDouble().ShouldBe(10);
+        entries[0].GetProperty("duration").GetString().ShouldBe("01:02:03");
+        var after = await Json(await again.GetAsync(Url($"/api/v1/me/plans/{plan}")));
+        after.GetProperty("plan").ToString().ShouldBe(before.GetProperty("plan").ToString());
+    }
+
+    [Fact]
+    public async Task Additional_runs_are_idempotent_separate_entries_and_time_alone_has_no_kilometres()
+    {
+        var client = await Runner();
+        var (plan, date, type) = await TenKPlan(client);
+        var id = Guid.NewGuid();
+        var url = Url($"/api/v1/me/plans/{plan}/check-ins/additional/{id}/{date}/Easy");
+        var body = new { status = "Done", actualSessionType = "Easy", duration = "00:42:10", distanceUnreported = true };
+        (await client.PutAsJsonAsync(url, body)).EnsureSuccessStatusCode();
+        (await client.PutAsJsonAsync(url, body)).EnsureSuccessStatusCode();
+        var entries = (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/check-ins")))).EnumerateArray().ToList();
+        entries.ShouldHaveSingleItem().GetProperty("isAdditional").GetBoolean().ShouldBeTrue();
+        (await Json(await client.GetAsync(Url("/api/v1/me/running")))).GetArrayLength().ShouldBe(0);
+        (await client.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan}/check-ins/{date}/{type}"), new { status = "Done", distanceKm = 10 })).EnsureSuccessStatusCode();
+        (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/check-ins")))).GetArrayLength().ShouldBe(2);
+        (await client.DeleteAsync(Url($"/api/v1/me/plans/{plan}/check-ins/additional/{id}"))).EnsureSuccessStatusCode();
+        var remaining = (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/check-ins")))).EnumerateArray().ToList();
+        remaining.ShouldHaveSingleItem().GetProperty("isAdditional").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Only_an_owned_same_day_import_can_be_used_once_and_no_imported_metrics_are_copied()
+    {
+        var client = await Runner();
+        var (plan, date, type) = await TenKPlan(client);
+        var content = new MultipartFormDataContent();
+        content.Add(new ByteArrayContent(FitFiles.Run(new DateTime(2026, 10, 13, 5, 0, 0, DateTimeKind.Utc), 10000, 360)), "file", "actual.fit");
+        var upload = await client.PostAsync(Url("/api/v1/me/activities"), content);
+        upload.EnsureSuccessStatusCode();
+        var activityId = (await Json(upload)).GetProperty("id").GetGuid();
+        var url = Url($"/api/v1/me/plans/{plan}/check-ins/{date}/{type}");
+        (await client.PutAsJsonAsync(url, new { status = "Done", activityId, distanceUnreported = true })).EnsureSuccessStatusCode();
+        var duplicate = await client.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan}/check-ins/additional/{Guid.NewGuid()}/{date}/Easy"),
+            new { status = "Done", activityId, distanceUnreported = true });
+        duplicate.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        var copied = await client.PutAsJsonAsync(url, new { status = "Done", activityId, distanceUnreported = true, distanceKm = 10 });
+        copied.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var foreign = await client.PutAsJsonAsync(url, new { status = "Done", activityId = Guid.NewGuid(), distanceUnreported = true });
+        foreign.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
 }
 
 /// <summary>A factory of its own, so moving its clock on never moves another test class's.</summary>

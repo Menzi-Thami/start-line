@@ -90,7 +90,7 @@ internal sealed partial class ReminderRunner(
 
     /// <summary>
     /// What a day's reminder is made of. Always: the plan and the runner's units, and on a Monday the check-ins of the week
-    /// before. With run data allowed: the coach's call (made now if it's due, as opening the plan would), the plan as the
+    /// before. With run data allowed: the already accepted coach's call, the plan as the
     /// coach has it, and last week's runs.
     /// </summary>
     private async Task<ReminderFacts> FactsAsync(SavedPlan saved, Runner runner, TrainingPlan asWritten, DateOnly day, CancellationToken cancellationToken)
@@ -113,7 +113,7 @@ internal sealed partial class ReminderRunner(
         var checkIns = await db.SessionCheckIns.AsNoTracking()
             .Where(c => c.SavedPlanId == saved.Id && c.Date >= lastWeek.StartDate && c.Date < day)
             .ToListAsync(cancellationToken);
-        bool CheckedIn(PlannedSession s) => checkIns.Any(c => c.Date == s.Date && c.SessionType == s.Type && c.Status != CheckInStatus.Skipped);
+        bool CheckedIn(PlannedSession s) => checkIns.Any(c => c.Date == s.Date && c.SessionType == s.Type && !c.IsAdditional && c.Status != CheckInStatus.Skipped);
         if (!settings.IncludeRunData)
         {
             return new ReminderFacts(plan, runner.Units, new LastWeek(planned.Count, planned.Count(CheckedIn), lastWeek.PlannedKm));

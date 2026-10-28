@@ -58,7 +58,7 @@ internal sealed partial class TickPrompter(
         var facts = new TickPromptFacts(
             RemindersOn: true,
             InPlan: session is not null,
-            CheckedIn: await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id && c.Date == date && c.SessionType == type, cancellationToken),
+            CheckedIn: await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id && c.Date == date && c.SessionType == type && !c.IsAdditional, cancellationToken),
             AlreadyPrompted: await db.TickPrompts.AnyAsync(p => p.SavedPlanId == saved.Id && p.Date == date && p.SessionType == type, cancellationToken));
         if (session is null || !TickPrompts.IsDue(run, facts, now) || !await NoteAsync(TickPrompt.For(saved.Id, date, type), cancellationToken))
         {

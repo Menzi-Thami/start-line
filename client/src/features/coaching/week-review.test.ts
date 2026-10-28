@@ -8,7 +8,7 @@ import { reviewLine, reviewWeek, weekAhead, type CheckInFor } from './week-revie
 const week = (n: number) => planFixture.weeks.find((w) => w.number === n)!
 
 const run = (localDate: string, distanceKm: number): ActivitySummary =>
-  ({ id: `${localDate}-${distanceKm}`, startedAt: `${localDate}T06:00:00Z`, localDate, kind: 'Run', distanceKm }) as unknown as ActivitySummary
+  ({ id: `${localDate}-${distanceKm}`, startedAt: `${localDate}T06:00:00Z`, localDate, kind: 'Run', distanceKm, source: { kind: 'Upload', viewUrl: null, recordedOnGarmin: false, cachedUntil: null } }) as unknown as ActivitySummary
 
 const checkIn = (date: string, sessionType: Session['type'], answers: Partial<CheckIn> = {}): CheckIn =>
   ({ date, sessionType, status: 'Done', effort: null, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: `${date}T08:00:00Z`, ...answers }) as CheckIn

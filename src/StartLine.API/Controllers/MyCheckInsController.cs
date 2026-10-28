@@ -33,8 +33,27 @@ public sealed class MyCheckInsController(IDispatcher dispatcher) : ControllerBas
     {
         ArgumentNullException.ThrowIfNull(request);
         return Ok(await dispatcher.Send(
-            new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note),
+            new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note, request.ActualSessionType, request.DistanceUnreported, request.ActivityId),
             cancellationToken));
+    }
+
+    [HttpPut("additional/{id:guid}/{date}/{sessionType}")]
+    [EnableRateLimiting(PresentationDependencyInjection.PlanRateLimitPolicy)]
+    [ProducesResponseType<CheckInDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> SaveAdditional(Guid planId, Guid id, DateOnly date, SessionType sessionType, [FromBody] CheckInRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Ok(await dispatcher.Send(new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort,
+            request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note, request.ActualSessionType,
+            request.DistanceUnreported, request.ActivityId, id), cancellationToken));
+    }
+
+    [HttpDelete("additional/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> DeleteAdditional(Guid planId, Guid id, CancellationToken cancellationToken)
+    {
+        await dispatcher.Send(new DeleteAdditionalRunCommand(planId, id), cancellationToken);
+        return NoContent();
     }
 
     [HttpDelete("{date}/{sessionType}")]
@@ -48,7 +67,7 @@ public sealed class MyCheckInsController(IDispatcher dispatcher) : ControllerBas
 }
 
 /// <param name="Effort">1 (very easy) to 10 (all out). Required for a run cut short or swapped; none for a skipped run; optional on a plain "Done", a tick.</param>
-/// <param name="DistanceKm">For a run no watch or app recorded.</param>
+/// <param name="DistanceKm">Independently entered actual distance; omitted for linked imports.</param>
 public sealed record CheckInRequest(
     CheckInStatus Status,
     int? Effort,
@@ -56,4 +75,7 @@ public sealed record CheckInRequest(
     BodyArea? PainArea = null,
     double? DistanceKm = null,
     TimeSpan? Duration = null,
-    string? Note = null);
+    string? Note = null,
+    SessionType? ActualSessionType = null,
+    bool DistanceUnreported = false,
+    Guid? ActivityId = null);

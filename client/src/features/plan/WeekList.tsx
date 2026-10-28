@@ -5,7 +5,6 @@ import type { ActivitySummary, PaceZone, PaceZoneRange, PlanWeek, Session } from
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
 import { CheckInCard } from '../coaching/CheckInCard'
-import { RanThis } from '../coaching/RanThis'
 import { reviewLine, reviewWeek } from '../coaching/week-review'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { ExerciseList } from '../strength/ExerciseList'
@@ -102,7 +101,7 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns 
           <ExerciseList session={session} done={done} onDoneChange={onDoneChange} />
         </div>
       )}
-      {session.type !== 'Race' && (
+      {session.type !== 'Race' && (strength || !coach) && (
         <label className="session-done">
           <span className="tick-wrap">
             <input
@@ -127,9 +126,8 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns 
       )}
       {coach && session.type !== 'Strength' && session.type !== 'Race' && (
         <>
-          <RanThis session={session} coach={coach} runs={dayRuns} onTicked={() => onDoneChange((current) => withSessionDone(current, session, true))} />
           {/* A check-in that says the run happened ticks it off too, and a skipped one unticks it. */}
-          <CheckInCard session={session} coach={coach} onDone={(ran) => onDoneChange((current) => withSessionDone(current, session, ran))} />
+          <CheckInCard session={session} coach={coach} runs={dayRuns} completion done={isDone} onDone={(ran) => onDoneChange((current) => withSessionDone(current, session, ran))} />
         </>
       )}
     </div>
@@ -214,7 +212,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
   return (
     <div className="weeks">
       {weeks.map((week) => {
-        const completed = week.sessions.filter((s) => done.has(sessionKey(s))).length
+        const completed = week.sessions.filter((s) => { const c = coach?.get(s); return c ? c.status !== 'Skipped' : done.has(sessionKey(s)) }).length
         return (
           <details className="week" id={`plan-week-${week.number}`} key={week.number} open={week.number === openWeek}>
             <summary>
@@ -234,7 +232,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
             {today && (runs || coach) && addDays(week.startDate, 6) < today && (
               <p className="week-review">
                 <span className="week-review-label">How it went:</span>{' '}
-                {reviewLine(reviewWeek(week, runs ? [...runs.values()].flat() : [], today, coach?.get), units)}
+                {reviewLine(reviewWeek(week, runs ? [...runs.values()].flat() : [], today, coach?.get, coach?.entries), units)}
               </p>
             )}
             <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} coach={coach} />

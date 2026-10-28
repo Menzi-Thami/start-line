@@ -233,6 +233,7 @@ internal sealed class SessionCheckInConfiguration : IEntityTypeConfiguration<Ses
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).ValueGeneratedNever();
         builder.Property(c => c.SessionType).HasConversion<string>().HasMaxLength(24);
+        builder.Property(c => c.ActualSessionType).HasConversion<string>().HasMaxLength(24);
         builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(16);
         builder.Property(c => c.Pain).HasConversion<string>().HasMaxLength(16);
         builder.Property(c => c.PainArea).HasConversion<string>().HasMaxLength(16);
@@ -241,7 +242,8 @@ internal sealed class SessionCheckInConfiguration : IEntityTypeConfiguration<Ses
         builder.Property(c => c.Note).HasMaxLength(SessionCheckIn.MaxNoteLength);
 
         // One check-in per session. Through the plan to the runner, so deleting either deletes these too.
-        builder.HasIndex(c => new { c.SavedPlanId, c.Date, c.SessionType }).IsUnique();
+        builder.HasIndex(c => new { c.SavedPlanId, c.Date, c.SessionType }).IsUnique().HasFilter("[IsAdditional] = 0");
+        builder.HasIndex(c => new { c.SavedPlanId, c.ActivityId }).IsUnique().HasFilter("[ActivityId] IS NOT NULL");
         builder.HasOne<SavedPlan>().WithMany().HasForeignKey(c => c.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
     }
 }

@@ -5,6 +5,7 @@ import type {
   ActivitySummary,
   BulkImport,
   CalendarLink,
+  CoachingProposal,
   CheckIn,
   CheckInRequest,
   GeneratePlanRequest,
@@ -191,11 +192,12 @@ export const api = {
     savePlan: (token: string, plan: GeneratePlanRequest, name?: string, replaceCurrent = false) =>
       request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan, replaceCurrent }) }, token),
     /**
-     * Opens the saved plan as the coach has it. On or after Monday the coach makes this week's call from how last week
-     * went, so this is what a runner's own plan is loaded with.
+     * Opens the saved plan with accepted coaching calls. New suggestions are previewed and applied separately.
      */
     coachPlan: (token: string, id: string) =>
       request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach`, { method: 'POST' }, token),
+    reviewCoaching: (token: string, id: string) => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/proposal`, {}, token),
+    applyCoaching: (token: string, id: string, proposalToken: string) => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
     /** The runner's check-ins on one saved plan: how each run went. */
     checkIns: (token: string, planId: string) => request<CheckIn[]>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins`, {}, token),
     /** Saves (or replaces) the check-in for the run planned on that day. */
@@ -205,6 +207,11 @@ export const api = {
         { method: 'PUT', body: JSON.stringify(body) },
         token,
       ),
+    saveAdditionalRun: (token: string, planId: string, id: string, date: string, sessionType: string, body: CheckInRequest) =>
+      request<CheckIn>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/additional/${encodeURIComponent(id)}/${encodeURIComponent(date)}/${encodeURIComponent(sessionType)}`,
+        { method: 'PUT', body: JSON.stringify(body) }, token),
+    deleteAdditionalRun: (token: string, planId: string, id: string) =>
+      request<void>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/additional/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
     deleteCheckIn: (token: string, planId: string, date: string, sessionType: string) =>
       request<void>(
         `/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/${encodeURIComponent(date)}/${encodeURIComponent(sessionType)}`,

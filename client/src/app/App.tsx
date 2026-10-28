@@ -262,7 +262,7 @@ export function App() {
   // way to this visit's plan as soon as that's on screen.
   const [fromCopy, setFromCopy] = useState<{ plan: TrainingPlan; savedAt: string } | null>(null)
 
-  // The runner's own plan opens as the coach has it: on or after Monday the coach makes this week's call, and its note
+  // The runner's own plan opens with accepted coaching calls; opening it never accepts a new suggestion. Its note
   // shows on "This week". A plan from a link, or anyone else's, is the plan as written.
   const [coachNotes, setCoachNotes] = useState<{ planId: string; notes: CoachNote[] } | null>(null)
   const coachRequested = useRef<TrainingPlan | null>(null)
@@ -896,7 +896,15 @@ export function App() {
                 onOpenAccount={state.kind === 'ready' ? () => go('account') : undefined}
                 onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
-                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, save: checkIns.save, remove: checkIns.remove } : undefined}
+                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
+                  review: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, savedOnScreen) },
+                  apply: async (proposalToken) => {
+                    const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your training.')
+                    const result = await api.me.applyCoaching(token, savedOnScreen, proposalToken)
+                    setPlan({ kind: 'ready', plan: result.proposed.plan, inputs: plan.inputs })
+                    setCoachNotes({ planId: savedOnScreen, notes: result.proposed.coaching ?? [] })
+                  },
+                }, saveAdditional: checkIns.saveAdditional, removeAdditional: checkIns.removeAdditional } : undefined}
                 coachNotes={notes}
                 onInjuryReplan={() => replanWith({ from: today, setback: 'Injury' })}
                 onUseGoal={(goalSeconds) => build({ ...plan.inputs, goalSeconds })}

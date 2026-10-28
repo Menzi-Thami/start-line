@@ -14,7 +14,7 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
   CQRS dispatcher (`Application/Common/Dispatcher`, **not MediatR**), FluentValidation in a pipeline
   behaviour, typed exceptions → ProblemDetails, API versioning (`/api/v1`), OpenAPI + Scalar (dev),
   rate limiting (per IP), health checks, OpenTelemetry (OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set).
-- **No database and no auth yet.** Add EF/SQL and Entra External ID only when accounts arrive. Don't add them speculatively.
+- **Accounts**: EF Core on SQL Server, Microsoft Entra External ID with email one-time codes. Anonymous plan generation remains stateless; local accounts stay off until configured.
 - **Race calendar** syncs itself: every `IRaceSource` is fetched at startup and every `RaceCalendar:SyncInterval`,
   reconciled by `RaceReconciler` (highest priority wins; organiser or agreeing sources = confirmed date) and published
   to the in-memory store. The curated list in `appsettings.json` is just the lowest-priority source. To add a source,
@@ -22,6 +22,10 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
 - **Frontend** (`client/`): React + Vite + TypeScript.
 - **Tests**: xUnit + Shouldly + NSubstitute + `FakeTimeProvider`; ArchUnitNET layer rules; integration
   tests through `WebApplicationFactory` with a pinned clock.
+
+## Safe testing
+
+Read [docs/testing.md](docs/testing.md) before running tests. **Never test against production or real runner data.** SQL integration tests migrate and reset their database; use disposable local SQL/LocalDB only. The test factory rejects remote hosts and non-test database names. Run the full checks before merging and report limitations honestly.
 
 ## Commands (repo root)
 ```bash

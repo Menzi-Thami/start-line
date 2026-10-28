@@ -57,7 +57,7 @@ public static class Fitness
     {
         ArgumentNullException.ThrowIfNull(lastWeek);
         var rated = lastWeek
-            .Where(e => ExpectedEffort.IsHard(e.Session.Type) && e.CheckIn?.Effort is not null && ExpectedEffort.For(e.Session.Type) is not null)
+            .Where(e => e.CompletedAsPlanned && ExpectedEffort.IsHard(e.Session.Type) && e.CheckIn?.Effort is not null && ExpectedEffort.For(e.Session.Type) is not null)
             .Select(e => (Effort: e.CheckIn!.Effort!.Value, Expected: ExpectedEffort.For(e.Session.Type)!.Value))
             .ToList();
         if (rated.Count == 0)

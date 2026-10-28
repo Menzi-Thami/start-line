@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { CalendarLinks } from '../../lib/calendar-links'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
@@ -9,6 +9,8 @@ import { allowsSwipe, horizontalSwipe } from '../../lib/swipe'
 import { loadDone, saveDone } from '../../lib/storage'
 import { revealDelta, tabFade, type TabFade } from '../../lib/tab-scroll'
 import type { CoachNote as CoachNoteType, ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
+import { PlanAdjustment } from '../coaching/PlanAdjustment'
+import { RunLog } from '../coaching/RunLog'
 import { CoachNote } from '../coaching/CoachNote'
 import { latestPaced } from '../coaching/fitness'
 import { PacesIntro, PredictedTimes } from '../coaching/FitnessNotes'
@@ -17,7 +19,7 @@ import { Overview } from '../dashboard/Overview'
 import { StrengthTab } from '../strength/StrengthTab'
 import type { DoneUpdate } from '../strength/strength-progress'
 import { FOCUS, PHASES, ZONES } from './copy'
-import { trainingKm } from './plan-math'
+import { sessionKey, trainingKm } from './plan-math'
 import { PlanProgress } from './PlanProgress'
 import { OutlookCard } from './OutlookCard'
 import { VolumeChart } from './VolumeChart'
@@ -114,8 +116,17 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
   const goalSeconds = parseTimeSpan(plan.goalTime) ?? 0
   const byZone = new Map(plan.paces.map((p) => [p.zone, p]))
   const progress = planProgress(plan, today)
-  const byDate = useMemo(() => (runs ? runsByDate(runs) : undefined), [runs])
-  const ran = useMemo(() => (runs ? ranKmByWeek(plan.weeks, runs, today) : undefined), [plan.weeks, runs, today])
+  const entries = coach?.entries ?? plan.weeks.flatMap((w) => w.sessions).flatMap((s) => { const c = coach?.get(s); return c ? [c] : [] })
+  const effectiveDone = new Set(done)
+  for (const entry of entries.filter((c) => !c.isAdditional)) {
+    const key = sessionKey({ date: entry.date, type: entry.sessionType })
+    if (entry.status === 'Skipped') effectiveDone.delete(key)
+    else effectiveDone.add(key)
+  }
+  const additionalIds = new Set(entries.filter((c) => c.isAdditional && c.activityId).map((c) => c.activityId))
+  const byDate = runs ? runsByDate(runs.filter((r) => !additionalIds.has(r.id))) : undefined
+  const completionByDate = runs ? runsByDate(runs.filter((r) => !additionalIds.has(r.id) && (r.source.kind !== 'Strava' || entries.some((c) => !c.isAdditional && c.activityId === r.id)))) : undefined
+  const ran = runs || coach ? ranKmByWeek(plan.weeks, runs ?? [], today, entries) : undefined
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -289,6 +300,8 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
       <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
 
       {replan}
+      {coach && <RunLog plan={plan} coach={coach} runs={runs} />}
+      {coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}
 
       {plan.outlook && (
         // A rebuilt plan's own banner already offers its suggested goal, which is the very goal the card names, so the
@@ -442,8 +455,8 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
                   onUseGoal={onUseGoal}
                 />
               )}
-              <WeekGlance week={shown.week} done={done} runs={byDate} today={today} units={units} />
-              <WeekDays week={shown.week} byZone={byZone} units={units} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
+              <WeekGlance week={shown.week} done={effectiveDone} runs={completionByDate} today={today} units={units} />
+              <WeekDays week={shown.week} byZone={byZone} units={units} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
               <p className="field-help">
                 Ticks are saved on this device.{' '}
                 <button type="button" className="link-button" onClick={() => showTab(tabs.findIndex((t) => t.id === 'all'))}>
@@ -455,13 +468,13 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
         </div>
 
         <div {...panel('all')}>
-          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={done} />
+          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} />
           <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
-          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={done} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} today={today} />
+          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} today={today} />
         </div>
 
         <div {...panel('strength')}>
-            <StrengthTab plan={plan} week={shown?.week} done={done} onDoneChange={updateDone} onEditStrength={onEditStrength} />
+            <StrengthTab plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={onEditStrength} />
         </div>
 
         <div {...panel('paces')}>

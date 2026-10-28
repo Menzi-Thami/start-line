@@ -35,6 +35,9 @@ an exception to return `null`/`default`.
 - One branch per concern. Keep a branch current by merging `main` into it.
 - Before review: `dotnet build` with 0 warnings, all tests green, frontend lint/test/build green.
 
+## Safe test data
+Automated tests must use disposable local SQL/LocalDB and synthetic data, never the production database or real runner accounts. Read `docs/testing.md`; the SQL integration suite resets rows. Run the required checks before a merge.
+
 ## Review checklist
 1. New inheritance hierarchy? Check substitutability first.
 2. Any clock read? Decision logic must use `TimeProvider`.

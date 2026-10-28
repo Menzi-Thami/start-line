@@ -51,8 +51,8 @@ internal sealed partial class GetRunningLogHandler(
             var sessions = await SessionsAsync(plans.Single(p => p.Id == byPlan.Key), cancellationToken);
             ticks.AddRange(byPlan.Select(c => new TickedSession(
                 c.Date,
-                sessions.FirstOrDefault(s => s.Date == c.Date && s.Type == c.SessionType)?.DistanceKm ?? 0,
-                c.Answers)));
+                c.IsAdditional ? 0 : sessions.FirstOrDefault(s => s.Date == c.Date && s.Type == c.SessionType)?.DistanceKm ?? 0,
+                c.Answers, c.IsAdditional)));
         }
 
         return [.. RunningLog.Of(ticks, uploads).Select(r => new LoggedRunDto(r.Date, ActivitySummaryDto.Round(r.DistanceKm, 2), r.Source))];

@@ -1,5 +1,5 @@
 import { formatDate, formatDistance, type Units } from '../../lib/format'
-import { plannedRuns, runsByDate, weekEnd } from '../../lib/plan-runs'
+import { plannedRuns, ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CheckIn, PlanWeek, Session, SessionType, TrainingPlan } from '../../lib/types'
 import { KEY_SESSIONS } from '../dashboard/dashboard-math'
 import { trainingKm } from '../plan/plan-math'
@@ -55,7 +55,9 @@ function expected(type: SessionType): [number, number] | null {
 function feelOf(sessions: readonly Session[], checkInFor?: CheckInFor): Feel | null {
   const counts = { harder: 0, right: 0, easier: 0 }
   for (const session of sessions.filter((s) => HARD.has(s.type))) {
-    const effort = checkInFor?.(session)?.effort
+    const answer = checkInFor?.(session)
+    if (answer?.status === 'SwappedForEasy' || answer?.status === 'Skipped' || answer?.actualSessionType && answer.actualSessionType !== session.type) continue
+    const effort = answer?.effort
     const range = expected(session.type)
     if (effort == null || !range) continue
     counts[effort > range[1] ? 'harder' : effort < range[0] ? 'easier' : 'right']++
@@ -71,21 +73,17 @@ function feelOf(sessions: readonly Session[], checkInFor?: CheckInFor): Feel | n
  * was missed. A run recorded on a planned run's day counts as that run, as everywhere else in Taperday; a check-in that
  * says it was run counts too, for runners who don't record. Runs on race day are left out, like the plan's weekly total.
  */
-export function reviewWeek(week: PlanWeek, runs: readonly ActivitySummary[], today: string, checkInFor?: CheckInFor): WeekReview {
+export function reviewWeek(week: PlanWeek, runs: readonly ActivitySummary[], today: string, checkInFor?: CheckInFor, entries?: readonly CheckIn[]): WeekReview {
   const end = weekEnd(week)
   const byDate = runsByDate(runs.filter((r) => r.localDate >= week.startDate && r.localDate <= end && r.localDate <= today))
   const sessions = plannedRuns(week.sessions).filter((s) => s.type !== 'Race')
-  const raceDays = new Set(week.sessions.filter((s) => s.type === 'Race').map((s) => s.date))
 
   const recordedKm = (date: string) => (byDate.get(date) ?? []).reduce((sum, r) => sum + r.distanceKm, 0)
-  const isDone = (s: Session) => (byDate.get(s.date)?.length ?? 0) > 0 || RAN.has(checkInFor?.(s)?.status ?? 'Skipped')
+  const isDone = (s: Session) => { const c = checkInFor?.(s); return c ? RAN.has(c.status) : (byDate.get(s.date) ?? []).some((r) => r.source.kind !== 'Strava') }
   const due = sessions.filter((s) => s.date < today || (s.date === today && isDone(s)))
 
-  // Distance a check-in gave, for planned runs done with nothing recorded that day.
-  const checkedKm = due
-    .filter((s) => isDone(s) && !byDate.has(s.date))
-    .reduce((sum, s) => sum + (checkInFor?.(s)?.distanceKm ?? 0), 0)
-  const ranKm = [...byDate.entries()].filter(([date]) => !raceDays.has(date)).reduce((sum, [date]) => sum + recordedKm(date), 0) + checkedKm
+  const answers = entries ?? sessions.flatMap((s) => { const c = checkInFor?.(s); return c ? [c] : [] })
+  const ranKm = ranKmByWeek([week], runs, today, answers).get(week.number) ?? 0
 
   const long = sessions.filter((s) => LONG_RUNS.has(s.type)).sort((a, b) => b.distanceKm - a.distanceKm)[0]
   const longDue = long && due.includes(long) ? long : null

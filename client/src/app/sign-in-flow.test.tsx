@@ -140,13 +140,13 @@ describe('waiting for a sleeping server after sign-in', () => {
 describe('Home from the copy kept on this device', () => {
   afterEach(() => window.localStorage.clear())
 
-  it('shows at once while the database wakes, then carries on with the real answers', async () => {
+  it('shows the saved page quietly while the account loads, then displays the fresh answers', async () => {
     saveSnapshot(ownerOf({ name: 'Thandi', email: 'thandi@example.com' }), { runner: thandi, current: null })
     let answer: (() => void) | undefined
     server.use(
       http.get('*/api/v1/me', async () => {
         await new Promise<void>((resolve) => (answer = resolve))
-        return HttpResponse.json(thandi)
+        return HttpResponse.json({ ...thandi, displayName: 'Thandi refreshed' })
       }),
     )
     window.history.replaceState(null, '', '/?view=home')
@@ -154,13 +154,12 @@ describe('Home from the copy kept on this device', () => {
     renderApp(signedIn())
 
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
-    expect(screen.getByText(/while Taperday catches up/)).toBeInTheDocument()
+    expect(screen.queryByText(/while Taperday catches up/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
 
     await waitFor(() => expect(answer).toBeDefined())
     answer!()
-    await waitFor(() => expect(screen.queryByText(/while Taperday catches up/)).not.toBeInTheDocument())
-    expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi refreshed' })).toBeInTheDocument()
   })
 
   it('is never shown to someone else signed in on the same device', async () => {
@@ -194,7 +193,7 @@ describe('Home from the copy kept on this device', () => {
     renderApp(signedIn())
 
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
-    expect(screen.getByText(/while Taperday catches up/)).toBeInTheDocument()
+    expect(screen.queryByText(/while Taperday catches up/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
   })
 
@@ -251,7 +250,7 @@ describe('their plan from the copy kept on this device', () => {
     renderApp(signedIn())
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
-    expect(screen.getByText(/Showing your plan .* while Taperday catches up/)).toBeInTheDocument()
+    expect(screen.queryByText(/while Taperday catches up/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
     // The copy is simply there: no reveal, as there's nothing new to show.
@@ -282,11 +281,12 @@ describe('their plan from the copy kept on this device', () => {
     const user = userEvent.setup()
 
     renderApp(signedIn())
-    expect(await screen.findByText(/while Taperday catches up/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(screen.queryByText(/while Taperday catches up/)).not.toBeInTheDocument()
     await waitFor(() => expect(answer).toBeDefined())
     answer!()
 
-    await waitFor(() => expect(screen.queryByText(/while Taperday catches up/)).not.toBeInTheDocument(), { timeout: 3000 })
+    await waitFor(() => expect(readSnapshot(owner)?.plan?.plan).toEqual(coached), { timeout: 3000 })
     expect(coachCalls).toBe(1)
     expect(screen.getByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
     // Kept on this device as the coach has it, for next time.

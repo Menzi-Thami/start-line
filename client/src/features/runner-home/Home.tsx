@@ -42,8 +42,6 @@ interface Props {
   initialPlan?: HomePlan | null
   /** This visit's plan, once it has loaded, so the device can keep a copy. */
   onPlanLoaded?: (plan: HomePlan) => void
-  /** When Home is showing the copy kept on this device while the account loads: when that copy was saved. */
-  catchingUpFrom?: string | null
   /** The runner's own picture, if they added one; their initials otherwise. */
   photo?: string | null
 }
@@ -159,25 +157,6 @@ function TickCard({ plan, today, coach, runs }: { plan: TrainingPlan | null; tod
         <RanThis session={session} coach={coach} runs={runs} onTicked={() => setTicked(true)} />
       )}
     </section>
-  )
-}
-
-const clock = new Intl.DateTimeFormat('en-GB', { hour: 'numeric', minute: '2-digit' })
-
-/** "from 9:14", or "from Tuesday" when the copy is from another day. */
-function savedWhen(savedAt: string, today: string): string {
-  const saved = new Date(savedAt)
-  const sameDay = saved.toLocaleDateString('en-CA') === today
-  return sameDay ? `from ${clock.format(saved)}` : `from ${saved.toLocaleDateString('en-GB', { weekday: 'long' })}`
-}
-
-/** A quiet line while a page shows the copy kept on this device, so it's clear what's on screen and that it's catching up. */
-export function CatchingUp({ what, savedAt, today }: { what: string; savedAt: string; today: string }) {
-  return (
-    <p className="home-catching-up" role="status">
-      <span className="wait-spinner" aria-hidden="true" />
-      Showing your {what} {savedWhen(savedAt, today)} while Taperday catches up.
-    </p>
   )
 }
 
@@ -436,7 +415,6 @@ export function Home({
   onOpenAccount,
   initialPlan,
   onPlanLoaded,
-  catchingUpFrom,
   photo = null,
 }: Props) {
   const auth = useAuth()
@@ -547,8 +525,6 @@ export function Home({
           </div>
         </header>
       </div>
-
-      {catchingUpFrom && <CatchingUp what="page" savedAt={catchingUpFrom} today={today} />}
 
       <InstallCard />
 

@@ -1,12 +1,14 @@
 # Deploying Taperday to Azure
 
-Everything lives in one resource group, described by `infra/main.bicep`. Pre-launch it costs nothing.
+Everything lives in one resource group, described by `infra/main.bicep`. The repository now defaults to paid
+Basic SQL (5 DTUs, 2 GiB); applying the infrastructure creates or configures a billable database. The API and
+website remain on their free tiers. Review Azure's regional price before applying infrastructure changes.
 
-| Resource | Pre-launch | At launch |
+| Resource | Configured default | Upgrade option |
 |---|---|---|
 | Website | Static Web Apps, Free | same |
 | API | App Service F1, free (sleeps when idle) | `apiSku=B1`, about $13/month |
-| Database | Azure SQL free offer, auto-pauses, **cannot bill** | `databaseTier=basic`, about $5/month |
+| Database | `databaseTier=basic`: 5 DTUs, 2 GiB, no free monthly compute cutoff | Increase capacity when measured usage requires it |
 | Logs | Log Analytics capped at 0.15 GB/day, inside the free 5 GB/month | same |
 
 ## Keep this away from work accounts
@@ -140,6 +142,39 @@ is `client/public/og-image.png` (1200 x 630). The CSP needs no change for it: cr
 - On the website, **Sign in** opens the Taperday sign-in page. If nothing happens, check the browser console
   for `endpoints_resolution_error`: the authority is missing the tenant ID (see `docs/accounts-setup.md`).
 
+## Basic database: storage and performance
+
+Basic has no free monthly vCore-seconds allowance to preserve. Keeping it online does not itself fill its storage.
+The 2 GiB limit is total stored data and indexes, not a monthly allowance that resets. Reaching it can prevent
+new saves, even while the database is online. The API's free F1 tier can still sleep independently.
+
+After changing the database tier in Azure Portal, verify its pricing tier and actual storage used. Run
+[`infra/database-storage-report.sql`](../infra/database-storage-report.sql) in the database's Query editor
+or an authorised SQL client for used/allocated/maximum data space and the largest tables. This report reads
+metadata only; it does not delete user records or set up automatic monitoring. Database metadata permissions
+are required. Do not run development or integration tests against the production database.
+
+Recommended monitoring in Azure Portal → database → Monitoring → Metrics / Alerts:
+
+- Track **Data space used percent**; configure warnings at 70% and urgent notifications at 85%, with an action
+  group delivering to the operator. Review the alert cost before creating resources. No alert is installed by this template.
+- Track **DTU percentage** for sustained processing pressure. Basic can become slow before its storage is full.
+- Record storage growth weekly during the initial launch, then choose a review interval from the observed growth.
+  Upgrade with headroom before the storage limit is reached. Keep actual user plans and running history intact;
+  remove only data whose existing retention rules allow expiry.
+
+Activity imports already discard original files and GPS recordings, retaining summaries, splits and best efforts.
+Profile images are capped at 96 KiB. Strava copies have an existing seven-day cache lifetime. These controls help
+limit storage but do not establish how many users fit; measure the real database before forecasting capacity.
+
+Use `/health/live` for regular uptime checks; reserve `/health/ready` for deployment and dependency readiness.
+This remains useful on Basic because routine probes need not spend its limited processing capacity on SQL.
+Keep idle background workers asleep and deployments behind validation. Buying Basic removes the sleep/budget
+constraint, not the need to protect production data or monitor performance.
+
+The `free` database option remains available only by explicitly passing `databaseTier=free` for a suitable new
+environment. The sleep and allowance guidance below applies to that option, not to the Basic production database.
+
 ## Keeping the free API awake
 
 On F1, Azure unloads the API after about 20 minutes without a request, and F1 has no Always On. Until launch, an
@@ -205,8 +240,12 @@ different times, watch the database's usage.
 
 ## Going live
 
-Redeploy with `-p apiSku=B1 databaseTier=basic`. Changing the database tier moves the data with it; the free
-offer can't be switched back on for the same database afterwards.
+The database defaults to Basic; buying it in the portal does not require a change to API hosting. If upgrading
+API hosting as well, explicitly choose `-p apiSku=B1 databaseTier=basic` and review that additional cost first.
+Check stored data fits within 2 GiB before converting to Basic, and retain the existing database rather than
+deleting/recreating it. Changing the database tier moves the data with it; the free offer can't be switched back
+on for the same database afterwards. After SQL is available, run the current `main` deploy and verify migrations
+and `/health/ready`; old failed runs remain historical failures.
 
 ## Why things are set up this way
 

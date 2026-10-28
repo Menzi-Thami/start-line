@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react'
 import { Avatar } from '../features/account/Avatar'
 
 export type TabBarItem = 'home' | 'plan' | 'runs' | 'strength' | 'account'
@@ -25,13 +26,16 @@ const ITEMS: readonly { id: TabBarItem; label: string }[] = [
   { id: 'account', label: 'Account' },
 ]
 
+const activeIndex = (current: TabBarItem | null) => ITEMS.findIndex((item) => item.id === current)
+
 /**
  * The app's own navigation on a phone: fixed to the bottom like an installed app's, clear of the home indicator, and
  * still while the page under it changes. The header keeps these links on a wider screen.
  */
 export function TabBar({ current, onPick, account }: Props) {
   return (
-    <nav className="tab-bar" aria-label="Main">
+    <nav className="tab-bar" aria-label="Main" style={{ '--active-tab': activeIndex(current) } as CSSProperties}>
+      {current && <span className="tab-bar-indicator" aria-hidden="true" />}
       {ITEMS.map((item) => (
         <button key={item.id} type="button" className="tab-bar-item" aria-current={current === item.id ? 'page' : undefined} onClick={() => onPick(item.id)}>
           {item.id === 'account' && account ? (

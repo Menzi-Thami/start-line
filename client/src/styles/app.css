@@ -5045,6 +5045,23 @@ select.input option {
   background: rgb(10 10 11 / 0.92);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--line);
+  isolation: isolate;
+  box-shadow: 0 -12px 40px rgb(0 0 0 / 0.24);
+}
+
+/* One continuous selection glides under the icons instead of five disconnected flashes. */
+.tab-bar-indicator {
+  position: absolute;
+  z-index: -1;
+  top: 6px;
+  left: calc(var(--space-2) + (100% - 2 * var(--space-2)) / 5 * var(--active-tab));
+  width: calc((100% - 2 * var(--space-2)) / 5);
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(215, 255, 62, 0.16), rgba(215, 255, 62, 0.045));
+  border: 1px solid rgba(215, 255, 62, 0.14);
+  transition: left var(--dur-slide) var(--ease-glide);
+  pointer-events: none;
 }
 
 /* Room under the page for the bar, so the footer and last card aren't hidden behind it. */
@@ -5066,6 +5083,7 @@ select.input option {
   font-weight: 700;
   cursor: pointer;
   transition: color var(--dur-base) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+  position: relative;
 }
 
 .tab-bar-item svg {
@@ -5080,6 +5098,16 @@ select.input option {
 
 .tab-bar-item[aria-current='page'] {
   color: var(--accent);
+}
+
+.tab-bar-item[aria-current='page'] svg,
+.tab-bar-item[aria-current='page'] .avatar {
+  animation: tab-icon-settle var(--dur-slide) var(--ease-spring) both;
+}
+
+@keyframes tab-icon-settle {
+  from { transform: translateY(3px) scale(0.86); }
+  to { transform: translateY(0) scale(1); }
 }
 
 .tab-bar-item:active {

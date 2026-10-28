@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { PlanWeek } from '../../lib/types'
 import { weekLabels } from './plan-math'
@@ -64,5 +64,30 @@ describe('the weekly distance chart', () => {
       if (count - current >= gap) expect(shown).toContain(count - 1)
       shown.slice(1).forEach((s, i) => expect(s - shown[i]!).toBeGreaterThanOrEqual(gap))
     }
+  })
+
+  it('lets keyboard users inspect weekly volumes and touch users select a bar', () => {
+    const { container } = render(<VolumeChart weeks={short} units="km" currentWeek={1} />)
+    const plot = container.querySelector<HTMLElement>('.volume-plot')!
+    plot.focus()
+    fireEvent.keyDown(plot, { key: 'ArrowRight' })
+    expect(plot.getAttribute('aria-label')).toContain('Week 2, Build, 35 km planned')
+    expect(container.querySelectorAll('.volume-week.is-selected')).toHaveLength(1)
+    fireEvent.click(container.querySelectorAll('.volume-week')[2]!)
+    expect(plot.getAttribute('aria-label')).toContain('Week 3, Build, 23.5 km planned')
+  })
+
+  it('exposes a bounded keyboard control and lets Escape dismiss the detail', () => {
+    const { getByRole, container } = render(<VolumeChart weeks={short} units="km" currentWeek={1} />)
+    const plot = getByRole('slider')
+    fireEvent.keyDown(plot, { key: 'End' })
+    expect(plot).toHaveAttribute('aria-valuenow', '4')
+    expect(plot).toHaveAttribute('aria-valuetext', 'Week 4, Build, 11.5 km planned')
+    fireEvent.keyDown(plot, { key: 'ArrowRight' })
+    expect(plot).toHaveAttribute('aria-valuenow', '4')
+    fireEvent.keyDown(plot, { key: 'Home' })
+    expect(plot).toHaveAttribute('aria-valuenow', '1')
+    fireEvent.keyDown(plot, { key: 'Escape' })
+    expect(container.querySelector('.volume-tooltip')).toBeNull()
   })
 })

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type KeyboardEvent, type TouchEvent } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
+import { allowsSwipe, horizontalSwipe } from '../../lib/swipe'
 import { runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CoachNote, LoggedRun, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import { Avatar } from '../account/Avatar'
@@ -14,9 +15,10 @@ import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
-import { Calculators } from './Calculators'
 import { change, todayInPlan, trainingTotals, weeklyBars, type Change, type WeekBar } from './home-math'
 import { YourWeek } from './YourWeek'
+
+const Calculators = lazy(() => import('./Calculators').then((module) => ({ default: module.Calculators })))
 
 interface Props {
   runner: Runner
@@ -244,8 +246,8 @@ function TodayCard({ plan, today, units, runs, coach, onOpenPlan }: { plan: Trai
       <h2 id="home-today" className="home-card-heading">
         Today
       </h2>
-      {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : <p className="field-help">Getting today’s session…</p>}
-      <button type="button" className="button" onClick={onOpenPlan}>
+      {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : <div className="skeleton-stack" role="status" aria-label="Loading today's session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
+      <button type="button" className="button button-primary" onClick={onOpenPlan}>
         Open your plan
       </button>
     </section>
@@ -459,6 +461,9 @@ export function Home({
   photo = null,
 }: Props) {
   const [tab, setTab] = useState<HomeTab>(tabFromUrl)
+  const [toolsOpened, setToolsOpened] = useState(() => tab === 'tools')
+  const [tabDirection, setTabDirection] = useState<'forward' | 'back' | null>(null)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
   const { plan, coaching } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
@@ -491,9 +496,27 @@ export function Home({
   const ranDates = new Set(runs.filter((r) => r.kind !== 'Other').map((r) => r.localDate))
 
   const showTab = (next: HomeTab, focus = false) => {
+    if (next === tab) return
+    if (next === 'tools') setToolsOpened(true)
+    setTabDirection(HOME_TABS.findIndex((item) => item.id === next) > HOME_TABS.findIndex((item) => item.id === tab) ? 'forward' : 'back')
     setTab(next)
     tabToUrl(next)
     if (focus) tabRefs.current[HOME_TABS.findIndex((t) => t.id === next)]?.focus()
+  }
+
+  const onTouchStart = (event: TouchEvent) => {
+    const touch = event.touches[0]
+    touchStart.current = touch && event.touches.length === 1 && allowsSwipe(event.target) ? { x: touch.clientX, y: touch.clientY } : null
+  }
+
+  const onTouchEnd = (event: TouchEvent) => {
+    const start = touchStart.current
+    touchStart.current = null
+    const touch = event.changedTouches[0]
+    if (!start || !touch) return
+    const direction = horizontalSwipe(start, { x: touch.clientX, y: touch.clientY })
+    const next = HOME_TABS.findIndex((item) => item.id === tab) + direction
+    if (direction && next >= 0 && next < HOME_TABS.length) showTab(HOME_TABS[next]!.id)
   }
 
   // Arrow keys move between tabs, as screen-reader users expect from a tab list, like the plan's own tabs.
@@ -510,25 +533,40 @@ export function Home({
     role: 'tabpanel',
     'aria-labelledby': `home-tab-${id}`,
     hidden: tab !== id,
-    className: 'tab-panel home-panel',
+    className: `tab-panel home-panel${tab === id && tabDirection ? ` slide-${tabDirection}` : ''}`,
   })
 
   return (
     <div className="home">
-      <header className="home-hello">
-        <Avatar name={runner.displayName} photo={photo} size={48} />
-        <div>
-          <h1 className="home-title">Welcome back, {runner.displayName}</h1>
-          <p className="home-lede">
-            {plan && progress && progress.daysToGo > 0
-              ? `${progress.daysToGo} ${progress.daysToGo === 1 ? 'day' : 'days'} to ${plan.race.name}.`
-              : plan && progress?.kind === 'race'
-                ? `It’s race day: ${plan.race.name}.`
-                : 'Every run counts. Here’s yours.'}
-          </p>
-          {plan && progress && progress.kind !== 'after' && <RaceLine plan={plan} week={week} units={units} />}
-        </div>
-      </header>
+      <div className="home-intro">
+        <header className="home-hello">
+          <Avatar name={runner.displayName} photo={photo} size={48} />
+          <div>
+            <h1 className="home-title">Welcome back, {runner.displayName}</h1>
+            <p className="home-lede">
+              {plan && progress && progress.daysToGo > 0
+                ? `${progress.daysToGo} ${progress.daysToGo === 1 ? 'day' : 'days'} to ${plan.race.name}.`
+                : plan && progress?.kind === 'race'
+                  ? `It’s race day: ${plan.race.name}.`
+                  : 'Every run counts. Here’s yours.'}
+            </p>
+          </div>
+        </header>
+        {plan && progress && (
+          <section className="home-race-card" aria-labelledby="home-race-name">
+            <p className="home-card-heading">Your finish line</p>
+            <h2 id="home-race-name">{plan.race.name}</h2>
+            <RaceLine plan={plan} week={week} units={units} />
+            <div className="home-countdown-row">
+              <p className="home-countdown">
+                {progress.daysToGo > 0 ? <><span className="mono">{progress.daysToGo}</span><span className="home-countdown-label">days to go</span></> : <span className="home-race-state">{progress.kind === 'race' ? 'It’s race day' : 'Race complete'}</span>}
+              </p>
+              <button type="button" className="home-race-open" aria-label="Open your training plan" onClick={onOpenPlan}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></button>
+            </div>
+            <div className="home-race-track" aria-hidden="true"><span style={{ width: `${progress.fraction * 100}%` }} /></div>
+          </section>
+        )}
+      </div>
 
       {catchingUpFrom && <CatchingUp what="page" savedAt={catchingUpFrom} today={today} />}
 
@@ -555,7 +593,7 @@ export function Home({
         ))}
       </div>
 
-      <div {...panel('today')}>
+      <div {...panel('today')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
         <TickCard plan={plan} today={today} coach={coach} runs={runs} />
         <div className="home-top">
           {current ? (
@@ -633,14 +671,14 @@ export function Home({
           </p>
         </section>
 
-        <section className="section home-section" aria-labelledby="home-weeks">
+        <section className="section home-section home-history" aria-labelledby="home-weeks">
           <h2 id="home-weeks" className="home-heading">
             The last 12 weeks
           </h2>
           <WeeklyChart bars={bars} units={units} averageKm={totals.weeklyAverageKm} />
         </section>
 
-        <section className="section home-section" aria-labelledby="home-bests">
+        <section className="section home-section home-records" aria-labelledby="home-bests">
           <h2 id="home-bests" className="home-heading">
             Personal bests
           </h2>
@@ -663,12 +701,16 @@ export function Home({
         </section>
       </div>
 
-      <div {...panel('tools')}>
-        <Calculators
-          units={units}
-          maxHeartRate={runner.maxHeartRate}
-          race={plan && goalSeconds ? { distanceKm: plan.race.distanceKm, goalSeconds } : null}
-        />
+      <div {...panel('tools')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
+        {toolsOpened && (
+          <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading running tools"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>}>
+            <Calculators
+              units={units}
+              maxHeartRate={runner.maxHeartRate}
+              race={plan && goalSeconds ? { distanceKm: plan.race.distanceKm, goalSeconds } : null}
+            />
+          </Suspense>
+        )}
       </div>
     </div>
   )

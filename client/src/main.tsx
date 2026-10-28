@@ -9,9 +9,10 @@ import './styles/tokens.css'
 import './styles/app.css'
 import './styles/overview.css'
 import './styles/home.css'
+import './styles/polish.css'
 import { App } from './app/App'
 import { readAuthConfig } from './app/auth-context'
-import { AuthProvider } from './app/AuthProvider'
+import { AppAuth } from './app/AppAuth'
 import { wakeApi } from './lib/api-client'
 import { setUpInstall } from './lib/install-app'
 
@@ -27,8 +28,6 @@ if (!root) throw new Error('Missing #root element')
 
 createRoot(root).render(
   <StrictMode>
-    <AuthProvider config={readAuthConfig()}>
-      <App />
-    </AuthProvider>
+    <AppAuth config={readAuthConfig()}><App /></AppAuth>
   </StrictMode>,
 )

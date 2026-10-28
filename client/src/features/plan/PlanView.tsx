@@ -5,6 +5,7 @@ import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange
 import { planProgress } from '../../lib/plan-day'
 import { ranKmByWeek, runsByDate } from '../../lib/plan-runs'
 import { prefersMotion } from '../../lib/motion'
+import { allowsSwipe, horizontalSwipe } from '../../lib/swipe'
 import { loadDone, saveDone } from '../../lib/storage'
 import { revealDelta, tabFade, type TabFade } from '../../lib/tab-scroll'
 import type { CoachNote as CoachNoteType, ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
@@ -238,17 +239,16 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
   // A sideways swipe on a phone flips to the next or previous tab; mostly-vertical drags are scrolling.
   const onTouchStart = (event: TouchEvent) => {
     const t = event.touches[0]
-    touchStart.current = t ? { x: t.clientX, y: t.clientY } : null
+    touchStart.current = t && event.touches.length === 1 && allowsSwipe(event.target) ? { x: t.clientX, y: t.clientY } : null
   }
   const onTouchEnd = (event: TouchEvent) => {
     const start = touchStart.current
     const t = event.changedTouches[0]
     touchStart.current = null
     if (!start || !t) return
-    const dx = t.clientX - start.x
-    const dy = t.clientY - start.y
-    if (Math.abs(dx) < 60 || Math.abs(dx) < 2 * Math.abs(dy)) return
-    const next = index + (dx < 0 ? 1 : -1)
+    const direction = horizontalSwipe(start, { x: t.clientX, y: t.clientY })
+    if (!direction) return
+    const next = index + direction
     // Swiping stops at the ends rather than wrapping round, which would feel like a jump.
     if (next >= 0 && next < tabs.length) showTab(next)
   }
@@ -389,7 +389,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
         </div>
       </div>
 
-      <div className="tab-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className="tab-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
         {runs && (
           <div {...panel('overview')}>
             <Overview

@@ -32,7 +32,7 @@ const tenK: PersonalBest = { name: '10K', distanceMetres: 10000, seconds: 3258, 
 const signedIn = { ...accountsOff, enabled: true, getToken: () => Promise.resolve('token') }
 
 const renderHome = (props: Partial<Parameters<typeof Home>[0]> = {}, { signIn = false } = {}) => {
-  const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenAccount: vi.fn() }
+  const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenRuns: vi.fn(), onOpenAccount: vi.fn() }
   const home = <Home runner={thandi} units="km" today="2026-10-23" current={null} runs={[]} {...handlers} {...props} />
   render(signIn ? <AuthContext.Provider value={signedIn}>{home}</AuthContext.Provider> : home)
   const user = userEvent.setup()
@@ -45,6 +45,45 @@ const withPlan = { current, initialPlan: { id: 'plan-1', plan: plan5k as unknown
 beforeEach(() => window.history.replaceState(null, '', '/?view=home'))
 
 describe('Home', () => {
+  it('puts today before the countdown and groups the workout facts above its instructions', () => {
+    renderHome({ ...withPlan, today: '2026-10-20' })
+    const today = screen.getByRole('region', { name: 'Today' })
+    const race = screen.getByRole('region', { name: 'Parkrun PB' })
+    expect(today.compareDocumentPosition(race) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(today).getByText('Distance')).toBeInTheDocument()
+    expect(within(today).getByText('Target pace')).toBeInTheDocument()
+    expect(today.querySelector('details')).not.toHaveAttribute('open')
+  })
+
+  it('shows a loading state instead of zero totals before running data arrives', () => {
+    renderHome()
+    const running = screen.getByRole('region', { name: 'Your running' })
+    expect(within(running).getByRole('status', { name: 'Loading running totals' })).toBeInTheDocument()
+    expect(within(running).queryByText('0')).toBeNull()
+  })
+
+  it('makes an empty history useful and opens the supported run upload view', async () => {
+    server.use(http.get('*/api/v1/me/running', () => HttpResponse.json([])))
+    const { user, onOpenRuns } = renderHome({}, { signIn: true })
+    await user.click(await screen.findByRole('button', { name: 'Add your runs →' }))
+    expect(onOpenRuns).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('table', { name: 'Weekly distance, last 12 weeks' })).toBeNull()
+    expect(screen.getByText(/Your weekly pattern will take shape here/)).toBeInTheDocument()
+  })
+
+  it('lets failed totals retry without replacing the session or treating failure as no runs', async () => {
+    let failed = true
+    server.use(http.get('*/api/v1/me/running', () => failed ? new HttpResponse(null, { status: 503 }) : HttpResponse.json([{ date: '2026-10-22', distanceKm: 5, source: 'Uploaded' }])))
+    const { user } = renderHome(withPlan, { signIn: true })
+    const running = screen.getByRole('region', { name: 'Your running' })
+    await within(running).findByRole('alert')
+    expect(within(running).queryByText('0')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Open your plan' })).toBeInTheDocument()
+    failed = false
+    await user.click(screen.getByRole('button', { name: 'Retry running totals' }))
+    expect(await within(running).findAllByText('5')).not.toHaveLength(0)
+    expect(within(running).queryByRole('alert')).toBeNull()
+  })
   it('swipes between views without stealing gestures from calculator controls', async () => {
     renderHome()
     const panel = screen.getByRole('tabpanel', { name: 'Today' })
@@ -52,7 +91,7 @@ describe('Home', () => {
     fireEvent.touchEnd(panel, { changedTouches: [{ clientX: 80, clientY: 105 }] })
     expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')
     await screen.findByRole('region', { name: 'Calculators' })
-    const control = screen.getByRole('button', { name: 'Race times', exact: true })
+    const control = screen.getByRole('button', { name: 'Race times' })
     fireEvent.touchStart(control, { touches: [{ clientX: 80, clientY: 100 }] })
     fireEvent.touchEnd(control, { changedTouches: [{ clientX: 200, clientY: 105 }] })
     expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')

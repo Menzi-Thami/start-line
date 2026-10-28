@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -34,6 +35,12 @@ public sealed class AccountTests(StartLineApiFactory factory) : IClassFixture<St
         var subject = Guid.NewGuid().ToString();
         var client = await SignedUp(factory.CreateClient().As(subject));
         var id = await Save(client);
+        var original = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        static string[] RunningSessions(JsonElement saved) => saved.GetProperty("plan").GetProperty("weeks").EnumerateArray()
+            .SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .Where(s => s.GetProperty("type").GetString() != "Strength")
+            .Select(s => s.GetRawText()).ToArray();
+        var originalRuns = RunningSessions(original);
         var response = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new
         {
             replaceCurrent = true,
@@ -52,10 +59,13 @@ public sealed class AccountTests(StartLineApiFactory factory) : IClassFixture<St
 
         using var nextSession = factory.CreateClient().As(subject);
         var saved = await Json(await nextSession.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        RunningSessions(saved).ShouldBe(originalRuns);
         saved.GetProperty("inputs").GetProperty("strengthDays").EnumerateArray().Select(d => d.GetString()).ShouldBe(["Monday"]);
-        saved.GetProperty("plan").GetProperty("weeks").EnumerateArray()
+        var strengthSessions = saved.GetProperty("plan").GetProperty("weeks").EnumerateArray()
             .SelectMany(w => w.GetProperty("sessions").EnumerateArray())
-            .Any(s => s.GetProperty("type").GetString() == "Strength").ShouldBeTrue();
+            .Where(s => s.GetProperty("type").GetString() == "Strength").ToArray();
+        strengthSessions.ShouldNotBeEmpty();
+        strengthSessions.All(s => DateOnly.Parse(s.GetProperty("date").GetString()!, CultureInfo.InvariantCulture).DayOfWeek == DayOfWeek.Monday).ShouldBeTrue();
     }
 
     // Every test signs in as a brand-new runner, so tests never see each other's data.

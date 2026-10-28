@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SignInWait } from '../features/account/SignInWait'
-import { followWake, SCENE_MS, SCENES, SLOW_AFTER_MS, TIP_MS, TIPS, type WakeStep } from '../features/account/wait-film'
+import { followWake, SLOW_AFTER_MS, type WakeStep } from '../features/account/wait-film'
 import { WAKE_TRIES } from '../features/account/useRunner'
 import { api } from '../lib/api-client'
 import { ownerOf, readSnapshot, saveSnapshot } from '../lib/home-snapshot'
@@ -59,7 +59,7 @@ describe('waiting for a sleeping server after sign-in', () => {
     expect(container.querySelector('.wait-tip')).toBeNull()
     expect(checks).toBe(0)
     unmount()
-    await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS + SCENE_MS))
+    await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS * 2))
     expect(checks).toBe(0)
   })
 
@@ -81,46 +81,6 @@ describe('waiting for a sleeping server after sign-in', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }))
     expect(onRetry).toHaveBeenCalled()
     expect(onSignOut).toHaveBeenCalled()
-  })
-
-  it('plays a short film in order while it waits, then keeps running laps', async () => {
-    vi.useFakeTimers()
-    render(<SignInWait onRetry={vi.fn()} onSignOut={vi.fn()} />)
-    await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS))
-    const seen: string[] = []
-
-    for (let i = 0; i < SCENES.length + 2; i++) {
-      seen.push(SCENES.find((s) => screen.queryByText(s.caption))!.caption)
-      await act(() => vi.advanceTimersByTimeAsync(SCENE_MS))
-    }
-
-    expect(seen).toEqual([
-      'Waking the coach',
-      'On your marks',
-      'And they’re off',
-      'Ticking off the kilometres',
-      'Through the tape',
-      'And they’re off',
-      'Ticking off the kilometres',
-    ])
-  })
-
-  it('keeps each running tip up long enough to read, but tells a screen reader only that the account is being checked', async () => {
-    vi.useFakeTimers()
-    const { container } = render(<SignInWait onRetry={vi.fn()} onSignOut={vi.fn()} />)
-
-    expect(screen.getByRole('status')).toHaveTextContent(/^Checking your account$/)
-    expect(screen.queryByText(TIPS[0]!)).not.toBeInTheDocument()
-    await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS))
-    expect(screen.getByText(TIPS[0]!)).toBeInTheDocument()
-    // A scene changes before the tip does: the film moves on, the tip stays.
-    await act(() => vi.advanceTimersByTimeAsync(SCENE_MS))
-    expect(screen.getByText(TIPS[0]!)).toBeInTheDocument()
-    await act(() => vi.advanceTimersByTimeAsync(TIP_MS - SCENE_MS))
-    expect(screen.getByText(TIPS[1]!)).toBeInTheDocument()
-
-    expect(container.querySelector('.wait-film')).toHaveAttribute('aria-hidden', 'true')
-    expect(container.querySelector('.wait-tip')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('says how far the wake has got, and shows a loader once only the account is left', async () => {

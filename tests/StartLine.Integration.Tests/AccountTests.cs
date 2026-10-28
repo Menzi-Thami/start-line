@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -27,6 +28,45 @@ public sealed class AccountTests(StartLineApiFactory factory) : IClassFixture<St
     };
 
     private static Uri Url(string path) => new(path, UriKind.Relative);
+
+    [Fact]
+    public async Task Added_strength_survives_a_new_authenticated_client_without_replacing_the_running_plan()
+    {
+        var subject = Guid.NewGuid().ToString();
+        var client = await SignedUp(factory.CreateClient().As(subject));
+        var id = await Save(client);
+        var original = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        static string[] RunningSessions(JsonElement saved) => saved.GetProperty("plan").GetProperty("weeks").EnumerateArray()
+            .SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .Where(s => s.GetProperty("type").GetString() != "Strength")
+            .Select(s => s.GetRawText()).ToArray();
+        var originalRuns = RunningSessions(original);
+        var response = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new
+        {
+            replaceCurrent = true,
+            plan = new
+            {
+                raceSlug = "comrades-2027",
+                goalTime = "10:30:00",
+                runDays = new[] { "Tuesday", "Wednesday", "Thursday", "Saturday", "Sunday" },
+                longRunDay = "Sunday",
+                currentWeeklyKm = 40,
+                strengthDays = new[] { "Monday" },
+            },
+        });
+        response.EnsureSuccessStatusCode();
+        (await Json(response)).GetProperty("id").GetGuid().ShouldBe(id);
+
+        using var nextSession = factory.CreateClient().As(subject);
+        var saved = await Json(await nextSession.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        RunningSessions(saved).ShouldBe(originalRuns);
+        saved.GetProperty("inputs").GetProperty("strengthDays").EnumerateArray().Select(d => d.GetString()).ShouldBe(["Monday"]);
+        var strengthSessions = saved.GetProperty("plan").GetProperty("weeks").EnumerateArray()
+            .SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .Where(s => s.GetProperty("type").GetString() == "Strength").ToArray();
+        strengthSessions.ShouldNotBeEmpty();
+        strengthSessions.All(s => DateOnly.Parse(s.GetProperty("date").GetString()!, CultureInfo.InvariantCulture).DayOfWeek == DayOfWeek.Monday).ShouldBeTrue();
+    }
 
     // Every test signs in as a brand-new runner, so tests never see each other's data.
     private HttpClient NewRunner(string? email = null) => factory.CreateClient().As(Guid.NewGuid().ToString(), email);

@@ -1,0 +1,25 @@
+{
+  "persona": "skeptic",
+  "round": "post-fix",
+  "issues": [],
+  "pricing": {
+    "free": true,
+    "card": false,
+    "termsLinks": 0,
+    "privacyButtons": 1,
+    "signup": 0
+  },
+  "firstSuccess": true,
+  "url": "http://localhost:5173/?race=comrades-2027&goal=39600&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-28&v=2",
+  "screenshots": [
+    "/workspace/qa-launch/skeptic/after/01-landing.png",
+    "/workspace/qa-launch/skeptic/after/02-privacy.png",
+    "/workspace/qa-launch/skeptic/after/03-running-days.png",
+    "/workspace/qa-launch/skeptic/after/04-review.png",
+    "/workspace/qa-launch/skeptic/after/05-first-success.png"
+  ],
+  "pageErrors": [],
+  "limitations": [
+    "Live signup/account and sign-out persistence cannot be tested: this instance exposes no signup/sign-in configuration. No external account was created."
+  ]
+}

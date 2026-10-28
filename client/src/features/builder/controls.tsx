@@ -17,20 +17,21 @@ interface DayPillsProps {
   selected: DayOfWeek[]
   onChange: (days: DayOfWeek[]) => void
   max?: number
+  disabledDays?: readonly DayOfWeek[]
   error?: string
 }
 
 /** Days as checkbox pills. Real inputs underneath, so keyboard and screen readers work without extra code. */
-export function DayPills({ legend, hint, selected, onChange, max, error }: DayPillsProps) {
+export function DayPills({ legend, hint, selected, onChange, max, disabledDays = [], error }: DayPillsProps) {
   const id = useId()
   const full = max !== undefined && selected.length >= max
   const toggle = (day: DayOfWeek, on: boolean) =>
     onChange(on ? WEEK.filter((d) => d === day || selected.includes(d)) : selected.filter((d) => d !== day))
 
   return (
-    <fieldset className="field" style={{ border: 0, padding: 0, margin: '0 0 var(--space-4)' }} aria-describedby={error ? `${id}-error` : undefined}>
+    <fieldset className="field" style={{ border: 0, padding: 0, margin: '0 0 var(--space-4)' }} aria-describedby={[hint ? `${id}-hint` : '', error ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined}>
       <legend className="field-label">{legend}</legend>
-      {hint && <p className="field-help">{hint}</p>}
+      {hint && <p className="field-help" id={`${id}-hint`}>{hint}</p>}
       <div className="pills">
         {WEEK.map((day) => {
           const checked = selected.includes(day)
@@ -39,7 +40,7 @@ export function DayPills({ legend, hint, selected, onChange, max, error }: DayPi
               <input
                 type="checkbox"
                 checked={checked}
-                disabled={!checked && full}
+                disabled={!checked && (full || disabledDays.includes(day))}
                 onChange={(e) => toggle(day, e.target.checked)}
                 aria-label={day}
               />

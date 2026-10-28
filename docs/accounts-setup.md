@@ -77,8 +77,8 @@ VITE_AUTH_SCOPE=api://<api-client-id>/Plans.ReadWrite
 
 ## Database
 
-Locally the API uses LocalDB and migrates itself on start in Development. In Azure, use Azure SQL (the
-free offer is enough) with the connection string in App Service configuration or Key Vault, never in
+Locally the API uses LocalDB and migrates itself on start in Development. In Azure, use the configured Azure SQL Basic
+database with the connection string in App Service configuration or Key Vault, never in
 appsettings, and apply migrations from the deploy pipeline:
 
 ```bash

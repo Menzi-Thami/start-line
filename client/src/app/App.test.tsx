@@ -66,6 +66,8 @@ describe('the home page', () => {
   })
 
   it('plays the starting-gun intro once per visit, and a tap skips it', async () => {
+    const clock = vi.spyOn(window.performance, 'now').mockReturnValue(100)
+    onTestFinished(() => clock.mockRestore())
     withMotion()
     const { user, unmount } = setup()
 
@@ -96,6 +98,26 @@ describe('the home page', () => {
 })
 
 describe('building a plan', () => {
+  it('shows the film on review and opens the finished plan without waiting for a scene', async () => {
+    const { user } = setup()
+    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+    await answerEverything(user)
+    expect(screen.getByRole('complementary', { name: 'Running tips' })).toBeInTheDocument()
+    await buildIt(user)
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+  })
+
+  it('advances only one question when Continue is double-clicked', async () => {
+    const { user } = setup()
+    await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
+    await next(user)
+    await fillGoal(user, '11', '0', '0')
+    await user.dblClick(screen.getByRole('button', { name: 'Continue' }))
+    onStep(3)
+    expect(runDays()).toBeInTheDocument()
+  })
+
   it('lists upcoming races from the API', async () => {
     setup()
 
@@ -171,10 +193,11 @@ describe('building a plan', () => {
     const { user } = setup()
     await screen.findByRole('radio', { name: /Comrades/ })
 
-    await next(user)
+    await user.click(screen.getByRole('button', { name: 'Choose a race' }))
 
     onStep(1)
-    expect(within(screen.getByRole('alert')).getByText(/Choose a race/)).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Which race?' })).toHaveFocus()
     expect(screen.queryByText(/Enter a goal time/)).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('radio', { name: /Comrades/ }))

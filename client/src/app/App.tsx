@@ -29,7 +29,7 @@ import { calendarLinks, personalCalendarLinks } from '../lib/calendar-links'
 import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/home-snapshot'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
-import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
+import { introFitsStartup, introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
 import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
@@ -128,7 +128,7 @@ export function App() {
   const [revealPlan, setRevealPlan] = useState(false)
   const [freshBuild, setFreshBuild] = useState(false)
   // The starting-gun intro: once per visit, only when landing on the builder, never for reduced motion.
-  const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen())
+  const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen() && introFitsStartup(window.performance.now()))
   const finishIntro = useCallback(() => setPlayIntro(false), [])
   // Who just made the start list, while their celebration plays.
   const [celebrating, setCelebrating] = useState<string | null>(null)
@@ -226,7 +226,7 @@ export function App() {
   const [justSignedUp, setJustSignedUp] = useState(false)
   const runs = synced.runs
 
-  // The runner's last-seen Home, kept on this device, so it shows at once while the free database wakes. Read once per
+  // The runner's last-seen Home, kept on this device, so it shows at once while the account refreshes. Read once per
   // account; each piece is replaced as this visit's answer arrives, and saved again for next time.
   const owner = auth.account ? ownerOf(auth.account) : null
   const [snapshot, setSnapshot] = useState<{ owner: string; copy: HomeSnapshot | null } | null>(null)
@@ -800,7 +800,7 @@ export function App() {
         {(view === 'build' || view === 'sign-up') && (
           <>
             {/*
-              Signed in, the account still answering (the database may be waking): the page stays usable under one line, and
+              Signed in, the account still answering (the API or network may be slow): the page stays usable under one line, and
               the runner's plan opens by itself once it's found. The builder runs ungated meanwhile, so the sign-up screen
               never flashes past a returning runner.
             */}
@@ -875,6 +875,7 @@ export function App() {
                 every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}
             {showPlan && (
               <PlanView
+                onEditStrength={changeAnswers}
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
                 reveal={revealPlan}

@@ -27,6 +27,7 @@ import { WeekGlance } from './WeekGlance'
 import { WeekTotals } from './WeekTotals'
 
 interface Props {
+  onEditStrength?: () => void
   plan: TrainingPlan
   /** Just built: the race, the plan's shape and its weeks appear in turn, once, rather than all at once. */
   reveal?: boolean
@@ -94,7 +95,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal }: Props) {
+export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -460,7 +461,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
         </div>
 
         <div {...panel('strength')}>
-          <StrengthTab plan={plan} week={shown?.week} done={done} onDoneChange={updateDone} />
+            <StrengthTab plan={plan} week={shown?.week} done={done} onDoneChange={updateDone} onEditStrength={onEditStrength} />
         </div>
 
         <div {...panel('paces')}>

@@ -1,6 +1,6 @@
 // Taperday: everything the app runs on, in one resource group.
-// Pre-launch it costs nothing: free App Service, the Azure SQL free offer (auto-pauses, can't bill), free
-// Static Web Apps, and a capped Log Analytics workspace. Flip apiSku/databaseTier at launch.
+// Basic SQL is the paid production default (5 DTUs, 2 GiB); App Service and Static Web Apps stay on their free tiers.
+// New test environments can explicitly choose databaseTier=free. Upgrade apiSku separately when needed.
 targetScope = 'resourceGroup'
 
 @description('Region for the API, database and monitoring. South Africa North keeps them close to runners.')
@@ -20,9 +20,9 @@ param appName string = 'taperday'
 @allowed(['F1', 'B1'])
 param apiSku string = 'F1'
 
-@description('free = Azure SQL free offer, auto-pauses when idle and when the monthly allowance runs out. basic = about $5/month, always on.')
+@description('basic = paid SQL Database, 5 DTUs and 2 GiB. free = explicit opt-in for a suitable new environment; pauses when its monthly allowance runs out.')
 @allowed(['free', 'basic'])
-param databaseTier string = 'free'
+param databaseTier string = 'basic'
 
 @description('Who administers the database: your Entra sign-in name (email). The only admin; passwords are switched off.')
 param sqlAdminLogin string
@@ -103,7 +103,7 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   location: location
   sku: databaseTier == 'free'
     ? { name: 'GP_S_Gen5', tier: 'GeneralPurpose', family: 'Gen5', capacity: 2 }
-    : { name: 'Basic', tier: 'Basic' }
+    : { name: 'Basic', tier: 'Basic', capacity: 5 }
   properties: databaseTier == 'free'
     ? {
         useFreeLimit: true
@@ -116,6 +116,7 @@ resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
         zoneRedundant: false
       }
     : {
+        useFreeLimit: false
         maxSizeBytes: 2147483648
         requestedBackupStorageRedundancy: 'Local'
         zoneRedundant: false

@@ -14,6 +14,9 @@ allowance is no longer a reason to show a database-waking screen, though the fre
   and the operating system's reduced-motion preference stops scene changes and animation.
 - Email one-time codes remain the authentication method. This PR changes no Entra configuration or credentials.
 
+The review/build theatre was checked against the real API: [375 px](evidence/plan-theatre-375.png) and
+[desktop](evidence/plan-theatre-1440.png). Reduced motion is enabled in these screenshots.
+
 ## Strength work
 
 - Strength-only edits retain the original plan inputs, including its build date, custom start date, generator
@@ -27,6 +30,9 @@ allowance is no longer a reason to show a database-waking screen, though the fre
 - The generator already excludes strength on the long-run day. The form now explains that rule and disables new
   conflicting selections. An old conflicting selection can be unchecked and corrected, with a validation message
   instead of silently accepting a session the generator will omit. No generator rule or historical plan output changes.
+
+[Mobile strength card](evidence/strength-card-mobile.png), using an anonymous generated plan. Strength-day choices
+also remain expanded when the last selection is removed, making it possible to choose a replacement immediately.
 
 ## Validation
 

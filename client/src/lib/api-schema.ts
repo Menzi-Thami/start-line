@@ -388,6 +388,105 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/photo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RunnerPhotoDto"];
+                        "application/json": components["schemas"]["RunnerPhotoDto"];
+                        "text/json": components["schemas"]["RunnerPhotoDto"];
+                    };
+                };
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SetMyPhotoCommand"];
+                    "text/json": components["schemas"]["SetMyPhotoCommand"];
+                    "application/*+json": components["schemas"]["SetMyPhotoCommand"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RunnerPhotoDto"];
+                        "application/json": components["schemas"]["RunnerPhotoDto"];
+                        "text/json": components["schemas"]["RunnerPhotoDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/activities": {
         parameters: {
             query?: never;
@@ -829,6 +928,90 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{planId}/check-ins/additional/{id}/{date}/{sessionType}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                    id: string;
+                    date: string;
+                    sessionType: components["schemas"]["SessionType"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CheckInRequest"];
+                    "text/json": components["schemas"]["CheckInRequest"];
+                    "application/*+json": components["schemas"]["CheckInRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CheckInDto"];
+                        "application/json": components["schemas"]["CheckInDto"];
+                        "text/json": components["schemas"]["CheckInDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{planId}/check-ins/additional/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans": {
         parameters: {
             query?: never;
@@ -1039,6 +1222,101 @@ export interface paths {
                 };
                 /** @description Not Found */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/coach/proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CoachingProposalDto"];
+                        "application/json": components["schemas"]["CoachingProposalDto"];
+                        "text/json": components["schemas"]["CoachingProposalDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/coach/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ApplyCoachingRequest"];
+                    "text/json": components["schemas"]["ApplyCoachingRequest"];
+                    "application/*+json": components["schemas"]["ApplyCoachingRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CoachingProposalDto"];
+                        "application/json": components["schemas"]["CoachingProposalDto"];
+                        "text/json": components["schemas"]["CoachingProposalDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1874,6 +2152,7 @@ export interface components {
             coaching: components["schemas"]["CoachExportDto"][];
             reminders: components["schemas"]["ReminderDeviceDto"][];
             tickPrompts: components["schemas"]["TickPromptExportDto"][];
+            photo: null | components["schemas"]["RunnerPhotoDto"];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -1932,6 +2211,9 @@ export interface components {
             averageHeartRate: null | number;
             source: components["schemas"]["SourceDto"];
         };
+        ApplyCoachingRequest: {
+            token: string;
+        };
         BestEffortDto: {
             name: string;
             /** Format: double */
@@ -1974,6 +2256,15 @@ export interface components {
             note: null | string;
             /** Format: date-time */
             updatedAt: string;
+            /** Format: uuid */
+            id?: null | string;
+            actualSessionType?: null | components["schemas"]["SessionType"];
+            /** @default false */
+            distanceUnreported: boolean;
+            /** Format: uuid */
+            activityId?: null | string;
+            /** @default false */
+            isAdditional: boolean;
         };
         CheckInExportDto: {
             /** Format: uuid */
@@ -1990,6 +2281,11 @@ export interface components {
             distanceKm?: null | number;
             duration?: null | string;
             note?: null | string;
+            actualSessionType?: null | components["schemas"]["SessionType"];
+            /** @default false */
+            distanceUnreported: boolean;
+            /** Format: uuid */
+            activityId?: null | string;
         };
         /** @enum {unknown} */
         CheckInStatus: "Done" | "CutShort" | "SwappedForEasy" | "Skipped";
@@ -1997,6 +2293,12 @@ export interface components {
             /** Format: uuid */
             planId: string;
             call: components["schemas"]["CoachNoteDto"];
+        };
+        CoachingProposalDto: {
+            token: string;
+            hasChanges: boolean;
+            canApply: boolean;
+            proposed: components["schemas"]["SavedPlanDto"];
         };
         CoachNoteDto: {
             /** Format: date */
@@ -2314,6 +2616,9 @@ export interface components {
             needsPrivacyConsent: boolean;
             heartRateConsent: boolean;
         };
+        RunnerPhotoDto: {
+            dataUrl: string;
+        };
         SavedPlanDto: {
             /** Format: uuid */
             id: string;
@@ -2398,6 +2703,9 @@ export interface components {
         SessionType: "Easy" | "Recovery" | "EasyWithStrides" | "Hills" | "Fartlek" | "Intervals" | "Tempo" | "CruiseIntervals" | "ProgressionRun" | "RacePace" | "MediumLongRun" | "LongRun" | "LongRunFastFinish" | "LongRunRacePace" | "Shakeout" | "Race" | "Strength";
         /** @enum {unknown} */
         Setback: "MissedTraining" | "Illness" | "Injury" | "Behind";
+        SetMyPhotoCommand: {
+            dataUrl: string;
+        };
         SourceDto: {
             kind: components["schemas"]["ActivitySource"];
             /** Format: uri */

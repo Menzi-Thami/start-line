@@ -45,6 +45,7 @@ describe('Your week', () => {
         coachNotes={[harderWeek]}
         today="2026-10-20"
         units="km"
+        checkInFor={(s) => ['2026-10-13', '2026-10-15', '2026-10-18'].includes(s.date) ? ({ date: s.date, sessionType: s.type, status: 'Done', effort: null, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: '2026-10-19T08:00:00Z', distanceUnreported: true, isAdditional: false }) : undefined}
         runs={[run('2026-10-13', 5.5), run('2026-10-15', 3), run('2026-10-18', 6.2)]}
       />,
     )
@@ -67,7 +68,7 @@ describe('Your week', () => {
   })
 
   it('says how the hard sessions felt once the runner checks in, and asks them to when they haven’t', () => {
-    const hills: CheckIn = { date: '2026-10-13', sessionType: 'Hills', status: 'Done', effort: 9, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: '2026-10-13T08:00:00Z' }
+    const hills: CheckIn = { date: '2026-10-13', sessionType: 'Hills', status: 'Done', distanceUnreported: false, isAdditional: false, effort: 9, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: '2026-10-13T08:00:00Z' }
     const props = { plan: planFixture, week: week2, coachNotes: [], today: '2026-10-20', units: 'km' as const, runs: [run('2026-10-13', 5.5)] }
 
     const { unmount } = render(<YourWeek {...props} />)

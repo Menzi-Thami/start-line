@@ -188,4 +188,23 @@ public sealed class WeeklyCoachTests
 
         call.Verdict.ShouldNotBe(CoachVerdict.Thriving);
     }
+    [Fact]
+    public void Easy_replacements_never_count_as_easier_hard_work_or_speed_up_paces()
+    {
+        var evidence = Week(s => new RunEvidence(s, new CheckInAnswers(CheckInStatus.Done, 3, DistanceKm: s.DistanceKm, ActualSessionType: SessionType.Easy)));
+        Decide(evidence).Verdict.ShouldBe(CoachVerdict.OnTrack);
+        Fitness.PaceFactor(1, evidence).ShouldBe(1);
+        var legacy = Week(s => new RunEvidence(s, new CheckInAnswers(CheckInStatus.SwappedForEasy, 3)));
+        Decide(legacy).Verdict.ShouldBe(CoachVerdict.OnTrack);
+        Fitness.PaceFactor(1, legacy).ShouldBe(1);
+    }
+
+    [Fact]
+    public void Unknown_kilometres_are_not_treated_as_missed_volume()
+    {
+        var evidence = Week(s => new RunEvidence(s, new CheckInAnswers(CheckInStatus.Done, 4,
+            Duration: TimeSpan.FromMinutes(40), DistanceUnreported: true)));
+        Decide(evidence).Reasons.ShouldNotContain(CoachReason.MissedVolume);
+    }
+
 }

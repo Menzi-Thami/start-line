@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { AdjustmentActions } from './PlanAdjustment'
 import { useAuth } from '../../app/auth-context'
 import { api, ApiError } from '../../lib/api-client'
 import type { Units } from '../../lib/format'
@@ -11,6 +12,10 @@ export interface SessionCoach {
   get: (session: Session) => CheckIn | undefined
   save: (session: Session, answers: CheckInRequest) => Promise<void>
   remove: (session: Session) => Promise<void>
+  adjustments?: AdjustmentActions
+  entries?: readonly CheckIn[]
+  saveAdditional?: (id: string, session: Session, answers: CheckInRequest) => Promise<void>
+  removeAdditional?: (id: string) => Promise<void>
 }
 
 const key = (date: string, type: string) => `${date}|${type}`
@@ -31,7 +36,7 @@ export function useCheckIns(planId: string | null) {
     auth
       .getToken()
       .then((token) => (token ? api.me.checkIns(token, planId) : []))
-      .then((list) => !cancelled && setLoaded({ planId, checkIns: new Map(list.map((c) => [key(c.date, c.sessionType), c])) }))
+      .then((list) => !cancelled && setLoaded({ planId, checkIns: new Map(list.map((c) => [c.isAdditional ? c.id! : key(c.date, c.sessionType), c])) }))
       // Without its check-ins the plan still works; the coach just has nothing to go on yet.
       .catch(() => !cancelled && setLoaded({ planId, checkIns: new Map() }))
     return () => {
@@ -72,5 +77,21 @@ export function useCheckIns(planId: string | null) {
 
   const get = useCallback((session: Session) => checkIns?.get(key(session.date, session.type)), [checkIns])
 
-  return { ready: checkIns !== null, get, save, remove }
+  const saveAdditional = useCallback(async (id: string, session: Session, answers: CheckInRequest) => {
+    if (!planId) return
+    const saved = await api.me.saveAdditionalRun(await token(), planId, id, session.date, session.type, answers)
+    setLoaded((current) => current?.planId === planId ? { planId, checkIns: new Map(current.checkIns).set(id, saved) } : current)
+  }, [planId, token])
+  const removeAdditional = useCallback(async (id: string) => {
+    if (!planId) return
+    await api.me.deleteAdditionalRun(await token(), planId, id)
+    setLoaded((current) => {
+      if (current?.planId !== planId) return current
+      const next = new Map(current.checkIns)
+      next.delete(id)
+      return { planId, checkIns: next }
+    })
+  }, [planId, token])
+
+  return { ready: checkIns !== null, get, save, remove, entries: checkIns ? [...checkIns.values()] : [], saveAdditional, removeAdditional }
 }

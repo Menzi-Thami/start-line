@@ -3,6 +3,7 @@ import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
 import type { Activity, BestEffort, HeartRate, Split } from '../../lib/types'
+import { RunSticker } from '../sharing/RunSticker'
 import { PoweredByStrava, ViewOnStrava } from '../sync/StravaBrand'
 import {
   actualLine,
@@ -117,6 +118,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       <h2 className="plan-title" id="activity-title">
         {title}
       </h2>
+      <RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} />
       {run.source.kind === 'Strava' && (
         <p className="activity-source">
           <span>From Strava{run.source.recordedOnGarmin ? ' · recorded on Garmin' : ''}</span>

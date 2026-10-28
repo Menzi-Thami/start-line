@@ -44,8 +44,8 @@ public enum BodyArea
 
 /// <summary>
 /// What the runner said about one session: did they run it and how did it feel. Effort is the runner's own 1–10 scale
-/// (1 barely moving, 10 all out); a plain tick ("done", nothing more) leaves it out. The distance and time are for runs
-/// no watch or app recorded.
+/// (1 barely moving, 10 all out); a plain tick ("done", nothing more) leaves it out. Manual distance and time are independent entries;
+/// imported runs are linked without copying their cached metrics.
 /// </summary>
 public sealed record CheckInAnswers(
     CheckInStatus Status,
@@ -54,7 +54,10 @@ public sealed record CheckInAnswers(
     BodyArea? PainArea = null,
     double? DistanceKm = null,
     TimeSpan? Duration = null,
-    string? Note = null);
+    string? Note = null,
+    SessionType? ActualSessionType = null,
+    bool DistanceUnreported = false,
+    Guid? ActivityId = null);
 
 /// <summary>
 /// The runner's check-in on one planned run, the coach's main way of knowing how training is landing. A session is
@@ -94,11 +97,20 @@ public sealed class SessionCheckIn
 
     public string? Note { get; private set; }
 
+    public SessionType? ActualSessionType { get; private set; }
+
+    public bool DistanceUnreported { get; private set; }
+
+    /// <summary>A link only; imported metrics are never copied into a permanent check-in.</summary>
+    public Guid? ActivityId { get; private set; }
+
+    public bool IsAdditional { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    public CheckInAnswers Answers => new(Status, Effort, Pain, PainArea, DistanceKm, Duration, Note);
+    public CheckInAnswers Answers => new(Status, Effort, Pain, PainArea, DistanceKm, Duration, Note, ActualSessionType, DistanceUnreported, ActivityId);
 
     /// <summary>
     /// A run that happened is rated 1–10. "Done" on its own is a tick: the runner says they ran it and nothing more, so it
@@ -127,6 +139,20 @@ public sealed class SessionCheckIn
         return checkIn;
     }
 
+    public static SessionCheckIn CreateAdditional(Guid id, Guid savedPlanId, DateOnly date, SessionType type, CheckInAnswers answers)
+    {
+        ArgumentNullException.ThrowIfNull(answers);
+        if (id == Guid.Empty || answers.Status == CheckInStatus.Skipped)
+        {
+            throw new DomainException("An additional run needs an id and must have happened.");
+        }
+
+        var entry = Create(savedPlanId, date, type, answers);
+        entry.Id = id;
+        entry.IsAdditional = true;
+        return entry;
+    }
+
     /// <summary>Replaces the answers: the runner changed their mind, or added the distance later.</summary>
     public void Answer(CheckInAnswers answers)
     {
@@ -134,6 +160,21 @@ public sealed class SessionCheckIn
         if (!Enum.IsDefined(answers.Status) || !Enum.IsDefined(answers.Pain) || (answers.PainArea is { } area && !Enum.IsDefined(area)))
         {
             throw new DomainException("Unknown answer in the check-in.");
+        }
+
+        if (answers.ActualSessionType is { } actual && (!Enum.IsDefined(actual) || !IsCheckable(actual)))
+        {
+            throw new DomainException("Choose a running workout type.");
+        }
+
+        if (answers.DistanceUnreported && answers.DistanceKm is not null)
+        {
+            throw new DomainException("An unknown distance cannot also have a distance.");
+        }
+
+        if (answers.ActivityId is not null && (answers.DistanceKm is not null || answers.Duration is not null || !answers.DistanceUnreported))
+        {
+            throw new DomainException("Link the imported run without copying its distance or time.");
         }
 
         var skipped = answers.Status == CheckInStatus.Skipped;
@@ -144,12 +185,12 @@ public sealed class SessionCheckIn
                 : $"Rate the effort from {MinEffort} (very easy) to {MaxEffort} (all out).");
         }
 
-        if (skipped && (answers.DistanceKm is not null || answers.Duration is not null))
+        if (skipped && (answers.DistanceKm is not null || answers.Duration is not null || answers.ActivityId is not null || answers.ActualSessionType is not null))
         {
             throw new DomainException("A skipped run has no distance or time.");
         }
 
-        if (answers.DistanceKm is <= 0 or > MaxDistanceKm)
+        if (answers.DistanceKm is { } km && (!double.IsFinite(km) || km <= 0 || km > MaxDistanceKm))
         {
             throw new DomainException($"The distance must be more than 0 and at most {MaxDistanceKm} km.");
         }
@@ -177,5 +218,8 @@ public sealed class SessionCheckIn
         DistanceKm = answers.DistanceKm;
         Duration = answers.Duration;
         Note = note;
+        ActualSessionType = answers.ActualSessionType;
+        DistanceUnreported = answers.DistanceUnreported;
+        ActivityId = answers.ActivityId;
     }
 }

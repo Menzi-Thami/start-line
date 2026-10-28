@@ -83,5 +83,5 @@ internal sealed class TickFromNotificationHandler(IApplicationDbContext db, ITic
 
     private Task<bool> AlreadyCheckedInAsync(TickClaim claim, CancellationToken cancellationToken) =>
         db.SessionCheckIns.AsNoTracking().AnyAsync(
-            c => c.SavedPlanId == claim.PlanId && c.Date == claim.Date && c.SessionType == claim.SessionType, cancellationToken);
+            c => c.SavedPlanId == claim.PlanId && c.Date == claim.Date && c.SessionType == claim.SessionType && !c.IsAdditional, cancellationToken);
 }

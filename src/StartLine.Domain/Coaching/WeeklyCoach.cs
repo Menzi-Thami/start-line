@@ -49,6 +49,11 @@ public sealed record RunEvidence(
     PaceVerdict? Pace = null,
     double? HeartRateDriftPercent = null)
 {
+    public SessionType ActualType => CheckIn?.ActualSessionType ?? (CheckIn?.Status == CheckInStatus.SwappedForEasy ? SessionType.Easy : Session.Type);
+
+    public bool CompletedAsPlanned => CheckIn?.Status is not (CheckInStatus.Skipped or CheckInStatus.SwappedForEasy or CheckInStatus.CutShort)
+        && ActualType == Session.Type;
+
     public bool IsKnown => CheckIn is not null || RecordedKm is not null;
 }
 
@@ -133,8 +138,9 @@ public static class WeeklyCoach
                 hadAHardWeek ? [CoachReason.Pain, CoachReason.StrugglingTwice] : [CoachReason.Pain]);
         }
 
-        var plannedKm = known.Sum(e => e.Session.DistanceKm);
-        var ranKm = known.Sum(KmRun);
+        var volumeKnown = known.Where(e => e.CheckIn?.DistanceUnreported != true || e.RecordedKm is not null).ToList();
+        var plannedKm = volumeKnown.Sum(e => e.Session.DistanceKm);
+        var ranKm = volumeKnown.Sum(KmRun);
         var struggles = new List<CoachReason>();
         if (known.Count(FeltHarder) >= HardRunsToStruggle)
         {
@@ -146,7 +152,7 @@ public static class WeeklyCoach
             struggles.Add(CoachReason.MissedVolume);
         }
 
-        if (known.Count(e => !ExpectedEffort.IsHard(e.Session.Type) && e.HeartRateDriftPercent > HighDriftPercent) >= DriftingRunsToStruggle)
+        if (known.Count(e => !ExpectedEffort.IsHard(e.ActualType) && e.HeartRateDriftPercent > HighDriftPercent) >= DriftingRunsToStruggle)
         {
             struggles.Add(CoachReason.HighHeartRateDrift);
         }
@@ -168,7 +174,7 @@ public static class WeeklyCoach
 
         var hard = known.Where(e => ExpectedEffort.IsHard(e.Session.Type)).ToList();
         var ranItAll = plannedKm > 0 && ranKm >= plannedKm * FullVolumeShare;
-        if (ranItAll && hard.Count > 0 && hard.All(e => FeltEasier(e) || e.Pace == PaceVerdict.Faster))
+        if (ranItAll && hard.Count > 0 && hard.All(e => e.CompletedAsPlanned && (FeltEasier(e) || e.Pace == PaceVerdict.Faster)))
         {
             var reasons = new List<CoachReason>
             {
@@ -197,10 +203,10 @@ public static class WeeklyCoach
         };
 
     private static bool FeltHarder(RunEvidence e) =>
-        e.CheckIn?.Effort is { } effort && ExpectedEffort.For(e.Session.Type) is { } expected && effort >= expected.High + FeltHarderBy;
+        e.CheckIn?.Effort is { } effort && ExpectedEffort.For(e.ActualType) is { } expected && effort >= expected.High + FeltHarderBy;
 
     private static bool FeltEasier(RunEvidence e) =>
-        e.CheckIn?.Effort is { } effort && ExpectedEffort.For(e.Session.Type) is { } expected && effort <= expected.Low - FeltEasierBy;
+        e.CompletedAsPlanned && e.CheckIn?.Effort is { } effort && ExpectedEffort.For(e.ActualType) is { } expected && effort <= expected.Low - FeltEasierBy;
 }
 
 /// <summary>

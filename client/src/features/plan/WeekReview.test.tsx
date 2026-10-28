@@ -6,7 +6,7 @@ import { planFixture } from '../../test/server'
 import { WeekList } from './WeekList'
 
 const run = (localDate: string, distanceKm: number): ActivitySummary =>
-  ({ id: localDate, startedAt: `${localDate}T06:00:00Z`, localDate, kind: 'Run', distanceKm }) as unknown as ActivitySummary
+  ({ id: localDate, startedAt: `${localDate}T06:00:00Z`, localDate, kind: 'Run', distanceKm, source: { kind: 'Upload', viewUrl: null, recordedOnGarmin: false, cachedUntil: null } }) as unknown as ActivitySummary
 
 const list = (props: { today?: string; withRuns?: boolean }) =>
   render(

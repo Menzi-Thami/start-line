@@ -1,103 +1,110 @@
 # Taperday
 
-A free training plan for runners, from a first 5K to Comrades, that coaches you through it. Live at
-[taperday.run](https://taperday.run).
+A running-plan builder and training companion, from a first 5K to Comrades. Live at **[taperday.run](https://taperday.run)**.
 
-Pick a race, a goal time and the days you can run. Taperday builds a week-by-week plan with a pace, a purpose and
-step-by-step instructions for every session. You don't need an account to build one or share it as a link. Sign in
-to keep it, bring in your runs and have the plan adjust to how your training is going.
+Choose a race, a goal time and the days you can run. Get a week-by-week plan with pace zones, workout instructions and optional strength sessions. Build and share a plan without an account; sign in with an email code to save your plan, log your running and review coaching suggestions.
 
-## Building a plan (no account needed)
+## What you can do
 
-- **Any race.** Choose from the race catalogue or enter any distance and date.
-- **Your days, your start.** Tick the 3 to 7 days you can run, pick your long-run day and choose the day the plan
-  starts. Hard sessions are spread so they never land back to back when your days allow it.
-- **Trains for the distance.** 5K plans lean on speed, half and full marathons on threshold and race pace, and ultras
-  on back-to-back weekends, long hills and time on feet. Two Oceans and Comrades get different profiles.
-- **The full set of sessions.** Easy, recovery, strides, hills, fartlek, intervals, tempo, cruise intervals,
-  progression runs, race-pace runs, steady, fast-finish and rehearsal long runs, a race-week sharpener and a shakeout.
-  Strength and mobility days are optional.
-- **How to run it.** Every run comes step by step: the warm-up, each rep and recovery, and the cool-down, each with
-  that week's pace range or, for hills and strides, how it should feel.
-- **Paces from your goal.** Each zone is anchored to an equivalent race performance instead of a fixed offset, so easy
-  really is easy for every distance.
-- **Built-in safety rails.** Volume rises by at most 10% a week, there are regular easier weeks, long runs are capped
-  by time as well as distance, and race week is light.
-- **An honest outlook.** The coach says whether your goal looks realistic and why, and suggests a better one when
-  you're ahead of it or at risk. Add a recent race and it can judge your goal against your current fitness.
-- **Share it.** The whole plan lives in its link, so the same link always opens the same plan.
+- **Build for your race.** Choose a race from the calendar or enter your own distance and date. Plans cover 5K, 10K, half marathon, marathon and ultras, with different training profiles for each distance.
+- **Fit training around your week.** Choose running days, the long-run day, experience, current mileage and preferred start. Structured training may start later for a distant race; the built plan shows its actual start date.
+- **Understand each workout.** See its purpose, target paces, warm-up, work, recoveries and cool-down. Inspect the plan by week or calendar, with volume charts and calculators for pace, splits, fuelling and heart-rate zones.
+- **Keep a current plan.** Updating the same race saves changes in place. A different race replaces the current plan; the earlier record remains archived server-side. Strength can be added to an existing running plan without resetting its dates, generator version or running schedule. Build the changes, then choose **Save changes**.
+- **Record what actually happened.** Complete a workout with manual distance and time, log a different run or add an additional run. Time-only entries leave distance unknown. Imported activities can be linked rather than entered twice. The original prescription stays visible alongside the completed entry.
+- **Bring in recorded runs.** Connect Strava or upload `.fit`, `.gpx` or `.tcx` files, including supported ZIP exports. Recorded runs include splits, halves and best efforts where the file contains enough data.
+- **Review upcoming training.** Check-ins capture effort and pain. Preview a coaching adjustment and explicitly apply it; opening the plan or logging a run does not silently accept a new adjustment. Larger setbacks can use **Replan from here**, preserving previous weeks.
+- **Share your running.** Create a transparent Taperday run sticker using actual distance, time and average pace when known. Share it through the device's share sheet, copy the image where supported, or save a PNG to use in an Instagram Story. Direct Instagram targeting and image pasting depend on the device and receiving app.
+- **Use it across screens.** The Night run design uses dark surfaces, electric-lime actions, responsive dashboards, keyboard navigation and reduced-motion support. Install it as a PWA; cached app files can open offline, while account/API features still need a connection.
+- **Keep your calendar in sync.** Export a plan calendar or subscribe to your account's personal feed. Optional Web Push reminders are configured per device.
 
-## With an account
+Training safeguards include gradual volume growth, regular easier weeks, long-run distance/time limits and a light race week. A goal outlook explains whether the goal appears realistic; these are training guidance, not a medical assessment.
 
-- **Home.** Today's run, your week, your running totals and bests, and calculators for race splits, pace and time,
-  heart-rate zones and race-day fuelling.
-- **Your plan.** One plan at a time, on Home and a tap away. Delete it from the plan whenever you like.
-- **Your runs.** Connect Strava once and runs arrive by themselves, or upload a `.fit`, `.gpx` or `.tcx` file (or the
-  zip it came in) from almost any watch. Each run is matched to the session it was for, with splits, halves and best
-  efforts.
-- **Check-ins and a weekly coach.** Say how a run felt. Each Monday the coach reads last week and holds, eases or
-  steps up this week, always within the training rules. Anything bigger, like a new goal or an injury rebuild, is
-  offered, never made for you.
-- **Replan from here.** Missed a week, ill or injured? Rebuild the rest of the plan from where you are, keeping the
-  weeks you've already run.
-- **Strength.** Runner-specific exercises with figures showing how to do each one.
-- **Your data.** Export everything Taperday holds about you, disconnect Strava or delete your account at any time.
-  Heart rate is kept only if you say so.
+## Your data
 
-## Running it locally
+Accounts use Microsoft Entra External ID. You can export your data, disconnect Strava or delete your account. Heart-rate storage requires consent. Uploaded files and GPS tracks are discarded after processing; the app keeps activity summaries rather than route recordings.
 
-Needs the .NET 10 SDK, Node 22+ and SQL Server LocalDB (it comes with Visual Studio, or install it on its own).
+**Strava is a seven-day cache.** Imported Strava metrics are not copied into permanent manual logs or permanent coaching decisions. A linked entry shows the activity while it is available. Independently entered distance and time are kept as the runner's own record. Long-term totals use manual check-ins and uploads; the plan's current weekly view can also show available imported activities. See [Strava sync and retention](docs/strava-sync.md).
+
+## Run locally
+
+Requirements: **.NET 10 SDK**, **Node 22+**, and **SQL Server LocalDB or a disposable local SQL Server**. Development startup applies migrations, so its database must also be separate from production.
+
+Start the API from the repository root:
 
 ```bash
-dotnet run --project src/StartLine.API --launch-profile http   # API on http://localhost:5122
-cd client && npm install && npm run dev                         # app on http://localhost:5173
+dotnet restore StartLine.slnx
+dotnet tool restore
+dotnet run --project src/StartLine.API --launch-profile http
 ```
 
-In Development the API creates and migrates its LocalDB database when it starts. To use another SQL Server, set
-`ConnectionStrings__StartLine`. API docs are at http://localhost:5122/scalar.
-
-No secrets are needed to build and share plans. Sign-in and Strava stay off until they're configured: see
-[docs/accounts-setup.md](docs/accounts-setup.md) and [docs/strava-sync.md](docs/strava-sync.md).
-
-## Tests
+In another terminal:
 
 ```bash
-scripts/check.sh                   # everything below and more, in order; run it before merging anything
-dotnet test StartLine.slnx         # domain, application, architecture and integration tests
-cd client && npm test              # unit and component tests
-cd client && npm run e2e           # end-to-end, in a real browser (starts the API and the app itself)
+cd client
+npm ci
+npm run dev
 ```
 
-Integration tests run against LocalDB, or the SQL Server in `STARTLINE_TEST_SQL` when it's set (CI uses a container).
-The end-to-end tests need a browser once: `npx playwright install chromium`. The build treats warnings as errors.
+The API runs at `http://localhost:5122`, the app at `http://localhost:5173`, and development API documentation at `http://localhost:5122/scalar`.
 
-## How it's built
+LocalDB is the development default. For another **local development database**, configure `ConnectionStrings__StartLine` through local environment variables or user secrets. Never copy the production database connection into a developer or test setup. Container instructions and the separate `STARTLINE_TEST_SQL` variable are in [the testing guide](docs/testing.md).
 
-- **API** (`src/`): .NET 10 in Clean Architecture (Domain, Application, Infrastructure, API), EF Core on SQL Server,
-  sign-in with Microsoft Entra External ID. The plan generator is pure and deterministic: the same answers always
-  give the same plan.
-- **App** (`client/`): React, Vite and TypeScript, in the "Night run" design ([docs/design](docs/design/night-run/README.md),
-  [docs/brand.md](docs/brand.md)).
-- **Hosting**: Azure, described in `infra/main.bicep`. Every merge to `main` deploys once CI passes
-  ([docs/deploy.md](docs/deploy.md)).
+Anonymous plan building needs no account or Strava secrets. Optional setup:
 
-## Race calendar
+- [Accounts and email-code sign-in](docs/accounts-setup.md)
+- [Strava application and sync](docs/strava-sync.md)
+- [Deployment, personal calendar feeds and Web Push configuration](docs/deploy.md)
 
-The race calendar builds itself. Each race source (organiser feeds, federation calendars, a curated list) is
-fetched at startup and on a schedule. Sources are reconciled automatically: the most authoritative one wins,
-and every race says whether its date and distance are confirmed. If a source goes down, its last good data is
-kept. Plans for unconfirmed races say so, and because plans follow the race, they move if the date moves.
+## Test before merging
 
-The curated list in `src/StartLine.API/appsettings.json` is the fallback source. Adding an online source means
-writing one small `IRaceSource` class; check that site's terms of use first.
+**Read [docs/testing.md](docs/testing.md) first. Automated tests must never use the live Taperday database or real runner accounts.** SQL integration tests migrate and reset their database. The test factory rejects remote hosts and database names that do not identify a test database.
 
-## More
+With a disposable test database available:
 
-| Doc | What's in it |
-|---|---|
-| [accounts-setup.md](docs/accounts-setup.md) | Setting up sign-in, the database and the privacy rules |
-| [strava-sync.md](docs/strava-sync.md) | Strava sync, its 7-day cache and Strava's terms |
-| [activity-import.md](docs/activity-import.md) | Reading runs from watch files, and how runs are analysed |
-| [deploy.md](docs/deploy.md) | Azure resources, costs and the deploy pipeline |
-| [security.md](docs/security.md), [security-posture.md](docs/security-posture.md) | Security controls and where Taperday stands |
-| [brand.md](docs/brand.md) | The name, logo and voice |
+```bash
+dotnet tool restore
+scripts/check.sh
+```
+
+This runs formatting, strict backend build/tests, EF migration checks, frontend lint/types/tests/build/audit and browser journeys. CI uses disposable SQL Server containers. Test results, skipped checks and physical-device/authentication limitations belong in the PR description; do not substitute a focused test pass for full validation.
+
+Useful focused frontend commands, from `client/`:
+
+```bash
+npm run typecheck
+npm run lint
+npx vitest run --testTimeout=30000 --maxWorkers=1
+npm run build
+npm run e2e
+```
+
+Playwright needs its browser installed once with `npx playwright install chromium`. Its standard journeys start a local API and production frontend. Keep physical iPhone/Android/Safari verification separate from browser emulation, particularly for sharing and clipboard behavior.
+
+## Architecture and deployment
+
+| Area | Implementation |
+| --- | --- |
+| Backend | .NET 10, Clean Architecture, a small CQRS dispatcher, FluentValidation, EF Core / SQL Server |
+| Frontend | React, TypeScript, Vite; Bricolage headings, Atkinson body text, mono running numbers |
+| Authentication | Microsoft Entra External ID; email one-time codes |
+| Plan compatibility | Versioned deterministic generators; preserve historical versions and shared-link inputs |
+| Website | Azure Static Web Apps; custom domains use managed HTTPS certificates |
+| API | Azure App Service; the configured free F1 tier can sleep independently of SQL |
+| Database | Infrastructure defaults to paid Azure SQL Basic: 5 DTUs and 2 GiB; storage and processing still need monitoring |
+| Delivery | Feature branch → validated PR → merge to `main` → production deployment |
+
+Run checks **before** merging. The main deployment workflow builds and applies migrations, but does not replace the complete pre-merge test suite. See [deployment and failed-run diagnosis](docs/deploy.md). This repository does not require an automatic merge.
+
+The race calendar reconciles organiser feeds, federation calendars and curated fallback entries. Source priority and confirmation status remain visible; a failed source retains its last good data. New sources implement `IRaceSource` and must respect the source site's terms.
+
+## Developer references
+
+| Document | Purpose |
+| --- | --- |
+| [CLAUDE.md](CLAUDE.md) | Repository conventions, architecture and compatibility rules |
+| [Engineering principles](.claude/rules/engineering-principles.md) | Dependency direction, clocks, errors and safe testing |
+| [Testing](docs/testing.md) | Isolated databases and checks required before merging |
+| [Run logging](docs/run-logging.md) | Planned versus completed work, additional runs, coaching and stickers |
+| [Activity imports](docs/activity-import.md) | Supported recordings and run analysis |
+| [Design system](docs/design/night-run/README.md), [brand](docs/brand.md) | Taperday's visual identity and voice |
+| [Security](docs/security.md), [security posture](docs/security-posture.md) | Controls and operational limitations |

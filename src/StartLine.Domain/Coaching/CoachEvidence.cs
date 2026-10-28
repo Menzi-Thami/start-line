@@ -24,7 +24,7 @@ public static class CoachEvidence
         ArgumentNullException.ThrowIfNull(sessions);
         ArgumentNullException.ThrowIfNull(checkIns);
         ArgumentNullException.ThrowIfNull(runs);
-        var answers = checkIns.ToList();
+        var answers = checkIns.Where(c => !c.IsAdditional).ToList();
         var uploads = runs.Where(MayCount).ToList();
         return
         [

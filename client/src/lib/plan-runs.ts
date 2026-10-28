@@ -1,5 +1,5 @@
 import { addDays } from './format'
-import type { ActivitySummary, PlanWeek, Session } from './types'
+import type { ActivitySummary, CheckIn, PlanWeek, Session } from './types'
 
 /** Uploaded runs keyed by the day they were run (the runner's own calendar date), each day's runs in the order they started. */
 export type RunsByDate = ReadonlyMap<string, readonly ActivitySummary[]>
@@ -31,16 +31,20 @@ const round = (km: number) => Math.round(km * 10) / 10
  * Kilometres run in each plan week that has started by today, keyed by week number. Runs on race day are left out,
  * the same way the planned weekly distance leaves the race out, so race week compares like with like.
  */
-export function ranKmByWeek(weeks: readonly PlanWeek[], runs: readonly ActivitySummary[], today: string): Map<number, number> {
+export function ranKmByWeek(weeks: readonly PlanWeek[], runs: readonly ActivitySummary[], today: string, entries: readonly CheckIn[] = []): Map<number, number> {
   const ran = new Map<number, number>()
   for (const week of weeks) {
     if (week.startDate > today) continue
     const end = weekEnd(week)
     const raceDays = new Set(week.sessions.filter((s) => s.type === 'Race').map((s) => s.date))
-    const km = runs
+    const weekRuns = runs.filter((r) => r.localDate <= today)
+    const recordedDays = new Set(weekRuns.map((r) => r.localDate))
+    const manualKm = entries.filter((c) => c.date >= week.startDate && c.date <= end && c.date <= today && !raceDays.has(c.date) && c.status !== 'Skipped' && !c.activityId && (c.isAdditional || !recordedDays.has(c.date)))
+      .reduce((sum, c) => sum + (c.distanceUnreported ? 0 : c.distanceKm ?? (c.isAdditional ? 0 : week.sessions.find((s) => s.date === c.date && s.type === c.sessionType)?.distanceKm ?? 0) * (c.status === 'CutShort' ? .5 : 1)), 0)
+    const km = weekRuns
       .filter((r) => r.localDate >= week.startDate && r.localDate <= end && !raceDays.has(r.localDate))
       .reduce((sum, r) => sum + r.distanceKm, 0)
-    ran.set(week.number, round(km))
+    ran.set(week.number, round(km + manualKm))
   }
   return ran
 }

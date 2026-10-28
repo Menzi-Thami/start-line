@@ -358,3 +358,7 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .sticker-preview { max-width: 22rem; margin: var(--space-3) auto; border-radius: var(--radius-md); background: repeating-conic-gradient(#252824 0% 25%, #1b1e1a 0% 50%) 50% / 24px 24px; }
 .sticker-preview img { display: block; width: 100%; height: auto; }
 .sticker-panel .submit-row { flex-wrap: wrap; }
+
+.sticker-preview-horizontal, .sticker-preview-transparent { max-width: 50rem; }
+.sticker-layouts { margin-block: var(--space-3); min-width: 0; }
+.sticker-layouts .pill { max-width: 100%; text-align: center; }

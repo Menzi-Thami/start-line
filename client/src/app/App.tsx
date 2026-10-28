@@ -13,6 +13,7 @@ import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
 import { ScrollProgress } from './ScrollProgress'
+import { ScreenRecovery } from './ScreenRecovery'
 import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
 import { useCheckIns } from '../features/coaching/useCheckIns'
@@ -666,6 +667,7 @@ export function App() {
 
       <ScrollProgress />
       <main key={view} className={navigated ? 'view-enter' : undefined}>
+        <ScreenRecovery>
         <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
         {auth.error && (
           <div className="callout" role="alert">
@@ -930,6 +932,7 @@ export function App() {
           </>
         )}
         </Suspense>
+        </ScreenRecovery>
       </main>
 
       {phone && state.kind === 'ready' && <TabBar current={barCurrent} onPick={pickFromBar} account={{ name: state.runner.displayName, photo }} />}

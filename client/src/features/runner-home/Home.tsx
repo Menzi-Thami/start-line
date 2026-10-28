@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type KeyboardEvent, type TouchEvent } from 'react'
 import { useAuth } from '../../app/auth-context'
+import { ScreenRecovery } from '../../app/ScreenRecovery'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
@@ -15,8 +16,9 @@ import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
-import { change, todayInPlan, trainingTotals, weeklyBars, type Change, type WeekBar } from './home-math'
+import { change, todayInPlan, trainingTotals, weeklyBars, type Change } from './home-math'
 import { YourWeek } from './YourWeek'
+import { WeeklyChart } from './WeeklyChart'
 
 const Calculators = lazy(() => import('./Calculators').then((module) => ({ default: module.Calculators })))
 
@@ -57,10 +59,12 @@ function useHomePlan(
   current: CurrentPlan | null | undefined,
   initial?: HomePlan | null,
   onLoaded?: (plan: HomePlan) => void,
-): { plan: TrainingPlan | null; coaching: CoachNote[] } {
+): { plan: TrainingPlan | null; coaching: CoachNote[]; failed: boolean; retry: () => void } {
   const auth = useAuth()
   const [plan, setPlan] = useState<HomePlan | null>(null)
   const [coaching, setCoaching] = useState<{ id: string; notes: CoachNote[] } | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const [failure, setFailure] = useState<{ id: string; attempt: number } | null>(null)
   const loaded = useRef(onLoaded)
   useEffect(() => {
     loaded.current = onLoaded
@@ -72,22 +76,26 @@ function useHomePlan(
       .getToken()
       .then((token) => (token ? api.me.coachPlan(token, current.id) : null))
       .then((saved) => {
-        if (cancelled || !saved) return
+        if (cancelled) return
+        if (!saved) { setFailure({ id: current.id, attempt }); return }
         const found = { id: current.id, plan: saved.plan }
+        setFailure(null)
         setPlan(found)
         setCoaching({ id: current.id, notes: saved.coaching ?? [] })
         loaded.current?.(found)
       })
-      .catch(() => undefined)
+      .catch(() => { if (!cancelled) setFailure({ id: current.id, attempt }) })
     return () => {
       cancelled = true
     }
-  }, [current, auth])
+  }, [current, auth, attempt])
   // Until this visit's plan arrives, the copy from last time (if it's the same plan) stands in for it.
   const shown = plan && current && plan.id === current.id ? plan : initial
   return {
     plan: shown && current && shown.id === current.id ? shown.plan : null,
     coaching: coaching && current && coaching.id === current.id ? coaching.notes : [],
+    failed: failure?.id === current?.id && failure?.attempt === attempt,
+    retry: () => setAttempt((v) => v + 1),
   }
 }
 
@@ -246,13 +254,13 @@ function RaceLine({ plan, week, units }: { plan: TrainingPlan; week: PlanWeek | 
  * Today's session from the runner's plan. The card and its button stay put while the plan loads, so a tap on "Open your
  * plan" always lands, however quickly it comes.
  */
-function TodayCard({ plan, today, units, runs, coach, onOpenPlan }: { plan: TrainingPlan | null; today: string; units: Units; runs: ActivitySummary[]; coach?: SessionCoach; onOpenPlan: () => void }) {
+function TodayCard({ plan, failed, today, units, runs, coach, onOpenPlan }: { plan: TrainingPlan | null; failed: boolean; today: string; units: Units; runs: ActivitySummary[]; coach?: SessionCoach; onOpenPlan: () => void }) {
   return (
     <section className="panel home-card home-today" aria-labelledby="home-today">
       <h2 id="home-today" className="home-card-heading">
         Today
       </h2>
-      {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : <div className="skeleton-stack" role="status" aria-label="Loading today's session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
+      {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : failed ? <p>Today’s session will appear when your plan loads.</p> : <div className="skeleton-stack" role="status" aria-label="Loading today's session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
       <button type="button" className="button button-primary" onClick={onOpenPlan}>
         Open your plan
       </button>
@@ -325,52 +333,6 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
       {body}
       {day.strength.length > 0 && <p className="field-help">Plus {day.strength[0]!.title.toLowerCase()}.</p>}
     </>
-  )
-}
-
-/** The last twelve weeks, run against planned, as bars; a table carries the numbers for screen readers. */
-function WeeklyChart({ bars, units, averageKm }: { bars: WeekBar[]; units: Units; averageKm: number }) {
-  const max = Math.max(10, ...bars.map((b) => Math.max(b.km, b.plannedKm ?? 0)))
-  const share = (km: number) => `${(km / max) * 100}%`
-  return (
-    <figure className="home-chart">
-      <div className="home-bars" aria-hidden="true">
-        {bars.map((bar, i) => (
-          <div key={bar.weekStart} className={`home-bar${i === bars.length - 1 ? ' home-bar-now' : ''}`}>
-            {bar.plannedKm != null && <span className="home-bar-planned" style={{ height: share(bar.plannedKm) }} />}
-            <span className="home-bar-ran" style={{ height: share(bar.km) }} />
-          </div>
-        ))}
-        {averageKm > 0 && <span className="home-chart-average" style={{ bottom: share(averageKm) }} />}
-      </div>
-      <div className="home-bar-labels" aria-hidden="true">
-        {bars.map((bar, i) => (
-          <span key={bar.weekStart}>{(bars.length - 1 - i) % 3 === 0 ? formatDate(bar.weekStart, 'dayMonth') : ''}</span>
-        ))}
-      </div>
-      <figcaption className="field-help">
-        Bars: ticked and uploaded runs. Outline: planned. Line: 4-week average.
-      </figcaption>
-      <table className="visually-hidden">
-        <caption>Weekly distance, last 12 weeks</caption>
-        <thead>
-          <tr>
-            <th scope="col">Week of</th>
-            <th scope="col">Ran</th>
-            <th scope="col">Planned</th>
-          </tr>
-        </thead>
-        <tbody>
-          {bars.map((bar) => (
-            <tr key={bar.weekStart}>
-              <td>{formatDate(bar.weekStart, 'dayMonth')}</td>
-              <td>{formatDistance(bar.km, units)}</td>
-              <td>{bar.plannedKm == null ? '–' : formatDistance(bar.plannedKm, units)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </figure>
   )
 }
 
@@ -472,7 +434,7 @@ export function Home({
   const [tabDirection, setTabDirection] = useState<'forward' | 'back' | null>(null)
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
-  const { plan, coaching } = useHomePlan(current, initialPlan, onPlanLoaded)
+  const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
   // A tick or check-in made here changes the totals, so they're fetched again after each.
   const [logVersion, setLogVersion] = useState(0)
@@ -587,10 +549,11 @@ export function Home({
       </div>
 
       <div {...panel('today')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
+        {current && planFailed && <div className="home-data-state" role="alert"><p>{plan ? 'Your plan couldn’t refresh. Showing the last plan loaded on this device.' : 'Your plan couldn’t load. You can try again.'}</p><button type="button" className="button" onClick={retryPlan}>Retry plan</button></div>}
         <TickCard plan={plan} today={today} coach={coach} runs={runs} />
         <div className="home-top">
           {current ? (
-            <TodayCard plan={plan} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} />
+            <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} />
           ) : (
             <section className="panel home-card" aria-labelledby="home-goal">
               <h2 id="home-goal" className="home-card-heading">
@@ -721,6 +684,7 @@ export function Home({
 
       <div {...panel('tools')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
         {toolsOpened && (
+          <ScreenRecovery>
           <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading running tools"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>}>
             <Calculators
               units={units}
@@ -728,6 +692,7 @@ export function Home({
               race={plan && goalSeconds ? { distanceKm: plan.race.distanceKm, goalSeconds } : null}
             />
           </Suspense>
+          </ScreenRecovery>
         )}
       </div>
     </div>

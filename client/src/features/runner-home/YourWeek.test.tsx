@@ -95,7 +95,7 @@ describe('Home with a plan', () => {
 
   const renderHome = (today: string) => {
     server.use(http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json(saved)))
-    const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenAccount: vi.fn() }
+    const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenRuns: vi.fn(), onOpenAccount: vi.fn() }
     render(
       <AuthContext.Provider value={signedIn}>
         <Home runner={thandi} units="km" today={today} current={current} runs={[]} {...handlers} />

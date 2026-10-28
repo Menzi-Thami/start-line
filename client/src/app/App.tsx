@@ -744,6 +744,7 @@ export function App() {
             onOpenPlan={openOwnPlan}
             onBuildPlan={startFresh}
             onOpenRun={(id) => showRun(id)}
+            onOpenRuns={() => go('runs')}
             onOpenAccount={() => go('account')}
           />
         )}

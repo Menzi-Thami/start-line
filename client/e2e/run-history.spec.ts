@@ -1,7 +1,8 @@
 import { expect, test } from '@playwright/test'
+import { readFileSync } from 'node:fs'
 import type { CheckIn, CheckInRequest } from '../src/lib/types'
 import { formatDate } from '../src/lib/format'
-import plan from '../src/test/fixtures/plan-5k.json'
+const plan = JSON.parse(readFileSync(new URL('../src/test/fixtures/plan-5k.json', import.meta.url), 'utf8'))
 
 for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], ['planned-run', '2026-10-13']]) {
   test(`logging a run on a ${kind} day survives navigation, reload and cache expiry @phone`, async ({ page }, info) => {
@@ -56,7 +57,7 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     }
     await page.setViewportSize({ width: 375, height: 812 })
     await saved.scrollIntoViewIfNeeded()
-    await page.screenshot({ path: info.outputPath(`${kind}-run-saved.png`), fullPage: true })
+    await day.screenshot({ path: info.outputPath(`${kind}-run-saved.png`) })
     await page.getByRole('button', { name: 'Expire imported details', exact: true }).click()
     await expect(saved).toContainText('10 km · 1:00:00')
     await page.getByRole('tab', { name: 'All weeks', exact: true }).click()
@@ -64,7 +65,7 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     const marker = month.getByRole('button', { name: new RegExp(`^${Number(date!.slice(8))} October: .*1 additional run logged$`) })
     await marker.focus()
     await page.keyboard.press('Enter')
-    await expect(page.locator('#plan-week-1 summary')).toBeFocused()
+    await expect(page.locator('#plan-week-1 > summary')).toBeFocused()
     await page.getByRole('button', { name: 'Return home', exact: true }).click()
     await expect(running.getByRole('article', { name, exact: true })).toContainText('10 km · 1:00:00')
     await page.reload()

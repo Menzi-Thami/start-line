@@ -385,3 +385,20 @@ it('counts a saved time-only run while keeping its distance unreported', async (
   expect(within(running).getAllByText('—')).toHaveLength(2)
   expect(within(running).queryByText(/Your first run starts/)).not.toBeInTheDocument()
 })
+
+it('does not hide a second Strava run just because another run was logged on that date', async () => {
+  server.use(http.get('*/api/v1/me/plans/:id/check-ins', () => HttpResponse.json([
+    { id: 'morning-log', date: '2026-10-19', sessionType: 'Easy', status: 'Done', isAdditional: true, distanceKm: 5, duration: '00:30:00', pain: 'None', effort: null },
+  ])))
+  const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-19', 10, 'Strava')] }, { signIn: true })
+  const running = screen.getByRole('region', { name: 'Your running' })
+  await within(running).findByRole('article', { name: 'Additional run on Monday 19 October 2026' })
+  await user.click(within(running).getByRole('button', { name: 'Log this run' }))
+  expect(within(running).getByLabelText('Run details')).toHaveValue('2026-10-19')
+})
+
+it('does not claim an unconfirmed Strava run completed today’s workout while saved runs load', () => {
+  renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 10, 'Strava')] }, { signIn: true })
+  const today = screen.getByRole('region', { name: 'Today' })
+  expect(within(today).queryByText('Done', { exact: true })).not.toBeInTheDocument()
+})

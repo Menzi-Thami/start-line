@@ -59,6 +59,7 @@ interface Props {
   onOpenRuns?: () => void
   /** Check-ins, when this is the runner's saved plan: "How did it go?" on each run that's come round. */
   coach?: SessionCoach
+  canCompleteRuns?: boolean
   /** The coach's calls on the runner's saved plan; this week's shows on "This week". */
   coachNotes?: CoachNoteType[]
   /** Offered from a note about pain: rebuilds the plan after an injury. */
@@ -97,7 +98,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength }: Props) {
+export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, canCompleteRuns = true }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
@@ -127,7 +128,8 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
     else effectiveDone.add(key)
   }
   const additionalIds = new Set(entries.filter((c) => c.isAdditional && c.activityId).map((c) => c.activityId))
-  const byDate = runs ? runsByDate(runs.filter((r) => !additionalIds.has(r.id))) : undefined
+  const additionalDates = entries.filter((c) => c.isAdditional && c.status !== 'Skipped').map((c) => c.date)
+  const byDate = runs ? runsByDate(runs) : undefined
   const completionByDate = runs ? runsByDate(runs.filter((r) => !additionalIds.has(r.id) && (r.source.kind !== 'Strava' || entries.some((c) => !c.isAdditional && c.activityId === r.id)))) : undefined
   const ran = runs || coach ? ranKmByWeek(plan.weeks, runs ?? [], today, entries) : undefined
 
@@ -303,7 +305,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
       <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
 
       {replan}
-      {coach && <div ref={runLogRef}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} /></div>}
+      {coach && <div ref={runLogRef}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
       {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
 
       {plan.outlook && (
@@ -458,10 +460,10 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
                   onUseGoal={onUseGoal}
                 />
               )}
-              <WeekGlance week={shown.week} done={effectiveDone} runs={completionByDate} today={today} units={units} />
-              <WeekDays week={shown.week} byZone={byZone} units={units} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} />
+              <WeekGlance week={shown.week} done={effectiveDone} runs={completionByDate} additionalDates={additionalDates} today={today} units={units} />
+              <WeekDays week={shown.week} byZone={byZone} units={units} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} canCompleteRuns={canCompleteRuns} />
               <p className="field-help">
-                Ticks are saved on this device.{' '}
+                {coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Ticks are saved on this device.'}{' '}
                 <button type="button" className="link-button" onClick={() => showTab(tabs.findIndex((t) => t.id === 'all'))}>
                   See every week
                 </button>
@@ -471,9 +473,9 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
         </div>
 
         <div {...panel('all')}>
-          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} />
-          <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
-          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} />
+          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} />
+          <p className="tab-intro">{coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Tick sessions off as you go. Ticks are saved on this device only.'}</p>
+          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} canCompleteRuns={canCompleteRuns} />
         </div>
 
         <div {...panel('strength')}>

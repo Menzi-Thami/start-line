@@ -105,10 +105,11 @@ function useHomePlan(
  * Current totals: saved running history plus valid Strava measurements. Refreshed after logs, sync changes,
  * returning to the app and cache expiry; never stored in a lasting client cache.
  */
-function useRunningLog(version: number, activitiesVersion: string): { log: LoggedRun[] | null; failed: boolean } {
+function useRunningLog(version: number, activitiesVersion: string, ownerId: string): { log: LoggedRun[] | null; failed: boolean } {
   const auth = useAuth()
-  const [log, setLog] = useState<LoggedRun[] | null>(null)
-  const [failedVersion, setFailedVersion] = useState<number | null>(null)
+  const [loaded, setLoaded] = useState<{ ownerId: string; runs: LoggedRun[] } | null>(null)
+  const log = loaded?.ownerId === ownerId ? loaded.runs : null
+  const [failedVersion, setFailedVersion] = useState<{ ownerId: string; version: number } | null>(null)
   const [refresh, setRefresh] = useState(0)
   useEffect(() => {
     const visible = () => { if (document.visibilityState === 'visible') setRefresh(value => value + 1) }
@@ -119,7 +120,7 @@ function useRunningLog(version: number, activitiesVersion: string): { log: Logge
     const now = Date.now()
     const expiry = Math.min(...(log ?? []).flatMap(run => run.source === 'Strava' && run.cachedUntil ? [Date.parse(run.cachedUntil)] : []).filter(value => value > now))
     if (!Number.isFinite(expiry)) return
-    const timer = window.setTimeout(() => { setLog(null); setRefresh(value => value + 1) }, Math.min(expiry - now + 50, 2_147_483_647))
+    const timer = window.setTimeout(() => { setLoaded(null); setRefresh(value => value + 1) }, Math.min(expiry - now + 50, 2_147_483_647))
     return () => window.clearTimeout(timer)
   }, [log])
   useEffect(() => {
@@ -129,16 +130,16 @@ function useRunningLog(version: number, activitiesVersion: string): { log: Logge
       .then((token) => (token ? api.me.running(token, true) : null))
       .then((runs) => {
         if (!cancelled) {
-          if (runs) { setLog(runs); setFailedVersion(null) }
-          else setFailedVersion(version)
+          if (runs) { setLoaded({ ownerId, runs }); setFailedVersion(null) }
+          else setFailedVersion({ ownerId, version })
         }
       })
-      .catch(() => { if (!cancelled) setFailedVersion(version) })
+      .catch(() => { if (!cancelled) setFailedVersion({ ownerId, version }) })
     return () => {
       cancelled = true
     }
-  }, [auth, version, activitiesVersion, refresh])
-  return { log, failed: failedVersion === version }
+  }, [auth, version, activitiesVersion, refresh, ownerId])
+  return { log, failed: failedVersion?.ownerId === ownerId && failedVersion.version === version }
 }
 
 const dayName = new Intl.DateTimeFormat('en-GB', { weekday: 'long', timeZone: 'UTC' })
@@ -444,7 +445,7 @@ export function Home({
   const [logVersion, setLogVersion] = useState(0)
   const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
   const activitiesVersion = runs.map(run => `${run.id}|${run.localDate}|${run.distanceKm}|${run.kind}|${run.source.kind}|${run.source.cachedUntil ?? ''}`).sort().join(';')
-  const { log, failed: logFailed } = useRunningLog(logVersion, activitiesVersion)
+  const { log, failed: logFailed } = useRunningLog(logVersion, activitiesVersion, runner.id)
   const coach: SessionCoach | undefined = checkIns.ready
     ? {
         today,

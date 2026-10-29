@@ -12,6 +12,8 @@ Home requests GET /api/v1/me/running?includeSynced=true. Omitting the new query 
 
 The UI labels the Strava contribution in month/year figures. It refreshes totals after check-ins, changes to the activity list, returning to the visible app, and the next known imported-cache deadline. This adds no polling or provider API calls. HTTP responses and requests use no-store; computed totals are not saved to SQL, local storage or the service worker. No schema migration or new persistent Strava index is introduced. Coaching's durable evidence boundary is unchanged.
 
+In-memory totals and load errors are scoped to the runner ID, so switching accounts cannot show the previous runner's figures while a new request is pending. Cancelled reads cannot replace the current account's result.
+
 Strava deletion, disconnection or expiry can remove an imported contribution from the current figures; the UI explains this. Independently entered measurements and uploaded records keep their existing retention. The current view does not claim that all historical Strava activities have been backfilled. Existing cache refresh, deletion and provider-policy review requirements remain in place.
 
 Weekly average still means the last four **full** Monday–Sunday weeks. A run this week changes month/year/current chart, but enters that average only when its week finishes. Comparisons are unavailable when their contributing distance is unknown, rather than falsely claiming the runner is level with zero.

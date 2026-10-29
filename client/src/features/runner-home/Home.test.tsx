@@ -423,6 +423,27 @@ it('refreshes automatic distance when the runner returns to the app', async () =
   } finally { visible.mockRestore() }
 })
 
+it('never shows the previous account’s totals while a different account loads', async () => {
+  let release!: () => void
+  const pending = new Promise<void>(resolve => { release = resolve })
+  let reads = 0
+  server.use(http.get('*/api/v1/me/running', async () => {
+    const first = ++reads === 1
+    if (!first) await pending
+    return HttpResponse.json([{ date: '2026-10-22', distanceKm: first ? 10 : 20, source: 'Uploaded' }])
+  }))
+  const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenRuns: vi.fn(), onOpenAccount: vi.fn() }
+  const view = (id: string) => <AuthContext.Provider value={signedIn}><Home runner={{ ...thandi, id }} units="km" today="2026-10-23" current={null} {...handlers} /></AuthContext.Provider>
+  const { rerender } = render(view('one'))
+  const running = screen.getByRole('region', { name: 'Your running' })
+  expect(await within(running).findAllByText('10')).toHaveLength(2)
+  rerender(view('two'))
+  expect(within(running).queryByText('10')).not.toBeInTheDocument()
+  expect(within(running).getByRole('status', { name: 'Loading running totals' })).toBeInTheDocument()
+  release()
+  expect(await within(running).findAllByText('20')).toHaveLength(2)
+})
+
 it('refreshes at imported expiry and does not claim a missing distance is level with zero', async () => {
   vi.useFakeTimers()
   try {

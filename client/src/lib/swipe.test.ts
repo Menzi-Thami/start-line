@@ -3,7 +3,7 @@ import { allowsSwipe, horizontalSwipe } from './swipe'
 
 describe('horizontal swipe', () => {
   it('leaves native controls, editable content, calendars and charts in control of their own gestures', () => {
-    for (const html of ['<button><span>Run</span></button>', '<input type="range">', '<div contenteditable="true">Goal</div>', '<div role="slider"><span>Week</span></div>', '<section class="plan-calendar"><span>12</span></section>']) {
+    for (const html of ['<button><span>Run</span></button>', '<input type="range">', '<dialog open><p>Day summary</p></dialog>', '<ol class="week-strip"><span>12</span></ol>', '<div contenteditable="true">Goal</div>', '<div role="slider"><span>Week</span></div>', '<section class="plan-calendar"><span>12</span></section>']) {
       const container = document.createElement('div')
       container.innerHTML = html
       expect(allowsSwipe(container.querySelector('span') ?? container.firstElementChild)).toBe(false)

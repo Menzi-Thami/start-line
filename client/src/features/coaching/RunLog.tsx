@@ -19,6 +19,7 @@ export function RunLog({
   coach,
   runs = [],
   initialRun,
+  fixedDate,
   onClose,
   showEntries = true,
 }: {
@@ -26,12 +27,13 @@ export function RunLog({
   coach: SessionCoach
   runs?: readonly ActivitySummary[]
   initialRun?: ActivitySummary
+  fixedDate?: string
   onClose?: () => void
   showEntries?: boolean
 }) {
   const label = useId()
   const [open, setOpen] = useState(!!initialRun)
-  const [date, setDate] = useState(initialRun?.localDate ?? (coach.today < plan.race.date ? coach.today : plan.race.date))
+  const [date, setDate] = useState(initialRun?.localDate ?? fixedDate ?? (coach.today < plan.race.date ? coach.today : plan.race.date))
   const [entryId, setEntryId] = useState(() => newEntryId())
   const [target, setTarget] = useState('additional')
   if (!coach.saveAdditional || !coach.removeAdditional || coach.today < plan.startDate) return null
@@ -87,6 +89,7 @@ export function RunLog({
                 min={plan.startDate}
                 max={coach.today < plan.race.date ? coach.today : plan.race.date}
                 value={date}
+                readOnly={fixedDate !== undefined}
                 onChange={(e) => {
                   setDate(e.target.value)
                   setTarget('additional')

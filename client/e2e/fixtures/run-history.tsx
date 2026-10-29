@@ -12,7 +12,7 @@ import '../../src/styles/polish.css'
 export function Fixture() {
   const date = new URLSearchParams(location.search).get('date') ?? '2026-10-14'
   const km = Number(new URLSearchParams(location.search).get('km') ?? 12)
-  const [runs, setRuns] = useState<ActivitySummary[]>([{
+  const [runs, setRuns] = useState<ActivitySummary[]>(new URLSearchParams(location.search).has('empty') ? [] : [{
     id: 'synthetic-strava', localDate: date, startedAt: `${date}T06:00:00Z`, kind: 'Run', distanceKm: km,
     movingSeconds: 4000, source: { kind: 'Strava' },
   } as ActivitySummary])

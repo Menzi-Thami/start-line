@@ -25,7 +25,7 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
 
 ## Safe testing
 
-Read [docs/testing.md](docs/testing.md) before running tests. **Never test against production or real runner data.** SQL integration tests migrate and reset their database; use disposable local SQL/LocalDB only. The test factory rejects remote hosts and non-test database names. Run the full checks before merging and report limitations honestly.
+Read [docs/testing.md](docs/testing.md) before running tests. **Never test against production or real runner data.** SQL integration tests migrate and reset their database; use disposable local SQL/LocalDB only. The test factory rejects remote hosts and non-test database names. Plan/run changes also require multi-step sequence tests across editing, failed saves, reloads and source availability; record the coverage matrix and gaps, not just a green count. Run the full checks before merging and report limitations honestly.
 
 ## Commands (repo root)
 ```bash
@@ -52,7 +52,7 @@ requests (the free Actions minutes are kept for deploys; see `docs/deploy.md`), 
   `Application/Features/Sync/StravaSyncRunner` behind `IStravaApi`; tests use `FakeStravaApi`, never Strava.
 - `Domain/Plans/SavedPlan` — a runner has **one current plan** (a filtered unique index enforces it). A new plan for the
   same race updates it in place; another race replaces it (the old one is kept server-side as `Archived`; the app has no
-  My plans page since 25 Oct 2026, so it is not shown). Signed-in runners open on Home; the plan is deleted from the plan itself.
+  My plans page since 25 Oct 2026, so it is not shown). Signed-in runners open on Home; removing a plan with check-ins archives it to retain running history. See `docs/plan-history.md`.
 - `Domain/Plans` — `TrainingPlanGenerator` (phases, volume, taper), `WeekLayout` (which run goes on which
   chosen day), `WorkoutBuilder` (concrete sessions per distance), `PlanProfile` (per-distance shape).
 - `Application/Features/{Plans,Races,Predictions}` — query + validator + handler per feature.

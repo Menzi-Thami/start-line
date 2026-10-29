@@ -45,6 +45,10 @@ Failures need separate coverage: a failed load must not become empty history; a 
 
 Calendar day changes must also exercise `client/e2e/calendar-day.spec.ts`: selecting rest/workout days, preserving the prescription beside actual runs, explicit source-link deduplication, save/edit/reload, cache removal, time-only entries and failed/successful deletion. `ui-polish.spec.ts` checks the compact day dropdown against the production build and fonts at phone through ultrawide widths. Keep unavailable imported history distinct from an empty day. See [calendar day summaries](calendar-day-summary.md).
 
+## Test sequences across feature boundaries
+
+Changes to plans, logging or persistence require a risk-based sequence matrix, with evidence and remaining gaps recorded in the PR. A collection of isolated save-button tests is insufficient. Exercise log → edit availability/strength/goal/start → failed save/retry → repeated submit → reload → edit the original entry. Combine planned, additional, time-only, tick-only and imported sources. Verify retained IDs/dates, source links, own measurements, honest missing-data states, totals without duplicate counting, and calendar visibility outside a changed plan window. Include stale plan IDs, account ownership, plan replacement/removal and source expiry. See [the lifecycle audit](qa/2026-10-29/plan-history/audit.md).
+
 ## Browser and integration boundaries
 
 - Upload/request-limit regressions must include a real loopback Kestrel test (WebApplicationFactory.UseKestrel), not TestServer alone: TestServer does not enforce Kestrel's HTTP body limits. Use realistic payload sizes as well as tiny fixtures. RunnerPhotoHttpTests protects the profile-picture route against the 16 KiB limit mismatch; the browser suite separately exercises real camera-size decoding/compression. See [profile pictures](profile-pictures.md).

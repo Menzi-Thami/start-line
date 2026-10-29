@@ -29,12 +29,13 @@ public sealed record CheckInDto(
     SessionType? ActualSessionType = null,
     bool DistanceUnreported = false,
     Guid? ActivityId = null,
-    bool IsAdditional = false)
+    bool IsAdditional = false,
+    double? PrescribedKm = null)
 {
     public static CheckInDto From(SessionCheckIn c)
     {
         ArgumentNullException.ThrowIfNull(c);
-        return new(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.PainArea, c.DistanceKm, c.Duration, c.Note, c.UpdatedAt, c.Id, c.ActualSessionType, c.DistanceUnreported, c.ActivityId, c.IsAdditional);
+        return new(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.PainArea, c.DistanceKm, c.Duration, c.Note, c.UpdatedAt, c.Id, c.ActualSessionType, c.DistanceUnreported, c.ActivityId, c.IsAdditional, c.PrescribedKm);
     }
 }
 
@@ -140,6 +141,10 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
         }
 
         var additional = request.EntryId is not null;
+        var checkIn = additional
+            ? await db.SessionCheckIns.SingleOrDefaultAsync(c => c.Id == request.EntryId && c.SavedPlanId == plan.Id && c.IsAdditional, cancellationToken)
+            : await db.SessionCheckIns.SingleOrDefaultAsync(c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType && !c.IsAdditional, cancellationToken);
+        PlannedSession? prescribed = null;
         if (additional)
         {
             if (request.EntryId == Guid.Empty || request.Status == CheckInStatus.Skipped ||
@@ -148,15 +153,16 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
                 throw new DomainException("An additional run needs a distance, a time or an imported activity.");
             }
 
-            var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs));
-            if (request.Date < built.StartDate || request.Date > built.RaceDate)
+            if (checkIn is null)
             {
-                throw new DomainException("Choose a day within this plan for your additional run.");
+                var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs));
+                if (request.Date < built.StartDate || request.Date > built.RaceDate)
+                    throw new DomainException("Choose a day within this plan for your additional run.");
             }
         }
-        else
+        else if (checkIn is null)
         {
-            await PlanSessions.RequireAsync(db, builder, plan, request.Date, request.SessionType, cancellationToken);
+            prescribed = await PlanSessions.RequireAsync(db, builder, plan, request.Date, request.SessionType, cancellationToken);
         }
 
         if (request.ActivityId is not null && (request.DistanceKm is not null || request.Duration is not null) && !request.IndependentMetrics)
@@ -181,9 +187,6 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
 
         var answers = new CheckInAnswers(request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm,
             request.Duration, request.Note, request.ActualSessionType, request.DistanceUnreported, request.ActivityId);
-        var checkIn = additional
-            ? await db.SessionCheckIns.SingleOrDefaultAsync(c => c.Id == request.EntryId && c.SavedPlanId == plan.Id && c.IsAdditional, cancellationToken)
-            : await db.SessionCheckIns.SingleOrDefaultAsync(c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType && !c.IsAdditional, cancellationToken);
         if (checkIn is null)
         {
             if (additional && await db.SessionCheckIns.AnyAsync(c => c.Id == request.EntryId, cancellationToken))
@@ -211,6 +214,8 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
             checkIn.Answer(answers);
         }
 
+        if (prescribed is not null)
+            checkIn.RememberPrescription(prescribed.DistanceKm);
         await db.SaveChangesAsync(cancellationToken);
         return CheckInDto.From(checkIn);
     }

@@ -2365,6 +2365,8 @@ export interface components {
             activityId?: null | string;
             /** @default false */
             isAdditional: boolean;
+            /** Format: double */
+            prescribedKm?: null | number;
         };
         CheckInExportDto: {
             /** Format: uuid */
@@ -2777,6 +2779,8 @@ export interface components {
             plan: components["schemas"]["GeneratePlanQuery"];
             /** @default false */
             replaceCurrent: boolean;
+            /** Format: uuid */
+            expectedPlanId?: null | string;
         };
         SaveProfileCommand: {
             displayName: string;

@@ -5,7 +5,7 @@ import { SavePlanButton } from '../features/account/SavePlanButton'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
 import { useCalendarLink } from '../features/account/useCalendarLink'
-import { samePlan, useCurrentPlan } from '../features/account/useCurrentPlan'
+import { samePlan, sameRace, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { FindingPlan } from '../features/account/FindingPlan'
@@ -135,6 +135,8 @@ export function App() {
   const [celebrating, setCelebrating] = useState<string | null>(null)
   const finishCelebrating = useCallback(() => setCelebrating(null), [])
   const inflight = useRef<AbortController | null>(null)
+  const editingSavedPlan = useRef<string | null>(null)
+  useEffect(() => () => inflight.current?.abort(), [auth.account?.email, auth.account?.name])
 
   // Only sets state once the request settles; callers set the loading state themselves.
   const fetchRaces = useCallback((controller: AbortController) => {
@@ -159,17 +161,21 @@ export function App() {
   }
 
   // Like fetchRaces: state changes only when the request settles.
-  const fetchPlan = useCallback((inputs: PlanInputs) => {
+  const fetchPlan = useCallback((inputs: PlanInputs, beforeShow?: (request: ReturnType<typeof toRequest>, signal: AbortSignal) => Promise<void>) => {
     inflight.current?.abort()
     const controller = new AbortController()
     inflight.current = controller
 
     const withDate = { ...inputs, planFrom: inputs.planFrom ?? localToday() }
-    window.history.replaceState(null, '', `?${toSearchParams(withDate)}`)
+    if (!beforeShow) window.history.replaceState(null, '', `?${toSearchParams(withDate)}`)
 
     api
       .plan(toRequest(withDate), controller.signal)
-      .then((result) => {
+      .then(async (result) => {
+        if (controller.signal.aborted) return
+        await beforeShow?.(toRequest(withDate), controller.signal)
+        if (controller.signal.aborted) return
+        window.history.replaceState(null, '', `?${toSearchParams(withDate)}`)
         setPlan({ kind: 'ready', plan: result, inputs: withDate })
         setRevealPlan(true)
         setEditing(false)
@@ -194,14 +200,27 @@ export function App() {
   }
 
   const buildFromWizard = (inputs: PlanInputs) => {
-    // A brand-new plan is saved to the runner's account as soon as it's built; a re-run of changed answers isn't,
-    // so trying a different goal doesn't fill My plans with near-copies.
+    const own = currentPlan.current
+    if (editing && own && own.id === editingSavedPlan.current && sameRace(toRequest(inputs), own.inputs)) {
+      setFieldErrors({})
+      setPlan({ kind: 'loading' })
+      fetchPlan(inputs, async (request, signal) => {
+        const token = await auth.getToken()
+        if (!token) throw new ApiError('Sign in again to save your updated plan.', 401)
+        const saved = await api.me.savePlan(token, request, own.name, true, own.id, signal)
+        if (signal.aborted) return
+        currentPlan.remember({ id: saved.id, name: saved.name, inputs: request })
+        editingSavedPlan.current = null
+      })
+      return
+    }
     setFreshBuild(plan.kind !== 'ready')
     setEditing(true)
     build(inputs)
   }
 
   const changeAnswers = () => {
+    editingSavedPlan.current = savedOnScreen
     // Remount so the wizard starts from this plan's answers, on its summary screen.
     setBuilderKey((k) => k + 1)
     setEditing(true)
@@ -209,6 +228,7 @@ export function App() {
   }
 
   const backToPlan = () => {
+    editingSavedPlan.current = null
     setEditing(false)
     window.scrollTo?.({ top: 0 })
   }
@@ -843,7 +863,7 @@ export function App() {
                   <strong>We couldn’t build that plan.</strong>
                   <p>{plan.message}</p>
                   <div className="submit-row" style={{ marginTop: 'var(--space-3)' }}>
-                    <button type="button" className="button button-quiet" onClick={() => build(plan.inputs)}>
+                    <button type="button" className="button button-quiet" onClick={() => buildFromWizard(plan.inputs)}>
                       Try again
                     </button>
                     {/* The race may have gone from the calendar: never leave the runner without a way to build something. */}

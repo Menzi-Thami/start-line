@@ -5,13 +5,13 @@ import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
 import { allowsSwipe, horizontalSwipe } from '../../lib/swipe'
-import { ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
+import { outsideSchedule, ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CoachNote, LoggedRun, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import { Avatar } from '../account/Avatar'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import { PlanAdjustment } from '../coaching/PlanAdjustment'
 import { RunLog } from '../coaching/RunLog'
-import { AdditionalRun } from '../coaching/AdditionalRun'
+import { SavedRun } from '../coaching/SavedRun'
 import { CheckInLoadState } from '../coaching/CheckInLoadState'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { offersTick } from '../coaching/ran-this'
@@ -485,6 +485,8 @@ export function Home({
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
   const goalSeconds = plan ? parseTimeSpan(plan.goalTime) : null
   const pendingSyncedRuns = runs.filter(r => r.source.kind === 'Strava' && r.localDate <= today && !checkIns.entries.some(c => c.activityId === r.id))
+  const scheduledSessions = plan?.weeks.flatMap(week => week.sessions) ?? []
+  const otherLoggedRuns = checkIns.entries.filter(entry => outsideSchedule(entry, scheduledSessions)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3)
   const fromStrava = runs.some((r) => r.source.kind === 'Strava')
   const ranDates = new Set([...completedActivityRuns.filter((r) => r.kind !== 'Other').map((r) => r.localDate), ...checkIns.entries.filter((c) => !c.isAdditional && c.status !== 'Skipped').map((c) => c.date)])
 
@@ -649,9 +651,9 @@ export function Home({
               {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}
             </li>)}</ul><p className="field-help">Logging adds your effort and feedback to the plan. You do not need to enter the distance again for it to count here.</p></div>}
           {requestedRun && plan && coach && <RunLog key={requestedRun.id} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} />}
-          {coach && checkIns.entries.some(c => c.isAdditional) && <section aria-label="Recently logged runs">
+          {coach && otherLoggedRuns.length > 0 && <section aria-label="Recently logged runs">
             <h3>Recently logged runs</h3>
-            {checkIns.entries.filter(c => c.isAdditional).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3).map(entry => <AdditionalRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}
+            {otherLoggedRuns.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}
             <button type="button" className="link-button" onClick={onOpenPlan}>View runs in your plan →</button>
           </section>}
           {logFailed ? (

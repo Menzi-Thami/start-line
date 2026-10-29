@@ -93,6 +93,17 @@ public sealed class SessionCheckIn
 
     public double? DistanceKm { get; private set; }
 
+    /// <summary>The prescription at completion, independent of later schedule edits. Never an imported measurement.</summary>
+    public double? PrescribedKm { get; private set; }
+
+    public void RememberPrescription(double kilometres)
+    {
+        if (!double.IsFinite(kilometres) || kilometres < 0)
+            throw new DomainException("A prescribed distance must be finite and non-negative.");
+        if (!IsAdditional)
+            PrescribedKm ??= kilometres;
+    }
+
     public TimeSpan? Duration { get; private set; }
 
     public string? Note { get; private set; }

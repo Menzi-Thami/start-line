@@ -36,4 +36,19 @@ describe('strength days alongside an existing running plan', () => {
     expect(onSubmit).toHaveBeenCalledOnce()
     expect(onSubmit).toHaveBeenCalledWith({ ...inputs, strengthDays: ['Monday'] })
   })
+  it('changing availability preserves a historical start, build date and generator version', async () => {
+    const initial = { ...inputs, startOn: '2026-10-12', version: 1 }
+    const { user, onSubmit } = setup(initial)
+    await user.click(screen.getByRole('button', { name: 'Change days' }))
+    const days = within(screen.getByRole('group', { name: 'Which days can you run?' }))
+    await user.click(days.getByRole('checkbox', { name: 'Tuesday' }))
+    await user.click(days.getByRole('checkbox', { name: 'Wednesday' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+    expect(onSubmit).toHaveBeenCalledOnce()
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({ planFrom: '2026-10-08', startOn: '2026-10-12', version: 1 })
+    expect(onSubmit.mock.calls[0]![0].runDays).toContain('Wednesday')
+  })
+
 })

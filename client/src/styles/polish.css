@@ -399,3 +399,12 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
   @keyframes day-summary-arrive { from { opacity: 0; transform: translateY(-0.25rem); } to { opacity: 1; transform: translateY(0); } }
 }
 @media print { .day-summary { display: none; } }
+
+/* Strength stays compact until the runner opens a workout. */
+.strength-disclosure { border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--space-3); margin-block: var(--space-3); background: var(--glass); }
+.strength-disclosure > summary { cursor: pointer; min-height: var(--tap); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); font-weight: 700; color: var(--ink); }
+.strength-disclosure > summary::after { content: '+'; color: var(--accent); margin-inline-start: auto; }
+.strength-disclosure[open] > summary::after { content: '−'; }
+.strength-disclosure > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: var(--radius-sm); }
+.strength-disclosure[open] > summary { margin-bottom: var(--space-3); }
+@media print { .strength-disclosure > :not(summary) { display: block !important; } }

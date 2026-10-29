@@ -52,7 +52,7 @@ internal sealed partial class GetRunningLogHandler(
             var sessions = await SessionsAsync(plans.Single(p => p.Id == byPlan.Key), cancellationToken);
             ticks.AddRange(byPlan.Select(c => new TickedSession(
                 c.Date,
-                c.IsAdditional ? 0 : sessions.FirstOrDefault(s => s.Date == c.Date && s.Type == c.SessionType)?.DistanceKm ?? 0,
+                c.PrescribedKm ?? (c.IsAdditional ? 0 : sessions.FirstOrDefault(s => s.Date == c.Date && s.Type == c.SessionType)?.DistanceKm ?? 0),
                 c.Answers, c.IsAdditional, c.UpdatedAt)));
         }
 

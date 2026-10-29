@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using StartLine.Domain.Coaching;
 
 namespace StartLine.Infrastructure.Persistence;
 
@@ -34,6 +35,10 @@ internal sealed class AuditTimestampsInterceptor(TimeProvider timeProvider) : Sa
         var now = timeProvider.GetUtcNow();
         foreach (var entry in context.ChangeTracker.Entries())
         {
+            // Capturing an old prescription is bookkeeping, not a newer answer from the runner.
+            if (entry.State == EntityState.Modified && entry.Entity is SessionCheckIn &&
+                entry.Properties.Where(property => property.IsModified).All(property => property.Metadata.Name == nameof(SessionCheckIn.PrescribedKm)))
+                continue;
             var created = entry.Metadata.FindProperty("CreatedAt");
             var updated = entry.Metadata.FindProperty("UpdatedAt");
             if (entry.State == EntityState.Added && created is not null)

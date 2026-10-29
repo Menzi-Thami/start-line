@@ -292,7 +292,10 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     }
     // Compare the actual form answers, so adding strength preserves a saved plan's historical metadata too.
     const strengthOnly = initial !== null && JSON.stringify({ ...draft, strengthDays: [] }) === JSON.stringify({ ...draftFrom(initial, units, today), strengthDays: [] })
-    const found = validate(draft, goalSeconds, today, raceDate, strengthOnly ? initial?.startOn : undefined)
+    const sameRace = initial !== null && (initial.raceSlug ? draft.race === initial.raceSlug
+      : draft.race === OTHER && draft.otherDate === initial.raceDate
+        && draft.otherName.trim().toLowerCase() === (initial.raceName ?? '').trim().toLowerCase())
+    const found = validate(draft, goalSeconds, today, raceDate, sameRace ? initial?.startOn : undefined)
 
     if (step < LAST_STEP) {
       const here = onStep(found, step)
@@ -328,9 +331,10 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       currentWeeklyKm: currentKm > 0 ? toKilometres(currentKm, units) : undefined,
       experience: draft.experience,
       strengthDays: draft.strengthDays,
-      planFrom: today,
-      // A new plan: built with the newest generator, and stamped with it so its link keeps that shape.
-      version: LATEST_PLAN_VERSION,
+      planFrom: sameRace ? initial?.planFrom ?? today : today,
+      // Editing availability does not silently restart training or upgrade a historical generator.
+      version: sameRace ? initial?.version : LATEST_PLAN_VERSION,
+      replan: sameRace ? initial?.replan : undefined,
       recent: recentInputs(draft.recent, today),
       startOn: draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn : undefined,
     })

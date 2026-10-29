@@ -4873,6 +4873,28 @@ select.input option {
   pointer-events: none;
 }
 
+/* Show the actual field for keyboard entry. A clipped, one-pixel input can lose replacement text in Chromium. */
+.wheel-input:focus {
+  top: calc(var(--wheel-row) * 2);
+  left: 0;
+  width: 100%;
+  height: var(--wheel-row);
+  padding: 0 1.75rem 0 0;
+  border: 0;
+  outline: 0;
+  clip-path: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 1.45rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.wheel:focus-within .wheel-item.is-selected {
+  color: transparent;
+}
+
 .wheel-track {
   height: 100%;
   overflow-y: auto;

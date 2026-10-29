@@ -24,11 +24,10 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength }: 
     return (
       <>
         <p className="tab-intro">
-          Choose strength days to add sessions to your running plan. Build the updated plan, then use Save changes if you want to keep it in your account.
+          Choose strength days to add sessions to your running plan. Updates to your saved plan keep your logged runs.
         </p>
         {onEditStrength && <button type="button" className="button" onClick={onEditStrength}>Add strength days</button>}
-        <h3>The moves</h3>
-        <ExerciseLibrary />
+        <details className="disclosure"><summary>Preview the exercises</summary><ExerciseLibrary /></details>
       </>
     )
   }
@@ -45,7 +44,8 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength }: 
       {sessions.map((session) => {
         const progress = setsDone(done, session)
         return (
-          <section className="strength-session" key={session.date} aria-labelledby={`strength-${session.date}`}>
+          <details className="strength-session strength-disclosure" key={session.date}>
+            <summary><span>{formatDate(session.date)} · {session.title}</span><span className="field-help">{session.exercises.length} exercises · {progress.done}/{progress.total} sets done</span></summary>
             <div className="this-week-head">
               <h3 id={`strength-${session.date}`}>
                 {formatDate(session.date, 'weekday')} {formatDate(session.date, 'dayMonth')} · {session.title}
@@ -56,7 +56,7 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength }: 
             </div>
             <p className="session-why">Why: {session.purpose}</p>
             <ExerciseList session={session} done={done} onDoneChange={onDoneChange} />
-          </section>
+          </details>
         )
       })}
     </>

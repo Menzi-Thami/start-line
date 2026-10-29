@@ -48,7 +48,7 @@ export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, aut
     try {
       const token = await auth.getToken()
       if (!token) throw new ApiError('Your sign-in has expired. Sign in again to carry on.', 401)
-      await api.me.savePlan(token, request, undefined, replaceCurrent)
+      await api.me.savePlan(token, request, undefined, replaceCurrent, current && sameRace(request, current.inputs) ? current.id : undefined)
       setStatus({ kind: 'saved' })
       onSaved?.()
     } catch (error) {
@@ -105,7 +105,7 @@ export function SavePlanButton({ runner, request, onFinishSignUp, onDeleted, aut
     if (status.kind === 'confirming-delete' || status.kind === 'deleting') {
       return (
         <span className="save-confirm" role="group" aria-label="Delete your plan">
-          <span className="field-help">Delete this plan?</span>
+          <span className="field-help">Remove this training plan? Your logged runs will be kept.</span>
           <button type="button" className="button button-danger" disabled={status.kind === 'deleting'} onClick={() => void remove(current.id)}>
             Yes, delete
           </button>

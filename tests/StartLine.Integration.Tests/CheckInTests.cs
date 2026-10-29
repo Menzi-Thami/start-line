@@ -200,7 +200,7 @@ public sealed class CheckInTests : IClassFixture<CheckInClockFactory>
     }
 
     [Fact]
-    public async Task Check_ins_go_out_with_the_account_export_and_go_with_their_plan()
+    public async Task Check_ins_are_exported_survive_plan_removal_and_are_erased_with_the_account()
     {
         var client = await Runner();
         var (plan, date, type) = await TenKPlan(client);
@@ -211,7 +211,13 @@ public sealed class CheckInTests : IClassFixture<CheckInClockFactory>
 
         (await client.DeleteAsync(Url($"/api/v1/me/plans/{plan}"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
         using var scope = _factory.Services.CreateScope();
-        (await scope.ServiceProvider.GetRequiredService<StartLineDbContext>().SessionCheckIns.CountAsync(c => c.SavedPlanId == plan)).ShouldBe(0);
+        var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
+        (await db.SessionCheckIns.CountAsync(c => c.SavedPlanId == plan)).ShouldBe(1);
+        (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}")))).GetProperty("status").GetString().ShouldBe("Archived");
+        (await Json(await client.GetAsync(Url("/api/v1/me/export")))).GetProperty("checkIns")[0].GetProperty("planId").GetGuid().ShouldBe(plan);
+
+        (await client.DeleteAsync(Url("/api/v1/me"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await db.SessionCheckIns.CountAsync(c => c.SavedPlanId == plan)).ShouldBe(0);
     }
     [Fact]
     public async Task A_different_run_survives_a_new_session_without_rewriting_the_plan()

@@ -2,20 +2,7 @@ import { useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { Avatar } from './Avatar'
-
-/** Shrinks a picked image to a centred 256-pixel square JPEG, so what's sent is small whatever the phone's camera took. */
-async function squareJpeg(file: File, size = 256): Promise<string> {
-  const bitmap = await createImageBitmap(file)
-  const side = Math.min(bitmap.width, bitmap.height)
-  const canvas = document.createElement('canvas')
-  canvas.width = size
-  canvas.height = size
-  const context = canvas.getContext('2d')
-  if (!context) throw new Error('This browser can’t prepare the picture. Try another.')
-  context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, size, size)
-  bitmap.close()
-  return canvas.toDataURL('image/jpeg', 0.85)
-}
+import { prepareProfilePicture } from './profile-picture'
 
 interface Props {
   name: string
@@ -27,9 +14,12 @@ interface Props {
 export function PhotoPicker({ name, photo, onChange }: Props) {
   const auth = useAuth()
   const input = useRef<HTMLInputElement>(null)
+  const saving = useRef(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'saved' } | { kind: 'error'; message: string }>({ kind: 'idle' })
 
   const run = async (action: (token: string) => Promise<string | null>) => {
+    if (saving.current) return
+    saving.current = true
     setStatus({ kind: 'busy' })
     try {
       const token = await auth.getToken()
@@ -38,6 +28,8 @@ export function PhotoPicker({ name, photo, onChange }: Props) {
       setStatus({ kind: 'saved' })
     } catch (error) {
       setStatus({ kind: 'error', message: error instanceof Error ? error.message : 'That picture didn’t save. Try another.' })
+    } finally {
+      saving.current = false
     }
   }
 
@@ -57,7 +49,7 @@ export function PhotoPicker({ name, photo, onChange }: Props) {
             onChange={(e) => {
               const file = e.target.files?.[0]
               e.target.value = ''
-              if (file) void run(async (token) => (await api.me.setPhoto(token, await squareJpeg(file))).dataUrl)
+              if (file) void run(async (token) => (await api.me.setPhoto(token, await prepareProfilePicture(file))).dataUrl)
             }}
           />
         </label>
@@ -71,7 +63,7 @@ export function PhotoPicker({ name, photo, onChange }: Props) {
           {status.kind === 'error' && <span className="field-error">{status.message}</span>}
         </span>
       </div>
-      <p className="field-help">Optional. Without one, your initials show. Only you see it.</p>
+      <p className="field-help">Optional. Pictures are compressed to 24 KB or less. Replacing one removes the old picture. Without one, your initials show. Only you see it.</p>
     </div>
   )
 }

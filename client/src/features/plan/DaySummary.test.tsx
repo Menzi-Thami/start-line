@@ -16,8 +16,8 @@ const imported = (id = 'strava-1', localDate = date): ActivitySummary => ({ id, 
 const entry = (overrides: Partial<CheckIn> = {}): CheckIn => ({ date, sessionType: 'Easy', status: 'Done', effort: 3, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: `${today}T12:00:00Z`, id: 'saved-1', activityId: 'strava-1', distanceUnreported: true, isAdditional: true, ...overrides })
 const save = vi.fn<NonNullable<SessionCoach['saveAdditional']>>().mockResolvedValue(undefined)
 
-function View({ selected = date, runs = [], saved = [], ready = true, signedIn = true, close = noop, failedSave = false, units = 'km' }: {
-  selected?: string; runs?: ActivitySummary[]; saved?: CheckIn[]; ready?: boolean; signedIn?: boolean; close?: () => void; failedSave?: boolean; units?: 'km' | 'mi'
+function View({ selected = date, runs = [], saved = [], ready = true, signedIn = true, close = noop, failedSave = false, units = 'km', pendingImports = false }: {
+  selected?: string; runs?: ActivitySummary[]; saved?: CheckIn[]; ready?: boolean; signedIn?: boolean; close?: () => void; failedSave?: boolean; units?: 'km' | 'mi'; pendingImports?: boolean
 }) {
   const [done, setDone] = useState(new Set<string>())
   const [entries, setEntries] = useState(saved)
@@ -33,7 +33,7 @@ function View({ selected = date, runs = [], saved = [], ready = true, signedIn =
   }
   const effective = new Set(done)
   for (const item of entries.filter(item => !item.isAdditional && item.status !== 'Skipped')) effective.add(sessionKey({ date: item.date, type: item.sessionType }))
-  return <DaySummary date={selected} today={today} plan={planFixture} units={units} done={effective} onDoneChange={update => setDone(current => update(current))} runs={runs} coach={signedIn && ready ? coach : undefined} canCompleteRuns={ready} onClose={close} />
+  return <DaySummary date={selected} today={today} plan={planFixture} units={units} done={effective} onDoneChange={update => setDone(current => update(current))} runs={pendingImports ? undefined : runs} coach={signedIn && ready ? coach : undefined} canCompleteRuns={ready} onClose={close} />
 }
 const planned = () => screen.getByRole('region', { name: 'Planned' })
 const recorded = () => screen.getByRole('region', { name: 'Recorded' })
@@ -111,6 +111,13 @@ describe('calendar day summaries', () => {
     expect(recorded()).toHaveTextContent('Saved run history is not available yet')
     expect(recorded()).not.toHaveTextContent('No activity recorded')
     expect(screen.queryByRole('button', { name: 'Log a run' })).not.toBeInTheDocument()
+  })
+
+  it('distinguishes unavailable imported history from an empty day while preserving saved entries', () => {
+    render(<View pendingImports saved={[entry({ activityId: null, distanceKm: 8, distanceUnreported: false })]} />)
+    expect(recorded()).toHaveTextContent('Imported runs have not loaded')
+    expect(recorded()).not.toHaveTextContent('No activity recorded')
+    expect(recorded()).toHaveTextContent('8 km')
   })
 
   it('keeps strength completion independent of an imported running activity', async () => {

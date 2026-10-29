@@ -27,7 +27,7 @@ interface Props {
 }
 
 /** One date, with prescription and history kept separate. Opening it never changes completion. */
-export default function DaySummary({ date, today, plan, units, done, onDoneChange, runs = [], coach, canCompleteRuns, onOpenRun, onClose }: Props) {
+export default function DaySummary({ date, today, plan, units, done, onDoneChange, runs, coach, canCompleteRuns, onOpenRun, onClose }: Props) {
   const id = useId()
   const dialogRef = useRef<HTMLDialogElement>(null)
   const logRef = useRef<HTMLDivElement>(null)
@@ -36,7 +36,8 @@ export default function DaySummary({ date, today, plan, units, done, onDoneChang
   const sessions = plan.weeks.flatMap(week => week.sessions).filter(session => session.date === date)
   const entries = (coach?.entries ?? sessions.flatMap(session => { const entry = coach?.get(session); return entry ? [entry] : [] }))
     .filter(entry => entry.date === date && entry.status !== 'Skipped' && entry.sessionType !== 'Strength')
-  const dayRuns = [...new Map(runs.filter(run => run.localDate === date && run.kind !== 'Other').map(run => [run.id, run])).values()]
+  const importsUnavailable = !!coach && runs === undefined
+  const dayRuns = [...new Map((runs ?? []).filter(run => run.localDate === date && run.kind !== 'Other').map(run => [run.id, run])).values()]
   const unlinked = dayRuns.filter(run => !entries.some(entry => entry.activityId === run.id))
   const deviceRuns = sessions.filter(session => session.type !== 'Strength' && done.has(sessionKey(session)) && !coach?.get(session))
   const completedStrength = sessions.filter(session => session.type === 'Strength' && done.has(sessionKey(session)))
@@ -117,6 +118,7 @@ export default function DaySummary({ date, today, plan, units, done, onDoneChang
         <section aria-labelledby={`${id}-recorded`} className="day-summary-section">
           <h3 id={`${id}-recorded`}>Recorded</h3>
           {!historyReady && <p role="status">Saved run history is not available yet. Close this day to check loading or retry above the plan.</p>}
+          {importsUnavailable && <p role="status">Imported runs have not loaded. Your saved run entries are still available. Refresh Taperday to try loading imports again.</p>}
           {future ? <p className="field-help">This date hasn’t arrived yet. Completed sessions will appear here when recorded.</p> : <>
             {historyReady && coach && entries.map(entry => <div key={entry.id ?? `${entry.date}|${entry.sessionType}`} className="day-summary-saved">
               {entry.isAdditional ? <AdditionalRun entry={entry} coach={coach} runs={dayRuns} onOpenRun={onOpenRun ? openRun : undefined} /> : <>
@@ -138,10 +140,10 @@ export default function DaySummary({ date, today, plan, units, done, onDoneChang
             </article>)}
             {historyReady && deviceRuns.map(session => <div key={sessionKey(session)} className="day-summary-card"><h4>{session.title} completed</h4><p className="field-help">Completed on this device. Actual distance and time were not recorded.</p></div>)}
             {completedStrength.map(session => <div key={sessionKey(session)} className="day-summary-card"><h4>{session.title} completed</h4><p className="field-help">Strength completion is saved on this device.</p></div>)}
-            {historyReady && entries.length === 0 && unlinked.length === 0 && deviceRuns.length === 0 && completedStrength.length === 0 && <div className="day-summary-empty"><p>No activity recorded for this date.</p><p className="field-help">A blank day means nothing has been recorded here; it doesn’t tell us whether you trained.</p></div>}
+            {historyReady && !importsUnavailable && entries.length === 0 && unlinked.length === 0 && deviceRuns.length === 0 && completedStrength.length === 0 && <div className="day-summary-empty"><p>No activity recorded for this date.</p><p className="field-help">A blank day means nothing has been recorded here; it doesn’t tell us whether you trained.</p></div>}
           </>}
           {historyReady && coach && inPlan && !future && <div ref={logRef}><RunLog key={requestedRun?.id ?? 'manual'} plan={plan} coach={coach} runs={dayRuns} fixedDate={date} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
-          {!coach && historyReady && <p className="field-help">{runs.length ? 'Open your own saved plan to log or edit runs.' : 'On a shared plan, completion ticks stay on this device. Sign in and save your own plan to keep a run log.'}</p>}
+          {!coach && historyReady && <p className="field-help">{runs?.length ? 'Open your own saved plan to log or edit runs.' : 'On a shared plan, completion ticks stay on this device. Sign in and save your own plan to keep a run log.'}</p>}
         </section>
       </div>
     </dialog>, document.body,

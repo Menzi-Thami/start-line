@@ -33,9 +33,9 @@ interface Props {
  * One uploaded run beside the plan: a done mark on a day with a planned run, or a quiet line on a day without one.
  * The words carry the meaning; the tick is decoration.
  */
-function RunMark({ run, units, unplanned, onOpenRun }: { run: ActivitySummary; units: Units; unplanned: boolean; onOpenRun?: (id: string) => void }) {
+function RunMark({ run, units, unplanned, onOpenRun, logged = false }: { run: ActivitySummary; units: Units; unplanned: boolean; onOpenRun?: (id: string) => void; logged?: boolean }) {
   const distance = formatDistance(run.distanceKm, units)
-  const text = unplanned ? `Unplanned run · ${distance}` : `Ran ${distance}`
+  const text = unplanned ? `${logged ? 'Additional run logged' : 'Unplanned run'} · ${distance}` : `Ran ${distance}`
   const className = `run-mark${unplanned ? ' run-mark-unplanned' : ''}`
   const content = (
     <>
@@ -192,7 +192,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
                   <ul className="run-marks">
                     {marks.map(({ run, unplanned }) => (
                       <li key={run.id}>
-                        <RunMark run={run} units={units} unplanned={unplanned} onOpenRun={onOpenRun} />
+                        <RunMark run={run} units={units} unplanned={unplanned} onOpenRun={onOpenRun} logged={coach?.entries?.some(c => c.activityId === run.id)} />
                         {onLogRun && coach?.saveAdditional && run.localDate <= coach.today && !coach.entries?.some(c => c.activityId === run.id) && <button type="button" className="link-button" onClick={() => onLogRun(run)}>Log this run</button>}
                       </li>
                     ))}

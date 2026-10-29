@@ -123,6 +123,26 @@ public sealed class TickPromptTests
         (await CheckIns(runner)).GetArrayLength().ShouldBe(0);
     }
 
+    [Fact]
+    public async Task Independently_entered_metrics_keep_the_activity_association_and_survive_cached_activity_removal()
+    {
+        await using var factory = new TickPromptFactory(SundayMorningRun.AddHours(3));
+        var runner = await Ready(factory, endpoint: null);
+        await RunOnStrava(factory, runner, SundayMorningRun); // The provider says 12 km.
+        var activityId = (await Json(await runner.Client.GetAsync(Url("/api/v1/me/activities")))).EnumerateArray().ShouldHaveSingleItem().GetProperty("id").GetGuid();
+        var (date, _) = Sunday(runner);
+        await Json(await runner.Client.PutAsJsonAsync(Url($"/api/v1/me/plans/{runner.Plan}/check-ins/additional/{Guid.NewGuid()}/{date:yyyy-MM-dd}/Easy"),
+            new { status = "Done", distanceKm = 10, activityId, independentMetrics = true })); // Own report: never copied from the provider.
+        var saved = (await CheckIns(runner)).EnumerateArray().ShouldHaveSingleItem();
+        saved.GetProperty("activityId").GetGuid().ShouldBe(activityId);
+        saved.GetProperty("distanceKm").GetDouble().ShouldBe(10);
+        using (var scope = factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<StartLineDbContext>().Activities.Where(a => a.Id == activityId).ExecuteDeleteAsync();
+        }
+        (await Json(await runner.Client.GetAsync(Url("/api/v1/me/running")))).EnumerateArray().ShouldHaveSingleItem().GetProperty("distanceKm").GetDouble().ShouldBe(10);
+    }
+
     private static async Task<JsonElement> CheckIns(Runner runner) => await Json(await runner.Client.GetAsync(Url($"/api/v1/me/plans/{runner.Plan}/check-ins")));
 
     [Fact]

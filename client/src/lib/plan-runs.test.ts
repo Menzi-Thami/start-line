@@ -94,3 +94,10 @@ describe('wellOverPlan', () => {
     expect(wellOverPlan(0, 5)).toBe(false)
   })
 })
+
+it('counts independently entered measurements for an associated Strava run once, before and after its cache expires', () => {
+  const activity = { ...run('linked', '2026-10-14', 10), source: { kind: 'Strava', viewUrl: null } } as ActivitySummary
+  const entry = { date: '2026-10-14', sessionType: 'Easy', status: 'Done', isAdditional: true, activityId: 'linked', distanceKm: 12, distanceUnreported: false } as import('./types').CheckIn
+  expect(ranKmByWeek(plan.weeks, [activity], '2026-10-18', [entry]).get(1)).toBe(12)
+  expect(ranKmByWeek(plan.weeks, [], '2026-10-18', [entry]).get(1)).toBe(12)
+})

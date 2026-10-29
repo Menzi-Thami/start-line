@@ -56,7 +56,10 @@ export function RemindersSection() {
           setDaily(next.device.daily ?? false)
         }
       })
-      .catch((error: unknown) => !cancelled && setState({ kind: 'error', message: error instanceof Error ? error.message : 'Reminders didn’t load.' }))
+      .catch(
+        (error: unknown) =>
+          !cancelled && setState({ kind: 'error', message: error instanceof Error ? error.message : 'Reminders didn’t load.' }),
+      )
     return () => {
       cancelled = true
     }
@@ -91,7 +94,10 @@ export function RemindersSection() {
       const address = await subscribe(publicKey)
       const device = await api.me.reminders.turnOn(token, { ...address, remindAt: `${time}:00`, weekAhead, daily })
       setState({ kind: 'ready', publicKey, device })
-      setMessage({ tone: 'done', text: `Reminders are on. Morning reminders are set for around ${time} in your time zone${daily ? ", including recovery days" : " on workout days"}.` })
+      setMessage({
+        tone: 'done',
+        text: `Reminders are on. Morning reminders are set for around ${time} in your time zone${daily ? ', including recovery days' : ' on workout days'}.`,
+      })
     })
 
   const turnOff = (publicKey: string, device: ReminderDevice) =>
@@ -106,9 +112,9 @@ export function RemindersSection() {
     <section className="section" aria-labelledby={ids.heading}>
       <h3 id={ids.heading}>Reminders</h3>
       <p>
-        Start each day with your planned workout or recovery guidance. New reminders start at 6 am in your own time zone;
-        you can choose another time. A recent run arriving from Strava gets a congratulations notification opening the actual run,
-        even when it differs from the plan. It never marks a planned workout complete for you. Off until you turn it on.
+        Start each day with your planned workout or recovery guidance. New reminders start at 6 am in your own time zone; you can choose
+        another time. A recent run arriving from Strava gets a congratulations notification opening the actual run, even when it differs
+        from the plan. It never marks a planned workout complete for you. Off until you turn it on.
       </p>
 
       {state.kind === 'loading' && <p className="loading-line">Checking reminders…</p>}
@@ -120,8 +126,8 @@ export function RemindersSection() {
 
       {state.kind === 'ready' && support === 'home-screen-first' && (
         <p className="callout">
-          On an iPhone or iPad, reminders work once Taperday is on your home screen (iOS 16.4 or later). Add it from Safari’s Share menu, open it
-          from there, then turn reminders on here. On Android and on a computer, they work in the browser.
+          On an iPhone or iPad, reminders work once Taperday is on your home screen (iOS 16.4 or later). Add it from Safari’s Share menu,
+          open it from there, then turn reminders on here. On Android and on a computer, they work in the browser.
         </p>
       )}
       {state.kind === 'ready' && support === 'unsupported' && (
@@ -142,7 +148,9 @@ export function RemindersSection() {
             Reminders on this device
           </label>
           <div className="field">
-            <label className="field-label" htmlFor={ids.time}>Time</label>
+            <label className="field-label" htmlFor={ids.time}>
+              Time
+            </label>
             <input
               id={ids.time}
               type="time"
@@ -157,7 +165,19 @@ export function RemindersSection() {
               }}
             />
           </div>
-          <label className="session-done" htmlFor={ids.daily}><input id={ids.daily} type="checkbox" checked={daily} disabled={busy} onChange={e => { setDaily(e.target.checked); if (state.device) void save(state.publicKey, time, weekAhead, e.target.checked) }} />Include recovery and strength days</label>
+          <label className="session-done" htmlFor={ids.daily}>
+            <input
+              id={ids.daily}
+              type="checkbox"
+              checked={daily}
+              disabled={busy}
+              onChange={(e) => {
+                setDaily(e.target.checked)
+                if (state.device) void save(state.publicKey, time, weekAhead, e.target.checked)
+              }}
+            />
+            Include recovery and strength days
+          </label>
           <label className="session-done" style={{ color: 'var(--ink)' }} htmlFor={ids.week}>
             <input
               id={ids.week}
@@ -172,7 +192,9 @@ export function RemindersSection() {
             On Mondays, tell me when a new week starts
           </label>
           <p className="field-help">
-            In your own time zone, from Your details. Delivery can be delayed by your phone, connection or Taperday’s server; the app does not need to be open. Congratulations arrive when Strava syncs. Turning reminders off forgets this device; other devices keep theirs.
+            In your own time zone, from Your details. Delivery can be delayed by your phone, connection or Taperday’s server; the app does
+            not need to be open. Congratulations arrive when Strava syncs. Turning reminders off forgets this device; other devices keep
+            theirs.
             {notificationsBlocked() && ' Notifications are blocked for Taperday in this browser: allow them in its site settings first.'}
           </p>
         </div>

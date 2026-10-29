@@ -39,11 +39,14 @@ export function ranKmByWeek(weeks: readonly PlanWeek[], runs: readonly ActivityS
     const raceDays = new Set(week.sessions.filter((s) => s.type === 'Race').map((s) => s.date))
     const weekRuns = runs.filter((r) => r.localDate <= today)
     const recordedDays = new Set(weekRuns.map((r) => r.localDate))
-    const manualKm = entries.filter((c) => c.date >= week.startDate && c.date <= end && c.date <= today && !raceDays.has(c.date) && c.status !== 'Skipped' && !c.activityId && (c.isAdditional || !recordedDays.has(c.date)))
+    const manualKm = entries.filter((c) => c.date >= week.startDate && c.date <= end && c.date <= today && !raceDays.has(c.date) && c.status !== 'Skipped' && (!c.activityId || !weekRuns.some(r => r.id === c.activityId)) && (c.isAdditional || !recordedDays.has(c.date)))
       .reduce((sum, c) => sum + (c.distanceUnreported ? 0 : c.distanceKm ?? (c.isAdditional ? 0 : week.sessions.find((s) => s.date === c.date && s.type === c.sessionType)?.distanceKm ?? 0) * (c.status === 'CutShort' ? .5 : 1)), 0)
     const km = weekRuns
       .filter((r) => r.localDate >= week.startDate && r.localDate <= end && !raceDays.has(r.localDate))
-      .reduce((sum, r) => sum + r.distanceKm, 0)
+      .reduce((sum, r) => {
+        const own = entries.find(c => c.activityId === r.id && c.status !== 'Skipped' && !c.distanceUnreported && c.distanceKm != null)
+        return sum + (own?.distanceKm ?? r.distanceKm)
+      }, 0)
     ran.set(week.number, round(km + manualKm))
   }
   return ran

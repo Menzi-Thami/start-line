@@ -38,3 +38,16 @@ it('shows changed pace targets before allowing the adjustment to be applied', as
   expect(screen.getByText(/Easy pace:/)).toHaveTextContent('→')
   expect(actions.apply).not.toHaveBeenCalled()
 })
+
+it('invalidates the weekly preview when the recovery answer changes', async () => {
+  const actions = { review: vi.fn().mockResolvedValue(proposal), apply: vi.fn() }
+  const user = userEvent.setup()
+  render(<PlanAdjustment current={planFixture} units="km" actions={actions} />)
+  await user.selectOptions(screen.getByLabelText('How recovered do you feel for the week ahead?'), 'Tired')
+  await user.click(screen.getByRole('button', { name: 'Review training adjustments' }))
+  expect(actions.review).toHaveBeenCalledExactlyOnceWith('Tired')
+  expect(await screen.findByRole('button', { name: 'Apply this adjustment' })).toBeVisible()
+  await user.selectOptions(screen.getByLabelText('How recovered do you feel for the week ahead?'), 'Ready')
+  expect(screen.queryByRole('button', { name: 'Apply this adjustment' })).toBeNull()
+  expect(actions.apply).not.toHaveBeenCalled()
+})

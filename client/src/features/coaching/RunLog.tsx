@@ -13,7 +13,21 @@ function newEntryId(): string {
 }
 
 /** Add a run on a rest day or alongside a planned session, without claiming the prescribed workout was done. */
-export function RunLog({ plan, coach, runs = [], initialRun, onClose, showEntries = true }: { plan: TrainingPlan; coach: SessionCoach; runs?: readonly ActivitySummary[]; initialRun?: ActivitySummary; onClose?: () => void; showEntries?: boolean }) {
+export function RunLog({
+  plan,
+  coach,
+  runs = [],
+  initialRun,
+  onClose,
+  showEntries = true,
+}: {
+  plan: TrainingPlan
+  coach: SessionCoach
+  runs?: readonly ActivitySummary[]
+  initialRun?: ActivitySummary
+  onClose?: () => void
+  showEntries?: boolean
+}) {
   const label = useId()
   const [open, setOpen] = useState(!!initialRun)
   const [date, setDate] = useState(initialRun?.localDate ?? (coach.today < plan.race.date ? coach.today : plan.race.date))
@@ -120,7 +134,7 @@ export function RunLog({ plan, coach, runs = [], initialRun, onClose, showEntrie
           )}
         </>
       )}
-      {(showEntries ? coach.entries ?? [] : [])
+      {(showEntries ? (coach.entries ?? []) : [])
         .filter((c) => c.isAdditional)
         .sort((a, b) => b.date.localeCompare(a.date))
         .map((entry) => (

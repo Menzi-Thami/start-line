@@ -7,8 +7,9 @@ import type { ActivitySummary, CheckIn } from '../../lib/types'
 export function RunResult({ entry, runs = [], units }: { entry: CheckIn; runs?: readonly ActivitySummary[]; units: Units }) {
   if (entry.status === 'Skipped') return null
   const imported = entry.activityId ? runs.find((r) => r.id === entry.activityId) : undefined
-  const km = imported?.distanceKm ?? entry.distanceKm
-  const seconds = imported?.movingSeconds ?? (entry.duration ? parseTimeSpan(entry.duration) : null)
+  const ownMetrics = entry.distanceKm != null || !!entry.duration
+  const km = ownMetrics ? entry.distanceKm : imported?.distanceKm
+  const seconds = ownMetrics ? (entry.duration ? parseTimeSpan(entry.duration) : null) : imported?.movingSeconds
   const actual = entry.actualSessionType ?? (entry.status === 'SwappedForEasy' ? 'Easy' : null)
   return (
     <div className="run-result" aria-label={entry.isAdditional ? 'Additional run logged' : 'Completed run'}>
@@ -23,7 +24,7 @@ export function RunResult({ entry, runs = [], units }: { entry: CheckIn; runs?: 
         {seconds != null ? ` · ${formatDuration(seconds)}` : ' · Time not recorded'}
       </p>
       <p className="field-help">
-        {imported
+        {ownMetrics ? 'Manually logged' : imported
           ? imported.source.kind === 'Strava'
             ? 'Strava · moving time'
             : 'Uploaded activity · moving time'
@@ -41,7 +42,7 @@ export function RunResult({ entry, runs = [], units }: { entry: CheckIn; runs?: 
             title: actual ? runTypeName(actual) : 'Run completed',
             distanceKm: km,
             seconds,
-            source: imported?.source.kind ?? 'Manual',
+            source: ownMetrics ? 'Manual' : imported?.source.kind ?? 'Manual',
           }}
         />
       )}

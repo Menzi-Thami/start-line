@@ -36,13 +36,39 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
   }
   return (
     <section className="plan-adjustment" aria-label="Review upcoming training">
-      {actions.reviewRemaining && actions.applyRemaining && <RemainingWeekAdjustment current={current} units={units} actions={{ reviewRemaining: actions.reviewRemaining, applyRemaining: actions.applyRemaining }} />}
+      {actions.reviewRemaining && actions.applyRemaining && (
+        <RemainingWeekAdjustment
+          current={current}
+          units={units}
+          actions={{ reviewRemaining: actions.reviewRemaining, applyRemaining: actions.applyRemaining }}
+        />
+      )}
       <h3>Weekly review</h3>
-      <p>On Sunday, review this week for next Monday. From Monday, review the week just finished. Changes are applied only after you review them.</p>
-      <div className="field"><label className="field-label" htmlFor={recoveryId}>How recovered do you feel for the week ahead?</label>
-      <select id={recoveryId} className="input" value={recovery} disabled={busy} onChange={e => { setRecovery(e.target.value as RecoveryReadiness); setProposal(null); setSuccess(null) }}>
-        <option value="NotReported">Not sure / prefer not to say</option><option value="Ready">Recovered and ready</option><option value="Tired">Still tired</option><option value="Unwell">Unwell or not ready to train</option>
-      </select></div>
+      <p>
+        On Sunday, review this week for next Monday. From Monday, review the week just finished. Changes are applied only after you review
+        them.
+      </p>
+      <div className="field">
+        <label className="field-label" htmlFor={recoveryId}>
+          How recovered do you feel for the week ahead?
+        </label>
+        <select
+          id={recoveryId}
+          className="input"
+          value={recovery}
+          disabled={busy}
+          onChange={(e) => {
+            setRecovery(e.target.value as RecoveryReadiness)
+            setProposal(null)
+            setSuccess(null)
+          }}
+        >
+          <option value="NotReported">Not sure / prefer not to say</option>
+          <option value="Ready">Recovered and ready</option>
+          <option value="Tired">Still tired</option>
+          <option value="Unwell">Unwell or not ready to train</option>
+        </select>
+      </div>
       <p className="field-help">
         Your completed runs and original workouts stay in your plan. Review coaching before changing upcoming training.
       </p>
@@ -58,12 +84,36 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
       ) : (
         <>
           <h3>{proposal.hasChanges ? 'Suggested training adjustment' : 'Keep training as planned'}</h3>
-          {proposal.review && <div className="callout"><h4>Week of {formatDate(proposal.review.reviewedWeek)} → training from {formatDate(proposal.review.targetWeek)}</h4><ul>
-            <li>{proposal.review.runsCompleted} of {proposal.review.runsPlanned} planned runs logged · {proposal.review.skipped} skipped · {proposal.review.missingCheckIns} without a log</li>
-            <li>{formatDistance(proposal.review.reportedKm, units)} reported · {formatDistance(proposal.review.plannedKm, units)} prescribed</li>
-            <li>{proposal.review.substitutions} substitutions · {proposal.review.unknownDistances} runs without a reported distance</li>
-          </ul>{proposal.review.missingCheckIns > 0 && <p>Log completed runs and mark missed workouts as skipped before finalising. Strava syncing alone does not complete a prescribed workout.</p>}
-          <p className="field-help">Lasting coaching uses your entries and uploaded files. Progression needs three strong weeks, complete logs and a positive recovery check. One demand increases at a time; recovery and taper weeks are protected.</p></div>}
+          {proposal.review && (
+            <div className="callout">
+              <h4>
+                Week of {formatDate(proposal.review.reviewedWeek)} → training from {formatDate(proposal.review.targetWeek)}
+              </h4>
+              <ul>
+                <li>
+                  {proposal.review.runsCompleted} of {proposal.review.runsPlanned} planned runs logged · {proposal.review.skipped} skipped ·{' '}
+                  {proposal.review.missingCheckIns} without a log
+                </li>
+                <li>
+                  {formatDistance(proposal.review.reportedKm, units)} reported · {formatDistance(proposal.review.plannedKm, units)}{' '}
+                  prescribed
+                </li>
+                <li>
+                  {proposal.review.substitutions} substitutions · {proposal.review.unknownDistances} runs without a reported distance
+                </li>
+              </ul>
+              {proposal.review.missingCheckIns > 0 && (
+                <p>
+                  Log completed runs and mark missed workouts as skipped before finalising. Strava syncing alone does not complete a
+                  prescribed workout.
+                </p>
+              )}
+              <p className="field-help">
+                Lasting coaching uses your entries and uploaded files. Progression needs three strong weeks, complete logs and a positive
+                recovery check. One demand increases at a time; recovery and taper weeks are protected.
+              </p>
+            </div>
+          )}
           <p>
             {proposal.hasChanges
               ? 'This is a preview. Your plan has not changed.'

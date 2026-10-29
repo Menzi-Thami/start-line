@@ -365,3 +365,23 @@ describe('the calculators', () => {
     expect(screen.getByText(/60–90 g/)).toBeInTheDocument()
   })
 })
+
+it('acknowledges an unplanned Strava run and opens confirmation on its actual date', async () => {
+  const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-19', 10, 'Strava')] }, { signIn: true })
+  const running = screen.getByRole('region', { name: 'Your running' })
+  expect(await within(running).findByText(/Your Strava run has synced/)).toBeVisible()
+  expect(within(running).queryByText(/Your first run starts/)).not.toBeInTheDocument()
+  await user.click(await within(running).findByRole('button', { name: 'Log this run' }))
+  expect(within(running).getByLabelText('Run date')).toHaveValue('2026-10-19')
+  expect(within(running).getByLabelText('How does this fit your plan?')).toHaveValue('additional')
+  expect(within(running).getByLabelText('Run details')).toHaveValue('2026-10-19')
+})
+
+it('counts a saved time-only run while keeping its distance unreported', async () => {
+  server.use(http.get('*/api/v1/me/running', () => HttpResponse.json([{ date: '2026-10-20', distanceKm: 0, source: 'Ticked', distanceUnreported: true }])))
+  renderHome({}, { signIn: true })
+  const running = screen.getByRole('region', { name: 'Your running' })
+  expect(await within(running).findAllByText('1 run')).toHaveLength(2)
+  expect(within(running).getAllByText('—')).toHaveLength(2)
+  expect(within(running).queryByText(/Your first run starts/)).not.toBeInTheDocument()
+})

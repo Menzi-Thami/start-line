@@ -2373,6 +2373,8 @@ export interface components {
             distanceUnreported: boolean;
             /** Format: uuid */
             activityId?: null | string;
+            /** @default false */
+            independentMetrics: boolean;
         };
         /** @enum {unknown} */
         CheckInStatus: "Done" | "CutShort" | "SwappedForEasy" | "Skipped";

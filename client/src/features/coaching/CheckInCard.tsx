@@ -48,7 +48,7 @@ export function CheckInCard({
   const [open, setOpen] = useState(initialOpen)
   const [status, setStatus] = useState<CheckInStatus>(existing?.status ?? 'Done')
   const [actualType, setActualType] = useState<SessionType | ''>(existing?.actualSessionType ?? '')
-  const [activityId, setActivityId] = useState(existing?.activityId ?? initialActivityId ?? '')
+  const [activityId, setActivityId] = useState(existing?.distanceKm != null || existing?.duration ? '' : existing?.activityId ?? initialActivityId ?? '')
   const [effort, setEffort] = useState<number | null>(existing?.effort ?? null)
   const [pain, setPain] = useState<PainLevel>(existing?.pain ?? 'None')
   const [painArea, setPainArea] = useState<BodyArea | ''>(existing?.painArea ?? '')
@@ -72,6 +72,8 @@ export function CheckInCard({
         ? existing.distanceKm
         : toKilometres(Number(distance), coach.units)
   const seconds = durationSeconds(time)
+  const originalActivityId = existing?.activityId ?? initialActivityId
+  const association = activityId || ((distanceKm != null || seconds > 0) && runs.some(r => r.id === originalActivityId) ? originalActivityId : null)
   const distanceInvalid = !activityId && distanceKm !== null && !(Number.isFinite(distanceKm) && distanceKm > 0 && distanceKm <= 300)
   const timeInvalid =
     (!activityId && Object.values(time).some((v) => v !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0))) ||
@@ -88,7 +90,7 @@ export function CheckInCard({
     setDetailsOpen(detailed)
     setStatus(existing?.status ?? 'Done')
     setActualType(different ? 'Easy' : (existing?.actualSessionType ?? ''))
-    setActivityId(existing?.activityId ?? '')
+    setActivityId(existing?.distanceKm != null || existing?.duration ? '' : existing?.activityId ?? '')
     setEffort(existing?.effort ?? null)
     setPain(existing?.pain ?? 'None')
     setPainArea(existing?.painArea ?? '')
@@ -134,7 +136,8 @@ export function CheckInCard({
           note: note.trim() || null,
           actualSessionType: skipped ? null : actualType || (status === 'SwappedForEasy' ? 'Easy' : null),
           distanceUnreported: !skipped && (!!activityId || (distanceKm === null && seconds > 0) || (distanceKm === null && !!actualType)),
-          activityId: skipped ? null : activityId || null,
+          activityId: skipped ? null : association || null,
+          ...(!skipped && !activityId && association ? { independentMetrics: true } : {}),
         }),
       !skipped,
     )
@@ -221,6 +224,7 @@ export function CheckInCard({
               distance and time manually to keep a lasting record.
             </p>
           )}
+          {!activityId && originalActivityId && <p className="field-help">Enter your own measurements below. The activity association prevents this run being counted twice; imported measurements are not copied.</p>}
           {!skipped && (
             <>
               <div className="field">

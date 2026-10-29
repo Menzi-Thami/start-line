@@ -105,7 +105,7 @@ public sealed record SaveCheckInCommand(
     SessionType? ActualSessionType = null,
     bool DistanceUnreported = false,
     Guid? ActivityId = null,
-    Guid? EntryId = null) : IRequest<CheckInDto>;
+    Guid? EntryId = null, bool IndependentMetrics = false) : IRequest<CheckInDto>;
 
 internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInCommand>
 {
@@ -158,6 +158,9 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
         {
             await PlanSessions.RequireAsync(db, builder, plan, request.Date, request.SessionType, cancellationToken);
         }
+
+        if (request.ActivityId is not null && (request.DistanceKm is not null || request.Duration is not null) && !request.IndependentMetrics)
+            throw new DomainException("Link the imported run without copying its metrics, or explicitly enter your own measurements.");
 
         if (request.ActivityId is { } activityId)
         {

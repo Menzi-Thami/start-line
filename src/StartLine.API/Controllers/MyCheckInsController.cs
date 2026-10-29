@@ -33,7 +33,7 @@ public sealed class MyCheckInsController(IDispatcher dispatcher) : ControllerBas
     {
         ArgumentNullException.ThrowIfNull(request);
         return Ok(await dispatcher.Send(
-            new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note, request.ActualSessionType, request.DistanceUnreported, request.ActivityId),
+            new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note, request.ActualSessionType, request.DistanceUnreported, request.ActivityId, IndependentMetrics: request.IndependentMetrics),
             cancellationToken));
     }
 
@@ -45,7 +45,7 @@ public sealed class MyCheckInsController(IDispatcher dispatcher) : ControllerBas
         ArgumentNullException.ThrowIfNull(request);
         return Ok(await dispatcher.Send(new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort,
             request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note, request.ActualSessionType,
-            request.DistanceUnreported, request.ActivityId, id), cancellationToken));
+            request.DistanceUnreported, request.ActivityId, id, request.IndependentMetrics), cancellationToken));
     }
 
     [HttpDelete("additional/{id:guid}")]
@@ -67,7 +67,7 @@ public sealed class MyCheckInsController(IDispatcher dispatcher) : ControllerBas
 }
 
 /// <param name="Effort">1 (very easy) to 10 (all out). Required for a run cut short or swapped; none for a skipped run; optional on a plain "Done", a tick.</param>
-/// <param name="DistanceKm">Independently entered actual distance; omitted for linked imports.</param>
+/// <param name="DistanceKm">Independently entered actual distance. Combining own measurements with an activity association requires IndependentMetrics.</param>
 public sealed record CheckInRequest(
     CheckInStatus Status,
     int? Effort,
@@ -78,4 +78,4 @@ public sealed record CheckInRequest(
     string? Note = null,
     SessionType? ActualSessionType = null,
     bool DistanceUnreported = false,
-    Guid? ActivityId = null);
+    Guid? ActivityId = null, bool IndependentMetrics = false);

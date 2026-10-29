@@ -22,7 +22,7 @@ describe('strength stays separate from running', () => {
     fireEvent.keyDown(days[1]!, { key: 'End' })
     expect(days.at(-1)).toHaveFocus()
     fireEvent.click(days[2]!)
-    expect(select).toHaveBeenCalledWith('2026-10-14')
+    expect(select).toHaveBeenCalledWith('2026-10-14', days[2])
   })
 
   it('marks a running activity without claiming the prescribed running session is complete', () => {

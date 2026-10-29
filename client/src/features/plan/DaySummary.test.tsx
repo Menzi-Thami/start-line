@@ -33,7 +33,7 @@ function View({ selected = date, runs = [], saved = [], ready = true, signedIn =
   }
   const effective = new Set(done)
   for (const item of entries.filter(item => !item.isAdditional && item.status !== 'Skipped')) effective.add(sessionKey({ date: item.date, type: item.sessionType }))
-  return <DaySummary date={selected} today={today} plan={planFixture} units={units} done={effective} onDoneChange={update => setDone(current => update(current))} runs={pendingImports ? undefined : runs} coach={signedIn && ready ? coach : undefined} canCompleteRuns={ready} onClose={close} />
+  return <DaySummary id="test-day-summary" date={selected} today={today} plan={planFixture} units={units} done={effective} onDoneChange={update => setDone(current => update(current))} runs={pendingImports ? undefined : runs} coach={signedIn && ready ? coach : undefined} canCompleteRuns={ready} onClose={close} />
 }
 const planned = () => screen.getByRole('region', { name: 'Planned' })
 const recorded = () => screen.getByRole('region', { name: 'Recorded' })
@@ -41,7 +41,7 @@ const recorded = () => screen.getByRole('region', { name: 'Recorded' })
 describe('calendar day summaries', () => {
   it('shows an automatic rest-day import without changing the plan or logging it', () => {
     render(<View runs={[imported()]} />)
-    expect(screen.getByRole('dialog', { name: formatDate(date, 'long') })).toBeVisible()
+    expect(screen.getByRole('region', { name: formatDate(date, 'long') })).toBeVisible()
     expect(planned()).toHaveTextContent('Rest day')
     expect(recorded()).toHaveTextContent('10 km')
     expect(recorded()).toHaveTextContent('1:09:59 · 7:00/km')
@@ -171,13 +171,13 @@ describe('calendar day summaries', () => {
     expect(recorded()).toHaveTextContent('11:16/mi')
   })
 
-  it('does not let a tap inside the sheet dismiss it as a backdrop click', () => {
+  it('keeps taps inside the dropdown open and dismisses it with Escape', () => {
     const close = vi.fn()
     render(<View close={close} />)
     fireEvent.pointerDown(planned())
     fireEvent.click(planned())
     expect(close).not.toHaveBeenCalled()
-    fireEvent(screen.getByRole('dialog'), new Event('cancel', { cancelable: true, bubbles: false }))
+    fireEvent.keyDown(screen.getByRole('region', { name: formatDate(date, 'long') }), { key: 'Escape' })
     expect(close).toHaveBeenCalledOnce()
   })
 })

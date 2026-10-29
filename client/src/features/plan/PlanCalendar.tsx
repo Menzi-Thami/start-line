@@ -9,7 +9,9 @@ interface Props {
   done: Set<string>
   additionalDates?: readonly string[]
   activityDates?: readonly string[]
-  onSelectDate: (date: string) => void
+  onSelectDate: (date: string, trigger: HTMLButtonElement) => void
+  selectedDate?: string | null
+  daySummaryId?: string
 }
 
 const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -34,7 +36,7 @@ function monthsBetween(from: string, to: string): string[] {
  * The whole plan as a calendar, a month at a time: run days ringed, ticked ones in volt, today filled, race day flagged.
  * Every date opens its day summary, including rest days. It opens on today's month.
  */
-export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [], activityDates = [], onSelectDate }: Props) {
+export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [], activityDates = [], onSelectDate, selectedDate, daySummaryId }: Props) {
   const sessions = weeks.flatMap((w) => w.sessions)
   const months = monthsBetween(weeks[0]?.startDate ?? today, raceDate)
   const start = Math.max(0, months.indexOf(monthOf(today)))
@@ -76,13 +78,13 @@ export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [
           const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace ? 'race day' : day.length ? day.map((s) => s.title).join(', ') : inPlan ? 'rest' : 'outside this plan'}${completion === 'done' ? ', done' : completion === 'missed' ? ', no completion recorded' : ''}${recorded ? ', activity recorded' : ''}${additional ? `, ${additional} additional ${additional === 1 ? 'run' : 'runs'} logged` : ''}`
           const cls = `plan-calendar-day is-${state}${completion === 'missed' ? ' is-missed' : ''}${date === today ? ' is-today' : ''}${recorded ? ' has-activity' : ''}`
           return (
-            <button key={date} type="button" className={cls} aria-label={label} aria-haspopup="dialog" aria-current={date === today ? 'date' : undefined} onClick={() => onSelectDate(date)}>
+            <button key={date} type="button" className={cls} aria-label={label} aria-expanded={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
               {Number(date.slice(8))}
             </button>
           )
         })}
       </div>
-      <p className="field-help plan-calendar-key">Ringed days are sessions. An underline marks recorded activity. Select any date to see planned and recorded sessions.</p>
+      <p className="field-help plan-calendar-key">Ringed days are sessions. An underline marks recorded activity. Select any date to expand its planned and recorded sessions.</p>
     </section>
   )
 }

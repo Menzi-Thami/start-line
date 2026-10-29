@@ -59,7 +59,7 @@ internal static class SavedPlanMapping
 /// one plan at a time: with one already, <see cref="ReplaceCurrent"/> must be set. The same race then updates the current
 /// plan in place; a different race moves the current plan to the past plans.
 /// </summary>
-public sealed record SavePlanCommand(string? Name, GeneratePlanQuery Plan, bool ReplaceCurrent = false) : IRequest<SavedPlanSummaryDto>;
+public sealed record SavePlanCommand(string? Name, GeneratePlanQuery Plan, bool ReplaceCurrent = false, Guid? ExpectedPlanId = null) : IRequest<SavedPlanSummaryDto>;
 
 internal sealed class SavePlanValidator : AbstractValidator<SavePlanCommand>
 {
@@ -83,6 +83,9 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
         var name = string.IsNullOrWhiteSpace(request.Name) ? plan.Race.Name : request.Name;
 
         var active = await db.SavedPlans.SingleOrDefaultAsync(p => p.RunnerId == runner.Id && p.Status == SavedPlanStatus.Active, cancellationToken);
+        if (request.ExpectedPlanId is { } expected && (active?.Id != expected || !active.IsForSameRace(inputs)))
+            throw new ConflictException("plan_changed", "Your current plan changed. Reopen it before updating your answers.");
+
         if (active is not null && !request.ReplaceCurrent)
         {
             throw new ConflictException("plan_active", $"Your current plan is {active.Name}. Replace it to make this your plan.");
@@ -90,6 +93,15 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
 
         if (active is not null && active.IsForSameRace(inputs))
         {
+            // Freeze the runner's original prescription before changing the schedule. Actual answers and links stay intact.
+            var calls = await CoachCalls.ForAsync(db, active.Id, cancellationToken);
+            var previous = builder.BuildPlan(SavedPlanMapping.ToQuery(active.Inputs), calls, active.Adjustments)
+                .Weeks.SelectMany(w => w.Sessions).ToDictionary(s => (s.Date, s.Type));
+            var history = await db.SessionCheckIns.Where(c => c.SavedPlanId == active.Id && !c.IsAdditional && c.PrescribedKm == null)
+                .ToListAsync(cancellationToken);
+            foreach (var entry in history)
+                if (previous.TryGetValue((entry.Date, entry.SessionType), out var prescribed))
+                    entry.RememberPrescription(prescribed.DistanceKm);
             active.Update(inputs);
             active.Rename(name);
             await db.SaveChangesAsync(cancellationToken);
@@ -268,7 +280,12 @@ internal sealed class DeleteMyPlanHandler(IApplicationDbContext db, CurrentRunne
             throw new NotFoundException("Saved plan", request.Id.ToString());
         }
 
-        db.SavedPlans.Remove(saved);
+        // Removing a training schedule must not erase runs the runner has already recorded.
+        // Archived plans already retain history and are absent from the app's current-plan view.
+        if (await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id, cancellationToken))
+            saved.Archive();
+        else
+            db.SavedPlans.Remove(saved);
         await db.SaveChangesAsync(cancellationToken);
         return true;
     }

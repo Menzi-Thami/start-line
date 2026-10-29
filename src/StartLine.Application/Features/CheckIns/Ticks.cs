@@ -58,13 +58,15 @@ internal sealed class TickFromNotificationHandler(IApplicationDbContext db, ITic
             throw new ConflictException("plan_archived", "This is a past plan. Make it your plan again to check in on its runs.");
         }
 
-        await PlanSessions.RequireAsync(db, builder, plan, claim.Date, claim.SessionType, cancellationToken);
+        var prescribed = await PlanSessions.RequireAsync(db, builder, plan, claim.Date, claim.SessionType, cancellationToken);
         if (await AlreadyCheckedInAsync(claim, cancellationToken))
         {
             return true;
         }
 
-        db.SessionCheckIns.Add(SessionCheckIn.Create(plan.Id, claim.Date, claim.SessionType, new CheckInAnswers(CheckInStatus.Done, Effort: null)));
+        var checkIn = SessionCheckIn.Create(plan.Id, claim.Date, claim.SessionType, new CheckInAnswers(CheckInStatus.Done, Effort: null));
+        checkIn.RememberPrescription(prescribed.DistanceKm);
+        db.SessionCheckIns.Add(checkIn);
         try
         {
             await db.SaveChangesAsync(cancellationToken);

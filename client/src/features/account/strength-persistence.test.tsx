@@ -50,8 +50,7 @@ async function addStrength(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Add strength days' }))
   await user.click(screen.getByText('Add strength and mobility sessions'))
   await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
-  await user.click(screen.getByRole('button', { name: 'Build my plan' }))
-  await screen.findByRole('button', { name: 'Save changes' })
+  await user.dblClick(screen.getByRole('button', { name: 'Build my plan' }))
 }
 
 describe('adding strength to an existing account plan', () => {
@@ -65,8 +64,8 @@ describe('adding strength to an existing account plan', () => {
     const user = userEvent.setup()
     const first = mount()
     await addStrength(user)
-    expect(screen.getByText(/Changes aren’t saved to your account yet/)).toBeInTheDocument()
-    await user.dblClick(screen.getByRole('button', { name: 'Save changes' }))
+    await screen.findByRole('button', { name: 'Delete plan' })
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
     await waitFor(() => expect(db.writes).toHaveLength(1))
     // Null is the historical v1 contract. Custom starts and replan metadata must survive strength-only edits too.
     expect(db.writes[0]).toMatchObject({ replaceCurrent: true, plan: { strengthDays: ['Monday'], raceName: 'Parkrun PB', planFrom: '2026-10-08', version: inputs.version ?? null, startOn: inputs.startOn ?? null, replanFrom: inputs.replanFrom ?? null, setback: inputs.setback ?? null, recentWeeklyKm: inputs.recentWeeklyKm ?? null } })
@@ -90,15 +89,19 @@ describe('adding strength to an existing account plan', () => {
 
   it('keeps unsaved changes available after a save failure and lets the runner retry', async () => {
     const db = account()
+    db.fail(true)
     const user = userEvent.setup()
     mount()
+    await screen.findByRole('button', { name: 'Delete plan' })
+    const savedUrl = window.location.search
     await addStrength(user)
-    db.fail(true)
-    await user.click(screen.getByRole('button', { name: 'Save changes' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Please try again')
     expect(db.writes).toHaveLength(0)
+    expect(window.location.search).toBe(savedUrl)
     db.fail(false)
-    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(db.writes).toHaveLength(1))
+    await screen.findByRole('button', { name: 'Delete plan' })
+    expect(db.writes[0]?.plan.strengthDays).toEqual(['Monday'])
   })
 })

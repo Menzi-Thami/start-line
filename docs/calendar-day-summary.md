@@ -14,7 +14,7 @@ Imported measurements still follow their source's availability. Removing an acti
 
 Date buttons expose their date, prescription and status in text. Arrow keys, Home and End move between dates (Up/Down move one week in the monthly calendar). The native modal makes the background inert, contains keyboard focus, supports Escape and restores focus on close. A pointer must start outside the sheet to dismiss via its backdrop. Controls inside the sheet retain their own touch gestures. Reduced-motion users get no sheet entrance animation. The day view is loaded as a separate JavaScript chunk on first use.
 
-A loading/failed check-in request is not displayed as an empty saved history, and logging stays unavailable until the existing check-in load succeeds. Failed save/delete actions retain the existing form/entry and error/retry flow.
+Unloaded imported history is distinguished from an empty list. A loading/failed check-in request is not displayed as an empty saved history, and logging stays unavailable until the existing check-in load succeeds. Failed save/delete actions retain the existing form/entry and error/retry flow.
 
 ## Validation
 

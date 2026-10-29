@@ -48,7 +48,7 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     if (kind === 'rest') await expect(day.getByText('Rest', { exact: true })).toBeVisible()
     else {
       await expect(day.locator('.session-title')).toBeVisible()
-      expect(await day.getByRole('checkbox').isChecked()).toBe(false)
+      for (const checkbox of await day.getByRole('checkbox').all()) expect(await checkbox.isChecked()).toBe(false)
     }
     for (const width of [375, 820, 1440, 2560]) {
       await page.setViewportSize({ width, height: 900 })

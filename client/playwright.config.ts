@@ -38,7 +38,7 @@ export default defineConfig({
       // This test-only entry is served by Vite, never shipped in client/dist.
       command: 'npx vite --host 127.0.0.1 --port 5176 --strictPort',
       url: 'http://127.0.0.1:5176/e2e/fixtures/run-history.html',
-      env: { VITE_API_BASE_URL: api },
+      env: { VITE_API_BASE_URL: 'http://127.0.0.1:5176' },
       reuseExistingServer: !process.env.CI,
     },
     {

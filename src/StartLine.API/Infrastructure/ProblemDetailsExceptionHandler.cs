@@ -30,6 +30,7 @@ internal sealed partial class ProblemDetailsExceptionHandler(
             ForbiddenException e => (StatusCodes.Status403Forbidden, e.Code, "You can't do that yet.", e.Message),
             ConflictException e => (StatusCodes.Status409Conflict, e.Code, "That clashes with what's already there.", e.Message),
             DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "concurrency_conflict", "Someone changed this at the same time.", "Reload and try again."),
+            BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge } => (StatusCodes.Status413PayloadTooLarge, "request_too_large", "This upload is too large. Try a smaller file.", null),
             BadHttpRequestException => (StatusCodes.Status400BadRequest, "bad_request", "The request is malformed.", null),
             _ => (StatusCodes.Status500InternalServerError, "server_error", "Something went wrong on our side.", null),
         };

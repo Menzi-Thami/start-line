@@ -45,6 +45,7 @@ Failures need separate coverage: a failed load must not become empty history; a 
 
 ## Browser and integration boundaries
 
+- Upload/request-limit regressions must include a real loopback Kestrel test (WebApplicationFactory.UseKestrel), not TestServer alone: TestServer does not enforce Kestrel's HTTP body limits. Use realistic payload sizes as well as tiny fixtures. RunnerPhotoHttpTests protects the profile-picture route against the 16 KiB limit mismatch; the browser suite separately exercises real camera-size decoding/compression. See [profile pictures](profile-pictures.md).
 - The browser suite runs a local production frontend and local API. Its stateless plan-generation journeys do not need a live database; the E2E API environment skips startup migrations.
 - Account, persistence and migration tests use the disposable SQL database and test authentication. Use synthetic runners and recordings.
 - Strava tests use the repository's fake provider. Never run sync tests against a real runner's Strava account or call production endpoints to seed/reset test data.

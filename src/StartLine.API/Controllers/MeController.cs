@@ -84,8 +84,10 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
 
     /// <summary>Adds or replaces the runner's picture: a JPEG, PNG or WebP data URL of at most 96 KB.</summary>
     [HttpPut("photo")]
+    [RequestSizeLimit(PhotoUpload.MaxRequestBytes)]
     [ProducesResponseType<RunnerPhotoDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status413PayloadTooLarge)]
     public async Task<IActionResult> SetPhoto(SetMyPhotoCommand command, CancellationToken cancellationToken) =>
         Ok(await dispatcher.Send(command, cancellationToken));
 

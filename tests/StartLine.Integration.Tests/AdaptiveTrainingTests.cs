@@ -66,7 +66,8 @@ public sealed class AdaptiveTrainingTests
         preview.GetProperty("review").GetProperty("targetWeek").GetString().ShouldBe("2026-11-02"); preview.GetProperty("canApply").GetBoolean().ShouldBeTrue();
         var token = preview.GetProperty("token").GetString();
         (await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{id}/coach/apply"), new { token, recovery = "Ready" })).StatusCode.ShouldBe(HttpStatusCode.Conflict);
-        await Json(await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{id}/coach/apply"), new { token, recovery = "Tired" }));
+        var applied = await Json(await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{id}/coach/apply"), new { token, recovery = "Tired" }));
+        applied.GetProperty("proposed").GetProperty("plan").GetProperty("paces").GetRawText().ShouldBe(original.GetProperty("paces").GetRawText());
         var reopened = (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")))).GetProperty("plan");
         reopened.GetProperty("paces").GetRawText().ShouldBe(original.GetProperty("paces").GetRawText());
         Sessions(reopened).Where(s => string.CompareOrdinal(s.GetProperty("date").GetString(), "2026-11-01") <= 0).Select(s => s.GetRawText()).ShouldBe(Sessions(original).Where(s => string.CompareOrdinal(s.GetProperty("date").GetString(), "2026-11-01") <= 0).Select(s => s.GetRawText()));

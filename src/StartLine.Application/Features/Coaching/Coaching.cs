@@ -243,6 +243,8 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
             }
 
             await coach.AcceptAsync(saved.Id, pending, cancellationToken);
+            // The apply response is the current view, while the preview shows the target week’s zones.
+            dto = dto with { Plan = builder.Build(query, proposed, saved.Adjustments, today) };
         }
 
         return new(token, changed, canApply, dto, review);

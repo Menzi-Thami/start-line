@@ -1,3 +1,4 @@
+import { openSyncedRuns, openRecentRun } from './navigation'
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import type { CheckIn, CheckInRequest } from '../src/lib/types'
@@ -45,9 +46,11 @@ test('a synced 10 km run counts automatically before and after logging, reload a
   await expect(tile(page, 'This month').getByText('10 km from Strava', { exact: true })).toBeVisible()
   expect(state.writes).toBe(0)
   const running = page.getByRole('region', { name: 'Your running', exact: true })
+  await openSyncedRuns(page)
   await running.getByRole('button', { name: 'Log this run', exact: true }).click()
   await expect(running.getByLabel('Run details', { exact: true })).toHaveValue('synthetic-strava')
   await running.getByRole('button', { name: 'Save check-in', exact: true }).click()
+  await openRecentRun(page, '2026-10-14')
   await expect(running.getByRole('article', { name: 'Additional run on Wednesday 14 October 2026', exact: true })).toBeVisible()
   await expect(value(page, 'This month')).toHaveText('10')
   await expect(tile(page, 'This month').getByText('1 run', { exact: true })).toBeVisible()
@@ -78,6 +81,7 @@ test('an independently entered correction counts once after cache expiry and lat
   const state = await history(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-14&km=10')
   const running = page.getByRole('region', { name: 'Your running', exact: true })
+  await openSyncedRuns(page)
   await running.getByRole('button', { name: 'Log this run', exact: true }).click()
   await running.getByLabel('Run details', { exact: true }).selectOption('')
   await running.getByLabel('Distance (km)', { exact: true }).fill('12')

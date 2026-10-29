@@ -1,3 +1,4 @@
+import { findPlanControl, openWeekDay, openDisclosure } from '../../test/user-navigation'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -162,6 +163,7 @@ describe('signed out', () => {
     const user = renderWith(auth)
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
+    await openDisclosure('Plan options')
     await user.click(screen.getByRole('button', { name: 'Sign in to save this plan' }))
 
     expect(within(screen.getByRole('navigation', { name: 'Account' })).getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
@@ -218,7 +220,7 @@ describe('signing up comes first', () => {
 
     expect(await screen.findByRole('heading', { name: 'Which race?' })).toHaveFocus()
     expect(screen.getByText('Step 2 of 6')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'My runs' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Runs' })).toBeInTheDocument()
     expect(db.profiles[0]).toMatchObject({ displayName: 'Thandi M', acceptPrivacyNotice: true, units: 'Kilometres' })
     expect(typeof (db.profiles[0] as { timeZone: string }).timeZone).toBe('string')
   })
@@ -248,7 +250,7 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await user.click(await screen.findByRole('button', { name: 'Save plan' }))
+    await user.click(await findPlanControl('Save plan'))
 
     expect(await screen.findByText('Saved')).toBeInTheDocument()
     expect(db.saved[0]).toMatchObject({ plan: { distanceKm: 5, raceDate: '2026-12-13', goalTime: '00:24:30', planFrom: '2026-10-08' } })
@@ -280,16 +282,16 @@ describe('a signed-up runner', () => {
     await next()
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
-    expect(await screen.findByRole('button', { name: 'Delete plan' })).toBeInTheDocument()
+    expect(await findPlanControl('Delete plan')).toBeInTheDocument()
     expect(db.saved).toHaveLength(1)
 
-    await user.click(screen.getByRole('button', { name: 'Change answers' }))
+    await user.click(await findPlanControl('Change answers'))
     await user.click(screen.getByText('Add strength and mobility sessions'))
     await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
     await waitFor(() => expect(db.saved).toHaveLength(2))
-    expect(await screen.findByRole('button', { name: 'Delete plan' })).toBeInTheDocument()
+    expect(await findPlanControl('Delete plan')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
     expect(db.plans).toHaveLength(1)
   })
@@ -316,7 +318,7 @@ describe('a signed-up runner', () => {
     // They open their plan and delete it from there.
     await openTheirPlan(user)
 
-    await user.click(await screen.findByRole('button', { name: 'Delete plan' }, { timeout: 3000 }))
+    await user.click(await findPlanControl('Delete plan'))
     expect(db.plans).toHaveLength(1)
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
@@ -341,12 +343,12 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
-    await user.click(screen.getByRole('button', { name: 'Change answers' }))
+    await user.click(await findPlanControl('Change answers'))
     expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Taperday' }))
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' }, { timeout: 3000 })).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'My runs' }))
+    await user.click(screen.getByRole('button', { name: 'Runs' }))
     await user.click(screen.getByRole('button', { name: 'Taperday' }))
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' }, { timeout: 3000 })).toBeInTheDocument()
   })
@@ -357,8 +359,8 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
-    await user.click(screen.getByRole('button', { name: 'My runs' }))
-    expect(await screen.findByRole('heading', { name: 'My runs' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Runs' }))
+    expect(await screen.findByRole('heading', { name: 'Runs' })).toBeInTheDocument()
     window.history.back()
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
@@ -373,7 +375,7 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
 
     await openTheirPlan(user)
-    expect(await screen.findByRole('button', { name: 'Delete plan' })).toBeInTheDocument()
+    expect(await findPlanControl('Delete plan')).toBeInTheDocument()
     expect(window.location.search).toContain('goal=1470')
     expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
 
@@ -391,9 +393,11 @@ describe('a signed-up runner', () => {
     await openTheirPlan(user)
 
     // Tuesday's hills are the first run that's come round; later runs don't ask yet.
-    const askers = await screen.findAllByRole('button', { name: 'How did it go?' }, { timeout: 3000 })
+    await openWeekDay('2026-10-13')
+    const askers = await screen.findAllByRole('button', { name: 'Log this workout' }, { timeout: 3000 })
     expect(askers).toHaveLength(1)
     await user.click(askers[0]!)
+    await openDisclosure('How it felt, pain and other details')
     await user.click(screen.getByRole('radio', { name: '7, Hard' }))
     await user.click(screen.getByRole('button', { name: 'Save check-in' }))
 
@@ -401,7 +405,7 @@ describe('a signed-up runner', () => {
     expect((await screen.findAllByText('Done · felt 7/10, hard')).length).toBeGreaterThan(0)
     expect(db.checkIns).toEqual([{ path: 'plan-1/2026-10-13/Hills', body: expect.objectContaining({ status: 'Done', effort: 7 }) }])
     // Only the hills, of this week's runs, are ticked off.
-    expect(screen.getAllByRole('checkbox', { name: 'Complete' }).filter((box) => (box as HTMLInputElement).checked)).toHaveLength(1)
+    expect(screen.getByRole('button', { name: /^Tuesday 13 October 2026:/ })).toHaveAccessibleName(/done/)
   })
 
   it('opens on this week’s coach’s note', async () => {
@@ -428,7 +432,7 @@ describe('a signed-up runner', () => {
     window.history.replaceState(null, '', '/?km=10&date=2027-01-10&name=Spring+10K&goal=3000&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08')
     renderWith(signedIn())
 
-    expect(await screen.findByRole('button', { name: 'Make this my plan' }, { timeout: 3000 })).toBeInTheDocument()
+    expect(await findPlanControl('Make this my plan')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'How did it go?' })).not.toBeInTheDocument()
   })
 
@@ -438,6 +442,7 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
+    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
 
     await waitFor(() =>
@@ -452,8 +457,9 @@ describe('a signed-up runner', () => {
     accountApi({ runner: thandi, plans: [current] })
     window.history.replaceState(null, '', '/?km=10&date=2027-01-10&name=Spring+10K&goal=3000&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08')
     const user = renderWith(signedIn())
-    await screen.findByRole('button', { name: 'Make this my plan' }, { timeout: 3000 })
+    await findPlanControl('Make this my plan')
 
+    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
 
     expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain('/api/v1/plans/calendar.ics?')
@@ -473,10 +479,12 @@ describe('a signed-up runner', () => {
     window.history.replaceState(null, '', '/')
     const user = renderWith(signedIn())
     await openTheirPlan(user)
+    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
     await waitFor(() => expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain(calendarToken))
 
     await user.click(screen.getByRole('button', { name: 'Account' }))
+    await openDisclosure('App & calendars')
     const row = (await screen.findByRole('heading', { name: 'Calendar link' })).closest('.section') as HTMLElement
     expect(within(row).getByText(/the old link stops working/)).toBeInTheDocument()
     await user.click(within(row).getByRole('button', { name: 'Get a new link' }))
@@ -485,6 +493,7 @@ describe('a signed-up runner', () => {
     expect(resets).toBe(1)
     window.history.back()
     await screen.findByRole('heading', { name: 'Parkrun PB' }, { timeout: 3000 })
+    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
     expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain(`/api/v1/calendar/${newCalendarToken}.ics`)
   })
@@ -495,7 +504,7 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
 
     // The plan shows first; the button changes once the current plan has loaded.
-    await user.click(await screen.findByRole('button', { name: 'Make this my plan' }, { timeout: 3000 }))
+    await user.click(await findPlanControl('Make this my plan'))
     expect(screen.getByText('Replace Parkrun PB?')).toBeInTheDocument()
     expect(db.saved).toHaveLength(0)
     await user.click(screen.getByRole('button', { name: 'Yes, replace it' }))
@@ -519,6 +528,7 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
+    await openDisclosure('Plan options')
     await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
     await user.click(screen.getByRole('radio', { name: /I was ill/ }))
     await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
@@ -534,6 +544,7 @@ describe('a signed-up runner', () => {
     const user = renderWith(auth)
     await user.click(await screen.findByRole('button', { name: 'Account' }))
 
+    await openDisclosure('Data & privacy')
     await user.click(await screen.findByRole('button', { name: 'Delete my account' }))
     expect(db.runner).not.toBeNull()
     await user.click(screen.getByRole('button', { name: 'Yes, delete everything' }))
@@ -548,7 +559,7 @@ describe('a signed-up runner', () => {
     window.history.replaceState(null, '', `/${link}`)
     const user = renderWith(signedIn())
 
-    await user.click(await screen.findByRole('button', { name: 'Save plan' }, { timeout: 3000 }))
+    await user.click(await findPlanControl('Save plan'))
 
     expect(await screen.findByText(/sign-in has expired/)).toBeInTheDocument()
   })

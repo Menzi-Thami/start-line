@@ -11,6 +11,8 @@ source, kept for reference; they need that canvas's runtime to render.
 | `plan-phone.concept.html` | A plan's "This week", on a phone |
 | `sign-up-phone.concept.html` | Signing up, on a phone |
 
+The current screen hierarchy is documented in [Focused training](focused-training.md); the concept boards below describe the retained visual identity.
+
 ## The look
 
 Inspired by Godly (tactile, physical motion), Aceternity's studio template (bento grid, live mini-mockups, dashed

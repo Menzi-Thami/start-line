@@ -29,6 +29,7 @@ interface Props {
 /** Profile, where runs come from, a copy of everything we hold, and the way out. */
 export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
+  const [connectionsOpen, setConnectionsOpen] = useState(!!stravaNotice || stravaConnecting)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [newCalendarLink, setNewCalendarLink] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'error'; message: string }>({ kind: 'idle' })
@@ -70,12 +71,13 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
     })
 
   return (
-    <section aria-labelledby="account-title">
+    <section className="account-settings" aria-labelledby="account-title">
       <h2 className="plan-title" id="account-title">
         Account
       </h2>
       <p className="plan-focus">Signed in as {runner.email ?? runner.displayName}.</p>
 
+      <details className="settings-group"><summary>Profile & picture</summary>
       {onPhotoChange && (
         <div className="section">
           <h3>Your picture</h3>
@@ -88,13 +90,17 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         <ProfileForm runner={runner} onSaved={onSaved} />
       </div>
 
+      </details>
+      <details className="settings-group" open={connectionsOpen} onToggle={event => setConnectionsOpen(event.currentTarget.open)}><summary>Connections & run sources</summary>
       <StravaSection notice={stravaNotice} connecting={stravaConnecting} />
 
       <RunSources onOpenRuns={onOpenRuns} />
 
+      </details>
+      <details className="settings-group"><summary>App & calendars</summary>
       <InstallSection />
 
-      <RemindersSection />
+
 
       <div className="section">
         <h3>Calendar link</h3>
@@ -111,6 +117,9 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         )}
       </div>
 
+      </details>
+      <details className="settings-group"><summary>Notifications</summary><RemindersSection /></details>
+      <details className="settings-group"><summary>Data & privacy</summary>
       <div className="section">
         <h3>Your data</h3>
         <p>
@@ -142,6 +151,9 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
           </button>
         )}
       </div>
+
+      </details>
+      <button type="button" className="button button-quiet account-sign-out" onClick={auth.signOut}>Sign out</button>
 
       {status.kind === 'error' && (
         <p className="field-error" role="alert" style={{ marginTop: 'var(--space-3)' }}>

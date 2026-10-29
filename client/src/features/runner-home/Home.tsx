@@ -1,17 +1,17 @@
-import { lazy, Suspense, useEffect, useRef, useState, type KeyboardEvent, type TouchEvent } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { ScreenRecovery } from '../../app/ScreenRecovery'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
-import { allowsSwipe, horizontalSwipe } from '../../lib/swipe'
-import { outsideSchedule, ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
+import { ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CoachNote, LoggedRun, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import { Avatar } from '../account/Avatar'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import { PlanAdjustment } from '../coaching/PlanAdjustment'
 import { RunLog } from '../coaching/RunLog'
 import { SavedRun } from '../coaching/SavedRun'
+import { RunResult } from '../coaching/RunResult'
 import { CheckInLoadState } from '../coaching/CheckInLoadState'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { offersTick } from '../coaching/ran-this'
@@ -258,7 +258,7 @@ function TodayCard({ plan, failed, today, units, runs, coach, onOpenPlan }: { pl
         Today
       </h2>
       {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : failed ? <p>Today’s session will appear when your plan loads.</p> : <div className="skeleton-stack" role="status" aria-label="Loading today's session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
-      <button type="button" className="button button-primary" onClick={onOpenPlan}>
+      <button type="button" className="link-button home-plan-link" onClick={onOpenPlan}>
         Open your plan
       </button>
     </section>
@@ -319,7 +319,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
           </details>
         )}
         {/* Once it's ticked or checked in on, the usual check-in: how it felt, or a change of mind. */}
-        {coach && <CheckInCard session={s} coach={coach} runs={runs} completion done={isDone(s)} />}
+        {coach && <CheckInCard session={s} coach={coach} runs={runs} done={isDone(s)} compactActions />}
       </div>
     ))
   })()
@@ -327,14 +327,12 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   return (
     <>
       {body}
-      {coach && <RunLog plan={plan} coach={coach} runs={runs} showEntries={false} />}
-      {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
+      {coach && day.runs.length === 0 && <RunLog plan={plan} coach={coach} runs={runs} showEntries={false} />}
       {day.strength.map((s) => (
         <section className="home-today-strength" aria-label="Strength session" key={`${s.date}|${s.type}`}>
           <p className="wait-tip-label">Strength session</p>
           <p className="home-today-title">{s.title}</p>
-          <p className="field-help">{s.detail}</p>
-          <p className="field-help">Open your plan for the exercises and set tracking.</p>
+          <p className="field-help">{s.exercises.length} exercises · Open your plan for set tracking.</p>
         </section>
       ))}
     </>
@@ -359,44 +357,9 @@ function StravaNudge({ strava, onOpenAccount }: { strava?: StravaStatus; onOpenA
 
 type HomeTab = 'today' | 'tools'
 
-const HOME_TABS: readonly { id: HomeTab; label: string }[] = [
-  { id: 'today', label: 'Today' },
-  { id: 'tools', label: 'Tools' },
-]
-
-/** The tab in the address (`tab=`), so a shared link or Back from a run opens the same one. An old Progress link opens Today, where progress now is. */
+/** Existing tools links still open the calculator disclosure; old progress links open the focused Home. */
 function tabFromUrl(): HomeTab {
-  const tab = new URLSearchParams(window.location.search).get('tab')
-  return HOME_TABS.some((t) => t.id === tab) ? (tab as HomeTab) : 'today'
-}
-
-/**
- * This week's runs from the plan, day by day, so the plan is on Home without opening it: done (a run was recorded that
- * day), today, still to come, or gone by.
- */
-function WeekRuns({ week, today, units, ranOn }: { week: PlanWeek; today: string; units: Units; ranOn: (date: string) => boolean }) {
-  const sessions = week.sessions.filter((s) => s.type !== 'Strength')
-  if (sessions.length === 0) return null
-  return (
-    <ol className="home-week-runs" aria-label="This week’s runs">
-      {sessions.map((s) => {
-        const state = ranOn(s.date) ? 'done' : s.date === today ? 'today' : s.date < today ? 'missed' : 'ahead'
-        return (
-          <li key={`${s.date}|${s.type}`} className={`home-week-run is-${state}`}>
-            <span className="home-week-run-day">{formatDate(s.date, 'weekday')}</span>
-            <span className="home-week-run-title">{s.title}</span>
-            <span className="mono home-week-run-km">{s.distanceKm > 0 ? formatDistance(s.distanceKm, units) : ''}</span>
-            <span className="visually-hidden">{state === 'done' ? ', done' : state === 'today' ? ', today' : ''}</span>
-            {state === 'done' && (
-              <span className="home-week-run-mark" aria-hidden="true">
-                ✓
-              </span>
-            )}
-          </li>
-        )
-      })}
-    </ol>
-  )
+  return new URLSearchParams(window.location.search).get('tab') === 'tools' ? 'tools' : 'today'
 }
 
 function tabToUrl(tab: HomeTab) {
@@ -408,14 +371,7 @@ function tabToUrl(tab: HomeTab) {
   window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
 }
 
-/**
- * Home for a signed-in runner. Today, where it opens: what's on today, this week's runs from the plan and how the week
- * is going, then their running over the months, week by week, and their bests, all in one place without a tap. Tools:
- * the calculators. Built from
- * their own runs, so it's useful with or without a plan. A plan adds today's session, this week's ring and the planned
- * distance behind each week's bar. While the account loads it can show the copy kept on this device, saying so, and
- * fills in as each answer arrives.
- */
+/** Today's training and weekly progress lead; history, coaching and tools open when requested. */
 export function Home({
   runner,
   units,
@@ -434,11 +390,8 @@ export function Home({
   photo = null,
 }: Props) {
   const auth = useAuth()
-  const [tab, setTab] = useState<HomeTab>(tabFromUrl)
-  const [toolsOpened, setToolsOpened] = useState(() => tab === 'tools')
-  const [tabDirection, setTabDirection] = useState<'forward' | 'back' | null>(null)
-  const touchStart = useRef<{ x: number; y: number } | null>(null)
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const [toolsOpen, setToolsOpen] = useState(() => tabFromUrl() === 'tools')
+  const [toolsOpened, setToolsOpened] = useState(toolsOpen)
   const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
   // A tick or check-in made here changes the totals, so they're fetched again after each.
@@ -485,51 +438,8 @@ export function Home({
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
   const goalSeconds = plan ? parseTimeSpan(plan.goalTime) : null
   const pendingSyncedRuns = runs.filter(r => r.source.kind === 'Strava' && r.localDate <= today && !checkIns.entries.some(c => c.activityId === r.id))
-  const scheduledSessions = plan?.weeks.flatMap(week => week.sessions) ?? []
-  const otherLoggedRuns = checkIns.entries.filter(entry => outsideSchedule(entry, scheduledSessions)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3)
+  const recentEntries = checkIns.entries.filter(entry => entry.status !== 'Skipped').sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3)
   const fromStrava = runs.some((r) => r.source.kind === 'Strava')
-  const ranDates = new Set([...completedActivityRuns.filter((r) => r.kind !== 'Other').map((r) => r.localDate), ...checkIns.entries.filter((c) => !c.isAdditional && c.status !== 'Skipped').map((c) => c.date)])
-
-  const showTab = (next: HomeTab, focus = false) => {
-    if (next === tab) return
-    if (next === 'tools') setToolsOpened(true)
-    setTabDirection(HOME_TABS.findIndex((item) => item.id === next) > HOME_TABS.findIndex((item) => item.id === tab) ? 'forward' : 'back')
-    setTab(next)
-    tabToUrl(next)
-    if (focus) tabRefs.current[HOME_TABS.findIndex((t) => t.id === next)]?.focus()
-  }
-
-  const onTouchStart = (event: TouchEvent) => {
-    const touch = event.touches[0]
-    touchStart.current = touch && event.touches.length === 1 && allowsSwipe(event.target) ? { x: touch.clientX, y: touch.clientY } : null
-  }
-
-  const onTouchEnd = (event: TouchEvent) => {
-    const start = touchStart.current
-    touchStart.current = null
-    const touch = event.changedTouches[0]
-    if (!start || !touch) return
-    const direction = horizontalSwipe(start, { x: touch.clientX, y: touch.clientY })
-    const next = HOME_TABS.findIndex((item) => item.id === tab) + direction
-    if (direction && next >= 0 && next < HOME_TABS.length) showTab(HOME_TABS[next]!.id)
-  }
-
-  // Arrow keys move between tabs, as screen-reader users expect from a tab list, like the plan's own tabs.
-  const onTabKey = (event: KeyboardEvent) => {
-    const index = HOME_TABS.findIndex((t) => t.id === tab)
-    const moves: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: HOME_TABS.length - 1 }
-    if (!(event.key in moves)) return
-    event.preventDefault()
-    showTab(HOME_TABS[(moves[event.key]! + HOME_TABS.length) % HOME_TABS.length]!.id, true)
-  }
-
-  const panel = (id: HomeTab) => ({
-    id: `home-panel-${id}`,
-    role: 'tabpanel',
-    'aria-labelledby': `home-tab-${id}`,
-    hidden: tab !== id,
-    className: `tab-panel home-panel${tab === id && tabDirection ? ` slide-${tabDirection}` : ''}`,
-  })
 
   return (
     <div className="home">
@@ -539,47 +449,20 @@ export function Home({
           <div>
             <h1 className="home-title">Welcome back, {runner.displayName}</h1>
             <p className="home-lede">
-              {plan && progress && progress.daysToGo > 0
-                ? `${progress.daysToGo} ${progress.daysToGo === 1 ? 'day' : 'days'} to ${plan.race.name}.`
-                : plan && progress?.kind === 'race'
-                  ? `It’s race day: ${plan.race.name}.`
-                  : 'Every run counts. Here’s yours.'}
+              {formatDate(today, 'long')}
             </p>
           </div>
         </header>
       </div>
 
-      <InstallCard />
-
-      <div className="tabs home-tabs" role="tablist" aria-label="Home" onKeyDown={onTabKey}>
-        {HOME_TABS.map((t, i) => (
-          <button
-            key={t.id}
-            ref={(el) => {
-              tabRefs.current[i] = el
-            }}
-            type="button"
-            role="tab"
-            id={`home-tab-${t.id}`}
-            className="tab"
-            aria-selected={tab === t.id}
-            aria-controls={`home-panel-${t.id}`}
-            tabIndex={tab === t.id ? 0 : -1}
-            onClick={() => showTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div {...panel('today')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
+      <div className="home-panel home-focus" id="home-panel-today">
         {current && planFailed && <div className="home-data-state" role="alert"><p>{plan ? 'Your plan couldn’t refresh. Showing the last plan loaded on this device.' : 'Your plan couldn’t load. You can try again.'}</p><button type="button" className="button" onClick={retryPlan}>Retry plan</button></div>}
         <TickCard plan={plan} today={today} coach={coach} runs={runs} />
         <div className="home-top">
           {current ? (
             <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} />
           ) : (
-            <section className="panel home-card" aria-labelledby="home-goal">
+            <section className="panel home-card home-today" aria-labelledby="home-goal">
               <h2 id="home-goal" className="home-card-heading">
                 Something to run towards?
               </h2>
@@ -619,26 +502,13 @@ export function Home({
                 <p className="field-help">Last week {formatDistance(bars.at(-2)?.km ?? 0, units)}</p>
               </>
             )}
-            {week && <WeekRuns week={week} today={today} units={units} ranOn={(date) => ranDates.has(date)} />}
           </section>
+        {plan && progress && <button type="button" className="home-race-brief" onClick={onOpenPlan} aria-label="Open your training plan">
+          <span><span className="field-help">Your finish line</span><strong>{plan.race.name}</strong><RaceLine plan={plan} week={week} units={units} /></span>
+          <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
+        </button>}
         </div>
-        {plan && progress && (
-          <section className="home-race-card" aria-labelledby="home-race-name">
-            <p className="home-card-heading">Your finish line</p>
-            <h2 id="home-race-name">{plan.race.name}</h2>
-            <RaceLine plan={plan} week={week} units={units} />
-            <div className="home-countdown-row">
-              <p className="home-countdown">
-                {progress.daysToGo > 0 ? <><span className="mono">{progress.daysToGo}</span><span className="home-countdown-label">days to go</span></> : <span className="home-race-state">{progress.kind === 'race' ? 'It’s race day' : 'Race complete'}</span>}
-              </p>
-              <button type="button" className="home-race-open" aria-label="Open your training plan" onClick={onOpenPlan}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 18 18 6M6 6h12v12" /></svg></button>
-            </div>
-            <div className="home-race-track" aria-hidden="true"><span style={{ width: `${progress.fraction * 100}%` }} /></div>
-          </section>
-        )}
-        {plan && week && progress?.kind !== 'race' && (
-          <YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />
-        )}
+        {plan && week && progress?.kind !== 'race' && <details className="disclosure home-review"><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
 
         <section className="section home-section" aria-labelledby="home-training">
@@ -646,14 +516,17 @@ export function Home({
             Your running
           </h2>
           {current && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
-          {pendingSyncedRuns.length > 0 && <div className="callout"><p>Your Strava run has synced and counts automatically in your running totals. Log it to say how it fits your plan.</p>
+          {pendingSyncedRuns.length > 0 && <details className="disclosure home-sync"><summary>{pendingSyncedRuns.length} synced {pendingSyncedRuns.length === 1 ? 'run' : 'runs'} · Add training feedback</summary><p>Your Strava run has synced and counts automatically in your running totals. Log it to say how it fits your plan.</p>
             <ul>{pendingSyncedRuns.map(run => <li key={run.id}>{formatDate(run.localDate)} · {formatDistance(run.distanceKm, units)} from Strava{' '}
               {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}
-            </li>)}</ul><p className="field-help">Logging adds your effort and feedback to the plan. You do not need to enter the distance again for it to count here.</p></div>}
+            </li>)}</ul><p className="field-help">Logging adds your effort and feedback to the plan. You do not need to enter the distance again for it to count here.</p></details>}
           {requestedRun && plan && coach && <RunLog key={requestedRun.id} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} />}
-          {coach && otherLoggedRuns.length > 0 && <section aria-label="Recently logged runs">
-            <h3>Recently logged runs</h3>
-            {otherLoggedRuns.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}
+          {coach && recentEntries.length > 0 && <section className="home-recent" aria-label="Recently logged runs">
+            <h3>Recent activity</h3>
+            {recentEntries.map(entry => <details className="activity-row" key={entry.id ?? `${entry.date}|${entry.sessionType}`}>
+              <summary><span>{formatDate(entry.date)}</span><RunResult entry={entry} runs={runs} units={units} compact /></summary>
+              <SavedRun entry={entry} coach={coach} runs={runs} onOpenRun={onOpenRun} />
+            </details>)}
             <button type="button" className="link-button" onClick={onOpenPlan}>View runs in your plan →</button>
           </section>}
           {logFailed ? (
@@ -684,14 +557,16 @@ export function Home({
               {log.length === 0 && pendingSyncedRuns.length === 0 && <div className="home-data-state"><p>Your first run starts the story. Upload a run or tick a completed session in your plan to build your totals.</p><button type="button" className="link-button" onClick={onOpenRuns}>Add your runs →</button></div>}
             </>
           )}
-          <p className="field-help">
+          <details className="home-totals-note"><summary>About your totals</summary><p className="field-help">
             Totals include your saved running history and available Strava runs automatically, counting each associated run once.
             The weekly average excludes this week.
             {totals.month.unknownRuns ? ` ${totals.month.unknownRuns} ${totals.month.unknownRuns === 1 ? 'run has' : 'runs have'} no available distance and ${totals.month.unknownRuns === 1 ? 'is' : 'are'} excluded from kilometre totals.` : ''}
             {(fromStrava || log?.some(run => run.source === 'Strava')) && ' Strava contributions update with your connection and are removed if the imported run is deleted or no longer available. Your own saved distances remain.'}
           </p>
+          </details>
         </section>
 
+        <details className="disclosure home-insights"><summary>Running insights <span className="field-help">History & personal bests</span></summary>
         <section className="section home-section home-history" aria-labelledby="home-weeks">
           <h2 id="home-weeks" className="home-heading">
             The last 12 weeks
@@ -720,9 +595,15 @@ export function Home({
             </ul>
           )}
         </section>
+        </details>
       </div>
 
-      <div {...panel('tools')} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
+      <details className="disclosure home-tools" open={toolsOpen} onToggle={event => {
+        const open = event.currentTarget.open
+        setToolsOpen(open)
+        if (open) setToolsOpened(true)
+        tabToUrl(open ? 'tools' : 'today')
+      }}><summary>Running tools <span className="field-help">Pace, race time & heart rate</span></summary>
         {toolsOpened && (
           <ScreenRecovery>
           <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading running tools"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>}>
@@ -734,7 +615,8 @@ export function Home({
           </Suspense>
           </ScreenRecovery>
         )}
-      </div>
+      </details>
+      <InstallCard />
     </div>
   )
 }

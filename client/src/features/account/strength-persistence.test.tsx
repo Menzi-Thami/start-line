@@ -1,3 +1,4 @@
+import { findPlanControl, openStrengthWorkouts } from '../../test/user-navigation'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -45,8 +46,8 @@ function account(savedInputs: Partial<GeneratePlanRequest> = {}) {
 }
 
 async function addStrength(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole('button', { name: 'Delete plan' })
-  await user.click(screen.getByRole('tab', { name: 'Strength' }))
+  await findPlanControl('Delete plan')
+  await openStrengthWorkouts()
   await user.click(screen.getByRole('button', { name: 'Add strength days' }))
   await user.click(screen.getByText('Add strength and mobility sessions'))
   await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
@@ -64,13 +65,14 @@ describe('adding strength to an existing account plan', () => {
     const user = userEvent.setup()
     const first = mount()
     await addStrength(user)
-    await screen.findByRole('button', { name: 'Delete plan' })
+    await findPlanControl('Delete plan')
     expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
     await waitFor(() => expect(db.writes).toHaveLength(1))
     // Null is the historical v1 contract. Custom starts and replan metadata must survive strength-only edits too.
     expect(db.writes[0]).toMatchObject({ replaceCurrent: true, plan: { strengthDays: ['Monday'], raceName: 'Parkrun PB', planFrom: '2026-10-08', version: inputs.version ?? null, startOn: inputs.startOn ?? null, replanFrom: inputs.replanFrom ?? null, setback: inputs.setback ?? null, recentWeeklyKm: inputs.recentWeeklyKm ?? null } })
-    await screen.findByRole('button', { name: 'Delete plan' })
-    await user.click(screen.getByRole('button', { name: 'Sign out' }))
+    await findPlanControl('Delete plan')
+    await user.click(screen.getByRole('button', { name: 'Account' }))
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }))
     expect(auth.signOut).toHaveBeenCalled()
     first.unmount()
     window.localStorage.clear()
@@ -80,8 +82,8 @@ describe('adding strength to an existing account plan', () => {
     signedOut.unmount()
     window.history.replaceState(null, '', '/')
     mount({ ...auth })
-    await screen.findByRole('button', { name: 'Delete plan' })
-    await user.click(screen.getByRole('tab', { name: 'Strength' }))
+    await findPlanControl('Delete plan')
+    await openStrengthWorkouts()
     expect(screen.queryByRole('button', { name: 'Add strength days' })).toBeNull()
     expect(screen.getByRole('button', { name: 'Change strength days' })).toBeInTheDocument()
     expect(screen.getAllByText('Strength & mobility').length).toBeGreaterThan(0)
@@ -92,7 +94,7 @@ describe('adding strength to an existing account plan', () => {
     db.fail(true)
     const user = userEvent.setup()
     mount()
-    await screen.findByRole('button', { name: 'Delete plan' })
+    await findPlanControl('Delete plan')
     const savedUrl = window.location.search
     await addStrength(user)
     expect(await screen.findByRole('alert')).toHaveTextContent('Please try again')
@@ -101,7 +103,7 @@ describe('adding strength to an existing account plan', () => {
     db.fail(false)
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(db.writes).toHaveLength(1))
-    await screen.findByRole('button', { name: 'Delete plan' })
+    await findPlanControl('Delete plan')
     expect(db.writes[0]?.plan.strengthDays).toEqual(['Monday'])
   })
 })

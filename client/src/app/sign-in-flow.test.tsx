@@ -316,7 +316,7 @@ describe('their plan from the copy kept on this device', () => {
     renderApp(signedIn())
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
-    await user.click(await screen.findByRole('button', { name: 'My runs' }))
+    await user.click(await screen.findByRole('button', { name: 'Runs' }))
     expect(screen.getByRole('main')).toHaveClass('view-enter')
   })
 

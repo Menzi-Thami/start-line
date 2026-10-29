@@ -1,3 +1,4 @@
+import { openStrengthWorkouts } from './navigation'
 import { expect, test, type Page } from '@playwright/test'
 import type { TrainingPlan } from '../src/lib/types'
 
@@ -51,11 +52,13 @@ test('strength has its own workout cards and stays out of the run count @phone',
   const race = new Date(Date.now() + 56 * 86400000).toISOString().slice(0, 10)
   await page.goto(`/?km=10&date=${race}&name=Strength+check&goal=3000&days=tu.th.sa.su&long=su&gym=mo.we&exp=regular&from=${today}&v=2`)
   await expect(page.getByRole('heading', { name: 'Strength check' })).toBeVisible()
-  const strength = page.locator('.session-strength').first()
+  await openStrengthWorkouts(page)
+  const strength = page.locator('.strength-session').first()
+  await strength.locator('summary').first().click()
   await expect(strength).toBeVisible()
   await expect(strength).toContainText('Strength')
   await expect(strength).toContainText('exercises')
-  await expect(strength.getByText('About this session', { exact: true })).toBeVisible()
+  await expect(strength.getByRole('checkbox').first()).toBeVisible()
   await expect(strength).not.toContainText('How to run it')
   await expect(strength).not.toContainText('/km')
   await expect(page.locator('.week-glance-value').nth(1)).toHaveText('4')
@@ -68,7 +71,7 @@ test('adding strength to a plan with a past custom start preserves its running s
   const response = page.waitForResponse((r) => r.url().endsWith('/api/v1/plans') && r.request().method() === 'POST')
   await page.goto(`/?km=10&date=${iso(56)}&name=Keep+my+schedule&goal=3000&days=tu.th.sa.su&long=su&gym=mo&exp=regular&from=${built}&start=${start}&v=2`)
   const original = await (await response).json() as TrainingPlan
-  await page.getByRole('tab', { name: 'Strength', exact: true }).click()
+  await openStrengthWorkouts(page)
   await page.getByRole('button', { name: 'Change strength days' }).click()
   await expect(page.getByRole('complementary', { name: 'Running tips' })).toHaveCount(0)
   const days = page.getByRole('group', { name: 'Strength days' })

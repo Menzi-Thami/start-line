@@ -1,3 +1,4 @@
+import { openPlanOptions, openDisclosure } from './navigation'
 import { expect, test, type Page } from '@playwright/test'
 
 /*
@@ -51,11 +52,13 @@ test('the plan opens on this week, and its tabs and keys move between views', as
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
 
   const tabs = page.getByRole('tablist', { name: 'Your plan' })
-  await expect(tabs.getByRole('tab')).toHaveText(['This week', 'All weeks', 'Strength', 'Paces', 'Progress'])
+  await expect(tabs.getByRole('tab')).toHaveText(['This week', 'Calendar', 'Progress'])
   await expect(tabs.getByRole('tab', { name: 'This week' })).toHaveAttribute('aria-selected', 'true')
 
-  await tabs.getByRole('tab', { name: 'Paces' }).click()
-  await expect(page.getByRole('tabpanel', { name: 'Paces' })).toContainText('Recovery')
+  await tabs.getByRole('tab', { name: 'Progress' }).click()
+  await openDisclosure(page, 'Training paces')
+  await expect(page.getByRole('group', { name: 'Training paces', exact: true })).toContainText('Recovery')
+  await tabs.getByRole('tab', { name: 'Calendar' }).click()
 
   await page.keyboard.press('ArrowRight')
   await expect(tabs.getByRole('tab', { name: 'Progress' })).toBeFocused()
@@ -66,6 +69,7 @@ test('a calendar can subscribe to the plan, and the feed it subscribes to works'
   await page.goto(sharedLink())
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
 
+  await openPlanOptions(page)
   await page.getByText('Add to calendar').click()
   const apple = await page.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')
   expect(apple).toMatch(/^webcal:\/\/.+\/api\/v1\/plans\/calendar\.ics\?/)
@@ -82,6 +86,7 @@ test('a calendar can subscribe to the plan, and the feed it subscribes to works'
 test('a shared link builds the plan straight away and survives a reload', async ({ page }) => {
   await page.goto(sharedLink())
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
+  await page.getByRole('tab', { name: 'Progress', exact: true }).click()
   await expect(page.locator('.plan-progress')).toBeVisible()
 
   await page.reload()

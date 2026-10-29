@@ -1,3 +1,4 @@
+import { openTrainingGuide, findPlanControl, openStrengthWorkouts, openDisclosure, openWeekDay } from '../test/user-navigation'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -394,7 +395,7 @@ describe('building a plan', () => {
     await buildIt(user)
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await user.click(screen.getByRole('button', { name: 'Change answers' }))
+    await user.click(await findPlanControl('Change answers'))
 
     onStep(5)
     expect(screen.getByText(/Comrades Marathon, Sunday 13 June 2027/)).toBeInTheDocument()
@@ -464,6 +465,7 @@ describe('a shared plan', () => {
     window.history.replaceState(null, '', `/${link}`)
     const { user } = setup()
 
+    await openDisclosure('Plan options')
     await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
     await user.click(screen.getByRole('radio', { name: /I missed some training/ }))
     await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
@@ -477,6 +479,7 @@ describe('a shared plan', () => {
     window.history.replaceState(null, '', `/${link}&v=2`)
     const { user } = setup()
 
+    await openDisclosure('Plan options')
     await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
     await user.click(screen.getByRole('radio', { name: /I missed some training/ }))
     await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
@@ -498,10 +501,13 @@ describe('a shared plan', () => {
   })
 
   it('remembers ticked-off sessions on this device', async () => {
+    vi.setSystemTime(new Date(2026, 9, 18, 9))
     window.history.replaceState(null, '', `/${link}`)
     const { user, unmount } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
+    await openWeekDay('2026-10-12')
+    await openDisclosure('View exercises and completion')
     const firstDone = screen.getAllByRole('checkbox', { name: 'Done' })[0]!
     await user.click(firstDone)
     expect(firstDone).toBeChecked()
@@ -511,6 +517,8 @@ describe('a shared plan', () => {
 
     setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
+    await openWeekDay('2026-10-12')
+    await openDisclosure('View exercises and completion')
     await waitFor(() => expect(screen.getAllByRole('checkbox', { name: 'Done' })[0]).toBeChecked())
     // ...but a session that was already done doesn't celebrate again on every visit.
     expect(document.querySelector('.sparks')).toBeNull()
@@ -538,16 +546,17 @@ describe('a shared plan', () => {
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
     const tabs = screen.getByRole('tablist', { name: 'Your plan' })
-    expect(within(tabs).getAllByRole('tab').map((t) => t.textContent)).toEqual(['This week', 'All weeks', 'Strength', 'Paces', 'Progress'])
+    expect(within(tabs).getAllByRole('tab').map((t) => t.textContent)).toEqual(['This week', 'Calendar', 'Progress'])
     expect(within(tabs).getByRole('tab', { name: 'This week' })).toHaveAttribute('aria-selected', 'true')
     // The plan starts on Monday 12 October, after "today", so This week shows the first week.
     expect(screen.getByRole('heading', { name: 'Your first week' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Weekly distance' })).not.toBeInTheDocument()
 
-    await user.click(within(tabs).getByRole('tab', { name: 'Paces' }))
-    expect(screen.getByRole('tabpanel', { name: 'Paces' })).toHaveTextContent('Recovery')
+    await openTrainingGuide('Training paces')
+    expect(screen.getByRole('group', { name: 'Training paces' })).toHaveTextContent('Recovery')
     expect(screen.queryByRole('heading', { name: 'Your first week' })).not.toBeInTheDocument()
 
+    await user.click(within(tabs).getByRole('tab', { name: 'Calendar' }))
     await user.keyboard('{ArrowRight}')
     expect(within(tabs).getByRole('tab', { name: 'Progress' })).toHaveFocus()
     expect(screen.getByRole('heading', { name: 'Weekly distance' })).toBeInTheDocument()
@@ -558,8 +567,9 @@ describe('a shared plan', () => {
     const { user, unmount } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await user.click(screen.getByRole('tab', { name: 'Strength' }))
-    const panel = screen.getByRole('tabpanel', { name: 'Strength' })
+    await openStrengthWorkouts()
+    const panel = screen.getByRole('group', { name: 'Strength workouts' })
+    await user.click(panel.querySelector('.strength-session > summary')!)
     expect(within(panel).getByRole('heading', { name: /Strength & mobility/ })).toBeInTheDocument()
     expect(within(panel).getByText('Romanian deadlift')).toBeInTheDocument()
     expect(within(panel).getByText('3 × 8 each leg')).toBeInTheDocument()
@@ -576,23 +586,32 @@ describe('a shared plan', () => {
   })
 
   it('ticks every set when a strength session is ticked done, and the session when every set is', async () => {
+    vi.setSystemTime(new Date(2026, 9, 18, 9))
     window.history.replaceState(null, '', `/${link}`)
     const { user } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
-    // Monday's strength session comes first in the week.
-    const mondayDone = () => screen.getAllByRole('checkbox', { name: 'Done', hidden: true })[0]
-
-    await user.click(mondayDone()!)
-    await user.click(screen.getByRole('tab', { name: 'Strength' }))
-    const panel = screen.getByRole('tabpanel', { name: 'Strength' })
+    const openMonday = async () => {
+      const day = await openWeekDay('2026-10-12')
+      await openDisclosure('View exercises and completion')
+      return day
+    }
+    let day = await openMonday()
+    await user.click(within(day).getByRole('checkbox', { name: 'Done' }))
+    await user.click(within(day).getByRole('button', { name: 'Close day' }))
+    await openStrengthWorkouts()
+    const panel = screen.getByRole('group', { name: 'Strength workouts' })
+    await user.click(panel.querySelector('.strength-session > summary')!)
     expect(within(panel).getByText('All sets done. Nice work.')).toBeInTheDocument()
 
     await user.click(within(panel).getByRole('checkbox', { name: 'Plank, set 3 of 3: 30 s' }))
     expect(within(panel).getByText('17 of 18 sets done')).toBeInTheDocument()
-    expect(mondayDone()).not.toBeChecked()
+    day = await openMonday()
+    expect(within(day).getByRole('checkbox', { name: 'Done' })).not.toBeChecked()
+    await user.click(within(day).getByRole('button', { name: 'Close day' }))
 
     await user.click(within(panel).getByRole('checkbox', { name: 'Plank, set 3 of 3: 30 s' }))
-    expect(mondayDone()).toBeChecked()
+    day = await openMonday()
+    expect(within(day).getByRole('checkbox', { name: 'Done' })).toBeChecked()
   })
 
   it('keeps sharing in one menu', async () => {
@@ -600,6 +619,7 @@ describe('a shared plan', () => {
     const { user } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
+    await openDisclosure('Plan options')
     await user.click(screen.getByText('Share'))
 
     for (const action of ['Copy link to this plan', 'Print']) {
@@ -609,6 +629,7 @@ describe('a shared plan', () => {
     await user.keyboard('{Escape}')
     expect(screen.getByRole('button', { name: 'Print', hidden: true })).not.toBeVisible()
 
+    await openDisclosure('Plan options')
     await user.click(screen.getByText('Share'))
     await user.click(screen.getByRole('heading', { name: 'Parkrun PB' }))
     expect(screen.getByRole('button', { name: 'Print', hidden: true })).not.toBeVisible()
@@ -619,6 +640,7 @@ describe('a shared plan', () => {
     const { user } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
+    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
 
     const apple = screen.getByRole('link', { name: /Apple Calendar/ })

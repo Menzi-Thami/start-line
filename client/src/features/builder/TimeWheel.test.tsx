@@ -65,6 +65,17 @@ describe('the time wheels', () => {
     expect(screen.getByRole('status')).toHaveTextContent('4:59:2')
   })
 
+  it('does not let a delayed wheel event overwrite another field typed meanwhile', async () => {
+    vi.useFakeTimers()
+    const { container } = render(<Goal start={{ h: '1', m: '52', s: '0' }} />)
+    const hours = container.querySelectorAll<HTMLElement>('.wheel-track')[0]!
+    hours.scrollTop = 2 * WHEEL_ROW
+    fireEvent.scroll(hours)
+    fireEvent.change(screen.getByLabelText('Minutes'), { target: { value: '50' } })
+    await act(() => vi.advanceTimersByTimeAsync(WHEEL_SETTLE_MS))
+    expect(screen.getByRole('status')).toHaveTextContent('2:50:0')
+  })
+
   it('marks the chosen number on each wheel', () => {
     const { container } = render(<Goal start={{ h: '1', m: '5', s: '30' }} />)
 

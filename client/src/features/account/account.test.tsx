@@ -254,8 +254,20 @@ describe('a signed-up runner', () => {
     expect(db.saved[0]).toMatchObject({ plan: { distanceKm: 5, raceDate: '2026-12-13', goalTime: '00:24:30', planFrom: '2026-10-08' } })
   })
 
-  it('gets a new plan saved as soon as it’s built, but not every re-run of changed answers', async () => {
+  it('saves changed answers to the same current plan without a second save step', async () => {
     const db = accountApi({ runner: thandi })
+    let persistedInputs: Record<string, unknown> = savedPlanBody.inputs
+    server.use(
+      http.post('*/api/v1/me/plans', async ({ request }) => {
+        const body = await request.json() as { plan: Record<string, unknown> }
+        db.saved.push(body)
+        persistedInputs = body.plan
+        db.plans = [{ id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', status: 'Active', createdAt: savedPlanBody.createdAt }]
+        return HttpResponse.json(db.plans[0], { status: 201 })
+      }),
+      http.get('*/api/v1/me/plans/:id', () => HttpResponse.json({ ...savedPlanBody, inputs: persistedInputs, plan: planFixture })),
+      http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json({ ...savedPlanBody, inputs: persistedInputs, plan: planFixture, coaching: [] })),
+    )
     const user = renderWith(signedIn())
     const next = () => user.click(screen.getByRole('button', { name: 'Continue' }))
 
@@ -268,7 +280,7 @@ describe('a signed-up runner', () => {
     await next()
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
-    expect(await screen.findByText('Saved')).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Delete plan' })).toBeInTheDocument()
     expect(db.saved).toHaveLength(1)
 
     await user.click(screen.getByRole('button', { name: 'Change answers' }))
@@ -276,8 +288,10 @@ describe('a signed-up runner', () => {
     await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
-    expect(await screen.findByRole('button', { name: 'Save plan' })).toBeInTheDocument()
-    expect(db.saved).toHaveLength(1)
+    await waitFor(() => expect(db.saved).toHaveLength(2))
+    expect(await screen.findByRole('button', { name: 'Delete plan' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
+    expect(db.plans).toHaveLength(1)
   })
 
   it('has one plan, so there’s no My plans, and an old My plans link opens Home', async () => {

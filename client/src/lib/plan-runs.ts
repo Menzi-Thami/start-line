@@ -40,7 +40,7 @@ export function ranKmByWeek(weeks: readonly PlanWeek[], runs: readonly ActivityS
     const weekRuns = runs.filter((r) => r.localDate <= today)
     const recordedDays = new Set(weekRuns.map((r) => r.localDate))
     const manualKm = entries.filter((c) => c.date >= week.startDate && c.date <= end && c.date <= today && !raceDays.has(c.date) && c.status !== 'Skipped' && (!c.activityId || !weekRuns.some(r => r.id === c.activityId)) && (c.isAdditional || !recordedDays.has(c.date)))
-      .reduce((sum, c) => sum + (c.distanceUnreported ? 0 : c.distanceKm ?? (c.isAdditional ? 0 : week.sessions.find((s) => s.date === c.date && s.type === c.sessionType)?.distanceKm ?? 0) * (c.status === 'CutShort' ? .5 : 1)), 0)
+      .reduce((sum, c) => sum + (c.distanceUnreported ? 0 : c.distanceKm ?? (c.prescribedKm ?? (c.isAdditional ? 0 : week.sessions.find((s) => s.date === c.date && s.type === c.sessionType)?.distanceKm ?? 0)) * (c.status === 'CutShort' ? .5 : 1)), 0)
     const km = weekRuns
       .filter((r) => r.localDate >= week.startDate && r.localDate <= end && !raceDays.has(r.localDate))
       .reduce((sum, r) => {
@@ -54,3 +54,7 @@ export function ranKmByWeek(weeks: readonly PlanWeek[], runs: readonly ActivityS
 
 /** More than a fifth over the planned distance: worth a calm word, nothing more. */
 export const wellOverPlan = (plannedKm: number, ranKm: number) => plannedKm > 0 && ranKm > plannedKm * 1.2
+
+/** Logged history is independent of whether the current schedule still contains that prescription. */
+export const outsideSchedule = (entry: CheckIn, sessions: readonly Session[]) => entry.status !== 'Skipped' &&
+  (entry.isAdditional || !sessions.some(session => session.date === entry.date && session.type === entry.sessionType))

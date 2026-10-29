@@ -344,6 +344,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
+                    b.Property<double?>("PrescribedKm")
+                        .HasColumnType("float");
+
                     b.Property<Guid>("SavedPlanId")
                         .HasColumnType("uniqueidentifier");
 

@@ -9,6 +9,7 @@ interface Props {
   done: Set<string>
   additionalDates?: readonly string[]
   activityDates?: readonly string[]
+  historyDates?: readonly string[]
   onSelectDate: (date: string, trigger: HTMLButtonElement) => void
   selectedDate?: string | null
   daySummaryId?: string
@@ -36,9 +37,11 @@ function monthsBetween(from: string, to: string): string[] {
  * The whole plan as a calendar, a month at a time: run days ringed, ticked ones in volt, today filled, race day flagged.
  * Every date opens its day summary, including rest days. It opens on today's month.
  */
-export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [], activityDates = [], onSelectDate, selectedDate, daySummaryId }: Props) {
+export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId }: Props) {
   const sessions = weeks.flatMap((w) => w.sessions)
-  const months = monthsBetween(weeks[0]?.startDate ?? today, raceDate)
+  const firstDate = [weeks[0]?.startDate ?? today, ...historyDates].sort()[0]!
+  const lastDate = [raceDate, ...historyDates].sort().at(-1)!
+  const months = monthsBetween(firstDate, lastDate)
   const start = Math.max(0, months.indexOf(monthOf(today)))
   const [index, setIndex] = useState(start)
   const month = months[Math.min(index, months.length - 1)] ?? monthOf(today)

@@ -191,8 +191,8 @@ export const api = {
     plans: (token: string) => request<SavedPlanSummary[]>('/api/v1/me/plans', {}, token),
     plan: (token: string, id: string) => request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}`, {}, token),
     /** Saves as the runner's current plan. With a plan already, replaceCurrent must be true (the API answers 409 plan_active otherwise). */
-    savePlan: (token: string, plan: GeneratePlanRequest, name?: string, replaceCurrent = false) =>
-      request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan, replaceCurrent }) }, token),
+    savePlan: (token: string, plan: GeneratePlanRequest, name?: string, replaceCurrent = false, expectedPlanId?: string, signal?: AbortSignal) =>
+      request<SavedPlanSummary>('/api/v1/me/plans', { method: 'POST', body: JSON.stringify({ name: name ?? null, plan, replaceCurrent, expectedPlanId }), signal }, token),
     /**
      * Opens the saved plan with accepted coaching calls. New suggestions are previewed and applied separately.
      */

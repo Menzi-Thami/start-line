@@ -11,6 +11,8 @@ import { revealDelta, tabFade, type TabFade } from '../../lib/tab-scroll'
 import type { CoachNote as CoachNoteType, ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
 import { PlanAdjustment } from '../coaching/PlanAdjustment'
 import { RunLog } from '../coaching/RunLog'
+import { SavedRun } from '../coaching/SavedRun'
+import { weekEnd } from '../../lib/plan-runs'
 import { CoachNote } from '../coaching/CoachNote'
 import { latestPaced } from '../coaching/fitness'
 import { PacesIntro, PredictedTimes } from '../coaching/FitnessNotes'
@@ -131,6 +133,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
   const byZone = new Map(plan.paces.map((p) => [p.zone, p]))
   const progress = planProgress(plan, today)
   const entries = coach?.entries ?? plan.weeks.flatMap((w) => w.sessions).flatMap((s) => { const c = coach?.get(s); return c ? [c] : [] })
+  const earlierEntries = entries.filter(entry => entry.status !== 'Skipped' && (entry.date < (plan.weeks[0]?.startDate ?? plan.startDate) || entry.date > weekEnd(plan.weeks.at(-1) ?? { startDate: plan.race.date })))
   const effectiveDone = new Set(done)
   for (const entry of entries.filter((c) => !c.isAdditional)) {
     const key = sessionKey({ date: entry.date, type: entry.sessionType })
@@ -148,9 +151,19 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
 
   // Printing shows every tab and every week, not just the ones on screen.
   useEffect(() => {
-    const openAll = () => document.querySelectorAll<HTMLDetailsElement>('.week').forEach((d) => (d.open = true))
+    let openedStrength: HTMLDetailsElement[] = []
+    const openAll = () => {
+      document.querySelectorAll<HTMLDetailsElement>('.week').forEach((d) => (d.open = true))
+      openedStrength = [...document.querySelectorAll<HTMLDetailsElement>('.strength-disclosure:not([open])')]
+      openedStrength.forEach(d => (d.open = true))
+    }
+    const restoreStrength = () => { openedStrength.forEach(d => (d.open = false)); openedStrength = [] }
     window.addEventListener('beforeprint', openAll)
-    return () => window.removeEventListener('beforeprint', openAll)
+    window.addEventListener('afterprint', restoreStrength)
+    return () => {
+      window.removeEventListener('beforeprint', openAll)
+      window.removeEventListener('afterprint', restoreStrength)
+    }
   }, [])
 
   // The menus are <details>, which stay open on their own; close them on Escape or a tap anywhere else.
@@ -322,6 +335,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
 
       {replan}
       {coach && <div ref={runLogRef}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
+      {coach && earlierEntries.length > 0 && <section aria-label="Earlier logged runs"><h3>Earlier logged runs</h3>{earlierEntries.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}</section>}
       {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
 
       {plan.outlook && (
@@ -490,7 +504,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
         </div>
 
         <div {...panel('all')}>
-          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} />
+          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} historyDates={entries.map(entry => entry.date)} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} />
           {daySummary('all')}
           <p className="tab-intro">{coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Tick sessions off as you go. Ticks are saved on this device only.'}</p>
           <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} canCompleteRuns={canCompleteRuns} />

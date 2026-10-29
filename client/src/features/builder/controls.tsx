@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { SHORT_DAY, WEEK, type DayOfWeek } from '../../lib/types'
 import type { Duration } from './duration'
 import { TimeWheel } from './TimeWheel'
@@ -99,6 +99,8 @@ interface DurationInputProps {
  */
 export function DurationInput({ legend, value, onChange, error, help }: DurationInputProps) {
   const id = useId()
+  const latest = useRef(value)
+  useEffect(() => { latest.current = value }, [value])
   const part = (key: keyof Duration, label: string, unit: string, max: number) => (
     <TimeWheel
       id={`${id}-${key}`}
@@ -106,7 +108,11 @@ export function DurationInput({ legend, value, onChange, error, help }: Duration
       unit={unit}
       value={value[key]}
       max={max}
-      onChange={(next) => onChange({ ...value, [key]: next })}
+      onChange={(next) => {
+        const updated = { ...latest.current, [key]: next }
+        latest.current = updated
+        onChange(updated)
+      }}
       invalid={!!error}
       describedBy={error ? `${id}-error` : undefined}
     />

@@ -73,7 +73,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
   }, [onClose, trigger])
 
   const savedSession = (entry: CheckIn): Session => sessions.find(session => session.type === entry.sessionType) ?? {
-    date, type: entry.sessionType, title: 'Logged run', distanceKm: 0, zone: null, detail: '', purpose: '', exercises: [], steps: [],
+    date, type: entry.sessionType, title: 'Logged run', distanceKm: entry.prescribedKm ?? 0, zone: null, detail: '', purpose: '', exercises: [], steps: [],
   }
   const openRun = (runId: string) => { onClose(); onOpenRun?.(runId) }
   const logRun = (run: ActivitySummary) => {

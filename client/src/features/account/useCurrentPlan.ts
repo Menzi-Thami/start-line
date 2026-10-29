@@ -59,5 +59,5 @@ export function useCurrentPlan(enabled: boolean) {
     }
   }, [enabled, auth])
 
-  return { current: enabled ? current : undefined, refresh: () => load().catch(() => undefined) }
+  return { current: enabled ? current : undefined, remember: (saved: CurrentPlan) => setCurrent(saved), refresh: () => load().catch(() => undefined) }
 }

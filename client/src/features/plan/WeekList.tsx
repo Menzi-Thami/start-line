@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { addDays, formatDate, formatDistance, formatPaceRange, type Units } from '../../lib/format'
-import { dayRuns, type RunsByDate } from '../../lib/plan-runs'
+import { outsideSchedule, dayRuns, type RunsByDate } from '../../lib/plan-runs'
 import type { ActivitySummary, PaceZone, PaceZoneRange, PlanWeek, Session } from '../../lib/types'
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
 import { CheckInCard } from '../coaching/CheckInCard'
-import { AdditionalRun } from '../coaching/AdditionalRun'
+import { SavedRun } from '../coaching/SavedRun'
 import { reviewLine, reviewWeek } from '../coaching/week-review'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { ExerciseList } from '../strength/ExerciseList'
@@ -95,7 +95,8 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
         <p className="session-why">Why: {session.purpose}</p>
       </details>
       {session.exercises.length > 0 && (
-        <div className="strength-moves">
+        <details className="strength-moves strength-disclosure">
+          <summary>View exercises · {sets.done}/{sets.total} sets done</summary>
           <p className="strength-moves-head">
             <span>In this order</span>
             <span className="strength-moves-count mono" aria-live="polite">
@@ -103,7 +104,7 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
             </span>
           </p>
           <ExerciseList session={session} done={done} onDoneChange={onDoneChange} />
-        </div>
+        </details>
       )}
       {session.type !== 'Race' && (strength || !coach) && (
         <label className="session-done">
@@ -159,7 +160,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
     <ol className="days">
       {days.map((date) => {
         const sessions = week.sessions.filter((s) => s.date === date)
-        const additional = coach?.entries?.filter((entry) => entry.isAdditional && entry.date === date) ?? []
+        const additional = coach?.entries?.filter((entry) => entry.date === date && outsideSchedule(entry, sessions)) ?? []
         const ran = dayRuns(sessions, runs?.get(date)?.filter((run) => !additional.some((entry) => entry.activityId === run.id)))
         const marks = [...ran.done.map((run) => ({ run, unplanned: false })), ...ran.unplanned.map((run) => ({ run, unplanned: true }))]
         return (
@@ -205,7 +206,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
                   ))}
                 </ul>
               )}
-              {coach && additional.map((entry) => <AdditionalRun key={entry.id} entry={entry} coach={coach} runs={runs?.get(date)} onOpenRun={onOpenRun} />)}
+              {coach && additional.map((entry) => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs?.get(date)} onOpenRun={onOpenRun} />)}
             </div>
           </li>
         )

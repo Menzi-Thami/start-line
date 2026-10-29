@@ -20,7 +20,7 @@ export function RunResult({ entry, runs = [], units }: { entry: CheckIn; runs?: 
           ? formatDistance(km, units)
           : entry.distanceUnreported
             ? 'Distance not recorded'
-            : 'Distance not entered; planned distance used'}
+            : entry.prescribedKm != null ? `Actual distance not entered; ${formatDistance(entry.prescribedKm, units)} prescribed at completion` : 'Distance not entered'}
         {seconds != null ? ` · ${formatDuration(seconds)}` : ' · Time not recorded'}
       </p>
       {km != null && km > 0 && seconds != null && seconds > 0 && <p className="mono">{formatPace(seconds / km, units)}</p>}

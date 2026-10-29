@@ -25,4 +25,15 @@ Confirmed defects found: schedule edits were treated as fresh builds; unsaved pr
 
 Testing boundaries: browser accounts/API persistence are synthetic stand-ins, plan generation uses the real local API, and separate SQL tests exercise real API/database transactions. Source variants reuse deterministic generated fixtures to avoid exhausting the real local API rate limit; production limits are unchanged. Chromium phone emulation is not physical iOS/Android/WebKit or live Entra/Strava authorization. Temporary provider-cache expiry is not permanent portfolio storage. Account deletion remains intentionally destructive; archived-plan browsing/editing and device-local strength history are existing product limits. The expected plan ID guards replacement by a different race; it is not an optimistic revision lock for simultaneous edits to the same race.
 
-Validation is still in progress. Final counts and tested commit are recorded before merge.
+The complete `scripts/check.sh` gate passed on source `ccc38f4ac683382c7477e3866c8c6f2c19b31f35`. The subsequent commit records documentation/screenshots only.
+
+- Backend formatting and strict Release build: passed, 0 warnings/errors.
+- **1,204 backend tests:** 848 domain, 103 application, 7 architecture, 246 disposable local SQL integration; no failures/skips. EF model/migration consistency passed.
+- Frontend lint/TypeScript and **573 tests across 68 files:** passed.
+- Production build: passed. Main JavaScript 474.05 kB / 144.64 kB gzip; the day summary remains lazy at 8.02 kB / 2.76 kB gzip. Dependency audit: **0 vulnerabilities**.
+- **58 Playwright journeys:** passed in Chromium desktop and phone emulation. The eight new plan-edit journeys include the complete log/edit/failure/retry/reload/start/calendar sequence, double submission, keyboard strength progress and print-state restoration.
+- Layout checks include 375, 820 and 1440 px for compact strength, with the full existing suite spanning 320–2560 px. Keyboard and reduced-motion checks passed. Reviewed the screenshots below and final diff.
+
+The first gate exposed an existing test that expected plan deletion to erase check-ins. It now verifies preservation/export after plan removal and erasure after account deletion. Older strength tests requiring a second Save changes action now exercise the single save, double-click, retry and fresh-sign-in paths without dropping their historical metadata assertions.
+
+Screenshots from synthetic browser journeys: [retained run after changing Wednesday to rest](retained-run-phone.png), [compact phone strength](strength-phone.png), [tablet](strength-tablet.png), [desktop](strength-desktop.png), [keyboard time entry](keyboard-time-entry.png).

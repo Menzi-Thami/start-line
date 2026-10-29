@@ -408,3 +408,114 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .strength-disclosure > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: var(--radius-sm); }
 .strength-disclosure[open] > summary { margin-bottom: var(--space-3); }
 @media print { .strength-disclosure > :not(summary) { display: block !important; } }
+
+/* Focused training: one purpose per screen, summaries before detail. Night run tokens stay unchanged. */
+.home-focus { gap: var(--space-5); }
+#home-panel-today.home-focus { grid-template-columns: minmax(0, 1fr); }
+.home-focus .home-top { gap: var(--space-4); align-items: start; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'today' 'week' 'race'; }
+.home-focus .home-card { background: var(--surface-sunk); box-shadow: none; gap: var(--space-2); }
+.home-focus .home-card-heading { color: var(--muted); font-size: var(--text-sm); }
+.home-focus .home-today-title { font-size: clamp(1.5rem, 3vw, 2rem); }
+.home-focus .home-today-more { margin-block: var(--space-1); }
+.home-focus .home-plan-link { margin-top: 0; font-size: var(--text-sm); }
+.home-focus .home-today-strength { padding: var(--space-2) 0; border: 0; border-top: 1px solid var(--line); background: none; }
+.home-focus .home-today-strength .home-today-title { font-size: var(--text-md); }
+.home-race-brief { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); width: 100%; padding: var(--space-4) 0; border: 0; border-block: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.home-race-brief > span:first-child { min-width: 0; }
+.home-race-brief strong { display: block; font-size: var(--text-lg); }
+.home-race-brief .home-race-line { margin: var(--space-1) 0 0; font-size: var(--text-sm); }
+.home-race-remaining { flex: none; font-size: clamp(1.5rem, 3vw, 2.25rem); color: var(--accent); text-align: right; }
+.home-race-remaining small { display: block; font-family: var(--font-body); font-size: var(--text-sm); color: var(--muted); }
+.home-focus .home-section { margin: 0; padding: 0; }
+.home-focus .home-tiles { gap: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: var(--space-3); }
+.home-focus .home-tile { min-width: 0; padding: var(--space-3); border: 0; border-inline-start: 1px solid var(--line); border-radius: 0; background: none; box-shadow: none; }
+.home-focus .home-tile:first-child { border-inline-start: 0; padding-inline-start: 0; }
+.home-focus .home-tile::before { display: none; }
+.home-focus .home-tile-label { font-size: .7rem; letter-spacing: .02em; }
+.home-focus .home-tile-value { font-size: clamp(1.2rem, 3.5vw, 2rem); white-space: nowrap; }
+.home-focus .home-tile-unit { font-size: var(--text-sm); }
+.home-focus .home-tile > .field-help { font-size: .75rem; }
+.home-totals-note { margin-top: var(--space-2); color: var(--muted); font-size: var(--text-sm); }
+.home-totals-note > summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; }
+.home-recent { margin-bottom: var(--space-5); }
+.home-recent > h3 { font-size: var(--text-md); margin-block: var(--space-4) var(--space-2); }
+.activity-row { border-bottom: 1px solid var(--line); }
+.activity-row > summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); min-height: 3.75rem; padding-block: var(--space-3); cursor: pointer; font-size: var(--text-sm); }
+.activity-row > summary::after { content: '›'; color: var(--muted); }
+.activity-row[open] > summary::after { content: '⌄'; }
+.activity-row .run-result-line { flex: 1; text-align: right; }
+.home .disclosure, .plan > .disclosure, .training-guide { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; box-shadow: none; padding: 0 0 var(--space-2); margin-block: var(--space-2); }
+.home .disclosure > summary, .plan > .disclosure > summary, .training-guide > summary { min-height: var(--tap); padding-block: var(--space-3); }
+.home-insights > summary, .home-tools > summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); cursor: pointer; }
+.home-insights .home-history, .home-insights .home-records { margin-block: var(--space-4); }
+.plan > .plan-title { font-size: clamp(1.65rem, 3vw, 2.5rem); }
+.plan > .plan-facts { margin-block: var(--space-2) var(--space-3); font-size: var(--text-sm); gap: var(--space-2) var(--space-4); }
+.plan-options > summary { font-size: var(--text-sm); color: var(--muted); }
+.plan-options .plan-actions { margin: var(--space-2) 0 var(--space-4); }
+.plan .tabs-frame { margin-block: var(--space-3) var(--space-4); }
+.plan .tabs-scroll { width: 100%; }
+.plan .tabs-scroll > .tab { flex: 1; }
+.plan .this-week-head { margin-bottom: var(--space-3); }
+.plan .this-week-head h3 { font-size: var(--text-lg); }
+.plan .week-glance { border: 0; border-radius: 0; background: none; box-shadow: none; padding: 0; }
+.plan .week-glance-figures { gap: var(--space-5); margin-bottom: var(--space-3); }
+.plan .week-glance-value { font-size: var(--text-lg); }
+.plan .week-glance-figures p { display: flex; align-items: baseline; gap: var(--space-2); }
+.week-strip.week-agenda { display: block; }
+.week-agenda .week-day { display: block; text-align: left; border-bottom: 1px solid var(--line); }
+.week-agenda .week-day-button { width: 100%; display: grid; grid-template-columns: 2rem 2.5rem minmax(0, 1fr) 1rem; align-items: center; gap: var(--space-2); padding: var(--space-3) 0; border: 0; border-radius: 0; min-height: 4.25rem; text-align: left; }
+.week-agenda .week-day-name { font-size: .75rem; color: var(--muted); }
+.week-agenda .week-day-dot { width: 2.25rem; height: 2.25rem; font-size: var(--text-md); opacity: 1; }
+.week-agenda .week-day-workout { min-width: 0; display: grid; gap: 2px; }
+.week-agenda .week-day-workout strong { font-size: var(--text-md); font-weight: 600; overflow-wrap: anywhere; }
+.week-agenda .week-day-workout .field-help { font-size: .75rem; }
+.week-day-chevron { color: var(--muted); text-align: right; }
+.week-agenda .week-day.has-activity .week-day-button::after { display: none; }
+.week-agenda .week-day-button[aria-expanded='true'] { background: var(--accent-soft); padding-inline: var(--space-2); }
+.week-agenda .day-summary { margin: var(--space-2) 0 var(--space-3); }
+.day-summary { max-width: 32rem; max-height: min(22rem, 55dvh); padding: 0 var(--space-3) var(--space-3); border-color: var(--line); background: var(--surface-sunk); box-shadow: none; }
+.day-summary-head { padding-block: var(--space-2); }
+.day-summary-head h3 { font-size: var(--text-md); }
+.day-summary-section h4 { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-block: var(--space-2); }
+.day-summary-card, .day-summary-saved, .day-summary-empty { border: 0; border-radius: 0; padding: var(--space-2) 0; background: transparent; margin: 0; }
+.day-summary .day-summary-section + .day-summary-section { border-top: 1px solid var(--line); padding-top: var(--space-2); }
+.day-summary .run-result { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.day-summary .check-in-summary { margin-top: var(--space-2); }
+.day-summary .session-more { margin-block: var(--space-2); }
+@media (min-width: 64rem) {
+  .home-focus .home-top { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-areas: 'today week' 'today race'; }
+  .home-focus .home-top > .home-today { height: 100%; }
+  .home-hello { margin-bottom: var(--space-4); }
+}
+@media (max-width: 25rem) {
+  .home-focus .home-tile { padding-inline: var(--space-2); }
+  .activity-row > summary { align-items: start; }
+}
+@media print {
+  .home-tools { display: none; }
+  .plan-options { display: block; }
+  .plan-options > summary { display: none; }
+  .week-agenda .week-day-button { break-inside: avoid; }
+}
+.settings-group { border-bottom: 1px solid var(--line); padding-block: var(--space-2); }
+.settings-group > summary { display: flex; align-items: center; justify-content: space-between; min-height: 3.75rem; font-weight: 600; cursor: pointer; }
+.settings-group > summary::after, .home-insights > summary::after, .home-tools > summary::after { content: '+'; margin-inline-start: auto; color: var(--accent); }
+.settings-group[open] > summary::after, .home-insights[open] > summary::after, .home-tools[open] > summary::after { content: '−'; }
+.settings-group > .section:first-of-type { margin-top: var(--space-3); }
+.account-sign-out { margin-top: var(--space-5); }
+.upload > summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; font-weight: 600; }
+.run-feed-row { border-bottom: 1px solid var(--line); }
+.run-feed-open { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); width: 100%; padding: var(--space-4) 0; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.run-feed-open > span:first-child { min-width: 0; }
+.run-feed-open .week-name { font-size: var(--text-lg); }
+.run-feed-open .week-meta { font-size: var(--text-sm); overflow-wrap: anywhere; }
+.run-feed-open:hover { background: var(--accent-soft); }
+.run-feed-arrow { flex: none; color: var(--muted); font-size: var(--text-xl); }
+.home .home-intro { padding-bottom: 0; margin-bottom: var(--space-2); }
+.home .home-title { font-size: clamp(1.5rem, 2.5vw, 2.25rem); }
+.home-focus .home-workout-facts { margin-block: var(--space-2); }
+.plan .plan-notes { font-size: var(--text-sm); }
+.home-focus .home-today .run-result { border: 0; background: transparent; padding: var(--space-2) 0; }
+.home-focus .home-top > .home-today { grid-area: today; }
+.home-focus .home-top > .home-week { grid-area: week; }
+.home-focus .home-top > .home-race-brief { grid-area: race; }

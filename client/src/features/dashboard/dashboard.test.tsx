@@ -1,3 +1,4 @@
+import { openTrainingGuide } from '../../test/user-navigation'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -198,15 +199,15 @@ describe('the overview', () => {
     expect(screen.queryByRole('img', { name: 'Powered by Strava' })).not.toBeInTheDocument()
   })
 
-  it('is a tab of its own beside This week, for signed-in runners only', async () => {
+  it('keeps running insights in Progress without adding another plan tab', async () => {
     const { unmount } = render(<PlanView plan={plan} units="km" onUnitsChange={() => {}} shareUrl="https://taperday.run/?x" today="2026-10-19" />)
     expect(screen.queryByRole('tab', { name: 'Overview' })).not.toBeInTheDocument()
     unmount()
 
     render(<PlanView plan={plan} units="km" onUnitsChange={() => {}} shareUrl="https://taperday.run/?x" today="2026-10-19" runs={synced} strava={connected} />)
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent)
-    expect(tabs.slice(0, 3)).toEqual(['This week', 'Overview', 'All weeks'])
-    await userEvent.click(screen.getByRole('tab', { name: 'Overview' }))
-    expect(screen.getByRole('heading', { name: 'Weekly distance, ran against planned' })).toBeInTheDocument()
+    expect(tabs).toEqual(['This week', 'Calendar', 'Progress'])
+    await openTrainingGuide('Running insights')
+    expect(screen.getByRole('heading', { name: 'Easy runs over time' })).toBeInTheDocument()
   })
 })

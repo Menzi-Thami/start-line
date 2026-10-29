@@ -1,5 +1,7 @@
 # Responsive UI upgrade
 
+This records an earlier UI pass and its environment limitations. For the current screen hierarchy, see [Focused training](focused-training.md); current validation follows `scripts/check.sh` and its linked QA record.
+
 Taperday keeps its Night run identity: near-black surfaces, volt actions, the tapering wordmark, Bricolage headings, Atkinson body text and mono running numbers. The desktop/tablet/phone design board guides composition rather than introducing new capabilities.
 
 ## Experience

@@ -1,3 +1,4 @@
+import { openPlanOptions, openStrengthWorkouts, openDisclosure } from './navigation'
 import { expect, test } from '@playwright/test'
 import type { CheckIn, CheckInRequest, GeneratePlanRequest, TrainingPlan } from '../src/lib/types'
 
@@ -68,6 +69,7 @@ for (const mode of ['manual', 'time-only', 'tick', 'strava']) {
     else await day.getByRole('button', { name: 'Save check-in', exact: true }).click()
     expect(entries).toHaveLength(1)
     await day.getByRole('button', { name: 'Close day', exact: true }).click()
+    await openPlanOptions(page)
     await page.getByRole('button', { name: 'Change answers', exact: true }).click()
     await page.getByRole('button', { name: /Change days/ }).click()
     const days = page.getByRole('group', { name: 'Which days can you run?', exact: true })
@@ -100,6 +102,7 @@ for (const mode of ['manual', 'time-only', 'tick', 'strava']) {
     await dayButton().click()
     await expect(day.getByRole('region', { name: 'Recorded', exact: true }).locator('.run-result')).toHaveCount(1)
     await page.keyboard.press('Escape')
+    await openPlanOptions(page)
     await page.getByRole('button', { name: 'Change answers', exact: true }).click()
     await page.getByRole('button', { name: 'Change goal', exact: true }).click()
     const goalMinutes = page.getByRole('group', { name: 'Goal finish time', exact: true }).getByLabel('Minutes', { exact: true })
@@ -120,12 +123,13 @@ for (const mode of ['manual', 'time-only', 'tick', 'strava']) {
     expect(saves).toBe(2)
     expect(entries).toHaveLength(1)
     expect(current.inputs.startOn).toBe('2026-11-02')
+    await openDisclosure(page, /^Earlier logged runs/)
     await expect(page.getByRole('region', { name: 'Earlier logged runs', exact: true })).toContainText('Wednesday 28 October')
-    await page.getByRole('tab', { name: 'All weeks', exact: true }).click()
+    await page.getByRole('tab', { name: 'Calendar', exact: true }).click()
     await page.getByRole('region', { name: 'Your plan by month', exact: true }).getByRole('button', { name: /^28 October:/ }).click()
     await expect(day.getByRole('region', { name: 'Recorded', exact: true }).locator('.run-result')).toHaveCount(1)
     await page.keyboard.press('Escape')
-    await page.getByRole('tab', { name: 'Strength', exact: true }).click()
+    await openStrengthWorkouts(page)
     const strength = page.locator('.strength-session').first()
     await expect(strength).not.toHaveAttribute('open', '')
     expect(await strength.getByRole('checkbox').count()).toBe(0)

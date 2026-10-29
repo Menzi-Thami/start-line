@@ -97,8 +97,7 @@ export function App() {
   const [view, setView] = useState<View>(viewFromUrl)
   // On a phone the app's navigation sits in a bar at the bottom, as an installed app's does; wider, it stays in the header.
   const phone = useMediaQuery('(max-width: 47.99rem)')
-  // Plan or Strength, as last picked from the bar, and the plan tab it asked for.
-  const [navPick, setNavPick] = useState<'plan' | 'strength'>('plan')
+  // Plan navigation can return to the current week from any training detail.
   const [planTabAsk, setPlanTabAsk] = useState<{ id: string; seq: number } | undefined>(undefined)
   // The runner's own picture, if they added one; initials show until it arrives, or without one.
   const [photo, setPhoto] = useState<string | null>(null)
@@ -405,14 +404,12 @@ export function App() {
     else window.history.replaceState(null, '', url)
   }
 
-  // The bottom bar (and the header's Plan link). Plan and Strength open the runner's own plan, on This week or Strength;
-  // without a plan they open the builder. A plan already on screen just changes tab.
+  // Plan opens the runner's current week, or the builder when they have no plan.
   const pickFromBar = (item: TabBarItem) => {
     if (item === 'home') return go('home')
     if (item === 'runs') return go('runs')
     if (item === 'account') return go('account')
-    setNavPick(item === 'strength' ? 'strength' : 'plan')
-    setPlanTabAsk((asked) => ({ id: item === 'strength' ? 'strength' : 'week', seq: (asked?.seq ?? 0) + 1 }))
+    setPlanTabAsk((asked) => ({ id: 'week', seq: (asked?.seq ?? 0) + 1 }))
     if (view === 'build' && plan.kind === 'ready') return
     if (ownPlan) openOwnPlan()
     else go('build')
@@ -585,9 +582,9 @@ export function App() {
   const opening = showBuilder && !editing && !initial && !landed && !justSignedUp && state.kind === 'ready' && currentPlan.current !== null
 
   // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
-  // Which bar item is current: Plan and Strength both show the plan, so the one last picked is lit.
+  // Strength is part of Plan, so training always has one navigation destination.
   const barCurrent: TabBarItem | null =
-    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : view === 'build' && plan.kind === 'ready' ? navPick : null
+    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : view === 'build' && plan.kind === 'ready' ? 'plan' : null
 
   const gate: Gate | undefined =
     state.kind === 'signed-out'
@@ -644,8 +641,8 @@ export function App() {
           </span>
         </button>
 
-        {state.kind !== 'off' && (
-          <nav className="masthead-nav" aria-label="Account">
+        {state.kind !== 'off' && (state.kind !== 'ready' || !phone) && (
+          <nav className="masthead-nav" aria-label={state.kind === 'ready' ? 'Main' : 'Account'}>
             {state.kind === 'signed-out' && (
               <button type="button" className="button button-quiet" onClick={auth.signIn}>
                 Sign in
@@ -659,22 +656,20 @@ export function App() {
                     <button type="button" className="nav-link" aria-current={view === 'home' ? 'page' : undefined} onClick={() => go('home')}>
                       Home
                     </button>
-                    {ownPlan && (
-                      <button type="button" className="nav-link" aria-current={view === 'build' && plan.kind === 'ready' ? 'page' : undefined} onClick={() => pickFromBar('plan')}>
-                        Plan
-                      </button>
-                    )}
+                    <button type="button" className="nav-link" aria-current={view === 'build' && plan.kind === 'ready' ? 'page' : undefined} onClick={() => pickFromBar('plan')}>
+                      Plan
+                    </button>
                     <button type="button" className="nav-link" aria-current={view === 'runs' ? 'page' : undefined} onClick={() => go('runs')}>
-                      My runs
+                      Runs
                     </button>
                     <button type="button" className="nav-link" aria-current={view === 'account' ? 'page' : undefined} onClick={() => go('account')}>
                       Account
                     </button>
                   </>
                 )}
-                <button type="button" className="nav-link" onClick={auth.signOut}>
+                {state.kind !== 'ready' && <button type="button" className="nav-link" onClick={auth.signOut}>
                   Sign out
-                </button>
+                </button>}
               </>
             )}
           </nav>
@@ -780,7 +775,7 @@ export function App() {
               onOpenAccount={() => go('account')}
             />
           ) : (
-            <MyRuns units={units} onOpen={showRun} />
+            <MyRuns units={units} onOpen={showRun} onOpenPlan={ownPlan ? () => { openOwnPlan(); setPlanTabAsk(asked => ({ id: 'all', seq: (asked?.seq ?? 0) + 1 })) } : undefined} />
           ))}
 
         {view === 'account' && state.kind === 'ready' && (

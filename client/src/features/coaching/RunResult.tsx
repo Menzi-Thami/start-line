@@ -4,23 +4,26 @@ import { runTypeName } from './run-types'
 import type { ActivitySummary, CheckIn } from '../../lib/types'
 
 /** Imported metrics are resolved from the live activity list, never copied to a permanent manual entry. */
-export function RunResult({ entry, runs = [], units }: { entry: CheckIn; runs?: readonly ActivitySummary[]; units: Units }) {
+export function RunResult({ entry, runs = [], units, compact = false }: { entry: CheckIn; runs?: readonly ActivitySummary[]; units: Units; compact?: boolean }) {
   if (entry.status === 'Skipped') return null
   const imported = entry.activityId ? runs.find((r) => r.id === entry.activityId) : undefined
   const ownMetrics = entry.distanceKm != null || !!entry.duration
   const km = ownMetrics ? entry.distanceKm : imported?.distanceKm
   const seconds = ownMetrics ? (entry.duration ? parseTimeSpan(entry.duration) : null) : imported?.movingSeconds
   const actual = entry.actualSessionType ?? (entry.status === 'SwappedForEasy' ? 'Easy' : null)
+  const distance = km != null ? formatDistance(km, units) : entry.distanceUnreported ? 'Distance not recorded'
+    : entry.prescribedKm != null ? `Actual distance not entered; ${formatDistance(entry.prescribedKm, units)} prescribed at completion` : 'Distance not entered'
+  if (compact) {
+    const summary = km != null ? distance : entry.distanceUnreported ? 'Distance not recorded'
+      : entry.prescribedKm != null ? `${formatDistance(entry.prescribedKm, units)} prescribed` : 'Completed'
+    return <span className="run-result-line mono">{summary}{seconds != null ? ` · ${formatDuration(seconds)}` : ''}</span>
+  }
   return (
     <div className="run-result" aria-label={entry.isAdditional ? 'Additional run logged' : 'Completed run'}>
       <p className="wait-tip-label">{entry.isAdditional ? 'Additional run' : 'Completed'}</p>
       {actual && <p>{runTypeName(actual)}</p>}
       <p className="mono">
-        {km != null
-          ? formatDistance(km, units)
-          : entry.distanceUnreported
-            ? 'Distance not recorded'
-            : entry.prescribedKm != null ? `Actual distance not entered; ${formatDistance(entry.prescribedKm, units)} prescribed at completion` : 'Distance not entered'}
+        {distance}
         {seconds != null ? ` · ${formatDuration(seconds)}` : ' · Time not recorded'}
       </p>
       {km != null && km > 0 && seconds != null && seconds > 0 && <p className="mono">{formatPace(seconds / km, units)}</p>}

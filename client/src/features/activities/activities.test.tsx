@@ -1,3 +1,4 @@
+import { openDisclosure } from '../../test/user-navigation'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { zipSync } from 'fflate'
@@ -120,9 +121,10 @@ describe('my runs', () => {
   it('uploads a Garmin file and opens the run it read', async () => {
     const db = runsApi()
     const user = renderApp()
-    await user.click(await screen.findByRole('button', { name: 'My runs' }))
-    expect(await screen.findByText(/No runs yet/)).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Runs' }))
+    expect(await screen.findByText(/No imported runs yet/)).toBeInTheDocument()
 
+    await openDisclosure('Add runs from a file')
     await user.upload(screen.getByLabelText('Upload runs'), fitFile())
 
     expect(await screen.findByRole('heading', { name: 'Long run', level: 2 })).toBeInTheDocument()
@@ -136,16 +138,18 @@ describe('my runs', () => {
     runsApi([], ['Unreadable'])
     const user = renderApp('/?view=runs')
 
+    await openDisclosure('Add runs from a file')
     await user.upload(await screen.findByLabelText('Upload runs'), fitFile())
 
     expect(await screen.findByRole('alert')).toHaveTextContent('That isn’t a .fit file. Use Export Original.')
-    expect(screen.getByRole('heading', { name: 'My runs' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Runs' })).toBeInTheDocument()
   })
 
   it('takes several files at once and sums up what happened to each', async () => {
     const db = runsApi([], ['Imported', 'Skipped'])
     const user = renderApp('/?view=runs')
 
+    await openDisclosure('Add runs from a file')
     await user.upload(await screen.findByLabelText('Upload runs'), [fitFile(), new File([new Uint8Array(8)], 'ride.fit')])
 
     expect(await screen.findByText('1 run added.')).toBeInTheDocument()
@@ -161,6 +165,7 @@ describe('my runs', () => {
     const inner = zipSync({ 'a.fit': new Uint8Array(64).fill(1), 'b.fit': new Uint8Array(64).fill(2) })
     const exported = new File([zipSync({ 'DI_CONNECT/DI-Connect-Uploaded-Files/UploadedFiles_0-_Part1.zip': inner, 'summary.json': new Uint8Array(4) })], 'export.zip')
 
+    await openDisclosure('Add runs from a file')
     await user.upload(await screen.findByLabelText('Upload runs'), exported)
 
     expect(await screen.findByText('2 runs added.')).toBeInTheDocument()
@@ -297,7 +302,7 @@ describe('a run', () => {
     await user.click(await screen.findByRole('button', { name: 'Delete run' }))
     await user.click(screen.getByRole('button', { name: 'Yes, delete this run' }))
 
-    expect(await screen.findByText(/No runs yet/)).toBeInTheDocument()
+    expect(await screen.findByText(/No imported runs yet/)).toBeInTheDocument()
     expect(db.runs).toHaveLength(0)
   })
 

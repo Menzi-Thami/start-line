@@ -16,6 +16,7 @@ interface Props {
   runs?: readonly ActivitySummary[]
   done?: boolean
   completion?: boolean
+  compactActions?: boolean
   initialOpen?: boolean
   additional?: boolean
   initialActivityId?: string
@@ -37,6 +38,7 @@ export function CheckInCard({
   runs = [],
   done = false,
   completion = false,
+  compactActions = false,
   initialOpen = false,
   additional = false,
   onClose,
@@ -176,12 +178,12 @@ export function CheckInCard({
             </>
           ) : (
             <div className="submit-row">
-              <button type="button" className="button button-quiet check-in-open" onClick={() => start()}>
-                How did it go?
+              <button type="button" className={`button${compactActions ? ' button-primary' : ' button-quiet'} check-in-open`} onClick={() => start()}>
+                {compactActions ? 'Log this workout' : 'How did it go?'}
               </button>
-              <button type="button" className="link-button" onClick={() => start(true)}>
+              {!compactActions && <button type="button" className="link-button" onClick={() => start(true)}>
                 I ran something different
-              </button>
+              </button>}
             </div>
           )}
         </div>

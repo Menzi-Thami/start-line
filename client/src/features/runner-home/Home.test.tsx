@@ -1,3 +1,4 @@
+import { openDisclosure } from '../../test/user-navigation'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -36,13 +37,16 @@ const renderHome = (props: Partial<Parameters<typeof Home>[0]> = {}, { signIn = 
   const home = <Home runner={thandi} units="km" today="2026-10-23" current={null} runs={[]} {...handlers} {...props} />
   render(signIn ? <AuthContext.Provider value={signedIn}>{home}</AuthContext.Provider> : home)
   const user = userEvent.setup()
-  return { ...handlers, user, openTab: (name: 'Today' | 'Tools') => user.click(screen.getByRole('tab', { name })) }
+  return { ...handlers, user, openTab: async (name: 'Today' | 'Tools') => { const summary = screen.getByText(/^Running tools/, { selector: 'summary' }); if ((summary.closest('details')?.open ?? false) !== (name === 'Tools')) await user.click(summary) } }
 }
 
 const current = { id: 'plan-1', name: 'Spring 5K', inputs: {} as CurrentPlan['inputs'] }
 const withPlan = { current, initialPlan: { id: 'plan-1', plan: plan5k as unknown as TrainingPlan } }
 
-beforeEach(() => window.history.replaceState(null, '', '/?view=home'))
+beforeEach(() => {
+  window.history.replaceState(null, '', '/?view=home')
+  server.use(http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json({ id: current.id, plan: plan5k, coaching: [] })))
+})
 
 describe('Home', () => {
   it('shows strength-only training separately from running and never completes it from an uploaded run', () => {
@@ -81,7 +85,7 @@ describe('Home', () => {
   it('puts today before the countdown and groups the workout facts above its instructions', () => {
     renderHome({ ...withPlan, today: '2026-10-20' })
     const today = screen.getByRole('region', { name: 'Today' })
-    const race = screen.getByRole('region', { name: 'Parkrun PB' })
+    const race = screen.getByRole('button', { name: 'Open your training plan' })
     expect(today.compareDocumentPosition(race) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(today).getByText('Distance')).toBeInTheDocument()
     expect(within(today).getByText('Target pace')).toBeInTheDocument()
@@ -117,17 +121,14 @@ describe('Home', () => {
     expect(await within(running).findAllByText('5')).not.toHaveLength(0)
     expect(within(running).queryByRole('alert')).toBeNull()
   })
-  it('swipes between views without stealing gestures from calculator controls', async () => {
-    renderHome()
-    const panel = screen.getByRole('tabpanel', { name: 'Today' })
-    fireEvent.touchStart(panel, { touches: [{ clientX: 200, clientY: 100 }] })
-    fireEvent.touchEnd(panel, { changedTouches: [{ clientX: 80, clientY: 105 }] })
-    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')
-    await screen.findByRole('region', { name: 'Calculators' })
-    const control = screen.getByRole('button', { name: 'Race times' })
-    fireEvent.touchStart(control, { touches: [{ clientX: 80, clientY: 100 }] })
-    fireEvent.touchEnd(control, { changedTouches: [{ clientX: 200, clientY: 105 }] })
-    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')
+  it('keeps touch gestures on the current screen and tools behind an explicit choice', async () => {
+    const { openTab } = renderHome()
+    const home = document.querySelector('.home-focus')!
+    fireEvent.touchStart(home, { touches: [{ clientX: 200, clientY: 100 }] })
+    fireEvent.touchEnd(home, { changedTouches: [{ clientX: 80, clientY: 105 }] })
+    expect(screen.queryByRole('region', { name: 'Calculators' })).not.toBeInTheDocument()
+    await openTab('Tools')
+    expect(await screen.findByRole('region', { name: 'Calculators' })).toBeVisible()
   })
   it('greets the runner and, without a plan, offers to build one', async () => {
     const { user, onBuildPlan } = renderHome()
@@ -137,30 +138,25 @@ describe('Home', () => {
     expect(onBuildPlan).toHaveBeenCalled()
   })
 
-  it('opens on Today with the week and their progress in view, and the calculators a tab away', async () => {
+  it('opens with today and weekly progress, keeping insights and calculators closed', async () => {
     const { openTab } = renderHome()
 
-    expect(screen.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('tablist', { name: 'Home' })).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'This week' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Your running' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Personal bests' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Personal bests' })).not.toBeVisible()
     expect(screen.queryByRole('region', { name: 'Calculators' })).not.toBeInTheDocument()
 
     await openTab('Tools')
     expect(await screen.findByRole('region', { name: 'Calculators' })).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'This week' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'This week' })).toBeVisible()
   })
 
-  it('lists this week’s runs from the plan, ticking the ones already run', () => {
+  it('summarises the week without repeating the plan agenda on Home', () => {
     renderHome({ ...withPlan, runs: [run('2026-10-20', 6.5)] })
-
-    const week = screen.getByRole('list', { name: 'This week’s runs' })
-    const rows = within(week).getAllByRole('listitem').map((row) => row.textContent)
-    expect(rows).toHaveLength(4)
-    expect(rows[0]).toMatch(/Fartlek.*6.5 km, done/)
-    expect(rows.join(' ')).not.toMatch(/Strength/)
+    expect(screen.getByRole('region', { name: 'This week' })).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'This week’s runs' })).not.toBeInTheDocument()
   })
-
   it('puts the real race date, distance and plan phase in the race card', () => {
     renderHome(withPlan)
 
@@ -170,7 +166,7 @@ describe('Home', () => {
 
   it('opens the current plan from the race countdown without inventing a workout action', async () => {
     const { user, onOpenPlan } = renderHome(withPlan)
-    expect(screen.getByRole('region', { name: 'Parkrun PB' })).toHaveTextContent('51days to go')
+    expect(screen.getByRole('button', { name: 'Open your training plan' })).toHaveTextContent('51days to go')
     await user.click(screen.getByRole('button', { name: 'Open your training plan' }))
     expect(onOpenPlan).toHaveBeenCalledOnce()
   })
@@ -199,29 +195,27 @@ describe('Home', () => {
     window.history.replaceState(null, '', '/?view=home&tab=progress')
     renderHome()
 
-    expect(screen.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.queryByRole('tablist', { name: 'Home' })).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Your running' })).toBeInTheDocument()
   })
 
-  it('opens on the tab the address names', () => {
+  it('opens tools from an existing address link', async () => {
     window.history.replaceState(null, '', '/?view=home&tab=tools')
     renderHome()
 
-    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getByRole('region', { name: 'Calculators' })).toBeInTheDocument()
+    expect(screen.getByText(/^Running tools/, { selector: 'summary' }).closest('details')).toHaveAttribute('open')
+    expect(await screen.findByRole('region', { name: 'Calculators' })).toBeInTheDocument()
   })
 
-  it('moves between tabs with the arrow keys, like any tab list', async () => {
+  it('retains focus on the tools summary when closed', async () => {
     const { user } = renderHome()
-
-    await user.click(screen.getByRole('tab', { name: 'Today' }))
-    await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveFocus()
-    expect(screen.getByRole('tab', { name: 'Tools' })).toHaveAttribute('aria-selected', 'true')
-    await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Today' })).toHaveAttribute('aria-selected', 'true')
+    const tools = screen.getByText(/^Running tools/, { selector: 'summary' })
+    await user.click(tools)
+    expect(await screen.findByRole('region', { name: 'Calculators' })).toBeVisible()
+    await user.click(tools)
+    expect(tools).toHaveFocus()
+    expect(tools.closest('details')).not.toHaveAttribute('open')
   })
-
   it('shows their running this month, this year and week by week, from their uploads and ticked sessions', async () => {
     const log: LoggedRun[] = [
       { date: '2026-10-18', distanceKm: 42.2, source: 'Uploaded' },
@@ -236,6 +230,7 @@ describe('Home', () => {
     expect(within(running).getByText(/Totals include your saved running history/)).toBeInTheDocument()
     expect(within(running).getByText('64.2')).toBeInTheDocument()
     expect(within(running).getByText(/40.2 km \(335%\) more than 1 Sept–23 Sept/)).toBeInTheDocument()
+    await openDisclosure('Running insights')
     expect(screen.getByRole('table', { name: 'Weekly distance, last 12 weeks' })).toBeInTheDocument()
   })
 
@@ -267,7 +262,7 @@ describe('Home', () => {
     const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 6.8, 'Strava', 'Fartlek')] }, { signIn: true })
 
     const todayCard = screen.getByRole('region', { name: 'Today' })
-    const tick = await within(todayCard).findByRole('checkbox', { name: 'Complete' })
+    const tick = await within(todayCard).findByRole('button', { name: 'Log this workout' })
     // Strava's run alone doesn't make it done: that's the runner's tick.
     expect(todayCard.querySelector('.home-done-chip')).toBeNull()
     await user.click(tick)
@@ -300,6 +295,7 @@ describe('Home', () => {
   it('shows personal bests, each opening the run it came from', async () => {
     const { user, onOpenRun } = renderHome({ bests: [tenK] })
 
+    await openDisclosure('Running insights')
     const bests = screen.getByRole('region', { name: 'Personal bests' })
     expect(within(bests).getByText('54:18')).toBeInTheDocument()
     await user.click(within(bests).getByRole('button', { name: '18 Oct' }))
@@ -374,6 +370,7 @@ describe('the calculators', () => {
 it('acknowledges an unplanned Strava run and opens confirmation on its actual date', async () => {
   const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-19', 10, 'Strava')] }, { signIn: true })
   const running = screen.getByRole('region', { name: 'Your running' })
+  await openDisclosure(/^\d+ synced /)
   expect(await within(running).findByText(/Your Strava run has synced/)).toBeVisible()
   expect(within(running).queryByText(/Your first run starts/)).not.toBeInTheDocument()
   await user.click(await within(running).findByRole('button', { name: 'Log this run' }))

@@ -139,7 +139,7 @@ describe('a runner on an older notice', () => {
     const user = renderWith(<App />, signedIn)
 
     expect(await screen.findByRole('heading', { name: 'We’ve updated what we keep' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'My runs' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Runs' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Accept and carry on' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Please read and accept the updated notice to carry on.')
@@ -148,7 +148,7 @@ describe('a runner on an older notice', () => {
     await user.click(screen.getByRole('checkbox', { name: /I’ve read this/ }))
     await user.click(screen.getByRole('button', { name: 'Accept and carry on' }))
 
-    expect(await screen.findByRole('heading', { name: 'My runs' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Runs' })).toBeInTheDocument()
     expect(accepted).toEqual([{ heartRateConsent: false }])
   })
 

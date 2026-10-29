@@ -5062,7 +5062,7 @@ select.input option {
   right: 0;
   bottom: 0;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(var(--tab-count, 4), 1fr);
   padding: 6px var(--space-2) max(6px, env(safe-area-inset-bottom));
   background: rgb(10 10 11 / 0.92);
   backdrop-filter: blur(12px);
@@ -5076,8 +5076,8 @@ select.input option {
   position: absolute;
   z-index: -1;
   top: 6px;
-  left: calc(var(--space-2) + (100% - 2 * var(--space-2)) / 5 * var(--active-tab));
-  width: calc((100% - 2 * var(--space-2)) / 5);
+  left: calc(var(--space-2) + (100% - 2 * var(--space-2)) / var(--tab-count, 4) * var(--active-tab));
+  width: calc((100% - 2 * var(--space-2)) / var(--tab-count, 4));
   height: 44px;
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(215, 255, 62, 0.16), rgba(215, 255, 62, 0.045));

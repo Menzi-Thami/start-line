@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { RunsByDate } from '../../lib/plan-runs'
 import type { PlanWeek } from '../../lib/types'
@@ -13,6 +14,7 @@ interface Props {
   units: Units
   onSelectDate: (date: string, trigger: HTMLButtonElement) => void
   selectedDate?: string | null
+  renderSelectedDay?: () => ReactNode
   daySummaryId?: string
 }
 
@@ -27,7 +29,7 @@ const addDays = (iso: string, n: number) => {
  * done once its sessions are ticked; recorded activities have a separate marker. Today is in volt; rest days are dim. All from the plan
  * and the runner's own ticks and runs, never made up.
  */
-export function WeekGlance({ week, done, runs, additionalDates = [], activityDates = [], today, units, onSelectDate, selectedDate, daySummaryId }: Props) {
+export function WeekGlance({ week, done, runs, additionalDates = [], activityDates = [], today, units, onSelectDate, selectedDate, daySummaryId, renderSelectedDay }: Props) {
   const runSessions = week.sessions.filter((s) => s.type !== 'Strength')
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
@@ -42,7 +44,7 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
           <span className="field-help">{runSessions.length === 1 ? 'run' : 'runs'}</span>
         </p>
       </div>
-      <ol className="week-strip" onKeyDown={moveCalendarFocus}>
+      <ol className="week-strip week-agenda" onKeyDown={moveCalendarFocus}>
         {days.map((date) => {
           const sessions = week.sessions.filter((s) => s.date === date)
           const ran = runs?.get(date)?.some((r) => r.kind !== 'Other') ?? false
@@ -54,17 +56,20 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
               <button type="button" className="week-day-button" aria-expanded={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} aria-label={`${formatDate(date, 'long')}: ${sessions.length ? sessions.map(s => s.title).join(', ') : 'rest'}${state === 'done' ? ', done' : state === 'missed' ? ', no completion recorded' : ''}${recorded ? ', activity recorded' : ''}`} onClick={event => onSelectDate(date, event.currentTarget)}>
                 <span className="week-day-name">{formatDate(date, 'weekday').slice(0, 3)}</span>
                 <span className="week-day-dot mono">{Number(date.slice(8))}</span>
+                <span className="week-day-workout"><strong>{sessions.length ? sessions.map(session => session.title).join(' + ') : 'Rest day'}</strong><span className="field-help">{sessions.filter(session => session.distanceKm > 0).map(session => formatDistance(session.distanceKm, units)).join(' + ')}{recorded ? ' · Activity recorded' : state === 'done' ? ' · Complete' : state === 'missed' ? ' · Not logged' : ''}</span></span>
+                <span className="week-day-chevron" aria-hidden="true">{date === selectedDate ? '−' : '+'}</span>
                 <span className="visually-hidden">
                   {sessions.length === 0 ? ', rest' : `, ${sessions.map((s) => s.title).join(', ')}`}
                   {state === 'done' ? ', done' : ''}
                   {additional ? ', additional run logged' : ''}
                 </span>
               </button>
+              {date === selectedDate && renderSelectedDay?.()}
             </li>
           )
         })}
       </ol>
-      <p className="field-help calendar-day-key">Select a date to expand its planned and recorded sessions. An underline marks recorded activity.</p>
+      <p className="field-help calendar-day-key">Select a day for workout details and recorded activity.</p>
     </section>
   )
 }

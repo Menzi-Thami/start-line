@@ -70,7 +70,7 @@ describe('saved runs stay visible throughout the logging journey', () => {
     expect(within(allWeeks).getByRole('article', { name })).toBeVisible()
     const monthDay = within(allWeeks).getByRole('button', { name: new RegExp(`^${Number(date.slice(8))} October: .*1 additional run logged$`) })
     await user.click(monthDay)
-    const daySummary = await screen.findByRole('dialog', { name: formatDate(date, 'long') })
+    const daySummary = await screen.findByRole('region', { name: formatDate(date, 'long') })
     expect(within(daySummary).getByRole('article', { name })).toBeVisible()
     await user.click(within(daySummary).getByRole('button', { name: 'Close day' }))
     expect(monthDay).toHaveFocus()

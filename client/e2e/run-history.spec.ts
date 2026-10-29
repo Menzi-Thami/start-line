@@ -65,7 +65,7 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     const marker = month.getByRole('button', { name: new RegExp(`^${Number(date!.slice(8))} October: .*1 additional run logged$`) })
     await marker.focus()
     await page.keyboard.press('Enter')
-    const daySummary = page.getByRole('dialog', { name: formatDate(date!, 'long'), exact: true })
+    const daySummary = page.getByRole('region', { name: formatDate(date!, 'long'), exact: true })
     await expect(daySummary.getByRole('article', { name, exact: true })).toContainText('10 km · 1:00:00')
     await page.keyboard.press('Escape')
     await expect(marker).toBeFocused()

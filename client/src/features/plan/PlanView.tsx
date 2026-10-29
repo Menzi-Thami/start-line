@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { CalendarLinks } from '../../lib/calendar-links'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
@@ -110,9 +110,13 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
-  const [selectedDay, setSelectedDay] = useState<{ planKey: string; date: string } | null>(null)
+  const daySummaryId = useId()
+  const [selectedDay, setSelectedDay] = useState<{ planKey: string; date: string; tab: TabId; trigger: HTMLButtonElement } | null>(null)
   const selectedDate = selectedDay?.planKey === planKey ? selectedDay.date : null
-  const selectDate = (date: string) => setSelectedDay({ planKey, date })
+  const selectDate = (date: string, trigger: HTMLButtonElement) => {
+    trigger.focus({ preventScroll: true })
+    setSelectedDay(current => current?.planKey === planKey && current.date === date && current.tab === tab ? null : { planKey, date, tab, trigger })
+  }
   const closeDay = useCallback(() => setSelectedDay(null), [setSelectedDay])
   const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
   const runLogRef = useRef<HTMLDivElement>(null)
@@ -238,12 +242,13 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
   if (openTab && openTab.seq !== askedSeq) {
     setAskedSeq(openTab.seq)
     const asked = tabs.find((t) => t.id === openTab.id)
-    if (asked && asked.id !== tab) setTab(asked.id)
+    if (asked && asked.id !== tab) { setSelectedDay(null); setTab(asked.id) }
   }
 
   const showTab = (next: number, focus = false) => {
     const target = tabs[(next + tabs.length) % tabs.length]!
     if (target.id === tab) return
+    setSelectedDay(null)
     setDirection(next > index ? 'forward' : 'back')
     setTab(target.id)
     if (focus) tabRefs.current[tabs.indexOf(target)]?.focus()
@@ -282,6 +287,12 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
     hidden: tab !== id,
     className: `tab-panel${tab === id && direction ? ` slide-${direction}` : ''}`,
   })
+
+  const daySummary = (calendarTab: TabId) => selectedDay?.tab === calendarTab && selectedDate && (
+    <Suspense fallback={<p role="status">Opening day…</p>}>
+      <DaySummary key={`${planKey}|${selectedDate}`} id={daySummaryId} trigger={selectedDay.trigger} date={selectedDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} />
+    </Suspense>
+  )
 
   return (
     <section className={`plan${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
@@ -465,7 +476,8 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
                   onUseGoal={onUseGoal}
                 />
               )}
-              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} />
+              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'week' ? selectedDate : null} daySummaryId={daySummaryId} />
+              {daySummary('week')}
               <WeekDays week={shown.week} byZone={byZone} units={units} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} canCompleteRuns={canCompleteRuns} />
               <p className="field-help">
                 {coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Ticks are saved on this device.'}{' '}
@@ -478,7 +490,8 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
         </div>
 
         <div {...panel('all')}>
-          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} onSelectDate={selectDate} />
+          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} />
+          {daySummary('all')}
           <p className="tab-intro">{coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Tick sessions off as you go. Ticks are saved on this device only.'}</p>
           <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} canCompleteRuns={canCompleteRuns} />
         </div>
@@ -519,7 +532,6 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
           )}
         </div>
       </div>
-      {selectedDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary key={`${planKey}|${selectedDate}`} date={selectedDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} /></Suspense>}
     </section>
   )
 }

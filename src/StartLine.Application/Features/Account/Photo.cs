@@ -8,6 +8,12 @@ using ValidationException = StartLine.Application.Common.Exceptions.ValidationEx
 
 namespace StartLine.Application.Features.Account;
 
+/// <summary>Transport headroom for the existing 96 KB image cap, base64 and JSON encoding.</summary>
+public static class PhotoUpload
+{
+    public const int MaxRequestBytes = 192 * 1024;
+}
+
 /// <summary>The runner's picture as a data URL (<c>data:image/jpeg;base64,…</c>), ready for an img's src.</summary>
 public sealed record RunnerPhotoDto(string DataUrl)
 {

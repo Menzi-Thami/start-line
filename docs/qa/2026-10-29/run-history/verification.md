@@ -27,4 +27,6 @@ The wider review also found and fixed failed history requests masquerading as em
 
 Validation results and tested commit are recorded in the pull request after the required checks finish. This matrix is a set of concrete regression checks, not a claim that every possible state has been proven correct.
 
+The six focused desktop/phone browser journeys passed. Selected phone evidence shows the [saved rest-day run](rest-day-saved-phone.png) and [saved run beside the outstanding prescription](planned-day-saved-phone.png). Screenshots use synthetic activities and independently entered measurements.
+
 All SQL validation uses disposable local SQL and synthetic runner data. Browser account journeys use synthetic authentication and controlled API responses against actual React screens/hooks; the normal browser suite also uses the real local stateless API. No production database, live Strava account or real notifications are used. Live Entra authentication, physical iPhone/Android behavior and production push delivery remain separate checks.

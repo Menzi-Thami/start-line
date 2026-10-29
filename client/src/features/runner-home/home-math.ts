@@ -9,17 +9,20 @@ export interface Totals {
   km: number
   runs: number
   unknownRuns?: number
+  stravaKm?: number
 }
 
 /**
  * The runs between two dates, from the runner's kept log: sessions they ticked off, at the plan's distance, and runs they
- * uploaded. Never a Strava run: those stay 7 days, and so must anything worked out from them.
+ * uploaded, plus currently available Strava measurements resolved by the server without persisting derived totals.
  */
 function totalOf(runs: readonly LoggedRun[], from: string, to: string): Totals {
   const inRange = runs.filter((r) => r.date >= from && r.date <= to)
   const unknown = inRange.filter(r => r.distanceUnreported).length
+  const strava = inRange.filter(r => r.source === 'Strava')
   return {
     ...(unknown > 0 ? { unknownRuns: unknown } : {}),
+    ...(strava.length ? { stravaKm: round1(strava.reduce((sum, r) => sum + r.distanceKm, 0)) } : {}),
     km: round1(inRange.reduce((sum, r) => sum + r.distanceKm, 0)),
     runs: inRange.length,
   }
@@ -44,6 +47,8 @@ export interface TrainingTotals {
   /** Kilometres a week over the last four full weeks (Monday to Sunday), and the four before them. */
   weeklyAverageKm: number
   previousWeeklyAverageKm: number
+  weeklyUnknownRuns?: number
+  previousWeeklyUnknownRuns?: number
 }
 
 const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate()
@@ -67,6 +72,8 @@ export function trainingTotals(runs: readonly LoggedRun[], today: string): Train
     year: totalOf(runs, `${year}-01-01`, today),
     weeklyAverageKm: round1(last4.km / 4),
     previousWeeklyAverageKm: round1(before4.km / 4),
+    ...(last4.unknownRuns ? { weeklyUnknownRuns: last4.unknownRuns } : {}),
+    ...(before4.unknownRuns ? { previousWeeklyUnknownRuns: before4.unknownRuns } : {}),
   }
 }
 

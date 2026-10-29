@@ -3,13 +3,25 @@ import type { LoggedRun, TrainingPlan } from '../../lib/types'
 import { fuelling, heartRateZones, splits } from './calculator-math'
 import { change, todayInPlan, trainingTotals, weeklyBars } from './home-math'
 
-// From the runner's kept log: uploads at their own distance, ticked sessions at the plan's. Strava runs are never in it.
+// Current display rows are resolved and deduplicated by the server; Strava contributions remain temporary.
 const run = (date: string, distanceKm: number, source: LoggedRun['source'] = 'Uploaded'): LoggedRun => ({ date, distanceKm, source })
 
 // Friday 23 October 2026.
 const today = '2026-10-23'
 
 describe('training totals', () => {
+  it('includes Strava in month/year/current chart, while excluding this week from the weekly average', () => {
+    const log = [run('2026-10-22', 10, 'Strava')]
+    const totals = trainingTotals(log, today)
+    expect(totals.month).toEqual({ km: 10, runs: 1, stravaKm: 10 })
+    expect(totals.year).toEqual({ km: 10, runs: 1, stravaKm: 10 })
+    expect(totals.weeklyAverageKm).toBe(0)
+    expect(weeklyBars(log, today, null).at(-1)?.km).toBe(10)
+  })
+
+  it('includes an available older Strava run in the last four full weeks', () => {
+    expect(trainingTotals([run('2026-10-18', 10, 'Strava')], today).weeklyAverageKm).toBe(2.5)
+  })
   const runs = [
     run('2026-10-02', 10),
     run('2026-10-18', 42.2, 'Ticked'),

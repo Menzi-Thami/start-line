@@ -102,18 +102,31 @@ function useHomePlan(
 }
 
 /**
- * The runs behind "Your running": sessions ticked off, at the plan's distance, and uploads. Never Strava runs, which stay
- * 7 days. Null until it has loaded; loaded again when a tick or check-in changes it.
+ * Current totals: saved running history plus valid Strava measurements. Refreshed after logs, sync changes,
+ * returning to the app and cache expiry; never stored in a lasting client cache.
  */
-function useRunningLog(version: number): { log: LoggedRun[] | null; failed: boolean } {
+function useRunningLog(version: number, activitiesVersion: string): { log: LoggedRun[] | null; failed: boolean } {
   const auth = useAuth()
   const [log, setLog] = useState<LoggedRun[] | null>(null)
   const [failedVersion, setFailedVersion] = useState<number | null>(null)
+  const [refresh, setRefresh] = useState(0)
+  useEffect(() => {
+    const visible = () => { if (document.visibilityState === 'visible') setRefresh(value => value + 1) }
+    document.addEventListener('visibilitychange', visible)
+    return () => document.removeEventListener('visibilitychange', visible)
+  }, [])
+  useEffect(() => {
+    const now = Date.now()
+    const expiry = Math.min(...(log ?? []).flatMap(run => run.source === 'Strava' && run.cachedUntil ? [Date.parse(run.cachedUntil)] : []).filter(value => value > now))
+    if (!Number.isFinite(expiry)) return
+    const timer = window.setTimeout(() => { setLog(null); setRefresh(value => value + 1) }, Math.min(expiry - now + 50, 2_147_483_647))
+    return () => window.clearTimeout(timer)
+  }, [log])
   useEffect(() => {
     let cancelled = false
     auth
       .getToken()
-      .then((token) => (token ? api.me.running(token) : null))
+      .then((token) => (token ? api.me.running(token, true) : null))
       .then((runs) => {
         if (!cancelled) {
           if (runs) { setLog(runs); setFailedVersion(null) }
@@ -124,7 +137,7 @@ function useRunningLog(version: number): { log: LoggedRun[] | null; failed: bool
     return () => {
       cancelled = true
     }
-  }, [auth, version])
+  }, [auth, version, activitiesVersion, refresh])
   return { log, failed: failedVersion === version }
 }
 
@@ -430,7 +443,8 @@ export function Home({
   // A tick or check-in made here changes the totals, so they're fetched again after each.
   const [logVersion, setLogVersion] = useState(0)
   const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
-  const { log, failed: logFailed } = useRunningLog(logVersion)
+  const activitiesVersion = runs.map(run => `${run.id}|${run.localDate}|${run.distanceKm}|${run.kind}|${run.source.kind}|${run.source.cachedUntil ?? ''}`).sort().join(';')
+  const { log, failed: logFailed } = useRunningLog(logVersion, activitiesVersion)
   const coach: SessionCoach | undefined = checkIns.ready
     ? {
         today,
@@ -629,10 +643,10 @@ export function Home({
             Your running
           </h2>
           {current && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
-          {pendingSyncedRuns.length > 0 && <div className="callout"><p>Your Strava run has synced. Confirm how it fits your plan to add a saved training entry.</p>
+          {pendingSyncedRuns.length > 0 && <div className="callout"><p>Your Strava run has synced and counts automatically in your running totals. Log it to say how it fits your plan.</p>
             <ul>{pendingSyncedRuns.map(run => <li key={run.id}>{formatDate(run.localDate)} · {formatDistance(run.distanceKm, units)} from Strava{' '}
               {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}
-            </li>)}</ul><p className="field-help">Synced details are temporary. Enter your own distance and time for lasting distance totals, or link the run to record completion without copying its metrics.</p></div>}
+            </li>)}</ul><p className="field-help">Logging adds your effort and feedback to the plan. You do not need to enter the distance again for it to count here.</p></div>}
           {requestedRun && plan && coach && <RunLog key={requestedRun.id} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} />}
           {coach && checkIns.entries.some(c => c.isAdditional) && <section aria-label="Recently logged runs">
             <h3>Recently logged runs</h3>
@@ -650,25 +664,28 @@ export function Home({
             <>
               <div className="home-tiles">
                 <Tile label="This month" value={totals.month.km === 0 && totals.month.unknownRuns ? '—' : amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} ${totals.month.runs === 1 ? 'run' : 'runs'}`}>
-                  <ChangeLine
+                  {totals.month.stravaKm != null && <p className="field-help">{formatDistance(totals.month.stravaKm, units)} from Strava</p>}
+                  {totals.month.unknownRuns || totals.previousMonth.unknownRuns ? <p className="field-help">Comparison unavailable while distances are missing.</p> : <ChangeLine
                     value={change(totals.month.km, totals.previousMonth.km)}
                     units={units}
                     against={`${formatDate(totals.previousMonth.from, 'dayMonth')}–${formatDate(totals.previousMonth.to, 'dayMonth')}`}
-                  />
+                  />}
                 </Tile>
-                <Tile label="This year" value={totals.year.km === 0 && totals.year.unknownRuns ? '—' : amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} ${totals.year.runs === 1 ? 'run' : 'runs'}`} />
-                <Tile label="Weekly average" value={amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
-                  <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />
+                <Tile label="This year" value={totals.year.km === 0 && totals.year.unknownRuns ? '—' : amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} ${totals.year.runs === 1 ? 'run' : 'runs'}`}>
+                  {totals.year.stravaKm != null && <p className="field-help">{formatDistance(totals.year.stravaKm, units)} from Strava</p>}
+                </Tile>
+                <Tile label="Weekly average" value={totals.weeklyAverageKm === 0 && totals.weeklyUnknownRuns ? '—' : amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
+                  {totals.weeklyUnknownRuns || totals.previousWeeklyUnknownRuns ? <p className="field-help">Comparison unavailable while distances are missing.</p> : <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />}
                 </Tile>
               </div>
               {log.length === 0 && pendingSyncedRuns.length === 0 && <div className="home-data-state"><p>Your first run starts the story. Upload a run or tick a completed session in your plan to build your totals.</p><button type="button" className="link-button" onClick={onOpenRuns}>Add your runs →</button></div>}
             </>
           )}
           <p className="field-help">
-            Saved totals use your own distance entries, uploaded files and plain completed sessions at their prescribed distance.
-            Runs logged without distance count as runs; their distance stays unrecorded. The weekly average excludes this week.
-            {totals.month.unknownRuns ? ` ${totals.month.unknownRuns} runs this month have no saved distance and are excluded from kilometre totals.` : ''}
-            {fromStrava && ' Linked Strava metrics stay in their temporary cache; they are not copied into your saved totals.'}
+            Totals include your saved running history and available Strava runs automatically, counting each associated run once.
+            The weekly average excludes this week.
+            {totals.month.unknownRuns ? ` ${totals.month.unknownRuns} ${totals.month.unknownRuns === 1 ? 'run has' : 'runs have'} no available distance and ${totals.month.unknownRuns === 1 ? 'is' : 'are'} excluded from kilometre totals.` : ''}
+            {(fromStrava || log?.some(run => run.source === 'Strava')) && ' Strava contributions update with your connection and are removed if the imported run is deleted or no longer available. Your own saved distances remain.'}
           </p>
         </section>
 

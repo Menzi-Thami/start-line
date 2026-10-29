@@ -7,6 +7,6 @@ export function horizontalSwipe(start: { x: number; y: number }, end: { x: numbe
 }
 /** Native controls and horizontally scrollable content keep their own touch gestures. */
 export function allowsSwipe(target: EventTarget | null): boolean {
-  return !(target instanceof Element && target.closest('button, a, input, select, textarea, summary, [contenteditable], [role="slider"], .plan-calendar, .home-chart'))
+  return !(target instanceof Element && target.closest('button, a, input, select, textarea, summary, dialog, [contenteditable], [role="slider"], .week-strip, .plan-calendar, .home-chart'))
 }
 

@@ -6,7 +6,7 @@ Taperday keeps its Night run identity: near-black surfaces, volt actions, the ta
 
 - Desktop pairs the greeting with a real race countdown, places today's session beside weekly progress, and gives running history and records their own columns. Content stays bounded on ultrawide screens.
 - Phones stack the race and daily session above supporting details. The existing mobile dock keeps its sliding selection and safe-area spacing.
-- Calendar session days support Left/Right and Home/End. Selecting a session opens its week and moves focus to that week's summary.
+- Calendar dates support arrow keys and Home/End. Every date, including rest days, opens a responsive planned/recorded day summary and returns focus on close. See [calendar day summaries](../../calendar-day-summary.md).
 - Weekly-volume charts support touch selection, keyboard inspection and Escape dismissal, with announced week/distance values and the existing accessible data table.
 - Home and plan swipes leave native controls, editable content, calendars and charts alone. Cancelled and multi-touch starts do not navigate.
 - Scroll progress, back-to-top, page transitions, card feedback and loading skeletons respect reduced motion. Back-to-top returns keyboard focus to navigation.

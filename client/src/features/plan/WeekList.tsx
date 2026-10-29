@@ -57,7 +57,7 @@ function RunMark({ run, units, unplanned, onOpenRun, logged = false }: { run: Ac
   )
 }
 
-function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns, canCompleteRuns = true }: {
+export function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns, canCompleteRuns = true }: {
   session: Session
   pace: PaceZoneRange | undefined
   units: Units

@@ -17,3 +17,7 @@ Logging cannot silently accept a coaching change. The proposal endpoint builds a
 Run stickers render entirely on the device. Use actual distance/duration only, calculate pace only when both are known, and keep unknown values visibly unknown. Choose Portrait, Horizontal card or Horizontal transparent. All layouts include the same actual metrics, date, run type and source, with variant-specific PNG filenames. Horizontal transparent draws text and branding without a card fill for photo overlays; View full size opens a larger preview. The card PNGs have transparent margins and contains no account name, GPS route or account/calendar secret. Strava stickers identify Strava as the source. File sharing and image copying are user-triggered; Save PNG is the fallback when native sharing or clipboard support is unavailable. Physical-device Instagram behavior must be verified separately.
 
 The `ActualRunLogs` migration adds nullable actual-type/activity-link fields, two flags with backward-compatible defaults, and filtered unique indexes. It does not rewrite generated plans. Do not downgrade a database containing additional entries without reviewing their preservation: the older uniqueness constraint cannot represent multiple entries for one date/type.
+
+## Calendar day view
+
+Select a date in This week or All weeks to open its [day summary](calendar-day-summary.md). The prescription and actual runs stay separate, with the same logging, replacement, editing and sharing flows on that date. Imported runs appear automatically, even on rest days.

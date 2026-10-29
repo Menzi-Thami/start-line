@@ -70,7 +70,10 @@ describe('saved runs stay visible throughout the logging journey', () => {
     expect(within(allWeeks).getByRole('article', { name })).toBeVisible()
     const monthDay = within(allWeeks).getByRole('button', { name: new RegExp(`^${Number(date.slice(8))} October: .*1 additional run logged$`) })
     await user.click(monthDay)
-    expect(document.querySelector('#plan-week-1 summary')).toHaveFocus()
+    const daySummary = await screen.findByRole('dialog', { name: formatDate(date, 'long') })
+    expect(within(daySummary).getByRole('article', { name })).toBeVisible()
+    await user.click(within(daySummary).getByRole('button', { name: 'Close day' }))
+    expect(monthDay).toHaveFocus()
 
     await user.click(screen.getByRole('button', { name: 'Return home' }))
     expect(await screen.findByRole('article', { name })).toBeVisible()
@@ -164,7 +167,7 @@ describe('saved runs stay visible throughout the logging journey', () => {
     expect(cards[1]).toHaveTextContent('Distance not recorded · 42:00')
     expect(within(week).queryByText('Unplanned run · 5 km')).not.toBeInTheDocument()
     await user.click(screen.getByRole('tab', { name: 'All weeks' }))
-    expect(screen.getByRole('button', { name: '14 October: rest, 2 additional runs logged' })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^14 October: rest.*2 additional runs logged$/ })).toBeVisible()
   })
 
   it('does not remove a saved run when its delete request fails', async () => {

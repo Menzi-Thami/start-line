@@ -1,4 +1,4 @@
-import { formatDistance, formatDuration, parseTimeSpan, type Units } from '../../lib/format'
+import { formatDistance, formatDuration, formatPace, parseTimeSpan, type Units } from '../../lib/format'
 import { RunSticker } from '../sharing/RunSticker'
 import { runTypeName } from './run-types'
 import type { ActivitySummary, CheckIn } from '../../lib/types'
@@ -23,6 +23,7 @@ export function RunResult({ entry, runs = [], units }: { entry: CheckIn; runs?: 
             : 'Distance not entered; planned distance used'}
         {seconds != null ? ` · ${formatDuration(seconds)}` : ' · Time not recorded'}
       </p>
+      {km != null && km > 0 && seconds != null && seconds > 0 && <p className="mono">{formatPace(seconds / km, units)}</p>}
       <p className="field-help">
         {ownMetrics ? 'Manually logged' : imported
           ? imported.source.kind === 'Strava'

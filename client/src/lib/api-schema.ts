@@ -216,7 +216,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    includeSynced?: boolean;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -2535,9 +2537,11 @@ export interface components {
             source: components["schemas"]["LoggedRunSource"];
             /** @default false */
             distanceUnreported: boolean;
+            /** Format: date-time */
+            cachedUntil?: null | string;
         };
         /** @enum {unknown} */
-        LoggedRunSource: "Ticked" | "Uploaded";
+        LoggedRunSource: "Ticked" | "Uploaded" | "Strava";
         OutlookReasonDto: {
             code: string;
             message: string;

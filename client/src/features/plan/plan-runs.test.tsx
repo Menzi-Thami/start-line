@@ -1,3 +1,4 @@
+import { openWeekDay } from '../../test/user-navigation'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -44,27 +45,35 @@ describe('the plan beside what was run', () => {
     const onOpenRun = vi.fn()
     show({ today: '2026-10-18', runs, onOpenRun })
 
-    const hills = screen.getByRole('button', { name: 'Open your run on Tuesday 13 October: Ran 5.6 km' })
-    await userEvent.click(hills)
+    let day = await openWeekDay('2026-10-13')
+    const hills = within(day).getByRole('article', { name: 'Recorded run: 5.6 km' })
+    await userEvent.click(within(hills).getByRole('button', { name: 'View run' }))
     expect(onOpenRun).toHaveBeenCalledWith('hills')
 
-    // Two runs on the long-run day: one mark each, in the order they were run.
-    const sunday = screen.getAllByRole('button', { name: /Open your run on Sunday 18 October/ })
-    expect(sunday.map((b) => b.textContent)).toEqual(['Ran 6.2 km', 'Ran 2 km'])
+    // Both runs on the same day remain distinct, in their original order.
+    day = await openWeekDay('2026-10-18')
+    const sunday = within(day).getAllByRole('article', { name: /^Recorded run:/ })
+    expect(sunday.map(card => card.getAttribute('aria-label'))).toEqual(['Recorded run: 6.2 km', 'Recorded run: 2 km'])
   })
 
-  it('shows runs on days without a planned run as unplanned, strength days included', () => {
+  it('shows running on rest and strength days without completing their prescriptions', async () => {
     show({ today: '2026-10-18', runs, onOpenRun: () => {} })
-    expect(screen.getByRole('button', { name: 'Open your run on Wednesday 14 October: Unplanned run · 4 km' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Open your run on Monday 12 October: Unplanned run · 3 km' })).toBeInTheDocument()
+    let day = await openWeekDay('2026-10-14')
+    expect(within(day).getByRole('article', { name: 'Recorded run: 4 km' })).toBeVisible()
+    expect(within(day).getByRole('region', { name: 'Planned' })).toHaveTextContent('Rest day')
+    day = await openWeekDay('2026-10-12')
+    expect(within(day).getByRole('article', { name: 'Recorded run: 3 km' })).toBeVisible()
+    expect(within(day).getByRole('region', { name: 'Planned' })).toHaveTextContent('No completion recorded')
   })
 
-  it('shows the marks as plain text, in the runner’s units, when runs can’t be opened', () => {
+  it('shows recorded measurements in the runner’s units without an unavailable open action', async () => {
     show({ today: '2026-10-18', runs, units: 'mi' })
     expect(screen.queryByRole('button', { name: /open your run/i })).not.toBeInTheDocument()
-    const thisWeek = screen.getByRole('tabpanel', { name: 'This week' })
-    expect(within(thisWeek).getByText('Ran 3.5 mi')).toBeInTheDocument()
-    expect(within(thisWeek).getByText('Unplanned run · 2.5 mi')).toBeInTheDocument()
+    let day = await openWeekDay('2026-10-13')
+    expect(within(day).getByRole('article', { name: 'Recorded run: 3.5 mi' })).toBeVisible()
+    expect(within(day).queryByRole('button', { name: 'View run' })).not.toBeInTheDocument()
+    day = await openWeekDay('2026-10-14')
+    expect(within(day).getByRole('article', { name: 'Recorded run: 2.5 mi' })).toBeVisible()
   })
 
   it('puts kilometres run beside the plan for every week so far, in words', async () => {

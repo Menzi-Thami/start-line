@@ -12,7 +12,7 @@ const view = () =>
 const layOut = (list: HTMLElement) => {
   const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')]
   vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 360, width: 360 } as DOMRect)
-  tabs.forEach((tab, i) => vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue({ left: i * 100, right: i * 100 + 90, width: 90 } as DOMRect))
+  tabs.forEach((tab, i) => vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue({ left: i * 200, right: i * 200 + 90, width: 90 } as DOMRect))
   Object.defineProperty(list, 'clientWidth', { configurable: true, value: 360 })
   Object.defineProperty(list, 'scrollWidth', { configurable: true, value: 500 })
 }
@@ -42,7 +42,7 @@ describe('the plan’s tab row on a narrow screen', () => {
     view()
     layOut(screen.getByRole('tablist', { name: 'Your plan' }))
 
-    await userEvent.setup().click(screen.getByRole('tab', { name: 'All weeks' }))
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Calendar' }))
 
     expect(scrollBy).not.toHaveBeenCalled()
   })

@@ -180,4 +180,11 @@ describe('calendar day summaries', () => {
     fireEvent.keyDown(screen.getByRole('region', { name: formatDate(date, 'long') }), { key: 'Escape' })
     expect(close).toHaveBeenCalledOnce()
   })
+
+  it('lets an outside control act before dismissing the inline day', async () => {
+    const order: string[] = []
+    render(<><button onClick={() => order.push('action')}>Switch view</button><View close={() => order.push('dismiss')} /></>)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Switch view' }))
+    expect(order).toEqual(['action', 'dismiss'])
+  })
 })

@@ -12,6 +12,17 @@ const uploaded = { id: 'extra-run', localDate: strength.date, kind: 'Run', dista
 const dayState = () => screen.getByText(/, Strength & mobility/).closest('li')!
 
 describe('strength stays separate from running', () => {
+  it('moves down one agenda day and leaves opened-day controls alone', () => {
+    render(<WeekGlance week={week} onSelectDate={vi.fn()} done={new Set()} today="2026-10-18" units="km" selectedDate="2026-10-12" renderSelectedDay={() => <button>Log this workout</button>} />)
+    const dates = screen.getAllByRole('button').filter(button => button.classList.contains('week-day-button'))
+    dates[0]!.focus()
+    fireEvent.keyDown(dates[0]!, { key: 'ArrowDown' })
+    expect(dates[1]).toHaveFocus()
+    const action = screen.getByRole('button', { name: 'Log this workout' })
+    action.focus()
+    expect(fireEvent.keyDown(action, { key: 'ArrowRight' })).toBe(true)
+    expect(action).toHaveFocus()
+  })
   it('opens rest days by date and supports keyboard movement across the week', () => {
     const select = vi.fn()
     render(<WeekGlance week={week} onSelectDate={select} done={new Set()} today="2026-10-18" units="km" />)

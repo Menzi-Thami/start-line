@@ -13,6 +13,7 @@ type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] 
 interface Props {
   units: Units
   onOpen: (id: string, uploaded?: Activity) => void
+  onOpenPlan?: () => void
 }
 
 /** Upload runs from a Garmin watch (one, a few, or a whole account export), and every run uploaded so far, newest first. */
@@ -39,7 +40,7 @@ function inRange(runs: readonly ActivitySummary[], range: Range): readonly Activ
   return runs.filter((r) => r.localDate >= from && r.localDate <= today)
 }
 
-export function MyRuns({ units, onOpen }: Props) {
+export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
   const auth = useAuth()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [range, setRange] = useState<Range>('all')
@@ -107,11 +108,12 @@ export function MyRuns({ units, onOpen }: Props) {
   return (
     <section className="section" aria-labelledby="my-runs-title" style={{ marginTop: 0 }}>
       <h2 className="plan-title" id="my-runs-title">
-        My runs
+        Runs
       </h2>
 
-      <div className="panel upload">
-        <h3>Add runs from a file</h3>
+      {onOpenPlan && <button type="button" className="link-button" onClick={onOpenPlan}>Your training log →</button>}
+
+      <details className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
         <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Runs you add this way stay on Taperday for good. How to get the file:</p>
         <ExportGuide />
         <label className={running ? 'button button-primary is-busy' : 'button button-primary'}>
@@ -138,7 +140,7 @@ export function MyRuns({ units, onOpen }: Props) {
         <p className="field-help" style={{ marginTop: 'var(--space-3)' }}>
           Runs already added are skipped. Your route is never kept.
         </p>
-      </div>
+      </details>
 
       {list.kind === 'loading' && (
         <div className="choice-list" aria-busy="true" style={{ marginTop: 'var(--space-5)' }}>
@@ -169,7 +171,7 @@ export function MyRuns({ units, onOpen }: Props) {
 
       {list.kind === 'ready' && list.runs.length === 0 && (
         <div className="empty" style={{ marginTop: 'var(--space-5)' }}>
-          <p>No runs yet. Upload one and you’ll see your splits, best efforts and how it matched your plan.</p>
+          <p>No imported runs yet. Upload a file to see splits, best efforts and how it matched your plan.</p>
         </div>
       )}
 
@@ -192,8 +194,8 @@ export function MyRuns({ units, onOpen }: Props) {
       {list.kind === 'ready' && list.runs.length > 0 && (
         <ul className="weeks runs" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-4)' }}>
           {inRange(list.runs, range).map((run) => (
-            <li className="week saved-plan" key={run.id}>
-              <div>
+            <li className="run-feed-row" key={run.id}>
+              <button type="button" className="run-feed-open" aria-label={`Open the run on ${formatDate(run.localDate, 'long')}`} onClick={() => onOpen(run.id)}><span>
                 <span className="week-name">{run.plannedTitle ?? KIND_LABEL[run.kind]}</span>
                 {run.source.kind === 'Strava' && <span className="tag">From Strava</span>}
                 <br />
@@ -201,17 +203,8 @@ export function MyRuns({ units, onOpen }: Props) {
                   {formatDate(run.localDate, 'short')} · {formatDistance(run.distanceKm, units)} · {formatDuration(run.movingSeconds)} ·{' '}
                   {formatPace(run.paceSecondsPerKm, units)}
                 </span>
-              </div>
-              <div className="saved-plan-actions">
-                <button
-                  type="button"
-                  className="button"
-                  aria-label={`Open the run on ${formatDate(run.localDate, 'long')}`}
-                  onClick={() => onOpen(run.id)}
-                >
-                  Open
-                </button>
-              </div>
+              </span>
+              <span aria-hidden="true" className="run-feed-arrow">›</span></button>
             </li>
           ))}
         </ul>

@@ -8,6 +8,7 @@ import { PoweredByStrava, ViewOnStrava } from '../sync/StravaBrand'
 
 interface Props {
   plan: TrainingPlan
+  showVolumeChart?: boolean
   units: Units
   today: string
   currentWeek: number | null
@@ -155,7 +156,7 @@ function trendSentence(trend: ReturnType<typeof easyTrend>, units: Units): strin
  * the easy-run trend, weekly distance and personal bests. Built on the runs the plan view already has, so a synced
  * run appears here the moment the list refreshes.
  */
-export function Overview({ plan, units, today, currentWeek, week, runs, bests, strava, onOpenRun, onOpenAccount, onOpenRuns }: Props) {
+export function Overview({ plan, showVolumeChart = true, units, today, currentWeek, week, runs, bests, strava, onOpenRun, onOpenAccount, onOpenRuns }: Props) {
   const byDate = runsByDate(runs)
   const soFar = week ? weekSoFar(week, runs, byDate) : null
   const kept = adherence(plan, byDate, today)
@@ -289,10 +290,10 @@ export function Overview({ plan, units, today, currentWeek, week, runs, bests, s
         )}
       </section>
 
-      <section className="section overview-section" aria-labelledby="overview-volume">
+      {showVolumeChart && <section className="section overview-section" aria-labelledby="overview-volume">
         <h3 id="overview-volume">Weekly distance, ran against planned</h3>
         <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
-      </section>
+      </section>}
 
       <section className="section overview-section" aria-labelledby="overview-bests">
         <h3 id="overview-bests">Personal bests</h3>

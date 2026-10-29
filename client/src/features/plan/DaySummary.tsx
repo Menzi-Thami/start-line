@@ -60,14 +60,16 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
         const restoreFocus = panelRef.current?.contains(document.activeElement) || document.activeElement === document.body
         onClose()
         if (restoreFocus && trigger?.isConnected && !trigger.closest('[hidden]')) trigger.focus({ preventScroll: true })
-      } else if (event.target instanceof Element && !panelRef.current?.contains(event.target) && !event.target.closest('.week-day-button, .plan-calendar-day')) {
+      } else if (event.target instanceof Element && !event.composedPath().includes(panelRef.current!) && !event.target.closest('.week-day-button, .plan-calendar-day')) {
         onClose()
       }
     }
-    document.addEventListener('pointerdown', dismiss)
+    // Dismiss after the target's action. Removing an inline panel on pointerdown can move that target before click.
+    // The original event path also keeps Save inside the panel when its form disappears after submitting.
+    document.addEventListener('click', dismiss)
     document.addEventListener('keydown', dismiss)
     return () => {
-      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('click', dismiss)
       document.removeEventListener('keydown', dismiss)
     }
   }, [onClose, trigger])
@@ -84,7 +86,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
   return (
     <section id={panelId} ref={panelRef} className="day-summary" aria-labelledby={`${id}-title`}>
       <div className="day-summary-head">
-        <h3 id={`${id}-title`} ref={headingRef} tabIndex={-1}>{formatDate(date, 'long')}</h3>
+        <h3 id={`${id}-title`} ref={headingRef} tabIndex={-1} aria-label={formatDate(date, 'long')}>{formatDate(date, 'weekday')} · {formatDate(date, 'dayMonth')}</h3>
         <button type="button" className="day-summary-close" aria-label="Close day" onClick={() => close()}>×</button>
       </div>
       <div className="day-summary-columns">
@@ -101,7 +103,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
                 <p className="mono">{formatDistance(session.distanceKm, units)}{pace ? ` · ${formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}` : ''}</p>
                 <p className="day-summary-status">{!historyReady ? 'Completion history unavailable' : entry?.status === 'Skipped' ? 'Skipped' : complete ? 'Completed' : future ? 'Upcoming' : date === today ? 'Scheduled today' : 'No completion recorded'}</p>
                 <details className="session-more"><summary>How to run it</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
-                {historyReady && coach && (!entry || entry.status === 'Skipped') && session.type !== 'Race' && <CheckInCard session={session} coach={coach} runs={dayRuns} completion done={complete} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}
+                {historyReady && coach && (!entry || entry.status === 'Skipped') && session.type !== 'Race' && <CheckInCard session={session} coach={coach} runs={dayRuns} completion compactActions done={complete} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}
                 {historyReady && !coach && session.type !== 'Race' && !future && <label className="session-done"><input type="checkbox" checked={complete} onChange={event => onDoneChange(current => withSessionDone(current, session, event.target.checked))} /> Complete on this device</label>}
               </>}
             </article>
@@ -115,7 +117,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
           {future ? <p className="field-help">This date hasn’t arrived yet. Completed sessions will appear here when recorded.</p> : <>
             {historyReady && coach && entries.map(entry => <div key={entry.id ?? `${entry.date}|${entry.sessionType}`} className="day-summary-saved">
               {entry.isAdditional ? <AdditionalRun entry={entry} coach={coach} runs={dayRuns} onOpenRun={onOpenRun ? openRun : undefined} /> : <>
-                <CheckInCard key={entry.updatedAt} session={savedSession(entry)} coach={{ ...coach, get: () => entry }} runs={dayRuns} completion done onDone={value => onDoneChange(current => withSessionDone(current, savedSession(entry), value))} />
+                <CheckInCard key={entry.updatedAt} session={savedSession(entry)} coach={{ ...coach, get: () => entry }} runs={dayRuns} done onDone={value => onDoneChange(current => withSessionDone(current, savedSession(entry), value))} />
                 {onOpenRun && entry.activityId && dayRuns.some(run => run.id === entry.activityId) && <button type="button" className="link-button" onClick={() => openRun(entry.activityId!)}>View imported run</button>}
               </>}
               {entry.note && <p className="field-help">Your note: {entry.note}</p>}
@@ -133,7 +135,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
             </article>)}
             {historyReady && deviceRuns.map(session => <div key={sessionKey(session)} className="day-summary-card"><h5>{session.title} completed</h5><p className="field-help">Completed on this device. Actual distance and time were not recorded.</p></div>)}
             {completedStrength.map(session => <div key={sessionKey(session)} className="day-summary-card"><h5>{session.title} completed</h5><p className="field-help">Strength completion is saved on this device.</p></div>)}
-            {historyReady && !importsUnavailable && entries.length === 0 && unlinked.length === 0 && deviceRuns.length === 0 && completedStrength.length === 0 && <div className="day-summary-empty"><p>No activity recorded for this date.</p><p className="field-help">A blank day means nothing has been recorded here; it doesn’t tell us whether you trained.</p></div>}
+            {historyReady && !importsUnavailable && entries.length === 0 && unlinked.length === 0 && deviceRuns.length === 0 && completedStrength.length === 0 && <div className="day-summary-empty"><p>No activity recorded for this date.</p></div>}
           </>}
           {historyReady && coach && inPlan && !future && <div ref={logRef}><RunLog key={requestedRun?.id ?? 'manual'} plan={plan} coach={coach} runs={dayRuns} fixedDate={date} initialRun={requestedRun} onClose={() => { setRequestedRun(undefined); headingRef.current?.focus({ preventScroll: true }) }} showEntries={false} /></div>}
           {!coach && historyReady && <p className="field-help">{runs?.length ? 'Open your own saved plan to log or edit runs.' : 'On a shared plan, completion ticks stay on this device. Sign in and save your own plan to keep a run log.'}</p>}

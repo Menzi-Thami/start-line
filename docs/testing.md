@@ -35,6 +35,14 @@ The script checks backend formatting, a strict Release build, all backend tests,
 
 For a focused investigation, run the relevant tests first, then the complete checks before merge. A focused pass is not evidence that the full suite passed. Record the tested commit, results, any skipped checks, and device/authentication limitations in the pull request. Do not merge with unexplained failures.
 
+## Verify the whole data journey
+
+For changes to saved running history, asserting that Save sends the right request is insufficient. Verify that the entry remains visible immediately after saving, on its actual calendar date, after navigating away and back, and after a fresh load. Cover rest days, strength days, prescribed-running days, additional runs versus replacements, multiple entries on one date, manual distance/time, time-only logs, uploads, linked Strava activities, and imported cache expiry. Check that the original prescription remains identifiable and that saved totals count each associated run once.
+
+Failures need separate coverage: a failed load must not become empty history; a failed save or delete must retain the form or saved entry; retry and double-clicking must not duplicate it. Late refresh responses must not undo a successful edit or deletion. Account changes must not reveal another plan's entries.
+
+`client/src/features/coaching/RunVisibility.test.tsx` drives actual Home/Plan screens with the real check-in hook and controlled API responses. `useCheckIns.test.tsx` covers refresh races and account/plan boundaries. `client/e2e/run-history.spec.ts` repeats saved-run visibility journeys in a real browser, including keyboard calendar navigation, reduced motion, reload and phone/tablet/desktop/ultrawide widths. These browser fixtures use synthetic authentication and API responses; they do not establish live Entra or production SQL behavior. Their Vite entry under `client/e2e/fixtures/` is test-only and excluded from the production build. The SQL integration suite separately checks API persistence, ownership and imported-run associations against disposable local SQL.
+
 ## Browser and integration boundaries
 
 - The browser suite runs a local production frontend and local API. Its stateless plan-generation journeys do not need a live database; the E2E API environment skips startup migrations.

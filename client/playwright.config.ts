@@ -34,6 +34,14 @@ export default defineConfig({
   ],
   webServer: [
     {
+      // Account run-history journeys use actual React screens and hooks with synthetic API responses.
+      // This test-only entry is served by Vite, never shipped in client/dist.
+      command: 'npx vite --host 127.0.0.1 --port 5176 --strictPort',
+      url: 'http://127.0.0.1:5176/e2e/fixtures/run-history.html',
+      env: { VITE_API_BASE_URL: api },
+      reuseExistingServer: !process.env.CI,
+    },
+    {
       // A non-Development environment skips the startup migration, so no database is needed:
       // building and sharing plans is stateless, and accounts stay off without sign-in settings.
       command: `dotnet run --project ../src/StartLine.API -c Release -p:UseAppHost=false --no-launch-profile --urls ${api}`,

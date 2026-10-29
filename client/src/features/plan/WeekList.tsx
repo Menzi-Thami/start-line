@@ -5,6 +5,7 @@ import type { ActivitySummary, PaceZone, PaceZoneRange, PlanWeek, Session } from
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
 import { CheckInCard } from '../coaching/CheckInCard'
+import { AdditionalRun } from '../coaching/AdditionalRun'
 import { reviewLine, reviewWeek } from '../coaching/week-review'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { ExerciseList } from '../strength/ExerciseList'
@@ -27,6 +28,7 @@ interface Props {
   coach?: SessionCoach
   /** With it, and the runner's runs or check-ins, each finished week opens with how it went. */
   today?: string
+  canCompleteRuns?: boolean
 }
 
 /**
@@ -55,7 +57,7 @@ function RunMark({ run, units, unplanned, onOpenRun, logged = false }: { run: Ac
   )
 }
 
-function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns }: {
+function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns, canCompleteRuns = true }: {
   session: Session
   pace: PaceZoneRange | undefined
   units: Units
@@ -64,6 +66,7 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns 
   coach?: SessionCoach
   /** The runner's runs on the session's day, for "Ran this? Tick it" when Strava has one. */
   dayRuns?: readonly ActivitySummary[]
+  canCompleteRuns?: boolean
 }) {
   // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
   const [bursts, setBursts] = useState(0)
@@ -108,6 +111,7 @@ function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns 
             <input
               type="checkbox"
               checked={isDone}
+              disabled={!strength && !canCompleteRuns}
               onChange={(e) => {
                 const checked = e.target.checked
                 if (checked) setBursts((n) => n + 1)
@@ -145,16 +149,18 @@ interface WeekDaysProps {
   onOpenRun?: (id: string) => void
   onLogRun?: (run: ActivitySummary) => void
   coach?: SessionCoach
+  canCompleteRuns?: boolean
 }
 
 /** One week, every day listed, rest days included, so the shape of the week is obvious. */
-export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpenRun, onLogRun, coach }: WeekDaysProps) {
+export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpenRun, onLogRun, coach, canCompleteRuns = true }: WeekDaysProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
     <ol className="days">
       {days.map((date) => {
         const sessions = week.sessions.filter((s) => s.date === date)
-        const ran = dayRuns(sessions, runs?.get(date))
+        const additional = coach?.entries?.filter((entry) => entry.isAdditional && entry.date === date) ?? []
+        const ran = dayRuns(sessions, runs?.get(date)?.filter((run) => !additional.some((entry) => entry.activityId === run.id)))
         const marks = [...ran.done.map((run) => ({ run, unplanned: false })), ...ran.unplanned.map((run) => ({ run, unplanned: true }))]
         return (
           <li className="day" key={date}>
@@ -162,44 +168,45 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
               {formatDate(date, 'weekday')}
               <small>{formatDate(date, 'dayMonth')}</small>
             </span>
-            {sessions.length === 0 && marks.length === 0 ? (
-              <span className="day-rest">
-                <span className="day-rest-sleeper" aria-hidden="true">
-                  <Runner pose="sleep" size={11} />
-                  <span className="zzz">
-                    <i>z</i>
-                    <i>z</i>
-                    <i>z</i>
+            <div>
+              {sessions.length === 0 && (
+                <span className="day-rest">
+                  <span className="day-rest-sleeper" aria-hidden="true">
+                    <Runner pose="sleep" size={11} />
+                    <span className="zzz">
+                      <i>z</i>
+                      <i>z</i>
+                      <i>z</i>
+                    </span>
                   </span>
+                  <span>Rest</span>
                 </span>
-                <span>Rest</span>
-              </span>
-            ) : (
-              <div>
-                {sessions.map((s) => (
-                  <SessionItem
-                    key={sessionKey(s)}
-                    session={s}
-                    pace={s.zone ? byZone.get(s.zone) : undefined}
-                    units={units}
-                    done={done}
-                    onDoneChange={onDoneChange}
-                    coach={coach}
-                    dayRuns={runs?.get(date)}
-                  />
-                ))}
-                {marks.length > 0 && (
-                  <ul className="run-marks">
-                    {marks.map(({ run, unplanned }) => (
-                      <li key={run.id}>
-                        <RunMark run={run} units={units} unplanned={unplanned} onOpenRun={onOpenRun} logged={coach?.entries?.some(c => c.activityId === run.id)} />
-                        {onLogRun && coach?.saveAdditional && run.localDate <= coach.today && !coach.entries?.some(c => c.activityId === run.id) && <button type="button" className="link-button" onClick={() => onLogRun(run)}>Log this run</button>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
+              )}
+              {sessions.map((s) => (
+                <SessionItem
+                  key={sessionKey(s)}
+                  session={s}
+                  pace={s.zone ? byZone.get(s.zone) : undefined}
+                  units={units}
+                  done={done}
+                  onDoneChange={onDoneChange}
+                  coach={coach}
+                  dayRuns={runs?.get(date)}
+                  canCompleteRuns={canCompleteRuns}
+                />
+              ))}
+              {marks.length > 0 && (
+                <ul className="run-marks">
+                  {marks.map(({ run, unplanned }) => (
+                    <li key={run.id}>
+                      <RunMark run={run} units={units} unplanned={unplanned} onOpenRun={onOpenRun} logged={coach?.entries?.some(c => c.activityId === run.id)} />
+                      {onLogRun && coach?.saveAdditional && run.localDate <= coach.today && !coach.entries?.some(c => c.activityId === run.id) && <button type="button" className="link-button" onClick={() => onLogRun(run)}>Log this run</button>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {coach && additional.map((entry) => <AdditionalRun key={entry.id} entry={entry} coach={coach} runs={runs?.get(date)} onOpenRun={onOpenRun} />)}
+            </div>
           </li>
         )
       })}
@@ -208,7 +215,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
 }
 
 /** Every week as a disclosure, every day of the week listed, rest days included, so the shape of the week is obvious. */
-export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange, runs, onOpenRun, onLogRun, coach, today }: Props) {
+export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange, runs, onOpenRun, onLogRun, coach, today, canCompleteRuns = true }: Props) {
   const byZone = new Map(paces.map((p) => [p.zone, p]))
   const openWeek = currentWeek ?? weeks[0]?.number
 
@@ -238,7 +245,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
                 {reviewLine(reviewWeek(week, runs ? [...runs.values()].flat() : [], today, coach?.get, coach?.entries), units)}
               </p>
             )}
-            <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} onLogRun={onLogRun} coach={coach} />
+            <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} onLogRun={onLogRun} coach={coach} canCompleteRuns={canCompleteRuns} />
           </details>
         )
       })}

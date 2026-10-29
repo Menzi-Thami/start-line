@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import type { ActivitySummary, CheckIn, Session, TrainingPlan } from '../../lib/types'
 import { CheckInCard } from './CheckInCard'
+import { AdditionalRun } from './AdditionalRun'
 import type { SessionCoach } from './useCheckIns'
 
 // getRandomValues is also available on browsers that do not expose randomUUID.
@@ -138,15 +139,7 @@ export function RunLog({
         .filter((c) => c.isAdditional)
         .sort((a, b) => b.date.localeCompare(a.date))
         .map((entry) => (
-          <div key={entry.id} className="additional-run">
-            <p className="field-help">{entry.date}</p>
-            <CheckInCard
-              session={{ ...additionalSession, date: entry.date, type: entry.sessionType }}
-              coach={extraCoach(entry)}
-              additional
-              runs={runs}
-            />
-          </div>
+          <AdditionalRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate />
         ))}
     </section>
   )

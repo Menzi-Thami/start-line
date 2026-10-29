@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AdjustmentActions } from './PlanAdjustment'
 import { useAuth } from '../../app/auth-context'
 import { api, ApiError } from '../../lib/api-client'
@@ -28,21 +28,33 @@ export function useCheckIns(planId: string | null) {
   const auth = useAuth()
   // Kept with the plan they belong to, so switching plans never shows the last plan's check-ins.
   const [loaded, setLoaded] = useState<{ planId: string; checkIns: Map<string, CheckIn> } | null>(null)
+  const [failedPlanId, setFailedPlanId] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const mutations = useRef(new Map<string, number>())
   const checkIns = loaded && loaded.planId === planId ? loaded.checkIns : null
 
   useEffect(() => {
     if (!planId) return
     let cancelled = false
+    const version = mutations.current.get(planId) ?? 0
     auth
       .getToken()
-      .then((token) => (token ? api.me.checkIns(token, planId) : []))
-      .then((list) => !cancelled && setLoaded({ planId, checkIns: new Map(list.map((c) => [c.isAdditional ? c.id! : key(c.date, c.sessionType), c])) }))
-      // Without its check-ins the plan still works; the coach just has nothing to go on yet.
-      .catch(() => !cancelled && setLoaded({ planId, checkIns: new Map() }))
+      .then((token) => {
+        if (!token) throw new ApiError('Sign in again to load your saved runs.', 401)
+        return api.me.checkIns(token, planId)
+      })
+      .then((list) => {
+        if (cancelled || version !== (mutations.current.get(planId) ?? 0)) return
+        setLoaded({ planId, checkIns: new Map(list.map((c) => [c.isAdditional ? c.id! : key(c.date, c.sessionType), c])) })
+        setFailedPlanId(null)
+      })
+      // A failed request is not an empty history. Keep any loaded entries and offer a retry.
+      .catch(() => !cancelled && setFailedPlanId(planId))
     return () => {
       cancelled = true
     }
-  }, [planId, auth])
+  }, [planId, auth, attempt])
+  const retry = useCallback(() => { setFailedPlanId(null); setAttempt(value => value + 1) }, [])
 
   const token = useCallback(async () => {
     const value = await auth.getToken()
@@ -54,6 +66,7 @@ export function useCheckIns(planId: string | null) {
     async (session: Session, answers: CheckInRequest) => {
       if (!planId) return
       const saved = await api.me.saveCheckIn(await token(), planId, session.date, session.type, answers)
+      mutations.current.set(planId, (mutations.current.get(planId) ?? 0) + 1)
       setLoaded((current) =>
         current?.planId === planId ? { planId, checkIns: new Map(current.checkIns).set(key(saved.date, saved.sessionType), saved) } : current,
       )
@@ -65,6 +78,7 @@ export function useCheckIns(planId: string | null) {
     async (session: Session) => {
       if (!planId) return
       await api.me.deleteCheckIn(await token(), planId, session.date, session.type)
+      mutations.current.set(planId, (mutations.current.get(planId) ?? 0) + 1)
       setLoaded((current) => {
         if (current?.planId !== planId) return current
         const next = new Map(current.checkIns)
@@ -80,11 +94,13 @@ export function useCheckIns(planId: string | null) {
   const saveAdditional = useCallback(async (id: string, session: Session, answers: CheckInRequest) => {
     if (!planId) return
     const saved = await api.me.saveAdditionalRun(await token(), planId, id, session.date, session.type, answers)
+    mutations.current.set(planId, (mutations.current.get(planId) ?? 0) + 1)
     setLoaded((current) => current?.planId === planId ? { planId, checkIns: new Map(current.checkIns).set(id, saved) } : current)
   }, [planId, token])
   const removeAdditional = useCallback(async (id: string) => {
     if (!planId) return
     await api.me.deleteAdditionalRun(await token(), planId, id)
+    mutations.current.set(planId, (mutations.current.get(planId) ?? 0) + 1)
     setLoaded((current) => {
       if (current?.planId !== planId) return current
       const next = new Map(current.checkIns)
@@ -93,5 +109,5 @@ export function useCheckIns(planId: string | null) {
     })
   }, [planId, token])
 
-  return { ready: checkIns !== null, get, save, remove, entries: checkIns ? [...checkIns.values()] : [], saveAdditional, removeAdditional }
+  return { ready: checkIns !== null, failed: planId !== null && failedPlanId === planId, retry, get, save, remove, entries: checkIns ? [...checkIns.values()] : [], saveAdditional, removeAdditional }
 }

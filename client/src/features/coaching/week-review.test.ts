@@ -16,6 +16,14 @@ const checkIn = (date: string, sessionType: Session['type'], answers: Partial<Ch
 const checkIns = (...list: CheckIn[]): CheckInFor => (s) => list.find((c) => c.date === s.date && c.sessionType === s.type)
 
 describe('reviewWeek', () => {
+  it('includes additional uploaded distance without completing the prescribed run', () => {
+    const uploaded = run('2026-10-18', 10)
+    const additional = checkIn('2026-10-18', 'Easy', { id: 'extra', activityId: uploaded.id, isAdditional: true, distanceKm: 10 })
+    const review = reviewWeek(week(1), [uploaded], '2026-10-20', () => undefined, [additional])
+    expect(review.ranKm).toBe(10)
+    expect(review.doneRuns).toBe(0)
+    expect(review.longRun).toMatchObject({ done: false, ranKm: null })
+  })
   it('a full week: every run done, the distance and the long run', () => {
     const runs = [run('2026-10-13', 5.6), run('2026-10-15', 3.1), run('2026-10-17', 3), run('2026-10-18', 6.4)]
 

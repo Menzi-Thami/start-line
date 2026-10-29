@@ -75,7 +75,7 @@ function feelOf(sessions: readonly Session[], checkInFor?: CheckInFor): Feel | n
  */
 export function reviewWeek(week: PlanWeek, runs: readonly ActivitySummary[], today: string, checkInFor?: CheckInFor, entries?: readonly CheckIn[]): WeekReview {
   const end = weekEnd(week)
-  const byDate = runsByDate(runs.filter((r) => r.localDate >= week.startDate && r.localDate <= end && r.localDate <= today))
+  const byDate = runsByDate(runs.filter((r) => r.localDate >= week.startDate && r.localDate <= end && r.localDate <= today && !entries?.some(c => c.isAdditional && c.activityId === r.id)))
   const sessions = plannedRuns(week.sessions).filter((s) => s.type !== 'Race')
 
   const recordedKm = (date: string) => (byDate.get(date) ?? []).reduce((sum, r) => sum + r.distanceKm, 0)

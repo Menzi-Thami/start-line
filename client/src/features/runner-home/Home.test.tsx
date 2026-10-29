@@ -233,7 +233,7 @@ describe('Home', () => {
 
     const running = screen.getByRole('region', { name: 'Your running' })
     expect(await within(running).findByText('52.2')).toBeInTheDocument()
-    expect(within(running).getByText(/each ticked one at its planned distance/)).toBeInTheDocument()
+    expect(within(running).getByText(/plain completed sessions at their prescribed distance/)).toBeInTheDocument()
     expect(within(running).getByText('64.2')).toBeInTheDocument()
     expect(within(running).getByText(/40.2 km \(335%\) more than 1 Sept–23 Sept/)).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Weekly distance, last 12 weeks' })).toBeInTheDocument()
@@ -243,7 +243,7 @@ describe('Home', () => {
     renderHome({ runs: [run('2026-10-21', 8, 'Strava')] }, { signIn: true })
 
     const running = screen.getByRole('region', { name: 'Your running' })
-    expect(await within(running).findByText(/they count here once you tick their session/)).toBeInTheDocument()
+    expect(await within(running).findByText(/they are not copied into your saved totals/)).toBeInTheDocument()
     expect(within(running).queryByText('8')).not.toBeInTheDocument()
     expect(within(running).getAllByText('0').length).toBeGreaterThan(0)
   })

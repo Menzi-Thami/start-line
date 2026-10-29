@@ -6,6 +6,8 @@ import type {
   BulkImport,
   CalendarLink,
   CoachingProposal,
+  RemainingWeekProposal,
+  RecoveryReadiness,
   CheckIn,
   CheckInRequest,
   GeneratePlanRequest,
@@ -196,8 +198,10 @@ export const api = {
      */
     coachPlan: (token: string, id: string) =>
       request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach`, { method: 'POST' }, token),
-    reviewCoaching: (token: string, id: string) => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/proposal`, {}, token),
-    applyCoaching: (token: string, id: string, proposalToken: string) => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
+    reviewCoaching: (token: string, id: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/proposal?recovery=${encodeURIComponent(recovery)}`, {}, token),
+    applyCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
+    reviewRemainingWeek: (token: string, id: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal`, {}, token),
+    applyRemainingWeek: (token: string, id: string, proposalToken: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
     /** The runner's check-ins on one saved plan: how each run went. */
     checkIns: (token: string, planId: string) => request<CheckIn[]>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins`, {}, token),
     /** Saves (or replaces) the check-in for the run planned on that day. */

@@ -13,10 +13,10 @@ function newEntryId(): string {
 }
 
 /** Add a run on a rest day or alongside a planned session, without claiming the prescribed workout was done. */
-export function RunLog({ plan, coach, runs = [] }: { plan: TrainingPlan; coach: SessionCoach; runs?: readonly ActivitySummary[] }) {
+export function RunLog({ plan, coach, runs = [], initialRun, onClose, showEntries = true }: { plan: TrainingPlan; coach: SessionCoach; runs?: readonly ActivitySummary[]; initialRun?: ActivitySummary; onClose?: () => void; showEntries?: boolean }) {
   const label = useId()
-  const [open, setOpen] = useState(false)
-  const [date, setDate] = useState(coach.today < plan.race.date ? coach.today : plan.race.date)
+  const [open, setOpen] = useState(!!initialRun)
+  const [date, setDate] = useState(initialRun?.localDate ?? (coach.today < plan.race.date ? coach.today : plan.race.date))
   const [entryId, setEntryId] = useState(() => newEntryId())
   const [target, setTarget] = useState('additional')
   if (!coach.saveAdditional || !coach.removeAdditional || coach.today < plan.startDate) return null
@@ -43,6 +43,7 @@ export function RunLog({ plan, coach, runs = [] }: { plan: TrainingPlan; coach: 
   const close = () => {
     setOpen(false)
     setEntryId(newEntryId())
+    onClose?.()
   }
   return (
     <section className="run-log" aria-label="Your run log">
@@ -109,6 +110,7 @@ export function RunLog({ plan, coach, runs = [] }: { plan: TrainingPlan; coach: 
               runs={runs}
               initialOpen
               onClose={close}
+              initialActivityId={initialRun?.localDate === date ? initialRun.id : undefined}
             />
           )}
           {(!date || date < plan.startDate || date > coach.today || date > plan.race.date) && (
@@ -118,7 +120,7 @@ export function RunLog({ plan, coach, runs = [] }: { plan: TrainingPlan; coach: 
           )}
         </>
       )}
-      {(coach.entries ?? [])
+      {(showEntries ? coach.entries ?? [] : [])
         .filter((c) => c.isAdditional)
         .sort((a, b) => b.date.localeCompare(a.date))
         .map((entry) => (

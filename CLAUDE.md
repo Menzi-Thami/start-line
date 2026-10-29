@@ -131,8 +131,8 @@ device, turned on in Account. `Reminders.DueDay` decides when from the plan as w
 today). What comes from runs (the coach's call, made via `PlanCoach` as opening the plan would, coached numbers, distance
 run) is added only with `Push:IncludeRunData`, off by default, so no Strava data is pushed unless that's turned on. A day's reminder is marked sent before it's sent (with a rowversion), so it goes once at most; one missed while
 the app slept goes out later that day. `ReminderWorker` sleeps until the next one is due and is woken by
-`ReminderScheduleInterceptor` when a plan, time zone or device changes: it never polls the database. A synced Strava run that matches a planned session with no check-in sends one "Ran Tuesday's Tempo?" push
-(`TickPrompter`, at most once per session, never for a run over 2 days old), noted as a `TickPrompt` (the session only,
-forgotten after 7 days). Push endpoints are
+`ReminderScheduleInterceptor` when a plan, time zone or device changes: it never polls the database. Daily guidance is a per-device choice (06:00 by default for new devices; existing choices stay unchanged). Recent synced runs send one congratulations notification through `RunCelebrator`, opening the actual run without completing prescribed training. The atomic marker is on the cached activity and disappears with it. Old signed Tick it actions remain compatible. Read `docs/pwa-reminders.md` for device and hosting requirements. Push endpoints are
 secrets: encrypted like Strava tokens, never logged, redacted in traces (`PushTraces`), and only push-service hosts are
 accepted. VAPID keys come from App Service settings (`docs/deploy.md`); without them reminders stay hidden.
+
+Adaptive training is explicit preview/apply: see `docs/flexible-training-week.md`. Existing v1/v2 generator outputs remain unchanged.

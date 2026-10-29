@@ -60,7 +60,7 @@ internal static class CoachCalls
 /// </summary>
 public sealed record CoachMyPlanCommand(Guid Id) : IRequest<SavedPlanDto>;
 
-internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, PlanCoach coach)
+internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, PlanCoach coach, TimeProvider time)
     : IRequestHandler<CoachMyPlanCommand, SavedPlanDto>
 {
     public async Task<SavedPlanDto> Handle(CoachMyPlanCommand request, CancellationToken cancellationToken)
@@ -76,7 +76,7 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
 
         var query = SavedPlanMapping.ToQuery(saved.Inputs);
         var calls = await coach.CallsAsync(saved, runner, cancellationToken);
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls), saved.Status,
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), saved.Status,
             [.. calls.Select(CoachNoteDto.From)]);
     }
 }
@@ -87,7 +87,7 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
 /// </summary>
 internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, TimeProvider time)
 {
-    public async Task<IReadOnlyList<CoachDecision>> CallsAsync(SavedPlan saved, Runner runner, CancellationToken cancellationToken, bool preview = false)
+    public async Task<IReadOnlyList<CoachDecision>> CallsAsync(SavedPlan saved, Runner runner, CancellationToken cancellationToken, bool preview = false, RecoveryReadiness recovery = RecoveryReadiness.NotReported)
     {
         ArgumentNullException.ThrowIfNull(saved);
         ArgumentNullException.ThrowIfNull(runner);
@@ -97,8 +97,8 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
             return calls;
         }
 
-        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls);
-        var call = await DecideThisWeekAsync(saved, runner, plan, calls, cancellationToken);
+        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls, saved.Adjustments, CoachCalls.LocalToday(runner, time));
+        var call = await DecideThisWeekAsync(saved, runner, plan, calls, recovery, cancellationToken);
         return call is null ? calls : [.. calls, call];
     }
 
@@ -121,24 +121,15 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
     }
 
     private async Task<CoachDecision?> DecideThisWeekAsync(
-        SavedPlan saved, Runner runner, TrainingPlan plan, IReadOnlyList<CoachDecision> calls, CancellationToken cancellationToken)
+        SavedPlan saved, Runner runner, TrainingPlan plan, IReadOnlyList<CoachDecision> calls, RecoveryReadiness recovery, CancellationToken cancellationToken)
     {
         var today = CoachCalls.LocalToday(runner, time);
-        var week = plan.Weeks.FirstOrDefault(w => w.StartDate <= today && today < w.StartDate.AddDays(7));
+        var targetDay = today.DayOfWeek == DayOfWeek.Sunday ? today.AddDays(1) : today;
+        var week = plan.Weeks.FirstOrDefault(w => w.StartDate <= targetDay && targetDay < w.StartDate.AddDays(7));
         var lastWeek = week is null ? null : plan.Weeks.FirstOrDefault(w => w.StartDate == week.StartDate.AddDays(-7));
         if (week is null || lastWeek is null || week.Phase == TrainingPhase.RaceWeek || calls.Any(c => c.WeekStart == week.StartDate))
         {
             return null;
-        }
-
-        // A replan last week or this week has just rebuilt the plan from where the runner is: judging the week behind it
-        // again would count the same setback twice.
-        if (saved.Inputs.Replan is { } replan && replan.From >= lastWeek.StartDate)
-        {
-            // Paces carry on as they were: the replan already starts from where the runner is.
-            var previous = calls.LastOrDefault(c => c.WeekStart < week.StartDate);
-            var asPlanned = CoachDecision.AsPlanned(week.StartDate, CoachVerdict.OnTrack, CoachReason.JustReplanned);
-            return asPlanned with { Fitness = previous?.Fitness, PaceFactor = previous?.PaceFactor ?? 1 };
         }
 
         var from = lastWeek.StartDate;
@@ -154,8 +145,19 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
 
         var evidence = CoachEvidence.ForWeek(lastWeek.Sessions, checkIns, runs);
 
+        // A replan last week or this week has just rebuilt the plan from where the runner is: judging the week behind it
+        // again would count the same setback twice.
+        if (saved.Inputs.Replan is { } replan && replan.From >= lastWeek.StartDate)
+        {
+            // Paces carry on as they were: the replan already starts from where the runner is.
+            var previous = calls.LastOrDefault(c => c.WeekStart < week.StartDate);
+            var asPlanned = CoachDecision.AsPlanned(week.StartDate, CoachVerdict.OnTrack, CoachReason.JustReplanned);
+            return WeeklyReview.Guide(asPlanned with { Fitness = previous?.Fitness, PaceFactor = previous?.PaceFactor ?? 1 }, evidence, calls, new(week, lastWeek, recovery, plan.GoalTime, checkIns.Any(c => c.IsAdditional && c.Status != CheckInStatus.Skipped), checkIns.Any(c => c.Pain == PainLevel.ChangedRunning)));
+        }
+
         var call = WeeklyCoach.Decide(week.StartDate, evidence, calls.FirstOrDefault(c => c.WeekStart == lastWeek.StartDate));
-        return await WithFitnessAsync(call, runner, plan, evidence, calls, cancellationToken);
+        call = await WithFitnessAsync(call, runner, plan, evidence, calls, cancellationToken);
+        return WeeklyReview.Guide(call, evidence, calls, new(week, lastWeek, recovery, plan.GoalTime, checkIns.Any(c => c.IsAdditional && c.Status != CheckInStatus.Skipped), checkIns.Any(c => c.Pain == PainLevel.ChangedRunning)));
     }
 
     /// <summary>
@@ -181,9 +183,11 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
 }
 
 /// <summary>A read-only preview and a fingerprint of exactly the plan the runner reviewed.</summary>
-public sealed record CoachingProposalDto(string Token, bool HasChanges, bool CanApply, SavedPlanDto Proposed);
+public sealed record WeeklyReviewDto(DateOnly ReviewedWeek, DateOnly TargetWeek, int RunsPlanned, int RunsCompleted, int Skipped,
+    int MissingCheckIns, int Substitutions, double PlannedKm, double ReportedKm, int UnknownDistances, RecoveryReadiness Recovery);
+public sealed record CoachingProposalDto(string Token, bool HasChanges, bool CanApply, SavedPlanDto Proposed, WeeklyReviewDto? Review = null);
 
-public sealed record ReviewCoachingCommand(Guid Id, string? AcceptToken = null) : IRequest<CoachingProposalDto>;
+public sealed record ReviewCoachingCommand(Guid Id, string? AcceptToken = null, RecoveryReadiness Recovery = RecoveryReadiness.NotReported) : IRequest<CoachingProposalDto>;
 
 internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, PlanCoach coach, TimeProvider time)
     : IRequestHandler<ReviewCoachingCommand, CoachingProposalDto>
@@ -193,11 +197,28 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
         var saved = await OwnPlan.FindAsync(db, current, request.Id, cancellationToken);
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         var existing = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var proposed = await coach.CallsAsync(saved, runner, cancellationToken, preview: true);
+        if (!Enum.IsDefined(request.Recovery)) throw new Domain.Common.DomainException("Choose how recovered you feel.");
+        var proposed = await coach.CallsAsync(saved, runner, cancellationToken, preview: true, recovery: request.Recovery);
         var query = SavedPlanMapping.ToQuery(saved.Inputs);
-        var plan = builder.Build(query, proposed);
-        var original = builder.Build(query, existing);
         var today = CoachCalls.LocalToday(runner, time);
+        var targetDay = today.DayOfWeek == DayOfWeek.Sunday ? today.AddDays(1) : today;
+        var targetWeek = targetDay.AddDays(-((int)targetDay.DayOfWeek + 6) % 7);
+        var plan = builder.Build(query, proposed, saved.Adjustments, targetWeek);
+        var original = builder.Build(query, existing, saved.Adjustments, targetWeek);
+        var from = targetWeek.AddDays(-7);
+        var answers = await db.SessionCheckIns.AsNoTracking().Where(c => c.SavedPlanId == saved.Id && c.Date >= from && c.Date < targetWeek).OrderBy(c => c.Id).ToListAsync(cancellationToken);
+        var uploads = await db.Activities.AsNoTracking().Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.LocalDate >= from && a.LocalDate < targetWeek).OrderBy(a => a.Id).ToListAsync(cancellationToken);
+        WeeklyReviewDto? review = null;
+        if (original.Weeks.FirstOrDefault(w => w.StartDate == from) is { } reviewed)
+        {
+            var sessions = reviewed.Sessions.Where(s => SessionCheckIn.IsCheckable(s.Type)).ToList();
+            var logged = sessions.Select(s => new { Entry = answers.FirstOrDefault(c => !c.IsAdditional && c.Date == s.Date && c.SessionType == s.Type), Uploaded = uploads.Any(a => a.LocalDate == s.Date && a.PlannedSession?.SessionType == s.Type) }).ToList();
+            var km = uploads.Sum(a => a.DistanceKm) + answers.Where(c => c.Status != CheckInStatus.Skipped && c.DistanceKm.HasValue && !uploads.Any(a => a.Id == c.ActivityId || !c.IsAdditional && a.LocalDate == c.Date)).Sum(c => c.DistanceKm!.Value);
+            review = new(from, targetWeek, sessions.Count, logged.Count(c => c.Entry is { Status: not CheckInStatus.Skipped } || c.Entry is null && c.Uploaded),
+                logged.Count(c => c.Entry?.Status == CheckInStatus.Skipped), logged.Count(c => c.Entry is null && !c.Uploaded),
+                logged.Count(c => c.Entry is { } e && (e.Status == CheckInStatus.SwappedForEasy || e.ActualSessionType is { } actual && actual != e.SessionType)),
+                reviewed.PlannedKm, km, answers.Count(c => c.Status != CheckInStatus.Skipped && c.DistanceKm is null && !uploads.Any(a => a.Id == c.ActivityId || !c.IsAdditional && a.LocalDate == c.Date)), request.Recovery);
+        }
         var completedToday = await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id && c.Date == today && !c.IsAdditional && c.Status != CheckInStatus.Skipped, cancellationToken);
         var originalPast = original.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date < today || completedToday && s.Date == today);
         var proposedPast = plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date < today || completedToday && s.Date == today);
@@ -210,12 +231,13 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
         }
 
         var dto = new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, plan, saved.Status, [.. proposed.Select(CoachNoteDto.From)]);
-        var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(dto))));
+        var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { dto, today, saved.Version, review, answers = answers.Select(c => new { c.Id, c.Date, c.SessionType, c.IsAdditional, c.Answers }), uploads = uploads.Select(a => new { a.Id, a.LocalDate, a.DistanceKm, a.MovingTime }) }))));
         var changed = JsonSerializer.Serialize(original) != JsonSerializer.Serialize(plan);
         var pending = proposed.LastOrDefault(c => !existing.Any(e => e.WeekStart == c.WeekStart));
+        var canApply = pending is not null && !(today.DayOfWeek == DayOfWeek.Sunday && review?.MissingCheckIns > 0);
         if (request.AcceptToken is not null)
         {
-            if (request.AcceptToken != token || pending is null || saved.Status != SavedPlanStatus.Active)
+            if (request.AcceptToken != token || !canApply || pending is null || saved.Status != SavedPlanStatus.Active)
             {
                 throw new ConflictException("coaching_changed", "Your running or plan has changed. Review the latest suggestion before applying it.");
             }
@@ -223,6 +245,6 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
             await coach.AcceptAsync(saved.Id, pending, cancellationToken);
         }
 
-        return new(token, changed, pending is not null, dto);
+        return new(token, changed, canApply, dto, review);
     }
 }

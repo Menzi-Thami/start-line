@@ -71,7 +71,7 @@ internal sealed partial class ReminderRunner(
                 {
                     // Worked out once for all of a runner's devices: the coach's call is made at most once a week anyway.
                     facts ??= await FactsAsync(saved, runner, plan!, day, cancellationToken);
-                    if (Reminders.For(facts, day, device.WeekAhead) is { } reminder && !await SendAsync(device, reminder, cancellationToken))
+                    if (Reminders.For(facts, day, device.WeekAhead, device.Daily) is { } reminder && !await SendAsync(device, reminder, cancellationToken))
                     {
                         continue;
                     }
@@ -100,7 +100,7 @@ internal sealed partial class ReminderRunner(
         if (settings.IncludeRunData)
         {
             var calls = await coach.CallsAsync(saved, runner, cancellationToken);
-            plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls);
+            plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls, saved.Adjustments, day);
             coachSays = calls.FirstOrDefault(c => c.WeekStart == day) is { } call ? CoachWords.Of(call) : null;
         }
 
@@ -140,7 +140,7 @@ internal sealed partial class ReminderRunner(
 
         try
         {
-            return builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs));
+            return builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), adjustments: saved.Adjustments);
         }
         catch (Exception e) when (e is NotFoundException or DomainException)
         {

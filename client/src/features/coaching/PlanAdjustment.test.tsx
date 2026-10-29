@@ -16,7 +16,7 @@ it('previews only on request and applies only after the runner reviews it', asyn
   expect(await screen.findByText('This is a preview. Your plan has not changed.')).toBeVisible()
   expect(actions.apply).not.toHaveBeenCalled()
   await user.click(screen.getByRole('button', { name: 'Apply this adjustment' }))
-  expect(actions.apply).toHaveBeenCalledExactlyOnceWith(proposal.token)
+  expect(actions.apply).toHaveBeenCalledExactlyOnceWith(proposal.token, 'NotReported')
 })
 it('requires a fresh review after a stale proposal is rejected', async () => {
   const actions = { review: vi.fn().mockResolvedValue(proposal), apply: vi.fn().mockRejectedValue(new Error('Review the latest suggestion.')) }

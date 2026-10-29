@@ -18,6 +18,7 @@ interface Props {
   completion?: boolean
   initialOpen?: boolean
   additional?: boolean
+  initialActivityId?: string
   onClose?: () => void
 }
 const EMPTY_DURATION: Duration = { h: '', m: '', s: '' }
@@ -39,6 +40,7 @@ export function CheckInCard({
   initialOpen = false,
   additional = false,
   onClose,
+  initialActivityId,
 }: Props) {
   const id = useId()
   const existing = coach.get(session)
@@ -46,7 +48,7 @@ export function CheckInCard({
   const [open, setOpen] = useState(initialOpen)
   const [status, setStatus] = useState<CheckInStatus>(existing?.status ?? 'Done')
   const [actualType, setActualType] = useState<SessionType | ''>(existing?.actualSessionType ?? '')
-  const [activityId, setActivityId] = useState(existing?.activityId ?? '')
+  const [activityId, setActivityId] = useState(existing?.activityId ?? initialActivityId ?? '')
   const [effort, setEffort] = useState<number | null>(existing?.effort ?? null)
   const [pain, setPain] = useState<PainLevel>(existing?.pain ?? 'None')
   const [painArea, setPainArea] = useState<BodyArea | ''>(existing?.painArea ?? '')

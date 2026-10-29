@@ -890,10 +890,12 @@ export function App() {
                 onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
                 coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
-                  review: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, savedOnScreen) },
-                  apply: async (proposalToken) => {
+                  reviewRemaining: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your week.'); return api.me.reviewRemainingWeek(token, savedOnScreen) },
+                  applyRemaining: async (proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your week.'); const result = await api.me.applyRemainingWeek(token, savedOnScreen, proposalToken); setPlan({ kind: 'ready', plan: result.proposed, inputs: plan.inputs }) },
+                  review: async (recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, savedOnScreen, recovery) },
+                  apply: async (proposalToken, recovery) => {
                     const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your training.')
-                    const result = await api.me.applyCoaching(token, savedOnScreen, proposalToken)
+                    const result = await api.me.applyCoaching(token, savedOnScreen, proposalToken, recovery)
                     setPlan({ kind: 'ready', plan: result.proposed.plan, inputs: plan.inputs })
                     setCoachNotes({ planId: savedOnScreen, notes: result.proposed.coaching ?? [] })
                   },

@@ -6,6 +6,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using StartLine.Application.Features.CheckIns;
 using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Sync;
 using StartLine.Infrastructure.Persistence;
@@ -100,10 +101,32 @@ public sealed class TickPromptTests
         await factory.SyncAsync();
     }
 
+    // Legacy delivered notifications retain their signed actions; new pushes open the actual run.
+    private static string LegacyToken(TickPromptFactory factory, Runner runner)
+    {
+        using var scope = factory.Services.CreateScope();
+        var owner = scope.ServiceProvider.GetRequiredService<StartLineDbContext>().SavedPlans.Single(p => p.Id == runner.Plan).RunnerId;
+        var (date, type) = Sunday(runner);
+        return scope.ServiceProvider.GetRequiredService<ITickTokens>().Issue(new TickClaim(owner, runner.Plan, date, Enum.Parse<StartLine.Domain.Plans.SessionType>(type)));
+    }
+
+    [Fact]
+    public async Task A_rest_day_run_and_two_distinct_runs_get_one_congratulations_each_without_completing_a_workout()
+    {
+        await using var factory = new TickPromptFactory(SundayMorningRun.AddHours(3));
+        var endpoint = RemindersFactory.NewEndpoint(); var runner = await Ready(factory, endpoint);
+        var friday = SundayMorningRun.AddDays(-2).AddHours(4);
+        var first = await RunOnStrava(factory, runner, friday, 5000);
+        await Hook(factory, runner, first, "update"); await RunOnStrava(factory, runner, friday.AddHours(2), 3000);
+        factory.Push.To(endpoint).Count.ShouldBe(2);
+        factory.Push.To(endpoint).Select(p => p.Tag).Distinct().Count().ShouldBe(2);
+        (await CheckIns(runner)).GetArrayLength().ShouldBe(0);
+    }
+
     private static async Task<JsonElement> CheckIns(Runner runner) => await Json(await runner.Client.GetAsync(Url($"/api/v1/me/plans/{runner.Plan}/check-ins")));
 
     [Fact]
-    public async Task A_synced_run_asks_once_to_tick_its_session_and_a_second_sync_asks_nothing()
+    public async Task A_synced_run_is_congratulated_once_and_a_second_sync_sends_nothing()
     {
         await using var factory = new TickPromptFactory(SundayMorningRun.AddHours(3));
         var endpoint = RemindersFactory.NewEndpoint();
@@ -114,9 +137,9 @@ public sealed class TickPromptTests
         await Hook(factory, runner, id, "update");
 
         var asked = factory.Push.To(endpoint).ShouldHaveSingleItem();
-        asked.Url.ShouldBe($"/?view=home&tick={date:yyyy-MM-dd}.{type}");
-        asked.Title.ShouldStartWith("Ran Sunday’s ");
-        asked.Tick.ShouldNotBeNullOrEmpty();
+        asked.Url.ShouldStartWith("/?view=runs&run=");
+        asked.Title.ShouldBe("Nice work — run finished!");
+        asked.Tick.ShouldBeNull();
         // Run data isn't pushed unless Push:IncludeRunData is on.
         asked.Body.ShouldNotContain("km");
     }
@@ -130,11 +153,11 @@ public sealed class TickPromptTests
 
         await RunOnStrava(factory, runner, SundayMorningRun);
 
-        factory.Push.To(endpoint).ShouldHaveSingleItem().Body.ShouldStartWith("Strava says you ran 12 km this morning.");
+        factory.Push.To(endpoint).ShouldHaveSingleItem().Body.ShouldStartWith("Your 12 km run has arrived from Strava.");
     }
 
     [Fact]
-    public async Task What_it_keeps_is_the_session_it_asked_about_and_nothing_from_the_run()
+    public async Task Deduplication_is_on_the_cached_activity_and_no_permanent_prompt_is_created()
     {
         await using var factory = new TickPromptFactory(SundayMorningRun.AddHours(3));
         var runner = await Ready(factory, RemindersFactory.NewEndpoint());
@@ -143,9 +166,10 @@ public sealed class TickPromptTests
         await RunOnStrava(factory, runner, SundayMorningRun);
 
         using var scope = factory.Services.CreateScope();
-        var prompt = await scope.ServiceProvider.GetRequiredService<StartLineDbContext>().TickPrompts.AsNoTracking()
-            .SingleAsync(p => p.SavedPlanId == runner.Plan);
-        (prompt.Date, prompt.SessionType.ToString()).ShouldBe((date, type));
+        var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
+        var owner = await db.SavedPlans.Where(p => p.Id == runner.Plan).Select(p => p.RunnerId).SingleAsync();
+        (await db.Activities.AsNoTracking().SingleAsync(a => a.RunnerId == owner)).Celebrated.ShouldBeTrue();
+        (await db.TickPrompts.AnyAsync(p => p.SavedPlanId == runner.Plan)).ShouldBeFalse();
     }
 
     [Fact]
@@ -156,7 +180,7 @@ public sealed class TickPromptTests
         var runner = await Ready(factory, endpoint);
         var (date, type) = Sunday(runner);
         await RunOnStrava(factory, runner, SundayMorningRun);
-        var token = factory.Push.To(endpoint).Single().Tick!;
+        var token = LegacyToken(factory, runner);
 
         // The service worker can't sign in: the key in the push is the only way in.
         var anonymous = factory.CreateClient();
@@ -181,7 +205,7 @@ public sealed class TickPromptTests
         (await runner.Client.PutAsJsonAsync(Url($"/api/v1/me/plans/{runner.Plan}/check-ins/{date:yyyy-MM-dd}/{type}"), new { status = "CutShort", effort = 8 }))
             .EnsureSuccessStatusCode();
 
-        (await factory.CreateClient().PostAsJsonAsync(Url("/api/v1/ticks"), new { token = factory.Push.To(endpoint).Single().Tick }))
+        (await factory.CreateClient().PostAsJsonAsync(Url("/api/v1/ticks"), new { token = LegacyToken(factory, runner) }))
             .StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         (await CheckIns(runner)).EnumerateArray().ShouldHaveSingleItem().GetProperty("status").GetString().ShouldBe("CutShort");
@@ -197,8 +221,9 @@ public sealed class TickPromptTests
         var anonymous = factory.CreateClient();
 
         (await anonymous.PostAsJsonAsync(Url("/api/v1/ticks"), new { token = "not-a-key" })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        var oldToken = LegacyToken(factory, runner);
         factory.Time.Advance(TimeSpan.FromDays(4));
-        (await anonymous.PostAsJsonAsync(Url("/api/v1/ticks"), new { token = factory.Push.To(endpoint).Single().Tick })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await anonymous.PostAsJsonAsync(Url("/api/v1/ticks"), new { token = oldToken })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
 
         (await CheckIns(runner)).GetArrayLength().ShouldBe(0);
     }
@@ -222,7 +247,7 @@ public sealed class TickPromptTests
     }
 
     [Fact]
-    public async Task A_run_from_a_backfill_or_already_ticked_asks_nothing()
+    public async Task Old_backfills_are_quiet_but_an_already_logged_recent_run_gets_congratulations()
     {
         await using var factory = new TickPromptFactory(SundayMorningRun.AddHours(3));
         var endpoint = RemindersFactory.NewEndpoint();
@@ -235,7 +260,7 @@ public sealed class TickPromptTests
         await RunOnStrava(factory, runner, new DateTimeOffset(thursday.Date.ToDateTime(new TimeOnly(5, 0)), TimeSpan.Zero), metres: 6_000);
         await RunOnStrava(factory, runner, SundayMorningRun);
 
-        factory.Push.To(endpoint).ShouldBeEmpty();
+        factory.Push.To(endpoint).ShouldHaveSingleItem().Title.ShouldBe("Nice work — run finished!");
     }
 
     [Fact]

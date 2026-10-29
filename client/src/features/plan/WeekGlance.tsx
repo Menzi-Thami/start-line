@@ -11,7 +11,9 @@ interface Props {
   activityDates?: readonly string[]
   today: string
   units: Units
-  onSelectDate: (date: string) => void
+  onSelectDate: (date: string, trigger: HTMLButtonElement) => void
+  selectedDate?: string | null
+  daySummaryId?: string
 }
 
 const addDays = (iso: string, n: number) => {
@@ -25,7 +27,7 @@ const addDays = (iso: string, n: number) => {
  * done once its sessions are ticked; recorded activities have a separate marker. Today is in volt; rest days are dim. All from the plan
  * and the runner's own ticks and runs, never made up.
  */
-export function WeekGlance({ week, done, runs, additionalDates = [], activityDates = [], today, units, onSelectDate }: Props) {
+export function WeekGlance({ week, done, runs, additionalDates = [], activityDates = [], today, units, onSelectDate, selectedDate, daySummaryId }: Props) {
   const runSessions = week.sessions.filter((s) => s.type !== 'Strength')
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
@@ -49,7 +51,7 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
           const state = calendarDayState(sessions, done, recorded, date, today)
           return (
             <li key={date} className={`week-day is-${state}${date === today ? ' is-today' : ''}${recorded ? ' has-activity' : ''}`}>
-              <button type="button" className="week-day-button" aria-haspopup="dialog" aria-current={date === today ? 'date' : undefined} aria-label={`${formatDate(date, 'long')}: ${sessions.length ? sessions.map(s => s.title).join(', ') : 'rest'}${state === 'done' ? ', done' : state === 'missed' ? ', no completion recorded' : ''}${recorded ? ', activity recorded' : ''}`} onClick={() => onSelectDate(date)}>
+              <button type="button" className="week-day-button" aria-expanded={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} aria-label={`${formatDate(date, 'long')}: ${sessions.length ? sessions.map(s => s.title).join(', ') : 'rest'}${state === 'done' ? ', done' : state === 'missed' ? ', no completion recorded' : ''}${recorded ? ', activity recorded' : ''}`} onClick={event => onSelectDate(date, event.currentTarget)}>
                 <span className="week-day-name">{formatDate(date, 'weekday').slice(0, 3)}</span>
                 <span className="week-day-dot mono">{Number(date.slice(8))}</span>
                 <span className="visually-hidden">
@@ -62,7 +64,7 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
           )
         })}
       </ol>
-      <p className="field-help calendar-day-key">Select a date to see planned and recorded sessions. An underline marks recorded activity.</p>
+      <p className="field-help calendar-day-key">Select a date to expand its planned and recorded sessions. An underline marks recorded activity.</p>
     </section>
   )
 }

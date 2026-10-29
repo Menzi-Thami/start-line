@@ -18,7 +18,7 @@ test('training views fit phone, tablet, desktop and ultrawide screens @phone', a
       if (name === 'This week') {
         const date = page.locator('.week-day-button').first()
         await date.click()
-        const day = page.getByRole('dialog')
+        const day = page.locator('.day-summary')
         await expect(day).toBeVisible()
         await expect(day.getByRole('region', { name: 'Planned', exact: true })).toBeVisible()
         expect(await day.evaluate(element => element.scrollWidth - element.clientWidth), `Day summary at ${width}px`).toBeLessThanOrEqual(1)

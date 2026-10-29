@@ -347,6 +347,7 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .run-log-choices { display: grid; gap: var(--space-3); }
 .run-result, .additional-run { padding: var(--space-3); margin-block: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-sunk); }
 .run-result p { overflow-wrap: anywhere; }
+.plan-calendar-day.has-additional-run { box-shadow: inset 0 -3px 0 var(--accent); }
 .check-in-log { min-width: 0; }
 .check-in-form h3 { font-family: var(--font-display); }
 .check-in-form .submit-row { flex-wrap: wrap; }

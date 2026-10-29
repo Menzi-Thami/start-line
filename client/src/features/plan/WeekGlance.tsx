@@ -7,6 +7,7 @@ interface Props {
   week: PlanWeek
   done: Set<string>
   runs?: RunsByDate
+  additionalDates?: readonly string[]
   today: string
   units: Units
 }
@@ -22,7 +23,7 @@ const addDays = (iso: string, n: number) => {
  * done once its sessions are ticked or a run was recorded on it; today is in volt; rest days are dim. All from the plan
  * and the runner's own ticks and runs, never made up.
  */
-export function WeekGlance({ week, done, runs, today, units }: Props) {
+export function WeekGlance({ week, done, runs, additionalDates = [], today, units }: Props) {
   const runSessions = week.sessions.filter((s) => s.type !== 'Strength')
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
@@ -41,9 +42,10 @@ export function WeekGlance({ week, done, runs, today, units }: Props) {
         {days.map((date) => {
           const sessions = week.sessions.filter((s) => s.date === date)
           const ran = runs?.get(date)?.some((r) => r.kind !== 'Other') ?? false
+          const additional = additionalDates.includes(date)
           // A recorded run can complete running work only. Strength needs its own session/set ticks.
           const completed = sessions.length > 0 && sessions.every((s) => done.has(sessionKey(s)) || (s.type !== 'Strength' && ran))
-          const state = completed || (sessions.length === 0 && ran) ? 'done' : sessions.length === 0 ? 'rest' : date < today ? 'missed' : 'ahead'
+          const state = completed || (sessions.length === 0 && (ran || additional)) ? 'done' : sessions.length === 0 ? 'rest' : date < today ? 'missed' : 'ahead'
           return (
             <li key={date} className={`week-day is-${state}${date === today ? ' is-today' : ''}`} aria-current={date === today ? 'date' : undefined}>
               <span className="week-day-name">{formatDate(date, 'weekday').slice(0, 3)}</span>
@@ -51,6 +53,7 @@ export function WeekGlance({ week, done, runs, today, units }: Props) {
               <span className="visually-hidden">
                 {sessions.length === 0 ? ', rest' : `, ${sessions.map((s) => s.title).join(', ')}`}
                 {state === 'done' ? ', done' : ''}
+                {additional ? ', additional run logged' : ''}
               </span>
             </li>
           )

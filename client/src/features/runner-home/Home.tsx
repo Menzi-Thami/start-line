@@ -11,6 +11,8 @@ import { Avatar } from '../account/Avatar'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import { PlanAdjustment } from '../coaching/PlanAdjustment'
 import { RunLog } from '../coaching/RunLog'
+import { AdditionalRun } from '../coaching/AdditionalRun'
+import { CheckInLoadState } from '../coaching/CheckInLoadState'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { offersTick } from '../coaching/ran-this'
 import { RanThis } from '../coaching/RanThis'
@@ -259,7 +261,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   }
   // Done is the runner's own word once their check-ins are in: a tick or check-in, or a run they uploaded. A run Strava sent
   // alone doesn't make it done; the card asks them to tick it instead.
-  const ranToday = runs.some((r) => !coach?.entries?.some((c) => c.isAdditional && c.activityId === r.id) && r.localDate === today && r.kind !== 'Other' && (!coach || r.source.kind !== 'Strava'))
+  const ranToday = runs.some((r) => !coach?.entries?.some((c) => c.isAdditional && c.activityId === r.id) && r.localDate === today && r.kind !== 'Other' && r.source.kind !== 'Strava')
   const isDone = (s: Session) => {
     const checkIn = coach?.get(s)
     return checkIn ? checkIn.status !== 'Skipped' : ranToday
@@ -311,7 +313,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   return (
     <>
       {body}
-      {coach && <RunLog plan={plan} coach={coach} runs={runs} />}
+      {coach && <RunLog plan={plan} coach={coach} runs={runs} showEntries={false} />}
       {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
       {day.strength.map((s) => (
         <section className="home-today-strength" aria-label="Strength session" key={`${s.date}|${s.type}`}>
@@ -467,7 +469,7 @@ export function Home({
   const progress = plan ? planProgress(plan, today) : null
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
   const goalSeconds = plan ? parseTimeSpan(plan.goalTime) : null
-  const pendingSyncedRuns = runs.filter(r => r.source.kind === 'Strava' && r.localDate <= today && !checkIns.entries.some(c => c.activityId === r.id || c.date === r.localDate && !c.activityId && c.status !== 'Skipped'))
+  const pendingSyncedRuns = runs.filter(r => r.source.kind === 'Strava' && r.localDate <= today && !checkIns.entries.some(c => c.activityId === r.id))
   const fromStrava = runs.some((r) => r.source.kind === 'Strava')
   const ranDates = new Set([...completedActivityRuns.filter((r) => r.kind !== 'Other').map((r) => r.localDate), ...checkIns.entries.filter((c) => !c.isAdditional && c.status !== 'Skipped').map((c) => c.date)])
 
@@ -626,11 +628,17 @@ export function Home({
           <h2 id="home-training" className="home-heading">
             Your running
           </h2>
+          {current && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
           {pendingSyncedRuns.length > 0 && <div className="callout"><p>Your Strava run has synced. Confirm how it fits your plan to add a saved training entry.</p>
             <ul>{pendingSyncedRuns.map(run => <li key={run.id}>{formatDate(run.localDate)} · {formatDistance(run.distanceKm, units)} from Strava{' '}
               {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}
             </li>)}</ul><p className="field-help">Synced details are temporary. Enter your own distance and time for lasting distance totals, or link the run to record completion without copying its metrics.</p></div>}
           {requestedRun && plan && coach && <RunLog key={requestedRun.id} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} />}
+          {coach && checkIns.entries.some(c => c.isAdditional) && <section aria-label="Recently logged runs">
+            <h3>Recently logged runs</h3>
+            {checkIns.entries.filter(c => c.isAdditional).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3).map(entry => <AdditionalRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}
+            <button type="button" className="link-button" onClick={onOpenPlan}>View runs in your plan →</button>
+          </section>}
           {logFailed ? (
             <div className="home-data-state" role="alert">
               <p>Your running totals couldn’t load. Try again when you’re ready.</p>

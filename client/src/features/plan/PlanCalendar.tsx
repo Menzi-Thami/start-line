@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import type { PlanWeek } from '../../lib/types'
 import { sessionKey } from './plan-math'
+import { weekEnd } from '../../lib/plan-runs'
 
 interface Props {
   weeks: readonly PlanWeek[]
   raceDate: string
   today: string
   done: Set<string>
+  additionalDates?: readonly string[]
 }
 
 const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
@@ -31,7 +33,7 @@ function monthsBetween(from: string, to: string): string[] {
  * The whole plan as a calendar, a month at a time: run days ringed, ticked ones in volt, today filled, race day flagged.
  * A day opens its week in the list below. It opens on the month with today in it.
  */
-export function PlanCalendar({ weeks, raceDate, today, done }: Props) {
+export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [] }: Props) {
   const sessions = weeks.flatMap((w) => w.sessions.map((s) => ({ ...s, week: w.number })))
   const months = monthsBetween(weeks[0]?.startDate ?? today, raceDate)
   const start = Math.max(0, months.indexOf(monthOf(today)))
@@ -80,13 +82,15 @@ export function PlanCalendar({ weeks, raceDate, today, done }: Props) {
           if (!date) return <span key={`gap-${i}`} aria-hidden="true" />
           const day = sessions.filter((s) => s.date === date)
           const runs = day.filter((s) => s.type !== 'Strength')
+          const additional = additionalDates.filter((d) => d === date).length
+          const week = weeks.find((w) => w.startDate <= date && date <= weekEnd(w))
           const isRace = date === raceDate
           const ticked = day.length > 0 && day.every((s) => done.has(sessionKey(s)))
           const state = isRace ? 'race' : ticked ? 'done' : runs.length > 0 ? 'run' : day.length > 0 ? 'strength' : 'rest'
-          const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace ? 'race day' : day.length ? day.map((s) => s.title).join(', ') : 'rest'}${ticked ? ', done' : ''}`
-          const cls = `plan-calendar-day is-${state}${date === today ? ' is-today' : ''}`
-          return day.length > 0 ? (
-            <button key={date} type="button" className={cls} aria-label={label} aria-current={date === today ? 'date' : undefined} onClick={() => openWeek(day[0]!.week)}>
+          const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace ? 'race day' : day.length ? day.map((s) => s.title).join(', ') : 'rest'}${ticked ? ', done' : ''}${additional ? `, ${additional} additional ${additional === 1 ? 'run' : 'runs'} logged` : ''}`
+          const cls = `plan-calendar-day is-${state}${date === today ? ' is-today' : ''}${additional ? ' has-additional-run' : ''}`
+          return day.length > 0 || (additional > 0 && week) ? (
+            <button key={date} type="button" className={cls} aria-label={label} aria-current={date === today ? 'date' : undefined} onClick={() => openWeek(day[0]?.week ?? week!.number)}>
               {Number(date.slice(8))}
             </button>
           ) : (
@@ -96,7 +100,7 @@ export function PlanCalendar({ weeks, raceDate, today, done }: Props) {
           )
         })}
       </div>
-      <p className="field-help plan-calendar-key">Ringed days are sessions. Select one to open its week.</p>
+      <p className="field-help plan-calendar-key">Ringed days are sessions. An underline marks an additional logged run. Select a day to open its week.</p>
     </section>
   )
 }

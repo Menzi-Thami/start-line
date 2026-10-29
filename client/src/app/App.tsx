@@ -17,6 +17,7 @@ import { ScreenRecovery } from './ScreenRecovery'
 import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
 import { useCheckIns } from '../features/coaching/useCheckIns'
+import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { RaceStartIntro } from '../features/home/RaceStartIntro'
@@ -863,6 +864,7 @@ export function App() {
             </div>
 
             {showPlan && <InstallCard />}
+            {showPlan && savedOnScreen && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
 
             {/* The calendar menu: the runner's own plan subscribes to their personal feed, which follows the plan through
                 every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}
@@ -883,6 +885,7 @@ export function App() {
                     : calendarLinks(toRequest(plan.inputs), units, plan.plan.race.name, apiOrigin())
                 }
                 today={today}
+                canCompleteRuns={!savedOnScreen || checkIns.ready}
                 runs={state.kind === 'ready' ? runs : undefined}
                 bests={state.kind === 'ready' ? synced.bests : undefined}
                 strava={state.kind === 'ready' ? synced.strava : undefined}

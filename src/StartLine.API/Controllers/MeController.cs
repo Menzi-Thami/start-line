@@ -39,14 +39,17 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
         Ok(await dispatcher.Send(request, cancellationToken));
 
     /// <summary>
-    /// The runs behind the runner's long-term totals, this year and the last 13 weeks at least: sessions they ticked off,
-    /// at the plan's distance, and runs they uploaded, at their own. Never a synced Strava run, which is kept 7 days only.
+    /// Saved running history, this year and the last 13 weeks at least. includeSynced=true resolves valid imported
+    /// measurements for current display without copying them into saved entries. Responses must not be cached.
     /// </summary>
     [HttpGet("running")]
     [ProducesResponseType<IReadOnlyList<LoggedRunDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Running(CancellationToken cancellationToken) =>
-        Ok(await dispatcher.Send(new GetRunningLogQuery(), cancellationToken));
+    public async Task<IActionResult> Running(CancellationToken cancellationToken, [FromQuery] bool includeSynced = false)
+    {
+        Response.Headers.CacheControl = "private, no-store";
+        return Ok(await dispatcher.Send(new GetRunningLogQuery(includeSynced), cancellationToken));
+    }
 
     /// <summary>Everything stored about the runner, as a downloadable file.</summary>
     [HttpGet("export")]

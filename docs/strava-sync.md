@@ -26,19 +26,22 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
   worker pass. Reading "refreshed at least every 7 days" as compliant is Taperday's interpretation, sent to Strava
   for confirmation before going past single-athlete mode.
 - **5.4: no combining Strava Data with other customer data.** Uploads and synced runs are never merged: an upload
-  of a synced run replaces the copy, and a synced copy of an uploaded run is skipped. The long-term totals on Home
-  ("Your running": this month, this year, the weekly average and the 12-week chart) are built only from what Taperday
-  may keep (see below), so a synced run is never added into them. The 7-day views (a plan day's run mark, This week's
-  ring, Overview) still show synced runs while they're cached, apart from the kept totals.
+  of a synced run replaces the copy, and a synced copy of an uploaded run is skipped. Home's current display now resolves
+  the runner's saved history and valid cached measurements on each read, with Strava contributions labelled and no
+  materialised aggregate or copied imported measurements. The saved-only API remains the default; `includeSynced=true`
+  opts into this transient view. See [automatic totals](automatic-running-totals.md). This does not change cache retention,
+  source-record separation or the provider-policy review needed before expanding beyond single-athlete mode.
 - **5.3 and 5.5: derived data.** Anything "derived from, aggregated from ... or generated using Strava Data" is held to
   the same 7 days, and none of it goes in a lasting index. So nothing Taperday keeps for good is worked out from a synced
   run:
   - **The coach's weekly call** (`CoachWeek`, kept for good so a plan never changes after the fact) is made only from
     check-ins and uploaded runs (`CoachEvidence`): no synced run counts as evidence, and the fitness estimate behind a
     call's paces uses uploads' best efforts only. Calls made before 26 Oct 2026 may have used a synced run.
-  - **The running totals** (`RunningLog`, `GET /me/running`) count ticked sessions at their planned distance (the
+  - **The saved-only running log** (`RunningLog.Of`, default `GET /me/running`) counts ticked sessions at their planned distance (the
     runner's own distance if they gave one; half for a run cut short, as the coach counts it) and uploads at their
-    measured distance. A day with an upload counts the upload and none of that day's ticks, so nothing counts twice.
+    measured distance. A day with an upload counts the upload and none of that day's ticks. Home's read-only current
+    totals use `RunningLog.WithSynced` instead, resolving valid activity associations once, preferring independently
+    entered distances and excluding expired imports. These calculated figures are not persisted or cached for reuse.
 - **The tick: the runner's own data.** A synced run doesn't count for good; the runner's word that they ran the session
   does. When a run that matches a planned session arrives, the plan shows "Ran this? Tick it" on that session (and on
   Home's Today card) until it's checked in on. A tap saves a plain "Done" check-in with no effort, through the usual

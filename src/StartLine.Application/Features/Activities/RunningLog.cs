@@ -14,14 +14,14 @@ using StartLine.Domain.Plans;
 
 namespace StartLine.Application.Features.Activities;
 
-/// <summary>One run in the runner's long-term totals: a ticked session at its planned distance, or an upload at its own.</summary>
-public sealed record LoggedRunDto(DateOnly Date, double DistanceKm, LoggedRunSource Source, bool DistanceUnreported = false);
+/// <summary>A saved or currently available run; synced measurements carry their cache deadline.</summary>
+public sealed record LoggedRunDto(DateOnly Date, double DistanceKm, LoggedRunSource Source, bool DistanceUnreported = false, DateTimeOffset? CachedUntil = null);
 
 /// <summary>
 /// The runs behind Home's "Your running" totals, from the 1st of January (or further back, for the last 12 weeks and last
-/// month): what the runner ticked off and what they uploaded. Never a synced Strava run (<see cref="RunningLog"/>).
+/// month). By default it returns saved history; IncludeSynced adds available imports for a transient current view.
 /// </summary>
-public sealed record GetRunningLogQuery : IRequest<IReadOnlyList<LoggedRunDto>>;
+public sealed record GetRunningLogQuery(bool IncludeSynced = false) : IRequest<IReadOnlyList<LoggedRunDto>>;
 
 internal sealed partial class GetRunningLogHandler(
     IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time, ILogger<GetRunningLogHandler> logger)
@@ -41,8 +41,9 @@ internal sealed partial class GetRunningLogHandler(
         var checkIns = await db.SessionCheckIns.AsNoTracking()
             .Where(c => planIds.Contains(c.SavedPlanId) && c.Date >= from && c.Date <= today && c.Status != CheckInStatus.Skipped)
             .ToListAsync(cancellationToken);
-        var uploads = await db.Activities.AsNoTracking()
-            .Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.LocalDate >= from && a.LocalDate <= today)
+        var now = time.GetUtcNow();
+        var activities = await db.Activities.AsNoTracking().Visible(now)
+            .Where(a => a.RunnerId == runner.Id && (request.IncludeSynced || a.Source == ActivitySource.Upload) && a.LocalDate >= from && a.LocalDate <= today)
             .ToListAsync(cancellationToken);
 
         List<TickedSession> ticks = [];
@@ -52,10 +53,11 @@ internal sealed partial class GetRunningLogHandler(
             ticks.AddRange(byPlan.Select(c => new TickedSession(
                 c.Date,
                 c.IsAdditional ? 0 : sessions.FirstOrDefault(s => s.Date == c.Date && s.Type == c.SessionType)?.DistanceKm ?? 0,
-                c.Answers, c.IsAdditional)));
+                c.Answers, c.IsAdditional, c.UpdatedAt)));
         }
 
-        return [.. RunningLog.Of(ticks, uploads).Select(r => new LoggedRunDto(r.Date, ActivitySummaryDto.Round(r.DistanceKm, 2), r.Source, r.DistanceUnreported))];
+        var log = request.IncludeSynced ? RunningLog.WithSynced(ticks, activities, now) : RunningLog.Of(ticks, activities);
+        return [.. log.Select(r => new LoggedRunDto(r.Date, ActivitySummaryDto.Round(r.DistanceKm, 2), r.Source, r.DistanceUnreported, r.CachedUntil))];
     }
 
     /// <summary>

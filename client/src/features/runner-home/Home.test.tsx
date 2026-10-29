@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -233,19 +233,24 @@ describe('Home', () => {
 
     const running = screen.getByRole('region', { name: 'Your running' })
     expect(await within(running).findByText('52.2')).toBeInTheDocument()
-    expect(within(running).getByText(/plain completed sessions at their prescribed distance/)).toBeInTheDocument()
+    expect(within(running).getByText(/Totals include your saved running history/)).toBeInTheDocument()
     expect(within(running).getByText('64.2')).toBeInTheDocument()
     expect(within(running).getByText(/40.2 km \(335%\) more than 1 Sept–23 Sept/)).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Weekly distance, last 12 weeks' })).toBeInTheDocument()
   })
 
-  it('never counts a Strava run in the kept totals, and says plainly why', async () => {
+  it('automatically counts available Strava distance without asking the runner to enter it again', async () => {
+    server.use(http.get('*/api/v1/me/running', ({ request }) => {
+      expect(new URL(request.url).searchParams.get('includeSynced')).toBe('true')
+      return HttpResponse.json([{ date: '2026-10-21', distanceKm: 8, source: 'Strava', distanceUnreported: false, cachedUntil: '2027-01-01T00:00:00Z' }])
+    }))
     renderHome({ runs: [run('2026-10-21', 8, 'Strava')] }, { signIn: true })
 
     const running = screen.getByRole('region', { name: 'Your running' })
-    expect(await within(running).findByText(/they are not copied into your saved totals/)).toBeInTheDocument()
-    expect(within(running).queryByText('8')).not.toBeInTheDocument()
-    expect(within(running).getAllByText('0').length).toBeGreaterThan(0)
+    expect(await within(running).findAllByText('8')).toHaveLength(2)
+    expect(within(running).getAllByText('8 km from Strava')).toHaveLength(2)
+    expect(within(running).getAllByText('1 run')).toHaveLength(2)
+    expect(within(running).queryByText('—')).not.toBeInTheDocument()
   })
 
   it('offers quick completion on today’s session and can use a linked Strava run', async () => {
@@ -308,9 +313,9 @@ describe('Home', () => {
     expect(onOpenAccount).toHaveBeenCalled()
   })
 
-  it('leaves Strava out of Home once it’s connected, or when it isn’t on offer', () => {
+  it('does not offer a connection nudge once Strava is connected', () => {
     renderHome({ strava: { ...stravaOff, available: true, connected: true, status: 'Active' } })
-    expect(screen.queryByText(/Strava/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Connect Strava/i })).not.toBeInTheDocument()
   })
 })
 
@@ -401,4 +406,59 @@ it('does not claim an unconfirmed Strava run completed today’s workout while s
   renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 10, 'Strava')] }, { signIn: true })
   const today = screen.getByRole('region', { name: 'Today' })
   expect(within(today).queryByText('Done', { exact: true })).not.toBeInTheDocument()
+})
+
+it('refreshes automatic distance when the runner returns to the app', async () => {
+  let available = false
+  server.use(http.get('*/api/v1/me/running', () => HttpResponse.json(available ? [{ date: '2026-10-22', distanceKm: 10, source: 'Strava', cachedUntil: '2027-01-01T00:00:00Z' }] : [])))
+  renderHome({}, { signIn: true })
+  await screen.findByRole('button', { name: 'Add your runs →' })
+  available = true
+  const visible = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+  try {
+    fireEvent(document, new Event('visibilitychange'))
+    const running = screen.getByRole('region', { name: 'Your running' })
+    expect(await within(running).findAllByText('10')).toHaveLength(2)
+    expect(within(running).getAllByText('1 run')).toHaveLength(2)
+  } finally { visible.mockRestore() }
+})
+
+it('never shows the previous account’s totals while a different account loads', async () => {
+  let release!: () => void
+  const pending = new Promise<void>(resolve => { release = resolve })
+  let reads = 0
+  server.use(http.get('*/api/v1/me/running', async () => {
+    const first = ++reads === 1
+    if (!first) await pending
+    return HttpResponse.json([{ date: '2026-10-22', distanceKm: first ? 10 : 20, source: 'Uploaded' }])
+  }))
+  const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenRuns: vi.fn(), onOpenAccount: vi.fn() }
+  const view = (id: string) => <AuthContext.Provider value={signedIn}><Home runner={{ ...thandi, id }} units="km" today="2026-10-23" current={null} {...handlers} /></AuthContext.Provider>
+  const { rerender } = render(view('one'))
+  const running = screen.getByRole('region', { name: 'Your running' })
+  expect(await within(running).findAllByText('10')).toHaveLength(2)
+  rerender(view('two'))
+  expect(within(running).queryByText('10')).not.toBeInTheDocument()
+  expect(within(running).getByRole('status', { name: 'Loading running totals' })).toBeInTheDocument()
+  release()
+  expect(await within(running).findAllByText('20')).toHaveLength(2)
+})
+
+it('refreshes at imported expiry and does not claim a missing distance is level with zero', async () => {
+  vi.useFakeTimers()
+  try {
+    vi.setSystemTime(new Date('2026-10-23T06:00:00Z'))
+    let reads = 0
+    server.use(http.get('*/api/v1/me/running', () => HttpResponse.json(++reads === 1
+      ? [{ date: '2026-10-22', distanceKm: 10, source: 'Strava', cachedUntil: '2026-10-23T06:01:00Z' }]
+      : [{ date: '2026-10-22', distanceKm: 0, source: 'Ticked', distanceUnreported: true }])))
+    renderHome({}, { signIn: true })
+    const running = screen.getByRole('region', { name: 'Your running' })
+    await vi.waitFor(() => expect(within(running).getAllByText('10')).toHaveLength(2))
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_100) })
+    await vi.waitFor(() => expect(within(running).getAllByText('—')).toHaveLength(2))
+    expect(within(running).getByText(/1 run has no available distance/)).toBeInTheDocument()
+    expect(within(running).getByText('Comparison unavailable while distances are missing.')).toBeInTheDocument()
+    expect(reads).toBe(2)
+  } finally { vi.useRealTimers() }
 })

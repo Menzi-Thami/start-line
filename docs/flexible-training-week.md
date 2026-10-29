@@ -2,7 +2,7 @@
 
 Log actual runs as a replacement for a prescribed workout or as an additional run. The prescription stays visible. Synced activities offer **Log this run** in the calendar and Home explains when an imported run has not yet been confirmed. Linking an import does not copy cached metrics into a permanent record. Choosing Enter manually starts empty fields for the runner’s own measurements. The `independentMetrics` request acknowledgement permits those self-reported values to retain an activity identity association, preventing double counting. Their own values remain after the imported cache disappears. No imported measurements are prefilled or copied.
 
-Time-only and linked entries count towards the number of saved runs. Their distance remains unreported, rather than being replaced with the prescribed distance. The running-log API retains its numeric distance contribution and adds `distanceUnreported`; when true, zero contributes nothing to distance sums and must not be presented as a zero-distance run. Home shows a dash when no distance is known and explains partial totals. The four-full-week average excludes the current week.
+Time-only and linked entries count towards the number of saved runs. Their saved distance remains unreported, rather than being replaced with the prescription. Home now resolves a valid linked Strava distance automatically for current display; it is not copied into the saved entry. The saved-only API retains `distanceUnreported`: zero contributes nothing to distance sums and must not be presented as a zero-distance run. Home shows a dash when no distance is available and explains partial totals. The four-full-week average excludes this week. See [automatic totals](automatic-running-totals.md).
 
 ## Remaining week
 

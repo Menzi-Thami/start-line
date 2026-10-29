@@ -58,7 +58,7 @@ export type ActivitySource = Schemas['ActivitySource']
 export type RunSource = Schemas['SourceDto']
 export type PersonalBest = Schemas['PersonalBestDto']
 // Older responses omit this additive availability flag.
-export type LoggedRun = Omit<Schemas['LoggedRunDto'], 'distanceUnreported'> & { distanceUnreported?: boolean }
+export type LoggedRun = Omit<Schemas['LoggedRunDto'], 'distanceUnreported' | 'cachedUntil'> & { distanceUnreported?: boolean; cachedUntil?: string | null }
 export type PaceVerdict = Schemas['PaceVerdict']
 export type StravaStatus = Schemas['StravaStatusDto']
 export type StravaDisconnected = Schemas['StravaDisconnectedDto']

@@ -107,6 +107,9 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
+  const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
+  const runLogRef = useRef<HTMLDivElement>(null)
+  const logImportedRun = (run: ActivitySummary) => { setRequestedRun(run); requestAnimationFrame(() => runLogRef.current?.scrollIntoView({ behavior: prefersMotion() ? 'smooth' : 'auto', block: 'center' })) }
   const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle')
   const tabs: readonly { id: TabId; label: string }[] = runs ? [PLAN_TABS[0], OVERVIEW_TAB, ...PLAN_TABS.slice(1)] : PLAN_TABS
   const [tab, setTab] = useState<TabId>('week')
@@ -300,8 +303,8 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
       <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
 
       {replan}
-      {coach && <RunLog plan={plan} coach={coach} runs={runs} />}
-      {coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}
+      {coach && <div ref={runLogRef}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} /></div>}
+      {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
 
       {plan.outlook && (
         // A rebuilt plan's own banner already offers its suggested goal, which is the very goal the card names, so the
@@ -456,7 +459,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
                 />
               )}
               <WeekGlance week={shown.week} done={effectiveDone} runs={completionByDate} today={today} units={units} />
-              <WeekDays week={shown.week} byZone={byZone} units={units} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} />
+              <WeekDays week={shown.week} byZone={byZone} units={units} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} />
               <p className="field-help">
                 Ticks are saved on this device.{' '}
                 <button type="button" className="link-button" onClick={() => showTab(tabs.findIndex((t) => t.id === 'all'))}>
@@ -470,7 +473,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
         <div {...panel('all')}>
           <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} />
           <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>
-          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} coach={coach} today={today} />
+          <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} />
         </div>
 
         <div {...panel('strength')}>

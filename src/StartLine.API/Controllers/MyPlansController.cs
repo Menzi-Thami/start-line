@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Plans;
 
 namespace StartLine.API.Controllers;
@@ -52,8 +53,8 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
 
     [HttpGet("{id:guid}/coach/proposal")]
     [ProducesResponseType<CoachingProposalDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ReviewCoaching(Guid id, CancellationToken cancellationToken) =>
-        Ok(await dispatcher.Send(new ReviewCoachingCommand(id), cancellationToken));
+    public async Task<IActionResult> ReviewCoaching(Guid id, CancellationToken cancellationToken, [FromQuery] RecoveryReadiness recovery = RecoveryReadiness.NotReported) =>
+        Ok(await dispatcher.Send(new ReviewCoachingCommand(id, Recovery: recovery), cancellationToken));
 
     [HttpPost("{id:guid}/coach/apply")]
     [ProducesResponseType<CoachingProposalDto>(StatusCodes.Status200OK)]
@@ -61,7 +62,20 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
     public async Task<IActionResult> ApplyCoaching(Guid id, [FromBody] ApplyCoachingRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return Ok(await dispatcher.Send(new ReviewCoachingCommand(id, request.Token), cancellationToken));
+        return Ok(await dispatcher.Send(new ReviewCoachingCommand(id, request.Token, request.Recovery), cancellationToken));
+    }
+
+    [HttpGet("{id:guid}/remaining-week/proposal")]
+    [ProducesResponseType<RemainingWeekProposalDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ReviewRemainingWeek(Guid id, CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new ReviewRemainingWeekCommand(id), cancellationToken));
+
+    [HttpPost("{id:guid}/remaining-week/apply")]
+    [ProducesResponseType<RemainingWeekProposalDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> ApplyRemainingWeek(Guid id, [FromBody] ApplyCoachingRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Ok(await dispatcher.Send(new ReviewRemainingWeekCommand(id, request.Token), cancellationToken));
     }
 
     /// <summary>Makes a past plan the current one again. The plan that was current becomes a past plan.</summary>
@@ -107,4 +121,4 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
 /// <param name="RecentWeeklyKm">What the runner ran last week. Required when they're behind.</param>
 public sealed record ReplanRequest(DateOnly ReplanFrom, Setback Setback, double? RecentWeeklyKm);
 
-public sealed record ApplyCoachingRequest([Required, StringLength(64, MinimumLength = 64)] string Token);
+public sealed record ApplyCoachingRequest([Required, StringLength(64, MinimumLength = 64)] string Token, RecoveryReadiness Recovery = RecoveryReadiness.NotReported);

@@ -37,6 +37,11 @@ internal static class CoachWords
         CoachReason.FasterThanPlanned => "You ran your hard sessions faster than planned.",
         CoachReason.StrugglingTwice => "That’s two tough weeks in a row, so the easier week comes now.",
         CoachReason.ThrivingTwice => "That’s two strong weeks in a row.",
+        CoachReason.BuildingConsistency => "Keep building consistency. Progression needs three strong weeks, complete logs and a positive recovery check.",
+        CoachReason.RecoveryFatigue => "You reported that you still feel tired, so recovery comes first.",
+        CoachReason.RecoveryIllness => "You reported feeling unwell or not ready to train. Rest and use the illness replan when ready.",
+        CoachReason.RecoveryWeek => "This is a recovery or taper week. Feeling good is a reason to respect it.",
+        CoachReason.OneDemandAtATime => "Only one demand increases: distance, workout difficulty or pace.",
         _ => "You rebuilt your plan last week, so this week follows it as it is.",
     };
 
@@ -46,7 +51,7 @@ internal static class CoachWords
         { HoldVolume: true, DoseStep: < 0 } => "This week stays at last week’s distance, with one smaller hard session instead of two.",
         { HoldVolume: true } => "This week stays at last week’s distance.",
         { DoseStep: > 0 } => "This week’s hard sessions are a step bigger.",
-        { Verdict: CoachVerdict.Thriving } => "Keep it up: another week like that and the hard sessions step up.",
+        { Verdict: CoachVerdict.Thriving } => "Keep building consistency; any increase is reviewed with you first.",
         _ => null,
     };
 }

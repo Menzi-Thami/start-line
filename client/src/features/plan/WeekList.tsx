@@ -22,6 +22,7 @@ interface Props {
   /** Uploaded runs by date. Without them, the weeks show the plan alone. */
   runs?: RunsByDate
   onOpenRun?: (id: string) => void
+  onLogRun?: (run: ActivitySummary) => void
   /** Check-ins on the runner's saved plan. Without it (a shared link, or signed out), runs only tick off. */
   coach?: SessionCoach
   /** With it, and the runner's runs or check-ins, each finished week opens with how it went. */
@@ -32,9 +33,9 @@ interface Props {
  * One uploaded run beside the plan: a done mark on a day with a planned run, or a quiet line on a day without one.
  * The words carry the meaning; the tick is decoration.
  */
-function RunMark({ run, units, unplanned, onOpenRun }: { run: ActivitySummary; units: Units; unplanned: boolean; onOpenRun?: (id: string) => void }) {
+function RunMark({ run, units, unplanned, onOpenRun, logged = false }: { run: ActivitySummary; units: Units; unplanned: boolean; onOpenRun?: (id: string) => void; logged?: boolean }) {
   const distance = formatDistance(run.distanceKm, units)
-  const text = unplanned ? `Unplanned run · ${distance}` : `Ran ${distance}`
+  const text = unplanned ? `${logged ? 'Additional run logged' : 'Unplanned run'} · ${distance}` : `Ran ${distance}`
   const className = `run-mark${unplanned ? ' run-mark-unplanned' : ''}`
   const content = (
     <>
@@ -142,11 +143,12 @@ interface WeekDaysProps {
   onDoneChange: (update: DoneUpdate) => void
   runs?: RunsByDate
   onOpenRun?: (id: string) => void
+  onLogRun?: (run: ActivitySummary) => void
   coach?: SessionCoach
 }
 
 /** One week, every day listed, rest days included, so the shape of the week is obvious. */
-export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpenRun, coach }: WeekDaysProps) {
+export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpenRun, onLogRun, coach }: WeekDaysProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
     <ol className="days">
@@ -190,7 +192,8 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
                   <ul className="run-marks">
                     {marks.map(({ run, unplanned }) => (
                       <li key={run.id}>
-                        <RunMark run={run} units={units} unplanned={unplanned} onOpenRun={onOpenRun} />
+                        <RunMark run={run} units={units} unplanned={unplanned} onOpenRun={onOpenRun} logged={coach?.entries?.some(c => c.activityId === run.id)} />
+                        {onLogRun && coach?.saveAdditional && run.localDate <= coach.today && !coach.entries?.some(c => c.activityId === run.id) && <button type="button" className="link-button" onClick={() => onLogRun(run)}>Log this run</button>}
                       </li>
                     ))}
                   </ul>
@@ -205,7 +208,7 @@ export function WeekDays({ week, byZone, units, done, onDoneChange, runs, onOpen
 }
 
 /** Every week as a disclosure, every day of the week listed, rest days included, so the shape of the week is obvious. */
-export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange, runs, onOpenRun, coach, today }: Props) {
+export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange, runs, onOpenRun, onLogRun, coach, today }: Props) {
   const byZone = new Map(paces.map((p) => [p.zone, p]))
   const openWeek = currentWeek ?? weeks[0]?.number
 
@@ -235,7 +238,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
                 {reviewLine(reviewWeek(week, runs ? [...runs.values()].flat() : [], today, coach?.get, coach?.entries), units)}
               </p>
             )}
-            <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} coach={coach} />
+            <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} onLogRun={onLogRun} coach={coach} />
           </details>
         )
       })}

@@ -64,6 +64,8 @@ public sealed class SavedPlan
 
     public SavedPlanStatus Status { get; private set; }
 
+    public IReadOnlyList<SessionRevision> Adjustments { get; private set; } = [];
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -108,6 +110,22 @@ public sealed class SavedPlan
     /// </summary>
     public void Replan(PlanReplan? replan) =>
         Update(Inputs with { ReplanFrom = replan?.From, Setback = replan?.Setback, RecentWeeklyKm = replan?.RecentWeeklyKm });
+
+    public void AdjustRemainingWeek(IReadOnlyList<SessionRevision> revisions, DateOnly today)
+    {
+        ArgumentNullException.ThrowIfNull(revisions);
+        if (Status != SavedPlanStatus.Active || revisions.Any(r => r.AppliedOn != today || r.Date <= today
+            || r.Date > today.AddDays(6 - ((int)today.DayOfWeek + 6) % 7) || r.OriginalType is SessionType.Strength or SessionType.Race
+            || r.EasyKm is < RemainingWeek.MinimumRunKm || r.EasyKm is { } km && !double.IsFinite(km)
+            || r.EasyKm > r.OriginalKm || r.EasyKm > RemainingWeek.ResetRunLimitKm))
+            throw new DomainException("Only upcoming runs in the current week can be eased. Past sessions stay unchanged.");
+        var changes = Adjustments.ToDictionary(r => r.Date);
+        foreach (var revision in revisions)
+            changes[revision.Date] = changes.TryGetValue(revision.Date, out var original)
+                ? revision with { OriginalType = original.OriginalType, OriginalTitle = original.OriginalTitle, OriginalKm = original.OriginalKm }
+                : revision;
+        Adjustments = [.. changes.Values.OrderBy(r => r.Date)];
+    }
 
     /// <summary>Is this the same race as <paramref name="inputs"/>: the same catalogue race, or the same named race on the same date.</summary>
     public bool IsForSameRace(SavedPlanInputs inputs)

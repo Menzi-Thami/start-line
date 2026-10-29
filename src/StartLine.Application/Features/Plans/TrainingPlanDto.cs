@@ -14,7 +14,7 @@ public sealed record TrainingPlanDto(
     IReadOnlyList<PlanWarningDto> Warnings,
     ReplanDto? Replan = null,
     TimeSpan? SuggestedGoal = null,
-    GoalOutlookDto? Outlook = null)
+    GoalOutlookDto? Outlook = null, IReadOnlyList<SessionRevision>? Adjustments = null)
 {
     public static TrainingPlanDto From(TrainingPlan plan, RaceSummaryDto race, GoalOutlook? outlook = null)
     {

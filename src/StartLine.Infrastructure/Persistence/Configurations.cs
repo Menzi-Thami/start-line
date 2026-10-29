@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -58,6 +59,12 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
         builder.Property(p => p.Name).HasMaxLength(SavedPlan.MaxNameLength).IsRequired();
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(16);
         builder.Property(p => p.Version).IsRowVersion();
+        builder.Property(p => p.Adjustments).HasConversion(
+            changes => JsonSerializer.Serialize(changes, (JsonSerializerOptions?)null),
+            json => JsonSerializer.Deserialize<IReadOnlyList<SessionRevision>>(json, (JsonSerializerOptions?)null)!)
+            .HasDefaultValueSql("N'[]'").Metadata.SetValueComparer(new ValueComparer<IReadOnlyList<SessionRevision>>(
+                (a, b) => a != null && b != null && a.SequenceEqual(b),
+                changes => changes.Aggregate(0, (hash, change) => HashCode.Combine(hash, change)), changes => changes.ToList()));
         builder.HasIndex(p => new { p.RunnerId, p.Status, p.UpdatedAt });
         // One current plan per runner, whatever the application does.
         builder.HasIndex(p => p.RunnerId).IsUnique().HasFilter("[Status] = 'Active'").HasDatabaseName("IX_SavedPlans_OneActivePerRunner");

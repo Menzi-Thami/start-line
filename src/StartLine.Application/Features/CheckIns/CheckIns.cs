@@ -65,7 +65,7 @@ internal static class PlanSessions
         IApplicationDbContext db, PlanBuilder builder, SavedPlan plan, DateOnly date, SessionType type, CancellationToken cancellationToken)
     {
         var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
-        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls).Weeks.SelectMany(w => w.Sessions);
+        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls, plan.Adjustments, date).Weeks.SelectMany(w => w.Sessions);
         return sessions.FirstOrDefault(s => s.Date == date && s.Type == type)
             ?? throw new DomainException("That run isn't in your plan on that day. Your plan may have changed: reload it and try again.");
     }
@@ -105,7 +105,7 @@ public sealed record SaveCheckInCommand(
     SessionType? ActualSessionType = null,
     bool DistanceUnreported = false,
     Guid? ActivityId = null,
-    Guid? EntryId = null) : IRequest<CheckInDto>;
+    Guid? EntryId = null, bool IndependentMetrics = false) : IRequest<CheckInDto>;
 
 internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInCommand>
 {
@@ -158,6 +158,9 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
         {
             await PlanSessions.RequireAsync(db, builder, plan, request.Date, request.SessionType, cancellationToken);
         }
+
+        if (request.ActivityId is not null && (request.DistanceKm is not null || request.Duration is not null) && !request.IndependentMetrics)
+            throw new DomainException("Link the imported run without copying its metrics, or explicitly enter your own measurements.");
 
         if (request.ActivityId is { } activityId)
         {

@@ -172,11 +172,6 @@ public sealed class SessionCheckIn
             throw new DomainException("An unknown distance cannot also have a distance.");
         }
 
-        if (answers.ActivityId is not null && (answers.DistanceKm is not null || answers.Duration is not null || !answers.DistanceUnreported))
-        {
-            throw new DomainException("Link the imported run without copying its distance or time.");
-        }
-
         var skipped = answers.Status == CheckInStatus.Skipped;
         if (skipped ? answers.Effort is not null : !EffortIsValid(answers.Status, answers.Effort))
         {

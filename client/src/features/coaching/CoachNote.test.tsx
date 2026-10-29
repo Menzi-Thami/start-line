@@ -51,9 +51,9 @@ describe('the coach’s note', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('too close')
   })
 
-  it('cheers a strong week, and steps up after two', () => {
+  it('cheers a strong week without promising automatic increases', () => {
     const { rerender } = render(<CoachNote note={note({ verdict: 'Thriving', reasons: ['FeltEasierThanPlanned'] })} />)
-    expect(screen.getByText('Keep it up: another week like that and the hard sessions step up.')).toBeInTheDocument()
+    expect(screen.getByText('Keep building consistency; any increase is reviewed with you first.')).toBeInTheDocument()
 
     rerender(<CoachNote note={note({ verdict: 'Thriving', doseStep: 1, reasons: ['FeltEasierThanPlanned', 'ThrivingTwice'] })} />)
     expect(screen.getByText('This week’s hard sessions are a step bigger.')).toBeInTheDocument()

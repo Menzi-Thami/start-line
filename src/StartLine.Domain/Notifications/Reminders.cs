@@ -48,7 +48,7 @@ public static class Reminders
         return plan is null
             || subscription.LastRemindedOn >= today
             || TimeOnly.FromDateTime(localNow) < subscription.RemindAt
-            || !HasSomethingToSay(plan, today, subscription.WeekAhead)
+            || !HasSomethingToSay(plan, today, subscription.WeekAhead, subscription.Daily)
             ? null
             : today;
     }
@@ -57,7 +57,7 @@ public static class Reminders
     public static Reminder? Due(PushSubscription subscription, ReminderFacts? facts, DateTime localNow)
     {
         ArgumentNullException.ThrowIfNull(subscription);
-        return DueDay(subscription, facts?.Plan, localNow) is { } day ? For(facts!, day, subscription.WeekAhead) : null;
+        return DueDay(subscription, facts?.Plan, localNow) is { } day ? For(facts!, day, subscription.WeekAhead, subscription.Daily) : null;
     }
 
     /// <summary>
@@ -76,7 +76,7 @@ public static class Reminders
         var horizon = today.AddDays(LookAheadDays);
         for (var day = today; day <= plan.RaceDate && day < horizon; day = day.AddDays(1))
         {
-            if (subscription.LastRemindedOn >= day || !HasSomethingToSay(plan, day, subscription.WeekAhead))
+            if (subscription.LastRemindedOn >= day || !HasSomethingToSay(plan, day, subscription.WeekAhead, subscription.Daily))
             {
                 continue;
             }
@@ -89,7 +89,7 @@ public static class Reminders
     }
 
     /// <summary>What a day's reminder says. Null on a rest day (strength alone is not a run), unless it opens a new week.</summary>
-    public static Reminder? For(ReminderFacts facts, DateOnly day, bool weekAhead)
+    public static Reminder? For(ReminderFacts facts, DateOnly day, bool weekAhead, bool daily = false)
     {
         ArgumentNullException.ThrowIfNull(facts);
         var plan = facts.Plan;
@@ -106,15 +106,22 @@ public static class Reminders
         }
 
         return runs.Count == 0
-            ? null
+            ? daily && day >= plan.StartDate && day <= plan.RaceDate ? RecoveryDay(plan, day) : null
             : new Reminder(day, $"Today: {string.Join(" + ", runs.Select(s => s.Title))}", RunsBody(runs, plan, facts.Units));
+    }
+
+    private static Reminder RecoveryDay(TrainingPlan plan, DateOnly day)
+    {
+        var strength = plan.Weeks.SelectMany(w => w.Sessions).FirstOrDefault(s => s.Date == day && s.Type == SessionType.Strength);
+        return strength is not null ? new(day, "Today: Strength", $"No run scheduled. {strength.Detail}")
+            : new(day, "Recovery day", "No run scheduled today. Rest is part of your training. Let your body recover; there is no need to make up missed kilometres.");
     }
 
     private static List<PlannedSession> RunsOn(TrainingPlan plan, DateOnly day) =>
         [.. plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date == day && s.Type != SessionType.Strength)];
 
-    private static bool HasSomethingToSay(TrainingPlan plan, DateOnly day, bool weekAhead) =>
-        RunsOn(plan, day).Count > 0 || (weekAhead && OpensAWeek(plan, day) is not null);
+    private static bool HasSomethingToSay(TrainingPlan plan, DateOnly day, bool weekAhead, bool daily = false) =>
+        RunsOn(plan, day).Count > 0 || (weekAhead && OpensAWeek(plan, day) is not null) || daily && day >= plan.StartDate && day <= plan.RaceDate;
 
     /// <summary>
     /// The week a Monday starts, if it's after the first and short of race week: the weeks the coach makes a call on, so

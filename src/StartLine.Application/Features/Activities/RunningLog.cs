@@ -15,7 +15,7 @@ using StartLine.Domain.Plans;
 namespace StartLine.Application.Features.Activities;
 
 /// <summary>One run in the runner's long-term totals: a ticked session at its planned distance, or an upload at its own.</summary>
-public sealed record LoggedRunDto(DateOnly Date, double DistanceKm, LoggedRunSource Source);
+public sealed record LoggedRunDto(DateOnly Date, double DistanceKm, LoggedRunSource Source, bool DistanceUnreported = false);
 
 /// <summary>
 /// The runs behind Home's "Your running" totals, from the 1st of January (or further back, for the last 12 weeks and last
@@ -55,7 +55,7 @@ internal sealed partial class GetRunningLogHandler(
                 c.Answers, c.IsAdditional)));
         }
 
-        return [.. RunningLog.Of(ticks, uploads).Select(r => new LoggedRunDto(r.Date, ActivitySummaryDto.Round(r.DistanceKm, 2), r.Source))];
+        return [.. RunningLog.Of(ticks, uploads).Select(r => new LoggedRunDto(r.Date, ActivitySummaryDto.Round(r.DistanceKm, 2), r.Source, r.DistanceUnreported))];
     }
 
     /// <summary>
@@ -67,7 +67,7 @@ internal sealed partial class GetRunningLogHandler(
         try
         {
             var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
-            return [.. builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls).Weeks.SelectMany(w => w.Sessions)];
+            return [.. builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls, plan.Adjustments).Weeks.SelectMany(w => w.Sessions)];
         }
         catch (Exception e) when (e is NotFoundException or DomainException)
         {

@@ -20,12 +20,12 @@ public sealed record SavedPlanDto(
     Guid Id, string Name, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, TrainingPlanDto Plan, SavedPlanStatus Status,
     IReadOnlyList<CoachNoteDto>? Coaching = null);
 
-public sealed record SavedPlanExportDto(Guid Id, string Name, SavedPlanStatus Status, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs)
+public sealed record SavedPlanExportDto(Guid Id, string Name, SavedPlanStatus Status, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, IReadOnlyList<SessionRevision>? Adjustments = null)
 {
     public static SavedPlanExportDto From(SavedPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        return new(plan.Id, plan.Name, plan.Status, plan.CreatedAt, SavedPlanMapping.ToQuery(plan.Inputs));
+        return new(plan.Id, plan.Name, plan.Status, plan.CreatedAt, SavedPlanMapping.ToQuery(plan.Inputs), plan.Adjustments);
     }
 }
 
@@ -152,7 +152,7 @@ internal sealed class ListMyPlansHandler(IApplicationDbContext db, CurrentRunner
 
 public sealed record GetMyPlanQuery(Guid Id) : IRequest<SavedPlanDto>;
 
-internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder)
+internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time)
     : IRequestHandler<GetMyPlanQuery, SavedPlanDto>
 {
     public async Task<SavedPlanDto> Handle(GetMyPlanQuery request, CancellationToken cancellationToken)
@@ -170,7 +170,7 @@ internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner c
 
         var query = SavedPlanMapping.ToQuery(saved.Inputs);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls), saved.Status, [.. calls.Select(CoachNoteDto.From)]);
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls, saved.Adjustments, CoachCalls.LocalToday(runner!, time)), saved.Status, [.. calls.Select(CoachNoteDto.From)]);
     }
 }
 
@@ -247,7 +247,7 @@ internal sealed class ReplanMyPlanHandler(IApplicationDbContext db, CurrentRunne
         // Build first: a replan that can't be generated (the race too close, say) must never be saved.
         var query = SavedPlanMapping.ToQuery(saved.Inputs);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var plan = builder.Build(query, calls);
+        var plan = builder.Build(query, calls, saved.Adjustments);
         await db.SaveChangesAsync(cancellationToken);
         return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, plan, saved.Status, [.. calls.Select(CoachNoteDto.From)]);
     }

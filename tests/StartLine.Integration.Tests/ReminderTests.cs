@@ -234,6 +234,28 @@ public sealed class RemindersSwitchedOffTests(StartLineApiFactory factory) : ICl
 [Collection(RemindersInSeries.Name)]
 public sealed class ReminderSendingTests
 {
+    [Fact]
+    public async Task Daily_choice_is_saved_and_recovery_is_sent_once_at_six_local_time()
+    {
+        await using var factory = new RemindersFactory();
+        var client = await factory.SignedUp("Africa/Johannesburg");
+        var first = await FirstRunDay(client);
+        var monday = first.AddDays(-1);
+        var endpoint = RemindersFactory.NewEndpoint();
+        var payload = JsonSerializer.SerializeToElement(RemindersFactory.Subscription(endpoint, "06:00:00"))
+            .EnumerateObject().ToDictionary(p => p.Name, p => (object)p.Value);
+        payload["daily"] = true;
+        (await client.PutAsJsonAsync(ReminderClients.Url("/api/v1/me/reminders/devices"), payload)).EnsureSuccessStatusCode();
+        (await client.Reminders()).GetProperty("devices").EnumerateArray().ShouldHaveSingleItem().GetProperty("daily").GetBoolean().ShouldBeTrue();
+        factory.Time.SetUtcNow(Utc(monday, 3, 59));
+        await RunDue(factory);
+        factory.Push.To(endpoint).ShouldBeEmpty();
+        factory.Time.SetUtcNow(Utc(monday, 4));
+        await RunDue(factory);
+        await RunDue(factory);
+        factory.Push.To(endpoint).ShouldHaveSingleItem().Title.ShouldBe("Recovery day");
+    }
+
     // A 10K on Sunday 20 December, saved on Thursday 8 October (the factory's clock), so the plan starts Monday 12 October.
     private static readonly object TenK = new
     {

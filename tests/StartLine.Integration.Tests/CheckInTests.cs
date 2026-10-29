@@ -244,7 +244,7 @@ public sealed class CheckInTests : IClassFixture<CheckInClockFactory>
         (await client.PutAsJsonAsync(url, body)).EnsureSuccessStatusCode();
         var entries = (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/check-ins")))).EnumerateArray().ToList();
         entries.ShouldHaveSingleItem().GetProperty("isAdditional").GetBoolean().ShouldBeTrue();
-        (await Json(await client.GetAsync(Url("/api/v1/me/running")))).GetArrayLength().ShouldBe(0);
+        (await Json(await client.GetAsync(Url("/api/v1/me/running")))).EnumerateArray().ShouldHaveSingleItem().GetProperty("distanceUnreported").GetBoolean().ShouldBeTrue();
         (await client.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan}/check-ins/{date}/{type}"), new { status = "Done", distanceKm = 10 })).EnsureSuccessStatusCode();
         (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/check-ins")))).GetArrayLength().ShouldBe(2);
         (await client.DeleteAsync(Url($"/api/v1/me/plans/{plan}/check-ins/additional/{id}"))).EnsureSuccessStatusCode();

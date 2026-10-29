@@ -8,6 +8,7 @@ const round1 = (km: number) => Math.round(km * 10) / 10
 export interface Totals {
   km: number
   runs: number
+  unknownRuns?: number
 }
 
 /**
@@ -16,7 +17,9 @@ export interface Totals {
  */
 function totalOf(runs: readonly LoggedRun[], from: string, to: string): Totals {
   const inRange = runs.filter((r) => r.date >= from && r.date <= to)
+  const unknown = inRange.filter(r => r.distanceUnreported).length
   return {
+    ...(unknown > 0 ? { unknownRuns: unknown } : {}),
     km: round1(inRange.reduce((sum, r) => sum + r.distanceKm, 0)),
     runs: inRange.length,
   }

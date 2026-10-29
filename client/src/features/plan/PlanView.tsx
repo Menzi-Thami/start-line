@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { CalendarLinks } from '../../lib/calendar-links'
 import { buildIcs } from '../../lib/ics'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
@@ -27,6 +27,8 @@ import { WeekDays, WeekList } from './WeekList'
 import { PlanCalendar } from './PlanCalendar'
 import { WeekGlance } from './WeekGlance'
 import { WeekTotals } from './WeekTotals'
+
+const DaySummary = lazy(() => import('./DaySummary'))
 
 interface Props {
   onEditStrength?: () => void
@@ -108,6 +110,10 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
+  const [selectedDay, setSelectedDay] = useState<{ planKey: string; date: string } | null>(null)
+  const selectedDate = selectedDay?.planKey === planKey ? selectedDay.date : null
+  const selectDate = (date: string) => setSelectedDay({ planKey, date })
+  const closeDay = useCallback(() => setSelectedDay(null), [setSelectedDay])
   const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
   const runLogRef = useRef<HTMLDivElement>(null)
   const logImportedRun = (run: ActivitySummary) => { setRequestedRun(run); requestAnimationFrame(() => runLogRef.current?.scrollIntoView({ behavior: prefersMotion() ? 'smooth' : 'auto', block: 'center' })) }
@@ -127,10 +133,9 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
     if (entry.status === 'Skipped') effectiveDone.delete(key)
     else effectiveDone.add(key)
   }
-  const additionalIds = new Set(entries.filter((c) => c.isAdditional && c.activityId).map((c) => c.activityId))
   const additionalDates = entries.filter((c) => c.isAdditional && c.status !== 'Skipped').map((c) => c.date)
+  const activityDates = [...runs?.filter(run => run.kind !== 'Other').map(run => run.localDate) ?? [], ...entries.filter(entry => entry.status !== 'Skipped').map(entry => entry.date)]
   const byDate = runs ? runsByDate(runs) : undefined
-  const completionByDate = runs ? runsByDate(runs.filter((r) => !additionalIds.has(r.id) && (r.source.kind !== 'Strava' || entries.some((c) => !c.isAdditional && c.activityId === r.id)))) : undefined
   const ran = runs || coach ? ranKmByWeek(plan.weeks, runs ?? [], today, entries) : undefined
 
   useEffect(() => {
@@ -460,7 +465,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
                   onUseGoal={onUseGoal}
                 />
               )}
-              <WeekGlance week={shown.week} done={effectiveDone} runs={completionByDate} additionalDates={additionalDates} today={today} units={units} />
+              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} />
               <WeekDays week={shown.week} byZone={byZone} units={units} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} canCompleteRuns={canCompleteRuns} />
               <p className="field-help">
                 {coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Ticks are saved on this device.'}{' '}
@@ -473,7 +478,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
         </div>
 
         <div {...panel('all')}>
-          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} />
+          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} onSelectDate={selectDate} />
           <p className="tab-intro">{coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Tick sessions off as you go. Ticks are saved on this device only.'}</p>
           <WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} canCompleteRuns={canCompleteRuns} />
         </div>
@@ -514,6 +519,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
           )}
         </div>
       </div>
+      {selectedDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary key={`${planKey}|${selectedDate}`} date={selectedDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} /></Suspense>}
     </section>
   )
 }

@@ -34,6 +34,12 @@ const WHY: Record<CoachReason, string> = {
   StrugglingTwice: 'That’s two tough weeks in a row, so the easier week comes now.',
   ThrivingTwice: 'That’s two strong weeks in a row.',
   JustReplanned: 'You rebuilt your plan last week, so this week follows it as it is.',
+  BuildingConsistency: 'Keep building consistency. Progression needs three strong weeks, complete logs and a positive recovery check.',
+  RecoveryFatigue: 'You reported that you still feel tired, so recovery comes first.',
+  RecoveryIllness: 'You reported feeling unwell or not ready to train. Rest and use the illness replan when ready.',
+  RecoveryWeek: 'This is a recovery or taper week. Feeling good is a reason to respect it.',
+  OneDemandAtATime: 'Only one demand increases: distance, workout difficulty or pace.',
+
 }
 
 /** What changed this week because of it. */
@@ -42,7 +48,7 @@ function change(note: Note): string | null {
   if (note.holdVolume && note.doseStep < 0) return 'This week stays at last week’s distance, with one smaller hard session instead of two.'
   if (note.holdVolume) return 'This week stays at last week’s distance.'
   if (note.doseStep > 0) return 'This week’s hard sessions are a step bigger.'
-  if (note.verdict === 'Thriving') return 'Keep it up: another week like that and the hard sessions step up.'
+  if (note.verdict === 'Thriving') return 'Keep building consistency; any increase is reviewed with you first.'
   return null
 }
 

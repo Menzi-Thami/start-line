@@ -1248,7 +1248,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    recovery?: components["schemas"]["RecoveryReadiness"];
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -1324,6 +1326,90 @@ export interface paths {
                         "text/plain": components["schemas"]["ProblemDetails"];
                         "application/json": components["schemas"]["ProblemDetails"];
                         "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/remaining-week/proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RemainingWeekProposalDto"];
+                        "application/json": components["schemas"]["RemainingWeekProposalDto"];
+                        "text/json": components["schemas"]["RemainingWeekProposalDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/remaining-week/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ApplyCoachingRequest"];
+                    "text/json": components["schemas"]["ApplyCoachingRequest"];
+                    "application/*+json": components["schemas"]["ApplyCoachingRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RemainingWeekProposalDto"];
+                        "application/json": components["schemas"]["RemainingWeekProposalDto"];
+                        "text/json": components["schemas"]["RemainingWeekProposalDto"];
                     };
                 };
             };
@@ -2213,6 +2299,7 @@ export interface components {
         };
         ApplyCoachingRequest: {
             token: string;
+            recovery?: components["schemas"]["RecoveryReadiness"];
         };
         BestEffortDto: {
             name: string;
@@ -2286,6 +2373,8 @@ export interface components {
             distanceUnreported: boolean;
             /** Format: uuid */
             activityId?: null | string;
+            /** @default false */
+            independentMetrics: boolean;
         };
         /** @enum {unknown} */
         CheckInStatus: "Done" | "CutShort" | "SwappedForEasy" | "Skipped";
@@ -2299,6 +2388,7 @@ export interface components {
             hasChanges: boolean;
             canApply: boolean;
             proposed: components["schemas"]["SavedPlanDto"];
+            review?: null | components["schemas"]["WeeklyReviewDto"];
         };
         CoachNoteDto: {
             /** Format: date */
@@ -2317,7 +2407,7 @@ export interface components {
             paceFactor: number;
         };
         /** @enum {unknown} */
-        CoachReason: "FewCheckIns" | "RanAsPlanned" | "FeltHarderThanPlanned" | "MissedVolume" | "HighHeartRateDrift" | "Niggles" | "Pain" | "FeltEasierThanPlanned" | "FasterThanPlanned" | "StrugglingTwice" | "ThrivingTwice" | "JustReplanned";
+        CoachReason: "FewCheckIns" | "RanAsPlanned" | "FeltHarderThanPlanned" | "MissedVolume" | "HighHeartRateDrift" | "Niggles" | "Pain" | "FeltEasierThanPlanned" | "FasterThanPlanned" | "StrugglingTwice" | "ThrivingTwice" | "JustReplanned" | "BuildingConsistency" | "RecoveryFatigue" | "RecoveryIllness" | "RecoveryWeek" | "OneDemandAtATime";
         /** @enum {unknown} */
         CoachVerdict: "NotEnoughToGoOn" | "OnTrack" | "Struggling" | "Hurting" | "Thriving";
         ConnectionExportDto: {
@@ -2432,6 +2522,8 @@ export interface components {
             /** Format: double */
             distanceKm: number;
             source: components["schemas"]["LoggedRunSource"];
+            /** @default false */
+            distanceUnreported: boolean;
         };
         /** @enum {unknown} */
         LoggedRunSource: "Ticked" | "Uploaded";
@@ -2557,6 +2649,14 @@ export interface components {
             /** Format: double */
             distanceKm: number;
         };
+        /** @enum {unknown} */
+        RecoveryReadiness: "NotReported" | "Ready" | "Tired" | "Unwell";
+        RemainingWeekProposalDto: {
+            token: string;
+            summary: string;
+            changes: components["schemas"]["SessionRevision"][];
+            proposed: components["schemas"]["TrainingPlanDto"];
+        };
         ReminderDeviceDto: {
             /** Format: uuid */
             id: string;
@@ -2566,6 +2666,8 @@ export interface components {
             weekAhead: boolean;
             /** Format: date-time */
             createdAt: string;
+            /** @default false */
+            daily: boolean;
         };
         RemindersDto: {
             available: boolean;
@@ -2638,6 +2740,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             inputs: components["schemas"]["GeneratePlanQuery"];
+            adjustments?: null | components["schemas"]["SessionRevision"][];
         };
         /** @enum {unknown} */
         SavedPlanStatus: "Active" | "Archived";
@@ -2682,6 +2785,22 @@ export interface components {
             zone: null | components["schemas"]["PaceZone"];
             exercises: components["schemas"]["StrengthExerciseDto"][];
             steps: components["schemas"]["SessionStepDto"][];
+        };
+        SessionRevision: {
+            /** Format: date */
+            appliedOn: string;
+            /** Format: date */
+            date: string;
+            originalType: components["schemas"]["SessionType"];
+            originalTitle: string;
+            /** Format: double */
+            originalKm: number;
+            /** Format: double */
+            easyKm: null | number;
+            /** Format: double */
+            easyFastestSecondsPerKm?: null | number;
+            /** Format: double */
+            easySlowestSecondsPerKm?: null | number;
         };
         SessionStepDto: {
             kind: components["schemas"]["StepKind"];
@@ -2800,6 +2919,7 @@ export interface components {
             replan?: null | components["schemas"]["ReplanDto"];
             suggestedGoal?: null | string;
             outlook?: null | components["schemas"]["GoalOutlookDto"];
+            adjustments?: null | components["schemas"]["SessionRevision"][];
         };
         TurnOnRemindersCommand: {
             endpoint: string;
@@ -2808,6 +2928,8 @@ export interface components {
             /** Format: time */
             remindAt: string;
             weekAhead: boolean;
+            /** @default false */
+            daily: boolean;
         };
         /** @enum {unknown} */
         Units: "Kilometres" | "Miles";
@@ -2821,6 +2943,29 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        WeeklyReviewDto: {
+            /** Format: date */
+            reviewedWeek: string;
+            /** Format: date */
+            targetWeek: string;
+            /** Format: int32 */
+            runsPlanned: number;
+            /** Format: int32 */
+            runsCompleted: number;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: int32 */
+            missingCheckIns: number;
+            /** Format: int32 */
+            substitutions: number;
+            /** Format: double */
+            plannedKm: number;
+            /** Format: double */
+            reportedKm: number;
+            /** Format: int32 */
+            unknownDistances: number;
+            recovery: components["schemas"]["RecoveryReadiness"];
         };
         /** @enum {unknown} */
         WorkShape: "Steady" | "Continuous" | "Reps" | "ByEffort";

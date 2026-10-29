@@ -27,7 +27,7 @@ internal sealed partial class StravaSyncRunner(
     StravaRateGate gate,
     StravaTokens tokens,
     ActivityImporter importer,
-    TickPrompter prompter,
+    RunCelebrator prompter,
     TimeProvider time,
     ILogger<StravaSyncRunner> logger) : IStravaSync
 {

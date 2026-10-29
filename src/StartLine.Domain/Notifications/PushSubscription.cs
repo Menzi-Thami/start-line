@@ -46,6 +46,8 @@ public sealed class PushSubscription
     /// <summary>Also say on a Monday that a new week has started and the coach's note on it is waiting.</summary>
     public bool WeekAhead { get; private set; }
 
+    public bool Daily { get; private set; }
+
     /// <summary>The last day (the runner's own date) a reminder went to this device, or was skipped because it was set up too late for it.</summary>
     public DateOnly? LastRemindedOn { get; private set; }
 
@@ -57,7 +59,7 @@ public sealed class PushSubscription
     public byte[] Version { get; private set; } = [];
 
     /// <param name="localNow">The runner's own time now. Set up after today's reminder time, the first reminder is tomorrow's.</param>
-    public static PushSubscription Start(Guid runnerId, string deviceKey, ProtectedPushAddress address, TimeOnly remindAt, bool weekAhead, DateTime localNow)
+    public static PushSubscription Start(Guid runnerId, string deviceKey, ProtectedPushAddress address, TimeOnly remindAt, bool weekAhead, DateTime localNow, bool daily = false)
     {
         if (runnerId == Guid.Empty)
         {
@@ -70,7 +72,7 @@ public sealed class PushSubscription
         }
 
         var subscription = new PushSubscription { Id = Guid.NewGuid(), RunnerId = runnerId, DeviceKey = deviceKey };
-        subscription.Change(address, remindAt, weekAhead, localNow);
+        subscription.Change(address, remindAt, weekAhead, localNow, daily);
         return subscription;
     }
 
@@ -78,7 +80,7 @@ public sealed class PushSubscription
     /// A new time or choice, or new keys from the browser. A change takes effect from the next reminder time: moved to a
     /// time that's already gone today, nothing is sent for today, so a change never sends a reminder straight away.
     /// </summary>
-    public void Change(ProtectedPushAddress address, TimeOnly remindAt, bool weekAhead, DateTime localNow)
+    public void Change(ProtectedPushAddress address, TimeOnly remindAt, bool weekAhead, DateTime localNow, bool daily = false)
     {
         ArgumentNullException.ThrowIfNull(address);
         if (string.IsNullOrEmpty(address.Endpoint) || string.IsNullOrEmpty(address.P256dh) || string.IsNullOrEmpty(address.Auth))
@@ -96,6 +98,7 @@ public sealed class PushSubscription
         Auth = address.Auth;
         RemindAt = remindAt;
         WeekAhead = weekAhead;
+        Daily = daily;
 
         var today = DateOnly.FromDateTime(localNow);
         if (TimeOnly.FromDateTime(localNow) >= remindAt && (LastRemindedOn is null || LastRemindedOn < today))

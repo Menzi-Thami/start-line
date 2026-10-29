@@ -43,6 +43,9 @@ public sealed class Activity
     /// <summary>Synced from Strava but recorded on a Garmin device: Strava's policy asks for Garmin to be credited.</summary>
     public bool RecordedOnGarmin { get; private set; }
 
+    /// <summary>At-most-once notification marker; deleted with the cached activity.</summary>
+    public bool Celebrated { get; private set; }
+
     public double DistanceMetres { get; private set; }
 
     public TimeSpan MovingTime { get; private set; }

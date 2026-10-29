@@ -312,7 +312,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
     <>
       {body}
       {coach && <RunLog plan={plan} coach={coach} runs={runs} />}
-      {coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}
+      {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
       {day.strength.map((s) => (
         <section className="home-today-strength" aria-label="Strength session" key={`${s.date}|${s.type}`}>
           <p className="wait-tip-label">Strength session</p>
@@ -427,6 +427,7 @@ export function Home({
   const checkIns = useCheckIns(current?.id ?? null)
   // A tick or check-in made here changes the totals, so they're fetched again after each.
   const [logVersion, setLogVersion] = useState(0)
+  const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
   const { log, failed: logFailed } = useRunningLog(logVersion)
   const coach: SessionCoach | undefined = checkIns.ready
     ? {
@@ -435,8 +436,10 @@ export function Home({
         get: checkIns.get,
         entries: checkIns.entries,
         adjustments: current ? {
-          review: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, current.id) },
-          apply: async (proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your training.'); await api.me.applyCoaching(token, current.id, proposalToken); retryPlan() },
+          reviewRemaining: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your week.'); return api.me.reviewRemainingWeek(token, current.id) },
+                  applyRemaining: async (proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your week.'); const result = await api.me.applyRemainingWeek(token, current.id, proposalToken); void result; retryPlan() },
+                  review: async (recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, current.id, recovery) },
+          apply: async (proposalToken, recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your training.'); await api.me.applyCoaching(token, current.id, proposalToken, recovery); retryPlan() },
         } : undefined,
         saveAdditional: async (id, session, answers) => { await checkIns.saveAdditional(id, session, answers); setLogVersion((v) => v + 1) },
         removeAdditional: async (id) => { await checkIns.removeAdditional(id); setLogVersion((v) => v + 1) },
@@ -464,6 +467,7 @@ export function Home({
   const progress = plan ? planProgress(plan, today) : null
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
   const goalSeconds = plan ? parseTimeSpan(plan.goalTime) : null
+  const pendingSyncedRuns = runs.filter(r => r.source.kind === 'Strava' && r.localDate <= today && !checkIns.entries.some(c => c.activityId === r.id || c.date === r.localDate && !c.activityId && c.status !== 'Skipped'))
   const fromStrava = runs.some((r) => r.source.kind === 'Strava')
   const ranDates = new Set([...completedActivityRuns.filter((r) => r.kind !== 'Other').map((r) => r.localDate), ...checkIns.entries.filter((c) => !c.isAdditional && c.status !== 'Skipped').map((c) => c.date)])
 
@@ -622,6 +626,11 @@ export function Home({
           <h2 id="home-training" className="home-heading">
             Your running
           </h2>
+          {pendingSyncedRuns.length > 0 && <div className="callout"><p>Your Strava run has synced. Confirm how it fits your plan to add a saved training entry.</p>
+            <ul>{pendingSyncedRuns.map(run => <li key={run.id}>{formatDate(run.localDate)} · {formatDistance(run.distanceKm, units)} from Strava{' '}
+              {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}
+            </li>)}</ul><p className="field-help">Synced details are temporary. Enter your own distance and time for lasting distance totals, or link the run to record completion without copying its metrics.</p></div>}
+          {requestedRun && plan && coach && <RunLog key={requestedRun.id} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} />}
           {logFailed ? (
             <div className="home-data-state" role="alert">
               <p>Your running totals couldn’t load. Try again when you’re ready.</p>
@@ -632,24 +641,26 @@ export function Home({
           ) : (
             <>
               <div className="home-tiles">
-                <Tile label="This month" value={amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} ${totals.month.runs === 1 ? 'run' : 'runs'}`}>
+                <Tile label="This month" value={totals.month.km === 0 && totals.month.unknownRuns ? '—' : amount(totals.month.km, units)} unit={units} sub={`${totals.month.runs} ${totals.month.runs === 1 ? 'run' : 'runs'}`}>
                   <ChangeLine
                     value={change(totals.month.km, totals.previousMonth.km)}
                     units={units}
                     against={`${formatDate(totals.previousMonth.from, 'dayMonth')}–${formatDate(totals.previousMonth.to, 'dayMonth')}`}
                   />
                 </Tile>
-                <Tile label="This year" value={amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} ${totals.year.runs === 1 ? 'run' : 'runs'}`} />
+                <Tile label="This year" value={totals.year.km === 0 && totals.year.unknownRuns ? '—' : amount(totals.year.km, units)} unit={units} sub={`${totals.year.runs} ${totals.year.runs === 1 ? 'run' : 'runs'}`} />
                 <Tile label="Weekly average" value={amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
                   <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />
                 </Tile>
               </div>
-              {log.length === 0 && <div className="home-data-state"><p>Your first run starts the story. Upload a run or tick a completed session in your plan to build your totals.</p><button type="button" className="link-button" onClick={onOpenRuns}>Add your runs →</button></div>}
+              {log.length === 0 && pendingSyncedRuns.length === 0 && <div className="home-data-state"><p>Your first run starts the story. Upload a run or tick a completed session in your plan to build your totals.</p><button type="button" className="link-button" onClick={onOpenRuns}>Add your runs →</button></div>}
             </>
           )}
           <p className="field-help">
-            Counted from the runs you’ve uploaded and the sessions you’ve ticked off, each ticked one at its planned distance.
-            {fromStrava && ' Runs from Strava stay on Taperday for 7 days, as Strava asks, so they count here once you tick their session.'}
+            Saved totals use your own distance entries, uploaded files and plain completed sessions at their prescribed distance.
+            Runs logged without distance count as runs; their distance stays unrecorded. The weekly average excludes this week.
+            {totals.month.unknownRuns ? ` ${totals.month.unknownRuns} runs this month have no saved distance and are excluded from kilometre totals.` : ''}
+            {fromStrava && ' Linked Strava metrics stay in their temporary cache; they are not copied into your saved totals.'}
           </p>
         </section>
 

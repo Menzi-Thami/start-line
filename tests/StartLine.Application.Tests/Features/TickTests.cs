@@ -40,6 +40,6 @@ public sealed class TickTests
     [Fact]
     public void A_tap_on_the_prompt_opens_home_on_that_session()
     {
-        TickPrompter.OpensAt(new DateOnly(2026, 10, 20), SessionType.Tempo).ShouldBe("/?view=home&tick=2026-10-20.Tempo");
+        RunCelebrator.OpensAt(Guid.Parse("b633263b-c9d9-43c2-8dfc-3800b4e017f1")).ShouldBe("/?view=runs&run=b633263b-c9d9-43c2-8dfc-3800b4e017f1");
     }
 }

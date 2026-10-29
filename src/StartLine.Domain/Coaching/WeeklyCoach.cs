@@ -36,6 +36,11 @@ public enum CoachReason
 
     /// <summary>The runner has just replanned: the rebuild already starts from where they are.</summary>
     JustReplanned,
+    BuildingConsistency,
+    RecoveryFatigue,
+    RecoveryIllness,
+    RecoveryWeek,
+    OneDemandAtATime,
 }
 
 /// <summary>

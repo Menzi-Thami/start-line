@@ -30,7 +30,7 @@ let thisPhone: ReminderDevice
 beforeAll(async () => {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ENDPOINT))
   const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
-  thisPhone = { id: 'device-1', deviceKey: hash, remindAt: '06:15:00', weekAhead: false, createdAt: '2026-10-25T08:00:00Z' }
+  thisPhone = { id: 'device-1', deviceKey: hash, remindAt: '06:15:00', weekAhead: false, daily: false, createdAt: '2026-10-25T08:00:00Z' }
 })
 
 /** A browser that can take pushes: a service worker, its push manager and the Notification permission prompt. */
@@ -71,9 +71,9 @@ function section(reminders: Reminders) {
   server.use(
     http.get('*/api/v1/me/reminders', () => HttpResponse.json(reminders)),
     http.put('*/api/v1/me/reminders/devices', async ({ request }) => {
-      const body = (await request.json()) as { remindAt: string; weekAhead: boolean }
+      const body = (await request.json()) as { remindAt: string; weekAhead: boolean; daily: boolean }
       puts.push(body)
-      return HttpResponse.json({ ...thisPhone, remindAt: body.remindAt, weekAhead: body.weekAhead })
+      return HttpResponse.json({ ...thisPhone, remindAt: body.remindAt, weekAhead: body.weekAhead, daily: body.daily })
     }),
     http.delete('*/api/v1/me/reminders/devices/:id', ({ params }) => {
       deletes.push(String(params.id))
@@ -112,7 +112,9 @@ describe('reminders in Account', () => {
 
     const toggle = await screen.findByRole('switch', { name: 'Reminders on this device' })
     expect(toggle).not.toBeChecked()
-    expect(screen.getByText(/asks whether to tick it.+never includes your recorded runs\./s)).toBeInTheDocument()
+    expect(screen.getByText(/never marks a planned workout complete for you/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Time')).toHaveValue('06:00')
+    expect(screen.getByRole('checkbox', { name: 'Include recovery and strength days' })).toBeChecked()
     fireEvent.change(screen.getByLabelText('Time'), { target: { value: '06:30' } })
     expect(puts).toHaveLength(0)
     await userEvent.click(toggle)
@@ -128,9 +130,10 @@ describe('reminders in Account', () => {
         auth: 'AQEBAQEBAQEBAQEBAQEBAQ',
         remindAt: '06:30:00',
         weekAhead: true,
+        daily: true,
       },
     ])
-    expect(screen.getByRole('status')).toHaveTextContent('Reminders are on. The next one comes at 06:30')
+    expect(screen.getByRole('status')).toHaveTextContent('Reminders are on. Morning reminders are set for around 06:30')
   })
 
   it('knows this device is on, saves a new time or choice straight away, and turning off forgets it', async () => {

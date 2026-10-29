@@ -16,7 +16,7 @@ it('previews only on request and applies only after the runner reviews it', asyn
   expect(await screen.findByText('This is a preview. Your plan has not changed.')).toBeVisible()
   expect(actions.apply).not.toHaveBeenCalled()
   await user.click(screen.getByRole('button', { name: 'Apply this adjustment' }))
-  expect(actions.apply).toHaveBeenCalledExactlyOnceWith(proposal.token)
+  expect(actions.apply).toHaveBeenCalledExactlyOnceWith(proposal.token, 'NotReported')
 })
 it('requires a fresh review after a stale proposal is rejected', async () => {
   const actions = { review: vi.fn().mockResolvedValue(proposal), apply: vi.fn().mockRejectedValue(new Error('Review the latest suggestion.')) }
@@ -36,5 +36,18 @@ it('shows changed pace targets before allowing the adjustment to be applied', as
   await user.click(screen.getByRole('button', { name: 'Review training adjustments' }))
   expect(await screen.findByText('Pace changes')).toBeVisible()
   expect(screen.getByText(/Easy pace:/)).toHaveTextContent('→')
+  expect(actions.apply).not.toHaveBeenCalled()
+})
+
+it('invalidates the weekly preview when the recovery answer changes', async () => {
+  const actions = { review: vi.fn().mockResolvedValue(proposal), apply: vi.fn() }
+  const user = userEvent.setup()
+  render(<PlanAdjustment current={planFixture} units="km" actions={actions} />)
+  await user.selectOptions(screen.getByLabelText('How recovered do you feel for the week ahead?'), 'Tired')
+  await user.click(screen.getByRole('button', { name: 'Review training adjustments' }))
+  expect(actions.review).toHaveBeenCalledExactlyOnceWith('Tired')
+  expect(await screen.findByRole('button', { name: 'Apply this adjustment' })).toBeVisible()
+  await user.selectOptions(screen.getByLabelText('How recovered do you feel for the week ahead?'), 'Ready')
+  expect(screen.queryByRole('button', { name: 'Apply this adjustment' })).toBeNull()
   expect(actions.apply).not.toHaveBeenCalled()
 })

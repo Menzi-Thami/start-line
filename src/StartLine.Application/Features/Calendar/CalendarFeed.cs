@@ -79,7 +79,7 @@ internal sealed class ResetMyCalendarLinkHandler(IApplicationDbContext db, Curre
 /// </summary>
 public sealed record GetCalendarFeedQuery(string Token) : IRequest<CalendarFeedDto>;
 
-internal sealed class GetCalendarFeedHandler(IApplicationDbContext db, PlanBuilder builder, PlanCoach coach)
+internal sealed class GetCalendarFeedHandler(IApplicationDbContext db, PlanBuilder builder, PlanCoach coach, TimeProvider time)
     : IRequestHandler<GetCalendarFeedQuery, CalendarFeedDto>
 {
     public async Task<CalendarFeedDto> Handle(GetCalendarFeedQuery request, CancellationToken cancellationToken)
@@ -103,6 +103,6 @@ internal sealed class GetCalendarFeedHandler(IApplicationDbContext db, PlanBuild
         }
 
         var calls = await coach.CallsAsync(saved, runner, cancellationToken);
-        return new CalendarFeedDto(builder.Build(SavedPlanMapping.ToQuery(saved.Inputs), calls), runner.Units);
+        return new CalendarFeedDto(builder.Build(SavedPlanMapping.ToQuery(saved.Inputs), calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), runner.Units);
     }
 }

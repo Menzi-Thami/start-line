@@ -56,6 +56,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<int?>("Calories")
                         .HasColumnType("int");
 
+                    b.Property<bool>("Celebrated")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -383,6 +386,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("Daily")
+                        .HasColumnType("bit");
+
                     b.Property<string>("DeviceKey")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -461,6 +467,12 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Adjustments")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("N'[]'");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");

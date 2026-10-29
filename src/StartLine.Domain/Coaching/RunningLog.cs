@@ -15,7 +15,7 @@ public enum LoggedRunSource
 public sealed record TickedSession(DateOnly Date, double PlannedKm, CheckInAnswers Answers, bool IsAdditional = false);
 
 /// <summary>One run that counts towards the runner's long-term totals.</summary>
-public sealed record LoggedRun(DateOnly Date, double DistanceKm, LoggedRunSource Source);
+public sealed record LoggedRun(DateOnly Date, double DistanceKm, LoggedRunSource Source, bool DistanceUnreported = false);
 
 /// <summary>
 /// The runner's running as Taperday may keep it for good: what they ticked off and what they uploaded. Runs synced from
@@ -54,8 +54,10 @@ public static class RunningLog
         var uploadDays = uploads.Select(a => a.LocalDate).ToHashSet();
         var ticked = ticks
             .Where(t => t.IsAdditional || !uploadDays.Contains(t.Date))
-            .Select(t => KmOf(t.Answers, t.PlannedKm) is { } km && km > 0 ? new LoggedRun(t.Date, km, LoggedRunSource.Ticked) : null)
-            .OfType<LoggedRun>();
+            .Where(t => t.Answers.ActivityId is not { } id || !uploads.Any(a => a.Id == id))
+            .Where(t => t.Answers.Status != CheckInStatus.Skipped)
+            .Select(t => KmOf(t.Answers, t.PlannedKm) is { } km && km > 0 ? new LoggedRun(t.Date, km, LoggedRunSource.Ticked)
+                : new LoggedRun(t.Date, 0, LoggedRunSource.Ticked, DistanceUnreported: true));
         return
         [
             .. uploads.Select(a => new LoggedRun(a.LocalDate, a.DistanceKm, LoggedRunSource.Uploaded))

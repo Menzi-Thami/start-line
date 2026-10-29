@@ -15,12 +15,12 @@ namespace StartLine.Application.Features.Notifications;
 /// One device with reminders on. Never its push address or keys: <c>DeviceKey</c> is a hash of the address, so the
 /// browser can tell which entry is itself without the API ever handing an address back.
 /// </summary>
-public sealed record ReminderDeviceDto(Guid Id, string DeviceKey, TimeOnly RemindAt, bool WeekAhead, DateTimeOffset CreatedAt)
+public sealed record ReminderDeviceDto(Guid Id, string DeviceKey, TimeOnly RemindAt, bool WeekAhead, DateTimeOffset CreatedAt, bool Daily = false)
 {
     public static ReminderDeviceDto From(PushSubscription s)
     {
         ArgumentNullException.ThrowIfNull(s);
-        return new(s.Id, s.DeviceKey, s.RemindAt, s.WeekAhead, s.CreatedAt);
+        return new(s.Id, s.DeviceKey, s.RemindAt, s.WeekAhead, s.CreatedAt, s.Daily);
     }
 }
 
@@ -69,7 +69,7 @@ internal sealed class GetRemindersHandler(IApplicationDbContext db, CurrentRunne
 /// keys), the local time for the day's run, and whether to hear about a new week on Mondays. The same device again
 /// updates its entry. A device someone else had reminders on moves to this runner: whoever signs in on it now gets them.
 /// </summary>
-public sealed record TurnOnRemindersCommand(string Endpoint, string P256dh, string Auth, TimeOnly RemindAt, bool WeekAhead) : IRequest<ReminderDeviceDto>;
+public sealed record TurnOnRemindersCommand(string Endpoint, string P256dh, string Auth, TimeOnly RemindAt, bool WeekAhead, bool Daily = false) : IRequest<ReminderDeviceDto>;
 
 internal sealed class TurnOnRemindersValidator : AbstractValidator<TurnOnRemindersCommand>
 {
@@ -117,7 +117,7 @@ internal sealed class TurnOnRemindersHandler(
         var device = await db.PushSubscriptions.SingleOrDefaultAsync(s => s.DeviceKey == key, cancellationToken);
         if (device is not null && device.RunnerId == runner.Id)
         {
-            device.Change(address, remindAt, request.WeekAhead, localNow);
+            device.Change(address, remindAt, request.WeekAhead, localNow, request.Daily);
             await db.SaveChangesAsync(cancellationToken);
             return ReminderDeviceDto.From(device);
         }
@@ -134,7 +134,7 @@ internal sealed class TurnOnRemindersHandler(
             throw new ConflictException("reminders_limit", $"Reminders can be on for up to {PushSubscription.MaxPerRunner} devices. Turn them off on one you no longer use.");
         }
 
-        device = PushSubscription.Start(runner.Id, key, address, remindAt, request.WeekAhead, localNow);
+        device = PushSubscription.Start(runner.Id, key, address, remindAt, request.WeekAhead, localNow, request.Daily);
         db.PushSubscriptions.Add(device);
         await db.SaveChangesAsync(cancellationToken);
         return ReminderDeviceDto.From(device);

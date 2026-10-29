@@ -108,3 +108,5 @@ The race calendar reconciles organiser feeds, federation calendars and curated f
 | [Activity imports](docs/activity-import.md) | Supported recordings and run analysis |
 | [Design system](docs/design/night-run/README.md), [brand](docs/brand.md) | Taperday's visual identity and voice |
 | [Security](docs/security.md), [security posture](docs/security-posture.md) | Controls and operational limitations |
+
+Training adjustments and weekly reviews: [behaviour and safeguards](docs/flexible-training-week.md). PWA notifications: [device setup and delivery requirements](docs/pwa-reminders.md).

@@ -5,7 +5,7 @@ import { showWelcomeNotification } from '../../lib/install-app'
 import { currentSubscription, pushSupport, subscribe } from '../../lib/push'
 
 const SEEN_KEY = 'taperday:installed-welcome'
-const REMINDER_TIME = '07:00:00'
+const REMINDER_TIME = '06:00:00'
 
 const seen = () => {
   try {
@@ -18,7 +18,7 @@ const seen = () => {
 /**
  * The first time Taperday opens from the home screen: a hello, and the one tap that lets it send notifications. An
  * iPhone only allows that from inside the installed app, after a tap, so it can't happen at the moment of adding.
- * Allowing sends the welcome notification at once and, for a signed-in runner, turns run reminders on at 07:00 (the
+ * Allowing sends the welcome notification at once and, for a signed-in runner, turns run reminders on at 06:00 (the
  * same default as Account, where the time can be changed).
  */
 export function InstalledWelcome() {
@@ -55,10 +55,10 @@ export function InstalledWelcome() {
         const reminders = await api.me.reminders.get(token)
         if (reminders.available && reminders.publicKey && !(await currentSubscription())) {
           const address = await subscribe(reminders.publicKey)
-          await api.me.reminders.turnOn(token, { ...address, remindAt: REMINDER_TIME, weekAhead: true })
+          await api.me.reminders.turnOn(token, { ...address, remindAt: REMINDER_TIME, weekAhead: true, daily: true })
         }
       }
-      setNote(token ? 'Done. Reminders come at 07:00 on your run days; change the time in Account.' : 'Done. Sign in to get reminders for your runs.')
+      setNote(token ? 'Done. Reminders come at 06:00 on your run days; change the time in Account.' : 'Done. Sign in to get reminders for your runs.')
     } catch {
       setNote('That didn’t work this time. You can turn reminders on in Account.')
     } finally {

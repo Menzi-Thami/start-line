@@ -1,12 +1,13 @@
-import { useRef, useState } from 'react'
-import { formatDistance, formatPaceRange, type Units } from '../../lib/format'
-import type { CoachingProposal, TrainingPlan } from '../../lib/types'
+import { useId, useRef, useState } from 'react'
+import { formatDate, formatDistance, formatPaceRange, type Units } from '../../lib/format'
+import type { CoachingProposal, RecoveryReadiness, TrainingPlan } from '../../lib/types'
 import { ZONES } from '../plan/copy'
 import { CoachNote } from './CoachNote'
+import { RemainingWeekAdjustment, type RemainingWeekActions } from './RemainingWeekAdjustment'
 
-export interface AdjustmentActions {
-  review: () => Promise<CoachingProposal>
-  apply: (token: string) => Promise<void>
+export interface AdjustmentActions extends Partial<RemainingWeekActions> {
+  review: (recovery?: RecoveryReadiness) => Promise<CoachingProposal>
+  apply: (token: string, recovery?: RecoveryReadiness) => Promise<void>
 }
 /** A preview never saves a call; the runner applies the exact proposal they reviewed. */
 export function PlanAdjustment({ current, units, actions }: { current: TrainingPlan; units: Units; actions: AdjustmentActions }) {
@@ -14,6 +15,8 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
   const [busy, setBusy] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [recovery, setRecovery] = useState<RecoveryReadiness>('NotReported')
+  const recoveryId = useId()
   const working = useRef(false)
   const run = async (work: () => Promise<void>) => {
     if (working.current) return
@@ -33,6 +36,39 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
   }
   return (
     <section className="plan-adjustment" aria-label="Review upcoming training">
+      {actions.reviewRemaining && actions.applyRemaining && (
+        <RemainingWeekAdjustment
+          current={current}
+          units={units}
+          actions={{ reviewRemaining: actions.reviewRemaining, applyRemaining: actions.applyRemaining }}
+        />
+      )}
+      <h3>Weekly review</h3>
+      <p>
+        On Sunday, review this week for next Monday. From Monday, review the week just finished. Changes are applied only after you review
+        them.
+      </p>
+      <div className="field">
+        <label className="field-label" htmlFor={recoveryId}>
+          How recovered do you feel for the week ahead?
+        </label>
+        <select
+          id={recoveryId}
+          className="input"
+          value={recovery}
+          disabled={busy}
+          onChange={(e) => {
+            setRecovery(e.target.value as RecoveryReadiness)
+            setProposal(null)
+            setSuccess(null)
+          }}
+        >
+          <option value="NotReported">Not sure / prefer not to say</option>
+          <option value="Ready">Recovered and ready</option>
+          <option value="Tired">Still tired</option>
+          <option value="Unwell">Unwell or not ready to train</option>
+        </select>
+      </div>
       <p className="field-help">
         Your completed runs and original workouts stay in your plan. Review coaching before changing upcoming training.
       </p>
@@ -41,13 +77,43 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
           type="button"
           className="button button-quiet"
           disabled={busy}
-          onClick={() => void run(async () => setProposal(await actions.review()))}
+          onClick={() => void run(async () => setProposal(await actions.review(recovery)))}
         >
           {busy ? 'Reviewing…' : 'Review training adjustments'}
         </button>
       ) : (
         <>
           <h3>{proposal.hasChanges ? 'Suggested training adjustment' : 'Keep training as planned'}</h3>
+          {proposal.review && (
+            <div className="callout">
+              <h4>
+                Week of {formatDate(proposal.review.reviewedWeek)} → training from {formatDate(proposal.review.targetWeek)}
+              </h4>
+              <ul>
+                <li>
+                  {proposal.review.runsCompleted} of {proposal.review.runsPlanned} planned runs logged · {proposal.review.skipped} skipped ·{' '}
+                  {proposal.review.missingCheckIns} without a log
+                </li>
+                <li>
+                  {formatDistance(proposal.review.reportedKm, units)} reported · {formatDistance(proposal.review.plannedKm, units)}{' '}
+                  prescribed
+                </li>
+                <li>
+                  {proposal.review.substitutions} substitutions · {proposal.review.unknownDistances} runs without a reported distance
+                </li>
+              </ul>
+              {proposal.review.missingCheckIns > 0 && (
+                <p>
+                  Log completed runs and mark missed workouts as skipped before finalising. Strava syncing alone does not complete a
+                  prescribed workout.
+                </p>
+              )}
+              <p className="field-help">
+                Lasting coaching uses your entries and uploaded files. Progression needs three strong weeks, complete logs and a positive
+                recovery check. One demand increases at a time; recovery and taper weeks are protected.
+              </p>
+            </div>
+          )}
           <p>
             {proposal.hasChanges
               ? 'This is a preview. Your plan has not changed.'
@@ -104,7 +170,7 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
                 disabled={busy}
                 onClick={() =>
                   void run(async () => {
-                    await actions.apply(proposal.token)
+                    await actions.apply(proposal.token, recovery)
                     setSuccess(
                       proposal.hasChanges
                         ? 'Training updated. Your past workouts and completed runs stay unchanged.'

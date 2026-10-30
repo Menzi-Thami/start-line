@@ -162,7 +162,7 @@ internal sealed class ReminderScheduleInterceptor(ReminderSignal signal) : SaveC
         Runner => entry.State == EntityState.Modified && entry.Property(nameof(Runner.TimeZone)).IsModified,
         PushSubscription => entry.State == EntityState.Added
             || (entry.State == EntityState.Modified && entry.Properties.Any(p => p.IsModified
-                && p.Metadata.Name is not (nameof(PushSubscription.LastRemindedOn) or nameof(PushSubscription.UpdatedAt)))),
+                && p.Metadata.Name is not (nameof(PushSubscription.LastRemindedOn) or nameof(PushSubscription.LastTestPushAt) or nameof(PushSubscription.UpdatedAt)))),
         _ => false,
     };
 }

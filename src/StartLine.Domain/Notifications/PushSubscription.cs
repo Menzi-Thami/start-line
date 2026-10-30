@@ -51,6 +51,9 @@ public sealed class PushSubscription
     /// <summary>The last day (the runner's own date) a reminder went to this device, or was skipped because it was set up too late for it.</summary>
     public DateOnly? LastRemindedOn { get; private set; }
 
+    /// <summary>Last claimed one-off test slot; separate from daily reminders and preserved across server restarts.</summary>
+    public DateTimeOffset? LastTestPushAt { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -119,5 +122,15 @@ public sealed class PushSubscription
         }
 
         LastRemindedOn = day;
+    }
+
+    public void MarkTestPush(DateTimeOffset slot)
+    {
+        if (LastTestPushAt is { } previous && slot <= previous)
+        {
+            throw new DomainException("That test notification has already been claimed.");
+        }
+
+        LastTestPushAt = slot;
     }
 }

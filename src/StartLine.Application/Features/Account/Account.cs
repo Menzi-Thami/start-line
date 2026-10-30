@@ -186,7 +186,8 @@ public sealed record AccountExportDto(
     IReadOnlyList<ReminderDeviceDto> Reminders,
     IReadOnlyList<TickPromptExportDto> TickPrompts,
     RunnerPhotoDto? Photo,
-    IReadOnlyList<NotificationHistoryDto>? NotificationHistory = null);
+    IReadOnlyList<NotificationHistoryDto>? NotificationHistory = null,
+    IReadOnlyList<Insights.FeedbackNoteDto>? Feedback = null);
 
 public sealed record NotificationHistoryDto(Guid DeviceId, Guid SubjectId, Domain.Notifications.NotificationKind Kind,
     string Event, DateTimeOffset NotBefore, DateTimeOffset ExpiresAt, DateTimeOffset? ClaimedAt);
@@ -261,7 +262,9 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             [.. coachWeeks.Select(w => new CoachExportDto(w.SavedPlanId, CoachNoteDto.From(w.ToDecision())))],
             [.. reminders.Select(ReminderDeviceDto.From)],
             [.. asked.Select(p => new TickPromptExportDto(p.SavedPlanId, p.Date, p.SessionType))],
-            photo is null ? null : RunnerPhotoDto.From(photo), notificationHistory);
+            photo is null ? null : RunnerPhotoDto.From(photo), notificationHistory,
+            await db.Feedback.AsNoTracking().Where(f => f.RunnerId == runner.Id).OrderBy(f => f.CreatedAt)
+                .Select(f => new Insights.FeedbackNoteDto(f.Message, f.Page, f.CreatedAt)).ToListAsync(cancellationToken));
     }
 }
 

@@ -21,7 +21,8 @@ public sealed record LoggedRunDto(DateOnly Date, double DistanceKm, LoggedRunSou
 /// The runs behind Home's "Your running" totals, from the 1st of January (or further back, for the last 12 weeks and last
 /// month). By default it returns saved history; IncludeSynced adds available imports for a transient current view.
 /// </summary>
-public sealed record GetRunningLogQuery(bool IncludeSynced = false) : IRequest<IReadOnlyList<LoggedRunDto>>;
+/// <param name="AllTime">Every kept run since the runner started, for the all-time totals, instead of this year and 13 weeks.</param>
+public sealed record GetRunningLogQuery(bool IncludeSynced = false, bool AllTime = false) : IRequest<IReadOnlyList<LoggedRunDto>>;
 
 internal sealed partial class GetRunningLogHandler(
     IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time, ILogger<GetRunningLogHandler> logger)
@@ -34,7 +35,7 @@ internal sealed partial class GetRunningLogHandler(
     {
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         var today = CoachCalls.LocalToday(runner, time);
-        var from = Earliest(new DateOnly(today.Year, 1, 1), new DateOnly(today.Year, today.Month, 1).AddMonths(-1), today.AddDays(-7 * WeeksBack));
+        var from = request.AllTime ? DateOnly.MinValue : Earliest(new DateOnly(today.Year, 1, 1), new DateOnly(today.Year, today.Month, 1).AddMonths(-1), today.AddDays(-7 * WeeksBack));
 
         var plans = await db.SavedPlans.AsNoTracking().Where(p => p.RunnerId == runner.Id).ToListAsync(cancellationToken);
         var planIds = plans.Select(p => p.Id).ToList();

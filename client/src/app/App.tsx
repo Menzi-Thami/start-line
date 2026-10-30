@@ -8,6 +8,7 @@ import { useCalendarLink } from '../features/account/useCalendarLink'
 import { samePlan, sameRace, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
+import { FeedbackBox } from '../features/account/FeedbackBox'
 import { FindingPlan } from '../features/account/FindingPlan'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
@@ -971,6 +972,7 @@ export function App() {
       {phone && state.kind === 'ready' && <TabBar current={barCurrent} onPick={pickFromBar} account={{ name: state.runner.displayName, photo }} />}
 
       <footer className="footer">
+        {state.kind === 'ready' && <FeedbackBox page={view} />}
         <p>
           Plans are a guide, not medical advice. If something hurts, rest and get it checked. Check race dates with the organiser.
         </p>

@@ -158,6 +158,7 @@ async function attempt<T>(path: string, init: RequestInit, token?: string): Prom
   throw new ApiError(problem.detail ?? problem.title ?? 'That request didn’t work.', response.status, problem.errors ?? {}, problem.code)
 }
 
+
 export const api = {
   races: (signal?: AbortSignal) => request<Race[]>('/api/v1/races', { signal }),
 
@@ -246,6 +247,10 @@ export const api = {
     bests: (token: string) => request<PersonalBest[]>('/api/v1/me/activities/bests', {}, token),
     /** The runs behind the long-term totals: sessions ticked off (at the plan's distance) and uploads. Never Strava runs. */
     running: (token: string, includeSynced = false) => request<LoggedRun[]>(`/api/v1/me/running${includeSynced ? '?includeSynced=true' : ''}`, { cache: 'no-store' }, token),
+    /** Every kept run since the runner started (uploads and ticks), for the all-time totals. */
+    allTimeRunning: (token: string) => request<LoggedRun[]>('/api/v1/me/running?allTime=true', { cache: 'no-store' }, token),
+    sendFeedback: (token: string, message: string, page: string) =>
+      request<void>('/api/v1/me/feedback', { method: 'POST', body: JSON.stringify({ message, page }) }, token),
     reminders: {
       get: (token: string) => request<Reminders>('/api/v1/me/reminders', {}, token),
       turnOn: (token: string, body: TurnOnRemindersRequest) =>

@@ -311,6 +311,21 @@ internal sealed class NotificationDeliveryConfiguration : IEntityTypeConfigurati
 }
 
 /// <summary>The runner's own picture, one at most, going with the runner.</summary>
+/// <summary>Notes runners sent from the app, newest first on the insights page, going with the runner.</summary>
+internal sealed class FeedbackConfiguration : IEntityTypeConfiguration<Feedback>
+{
+    public void Configure(EntityTypeBuilder<Feedback> builder)
+    {
+        builder.ToTable("Feedback");
+        builder.HasKey(f => f.Id);
+        builder.Property(f => f.Id).ValueGeneratedNever();
+        builder.Property(f => f.Message).HasMaxLength(Feedback.MaxMessageLength);
+        builder.Property(f => f.Page).HasMaxLength(Feedback.MaxPageLength);
+        builder.HasIndex(f => f.CreatedAt);
+        builder.HasOne<Runner>().WithMany().HasForeignKey(f => f.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class RunnerPhotoConfiguration : IEntityTypeConfiguration<RunnerPhoto>
 {
     public void Configure(EntityTypeBuilder<RunnerPhoto> builder)

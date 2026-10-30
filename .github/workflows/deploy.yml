@@ -73,6 +73,15 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      # Report presence only: VAPID values must never appear in deployment logs.
+      - name: Check notification delivery configuration
+        env:
+          API_APP_NAME: ${{ vars.API_APP_NAME }}
+        run: |
+          az webapp config appsettings list -g rg-taperday -n "$API_APP_NAME" \
+            --query "[?name=='Push__PublicKey' || name=='Push__PrivateKey' || name=='Push__Subject'].{name:name,configured: value != ''}" \
+            --output json
+
       # Migrations run before the new API starts, so it never meets a schema older than it expects.
       # Keep migrations additive: the old API keeps serving until the deploy below swaps it out.
       # The free database pauses when idle and answers 40613 ("not currently available") while it wakes, which can

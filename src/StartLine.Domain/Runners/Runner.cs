@@ -45,6 +45,16 @@ public sealed class Runner
 
     public bool WeeklyEmails { get; private set; }
 
+    /// <summary>
+    /// When the runner stopped Taperday's news and update emails (what's new in the app), or null while they still get
+    /// them. On unless they say no: they're about the service they signed up for, and every one carries an unsubscribe
+    /// link. The time is kept so we can show when they asked, should anyone ask.
+    /// </summary>
+    public DateTimeOffset? UpdateEmailsOffAt { get; private set; }
+
+    /// <summary>Whether Taperday's news and update emails may go to this runner.</summary>
+    public bool UpdateEmails => UpdateEmailsOffAt is null;
+
     /// <summary>Optional. With it, a run shows time in heart-rate zones; without it, Taperday doesn't guess.</summary>
     public int? MaxHeartRate { get; private set; }
 
@@ -164,6 +174,15 @@ public sealed class Runner
         WeeklyEmails = weeklyEmails;
         MaxHeartRate = maxHeartRate;
     }
+
+    /// <summary>
+    /// Stops news and update emails. Asking twice keeps the first time: an unsubscribe link tapped again, or a mail app's
+    /// one-click unsubscribe after the link, changes nothing.
+    /// </summary>
+    public void TurnOffUpdateEmails(DateTimeOffset at) => UpdateEmailsOffAt ??= at;
+
+    /// <summary>Starts news and update emails again, from Account.</summary>
+    public void TurnOnUpdateEmails() => UpdateEmailsOffAt = null;
 
     /// <summary>The runner's calendar link secret: the one they have, or this new one when they have none yet.</summary>
     public string IssueCalendarToken(string token)

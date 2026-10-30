@@ -22,8 +22,12 @@ public static class EmailLayout
 
     public static string Encode(string text) => WebUtility.HtmlEncode(text);
 
-    /// <summary>The whole email around a body: preheader, mascot, kicker and title, the body, one button and the footer.</summary>
-    public static string Wrap(string preheader, string kicker, string title, string body, string buttonText, string buttonUrl, string footer)
+    /// <summary>
+    /// The whole email around a body: preheader, mascot, kicker and title, the body, one button and the footer. With an
+    /// <paramref name="unsubscribeUrl"/>, the footer ends with an Unsubscribe link: every email to runners that isn't
+    /// about their own account needs one.
+    /// </summary>
+    public static string Wrap(string preheader, string kicker, string title, string body, string buttonText, string buttonUrl, string footer, string? unsubscribeUrl = null)
     {
         var html = new StringBuilder();
         html.Append(CultureInfo.InvariantCulture, $"""
@@ -45,11 +49,17 @@ public static class EmailLayout
             <div style="margin-top:4px;font-size:12px;color:{Muted};">Plans that keep up with how you run.</div>
             <div style="margin-top:12px;font-size:12px;line-height:1.6;color:{Muted};">{footer}</div>
             <div style="margin-top:10px;font-size:12px;"><a href="{Site}" style="color:{Volt};text-decoration:none;">taperday.run</a><span style="color:{Line};">&nbsp;&nbsp;·&nbsp;&nbsp;</span><a href="mailto:hello@taperday.run" style="color:{Volt};text-decoration:none;">hello@taperday.run</a></div>
+            {Unsubscribe(unsubscribeUrl)}
             </td></tr>
             </table></td></tr></table></body></html>
             """);
         return html.ToString();
     }
+
+    // Small and volt like the other footer links, but on its own line and underlined, so it's easy to find and plainly a link.
+    private static string Unsubscribe(string? url) => url is null
+        ? ""
+        : string.Create(CultureInfo.InvariantCulture, $"<div style=\"margin-top:10px;font-size:12px;\"><a href=\"{Encode(url)}\" style=\"color:{Volt};text-decoration:underline;\">Unsubscribe</a><span style=\"color:{Muted};\"> from Taperday news and updates</span></div>");
 
     /// <summary>One item in a "what's new" list: a volt dot, a bold title and a line of detail.</summary>
     public static string Item(string title, string detail) =>

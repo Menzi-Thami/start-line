@@ -29,13 +29,15 @@ public sealed record RunnerDto(
     int? MaxHeartRate,
     string PrivacyNoticeVersion,
     bool NeedsPrivacyConsent,
-    bool HeartRateConsent)
+    bool HeartRateConsent,
+    bool UpdateEmails,
+    DateTimeOffset? UpdateEmailsOffAt)
 {
     public static RunnerDto From(Runner r)
     {
         ArgumentNullException.ThrowIfNull(r);
         return new(r.Id, r.DisplayName, r.Email, r.TimeZone, r.Units, r.WeeklyEmails, r.ConsentedAt, r.MaxHeartRate,
-            r.PrivacyNoticeVersion, !r.HasAccepted(PrivacyNotice.CurrentVersion), r.HeartRateConsent);
+            r.PrivacyNoticeVersion, !r.HasAccepted(PrivacyNotice.CurrentVersion), r.HeartRateConsent, r.UpdateEmails, r.UpdateEmailsOffAt);
     }
 }
 
@@ -61,7 +63,8 @@ public sealed record SaveProfileCommand(
     bool WeeklyEmails,
     bool AcceptPrivacyNotice,
     int? MaxHeartRate = null,
-    bool? HeartRateConsent = null) : IRequest<RunnerDto>;
+    bool? HeartRateConsent = null,
+    bool? UpdateEmails = null) : IRequest<RunnerDto>;
 
 internal sealed class SaveProfileValidator : AbstractValidator<SaveProfileCommand>
 {
@@ -99,6 +102,7 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
 
             runner = Runner.Register(current.Subject, user.Email, request.DisplayName, request.TimeZone, request.Units,
                 request.WeeklyEmails, PrivacyNotice.CurrentVersion, time.GetUtcNow(), request.MaxHeartRate, request.HeartRateConsent ?? false);
+            SetUpdateEmails(runner, request.UpdateEmails);
             db.Runners.Add(runner);
             try
             {
@@ -119,6 +123,7 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
         }
 
         runner.UpdateProfile(user.Email ?? runner.Email, request.DisplayName, request.TimeZone, request.Units, request.WeeklyEmails, request.MaxHeartRate);
+        SetUpdateEmails(runner, request.UpdateEmails);
         if (request.HeartRateConsent is { } consent && runner.SetHeartRateConsent(consent, time.GetUtcNow()))
         {
             await heartRate.ForgetAsync(runner.Id, cancellationToken);
@@ -126,6 +131,19 @@ internal sealed class SaveProfileHandler(IApplicationDbContext db, CurrentRunner
 
         await db.SaveChangesAsync(cancellationToken);
         return RunnerDto.From(runner);
+    }
+
+    // Left out (an older app), the choice stays as it is: saving a name must never quietly subscribe or unsubscribe anyone.
+    private void SetUpdateEmails(Runner runner, bool? updateEmails)
+    {
+        if (updateEmails == true)
+        {
+            runner.TurnOnUpdateEmails();
+        }
+        else if (updateEmails == false)
+        {
+            runner.TurnOffUpdateEmails(time.GetUtcNow());
+        }
     }
 }
 

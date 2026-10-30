@@ -155,6 +155,11 @@ export function PrivacyPolicy() {
             can fit plans and emails to you.
           </li>
           <li>
+            <strong>News and updates:</strong> now and then we email what’s new in Taperday to the address you sign in with. Every one has
+            an Unsubscribe link, and you can turn them off or back on in Account any time. We keep whether you get them and, if you
+            unsubscribed, when.
+          </li>
+          <li>
             <strong>Your picture, if you add one:</strong> a small square image shown only to you in the app. Remove it in Account at any
             time; deleting your account deletes it too.
           </li>
@@ -216,6 +221,7 @@ export function PrivacyPolicy() {
         <ul>
           <li>Microsoft handles sign-in (Entra External ID) and hosts Taperday on Azure, in South Africa.</li>
           <li>Strava, only if you connect it, and only to read your own runs. Strava’s own privacy policy covers what it holds.</li>
+          <li>Brevo sends Taperday’s emails from hello@taperday.run. It gets your email address and the email itself, nothing else.</li>
           <li>
             Your browser’s push service, only if you turn reminders on: Google (Chrome, Edge on Android, Android), Apple (Safari, iPhone and
             iPad), Mozilla (Firefox) or Microsoft (Edge on Windows) carries each reminder to your device. A reminder says what your plan has for

@@ -170,6 +170,10 @@ export const api = {
     return request<Prediction>(`/api/v1/predictions?${query}`, { signal })
   },
 
+  /** Stops Taperday's news and update emails, with the key from an email's unsubscribe link. No sign-in: the key is enough. */
+  unsubscribe: (token: string) =>
+    request<void>('/api/v1/unsubscribe', { method: 'POST', body: JSON.stringify({ token }) }),
+
   // Signed-in calls take the access token explicitly, so this module never holds sign-in state.
   me: {
     get: (token: string) => request<Runner>('/api/v1/me', {}, token),

@@ -4,7 +4,7 @@ namespace StartLine.Application.Features.Insights;
 
 /// <summary>
 /// "What's new" emails about Taperday itself, in its look (<see cref="EmailLayout"/>). For now they go to the maker as a
-/// preview; sending them to runners waits for an opt-in and an unsubscribe link (docs/email.md).
+/// preview. Sent to runners, each carries its runner's unsubscribe links (<see cref="UpdateBroadcast"/>, docs/email.md).
 /// </summary>
 public static class UpdateEmails
 {
@@ -18,8 +18,11 @@ public static class UpdateEmails
         ("Strength where it helps", "Strength moves off hard days and the day before your long run, so your legs are fresh when it counts."),
     ];
 
-    /// <summary>Race Plan v3: what changed in how Taperday builds plans, and that the weekly coach still adapts.</summary>
-    public static EmailMessage RacePlanV3(string to, bool test = false)
+    /// <summary>
+    /// Race Plan v3: what changed in how Taperday builds plans, and that the weekly coach still adapts. With
+    /// <paramref name="unsubscribe"/> (a runner's copy) the footer and headers offer a way out; a preview to the maker has none.
+    /// </summary>
+    public static EmailMessage RacePlanV3(string to, bool test = false, UnsubscribeLinks? unsubscribe = null)
     {
         var body = new StringBuilder();
         body.Append(EmailLayout.Paragraph("Taperday's plan engine just got its biggest update yet. It now builds plans the way the best coaching books do, and keeps doing what it already did best: changing your week to match how you actually ran."));
@@ -40,7 +43,8 @@ public static class UpdateEmails
             body: body.ToString(),
             buttonText: "Build my plan",
             buttonUrl: EmailLayout.Site,
-            footer: "You're getting this because you have a Taperday account.");
+            footer: "You're getting this because you have a Taperday account.",
+            unsubscribeUrl: unsubscribe?.Page.AbsoluteUri);
 
         var text = new StringBuilder("Your plan just got smarter. Race Plan v3 is here.\n\n");
         foreach (var (title, detail) in RacePlanV3Changes)
@@ -49,6 +53,11 @@ public static class UpdateEmails
         }
 
         text.Append("\nPlans you already have keep their shape. Build a new plan, or change your answers, to get Race Plan v3.\n\nhttps://taperday.run\n");
-        return new EmailMessage(to, (test ? "[Test] " : "") + "Your plan just got smarter: meet Race Plan v3", html, text.ToString());
+        if (unsubscribe is not null)
+        {
+            text.Append("\nUnsubscribe from Taperday news and updates: ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
+        }
+
+        return new EmailMessage(to, (test ? "[Test] " : "") + "Your plan just got smarter: meet Race Plan v3", html, text.ToString(), unsubscribe);
     }
 }

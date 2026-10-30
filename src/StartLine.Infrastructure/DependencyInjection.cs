@@ -110,5 +110,9 @@ public static class DependencyInjection
             .AddHttpMessageHandler<MarkPushRequests>()
             .RemoveAllLoggers();
         services.AddHostedService<ReminderWorker>();
+        services.AddOptions<PushTestOptions>().BindConfiguration("PushTest").ValidateOnStart();
+        services.AddSingleton<IValidateOptions<PushTestOptions>, PushTestOptionsValidator>();
+        services.AddScoped<PushTestRunner>();
+        services.AddHostedService<PushTestWorker>();
     }
 }

@@ -1,0 +1,46 @@
+name: Two-hour PWA push test
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_email:
+        description: 'Exact email of the consenting runner; only existing opted-in devices are targeted'
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-push-test-configuration
+  cancel-in-progress: false
+
+jobs:
+  schedule:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install .NET
+        run: |
+          curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
+          version=$(curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json | jq -r '."latest-sdk"')
+          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$version" --install-dir "$HOME/.dotnet"
+          echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
+          echo "$HOME/.dotnet" >> "$GITHUB_PATH"
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Verify registered devices and configure two finite test slots
+        env:
+          PUSH_TEST_TARGET_EMAIL: ${{ inputs.target_email }}
+          SQL_SERVER: ${{ vars.SQL_SERVER }}
+          SQL_DATABASE: ${{ vars.SQL_DATABASE }}
+          API_APP_NAME: ${{ vars.API_APP_NAME }}
+        run: dotnet run --project tools/StartLine.PushDiagnostics -c Release

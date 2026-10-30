@@ -11,4 +11,7 @@
     <Project Path="tests/StartLine.Domain.Tests/StartLine.Domain.Tests.csproj" />
     <Project Path="tests/StartLine.Integration.Tests/StartLine.Integration.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/StartLine.PushDiagnostics/StartLine.PushDiagnostics.csproj" />
+  </Folder>
 </Solution>

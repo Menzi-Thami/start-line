@@ -17,3 +17,11 @@ New notifications open the actual run instead of offering a quick Tick it action
 Tests use fake push/Strava services and disposable SQL only. Production VAPID settings and physical iPhone/Android delivery still require deployment/device verification. No test sends a real notification or calls real Strava.
 
 After the signed-in profile loads, the app offers an Enable notifications button on supported devices that are not registered for that runner. Permission is requested only when the runner taps it, before token acquisition, to preserve the browser's user-activation requirement. Not now dismisses the offer; Account → Notifications remains available. An iPhone browser tab instead explains how to install the PWA. Blocked permissions and unavailable server configuration do not trigger permission requests.
+
+## Two-hour delivery diagnostic
+
+The manually dispatched **Two-hour PWA push test** production workflow accepts the consenting runner's exact sign-in email. It first reads only account/device metadata from production SQL, refuses ambiguous accounts or accounts with no opted-in devices, then configures absolute `PushTest__FirstAt` and `PushTest__TargetEmail` App Service settings. This is an operator action, not an automated test against production. No account email, device address, or key is committed to source.
+
+The API attempts one generic test push after one hour, and a second one an hour later, to that runner's existing devices. It then stops; no recurring task is created. A nullable `LastTestPushAt` on each subscription and SQL rowversion claim each slot before sending, preventing duplicates across restarts/overlapping deployments. A crash or provider failure after claiming can miss a test. Expired subscriptions are removed. Daily reminder times and sent markers are unchanged.
+
+Tests do not require an active training plan. Slots over 15 minutes late are skipped, so a sleeping server does not burst old diagnostics. Free App Service hosting and the device can still delay or prevent delivery. Push-service acceptance is not proof that a banner appeared on the phone. The worker records counts without email, endpoints, or keys. Missing `PushTest` settings disable this worker without querying SQL.

@@ -407,6 +407,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly?>("LastRemindedOn")
                         .HasColumnType("date");
 
+                    b.Property<DateTimeOffset?>("LastTestPushAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("P256dh")
                         .IsRequired()
                         .HasMaxLength(3000)

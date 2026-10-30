@@ -8,7 +8,7 @@ public sealed class FeedbackTests(StartLineApiFactory factory) : IClassFixture<S
     private static Uri Url(string path) => new(path, UriKind.Relative);
 
     [Fact]
-    public async Task A_runner_can_send_feedback_but_only_the_maker_sees_the_stats()
+    public async Task A_runner_can_send_feedback_and_finds_it_in_their_export()
     {
         var client = factory.CreateClient().As(Guid.NewGuid().ToString());
         (await client.PutAsJsonAsync(Url("/api/v1/me"), new
@@ -22,7 +22,6 @@ public sealed class FeedbackTests(StartLineApiFactory factory) : IClassFixture<S
 
         (await client.PostAsJsonAsync(Url("/api/v1/me/feedback"), new { message = "Love the week strip", page = "home" })).StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await client.PostAsJsonAsync(Url("/api/v1/me/feedback"), new { message = "", page = "home" })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        (await client.GetAsync(Url("/api/v1/me/insights"))).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         (await client.GetStringAsync(Url("/api/v1/me/export"))).ShouldContain("Love the week strip");
     }
 }

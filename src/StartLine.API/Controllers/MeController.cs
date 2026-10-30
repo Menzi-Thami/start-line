@@ -114,13 +114,6 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
         return NoContent();
     }
 
-    /// <summary>How Taperday is doing, in counts, with the latest feedback. Only for the emails in Insights:AdminEmails.</summary>
-    [HttpGet("insights")]
-    [ProducesResponseType<InsightsDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Insights(CancellationToken cancellationToken) =>
-        Ok(await dispatcher.Send(new GetInsightsQuery(), cancellationToken));
-
     /// <summary>Deletes the runner and all their plans. Safe to repeat.</summary>
     [HttpDelete]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

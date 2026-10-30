@@ -158,18 +158,6 @@ async function attempt<T>(path: string, init: RequestInit, token?: string): Prom
   throw new ApiError(problem.detail ?? problem.title ?? 'That request didn’t work.', response.status, problem.errors ?? {}, problem.code)
 }
 
-/** How Taperday is doing, in counts only, with the latest feedback: the maker's stats page. */
-export interface Insights {
-  runners: number
-  newThisWeek: number
-  withCurrentPlan: number
-  withRuns: number
-  stravaConnected: number
-  remindersOn: number
-  ranThisWeek: number
-  runs: number
-  feedback: { message: string; page: string; at: string }[]
-}
 
 export const api = {
   races: (signal?: AbortSignal) => request<Race[]>('/api/v1/races', { signal }),
@@ -263,7 +251,6 @@ export const api = {
     allTimeRunning: (token: string) => request<LoggedRun[]>('/api/v1/me/running?allTime=true', { cache: 'no-store' }, token),
     sendFeedback: (token: string, message: string, page: string) =>
       request<void>('/api/v1/me/feedback', { method: 'POST', body: JSON.stringify({ message, page }) }, token),
-    insights: (token: string) => request<Insights>('/api/v1/me/insights', {}, token),
     reminders: {
       get: (token: string) => request<Reminders>('/api/v1/me/reminders', {}, token),
       turnOn: (token: string, body: TurnOnRemindersRequest) =>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 44 240 66" width="240" height="66">
+  <!-- The Taperday runner peeking over the top edge of the page: head and smile above it, fingers gripping it. -->
+  <circle cx="120" cy="96" r="38" fill="#d7ff3e" />
+  <circle cx="106" cy="84" r="5" fill="#0a0a0b" />
+  <circle cx="134" cy="84" r="5" fill="#0a0a0b" />
+  <circle cx="108" cy="82.5" r="1.6" fill="#ffffff" />
+  <circle cx="136" cy="82.5" r="1.6" fill="#ffffff" />
+  <path d="M104 99 Q120 114 136 99" stroke="#0a0a0b" stroke-width="5" stroke-linecap="round" fill="none" />
+  <g stroke="#d7ff3e" stroke-width="3.5" stroke-linecap="round">
+    <path d="M70 66 L62 58" />
+    <path d="M66 80 L55 78" />
+    <path d="M170 66 L178 58" />
+    <path d="M174 80 L185 78" />
+  </g>
+  <g fill="#d7ff3e">
+    <rect x="72" y="104" width="7" height="14" rx="3.5" />
+    <rect x="81" y="103" width="7" height="15" rx="3.5" />
+    <rect x="90" y="104" width="7" height="14" rx="3.5" />
+    <rect x="143" y="104" width="7" height="14" rx="3.5" />
+    <rect x="152" y="103" width="7" height="15" rx="3.5" />
+    <rect x="161" y="104" width="7" height="14" rx="3.5" />
+  </g>
+</svg>

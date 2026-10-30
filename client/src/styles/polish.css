@@ -519,3 +519,19 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .home-focus .home-top > .home-today { grid-area: today; }
 .home-focus .home-top > .home-week { grid-area: week; }
 .home-focus .home-top > .home-race-brief { grid-area: race; }
+
+.notification-choices { border: 1px solid var(--line); border-radius: var(--radius-sm, 0.5rem); padding: var(--space-4); margin-block: var(--space-4); min-width: 0; }
+.notification-choices legend { font-weight: 600; padding-inline: var(--space-2); }
+.notification-choices .session-done { margin-block: var(--space-3); align-items: flex-start; }
+.notification-quiet-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.notification-quiet-times input { min-width: 0; width: 100%; }
+.preparation-card { margin-block: var(--space-4); }
+.preparation-guide { padding-block: var(--space-3); }
+.preparation-guide ul { padding-inline-start: var(--space-5); }
+.preparation-guide li { margin-block: var(--space-2); }
+.race-checkpoints { width: 100%; max-width: 32rem; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.race-checkpoints th, .race-checkpoints td { padding: var(--space-3) var(--space-2); text-align: left; border-bottom: 1px solid var(--line); }
+.week-guidance { max-width: 65ch; color: var(--muted); margin-block: var(--space-3); }
+@media (max-width: 27.5rem) {
+  .notification-quiet-times { grid-template-columns: minmax(0, 1fr); }
+}

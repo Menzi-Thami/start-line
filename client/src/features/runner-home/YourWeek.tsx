@@ -93,6 +93,7 @@ export function YourWeek({ plan, week, coachNotes, today, units, runs, checkInFo
         Your week
       </h2>
       {note && <CoachNote note={note} />}
+      {week.guidance && <p className="week-guidance">{week.guidance}</p>}
       <div className="your-week-grid">
         <section aria-labelledby="your-week-last">
           <h3 id="your-week-last">Last week</h3>

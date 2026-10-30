@@ -2,9 +2,17 @@ import { useEffect, useId, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { addressOf, currentSubscription, deviceKeyOf, notificationsBlocked, pushSupport, subscribe, unsubscribe } from '../../lib/push'
-import type { ReminderDevice } from '../../lib/types'
+import type { NotificationPreferences, ReminderDevice } from '../../lib/types'
 
 const DEFAULT_TIME = '06:00'
+const NEW_PREFERENCES: NotificationPreferences = {
+  runCongratulations: true, trainingReviews: true, longRunPreparation: true,
+  racePreparation: true, connectionAlerts: true, preparationAt: '18:00:00', quietStart: '22:00:00', quietEnd: '06:00:00',
+}
+const EXISTING_PREFERENCES: NotificationPreferences = {
+  ...NEW_PREFERENCES, trainingReviews: false, longRunPreparation: false, racePreparation: false, connectionAlerts: false,
+  quietStart: null, quietEnd: null,
+}
 
 type State =
   | { kind: 'loading' }
@@ -33,9 +41,11 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
   const [time, setTime] = useState(DEFAULT_TIME)
   const [weekAhead, setWeekAhead] = useState(true)
   const [daily, setDaily] = useState(true)
+  const [preferences, setPreferences] = useState<NotificationPreferences>(NEW_PREFERENCES)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'done' | 'error'; text: string } | null>(null)
   const [dismissed, setDismissed] = useState(false)
+  const validPreferences = preferences.quietStart == null || preferences.quietStart !== preferences.quietEnd
 
   useEffect(() => {
     let cancelled = false
@@ -55,6 +65,7 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
           setTime(next.device.remindAt.slice(0, 5))
           setWeekAhead(next.device.weekAhead)
           setDaily(next.device.daily ?? false)
+          setPreferences(next.device.preferences ?? EXISTING_PREFERENCES)
         }
       })
       .catch(
@@ -79,17 +90,25 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
       await action(token)
     } catch (error) {
       setMessage({ tone: 'error', text: error instanceof Error ? error.message : 'That didn’t work. Try again.' })
+      if (state.kind === 'ready' && state.device) {
+        setTime(state.device.remindAt.slice(0, 5))
+        setWeekAhead(state.device.weekAhead)
+        setDaily(state.device.daily ?? false)
+        setPreferences(state.device.preferences ?? EXISTING_PREFERENCES)
+      }
     } finally {
       setBusy(false)
     }
   }
 
-  const save = (publicKey: string, at: string, week: boolean, everyDay: boolean) =>
+  const save = (publicKey: string, at: string, week: boolean, everyDay: boolean, prefs = preferences) =>
     withToken(async (token) => {
       const subscription = await currentSubscription()
-      const address = subscription ? addressOf(subscription) : await subscribe(publicKey)
-      const device = await api.me.reminders.turnOn(token, { ...address, remindAt: `${at}:00`, weekAhead: week, daily: everyDay })
+      if (!subscription) throw new Error('This device’s reminders have expired. Turn reminders off and on to reconnect it.')
+      const address = addressOf(subscription)
+      const device = await api.me.reminders.turnOn(token, { ...address, remindAt: `${at}:00`, weekAhead: week, daily: everyDay, preferences: prefs })
       setState({ kind: 'ready', publicKey, device })
+      setPreferences(device.preferences ?? prefs)
     })
 
   const turnOn = async (publicKey: string) => {
@@ -100,7 +119,7 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
       const address = await subscribe(publicKey)
       const token = await auth.getToken()
       if (!token) throw new Error('Your sign-in has expired. Sign in again to carry on.')
-      const device = await api.me.reminders.turnOn(token, { ...address, remindAt: `${time}:00`, weekAhead, daily })
+      const device = await api.me.reminders.turnOn(token, { ...address, remindAt: `${time}:00`, weekAhead, daily, preferences })
       setState({ kind: 'ready', publicKey, device })
       setMessage({
         tone: 'done',
@@ -121,6 +140,16 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
       setMessage({ tone: 'done', text: 'Reminders are off, and Taperday has forgotten this device.' })
     })
 
+  const changePreferences = (patch: Partial<NotificationPreferences>) => {
+    const next = { ...preferences, ...patch }
+    setPreferences(next)
+    if (next.quietStart && next.quietStart === next.quietEnd) {
+      setMessage({ tone: 'error', text: 'Quiet hours need different start and end times. This change has not been saved.' })
+      return
+    }
+    if (state.kind === 'ready' && state.device) void save(state.publicKey, time, weekAhead, daily, next)
+  }
+
   if (offer) {
     if (dismissed || state.kind !== 'ready' || state.device || support === 'unsupported' || notificationsBlocked()) return null
     return (
@@ -130,8 +159,8 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
           <p>On iPhone or iPad, add Taperday to your Home Screen from Safari’s Share menu, then open it from its icon to enable notifications.</p>
         ) : (
           <>
-            <p>Get workout and recovery reminders around 06:00 in your profile’s time zone. You can change this in Account → Notifications.</p>
-            <button type="button" className="button" disabled={busy} onClick={() => void turnOn(state.publicKey)}>Enable notifications</button>
+            <p>Get workout reminders around 06:00, training review alerts, preparation tips and Strava updates. Quiet hours are 22:00–06:00 in your profile’s time zone. Choose what you receive in Account → Notifications.</p>
+            <button type="button" className="button" disabled={busy || !validPreferences} onClick={() => void turnOn(state.publicKey)}>Enable notifications</button>
           </>
         )}
         <button type="button" className="button button-quiet" disabled={busy} onClick={() => setDismissed(true)}>Not now</button>
@@ -144,9 +173,8 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
     <section className="section" aria-labelledby={ids.heading}>
       <h3 id={ids.heading}>Reminders</h3>
       <p>
-        Start each day with your planned workout or recovery guidance. New reminders start at 6 am in your own time zone; you can choose
-        another time. A recent run arriving from Strava gets a congratulations notification opening the actual run, even when it differs
-        from the plan. It never marks a planned workout complete for you. Off until you turn it on.
+        Choose your morning reminders, preparation tips and Strava updates for this device. Times use your profile’s time zone.
+        A synced run opens for review; it never marks a planned workout complete for you.
       </p>
 
       {state.kind === 'loading' && <p className="loading-line">Checking reminders…</p>}
@@ -174,14 +202,14 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
               type="checkbox"
               role="switch"
               checked={state.device !== null}
-              disabled={busy}
+              disabled={busy || state.device === null && !validPreferences}
               onChange={(e) => void (e.target.checked ? turnOn(state.publicKey) : state.device && turnOff(state.publicKey, state.device))}
             />
             Reminders on this device
           </label>
           <div className="field">
             <label className="field-label" htmlFor={ids.time}>
-              Time
+              Morning reminder time
             </label>
             <input
               id={ids.time}
@@ -223,6 +251,47 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
             />
             On Mondays, tell me when a new week starts
           </label>
+          <fieldset disabled={busy} className="notification-choices">
+            <legend>Choose your updates</legend>
+            {([
+              ['runCongratulations', 'Congratulations when a Strava run arrives'],
+              ['trainingReviews', 'Training adjustments ready to review'],
+              ['longRunPreparation', 'Preparation the evening before a long run'],
+              ['racePreparation', 'A checklist the evening before race day'],
+              ['connectionAlerts', 'Let me know when Strava needs reconnecting'],
+            ] as const).map(([key, label]) => (
+              <label className="session-done" key={key}>
+                <input type="checkbox" checked={preferences[key]} onChange={e => changePreferences({ [key]: e.target.checked })} />
+                {label}
+              </label>
+            ))}
+            <div className="field">
+              <label className="field-label" htmlFor={`${ids.time}-prep`}>Preparation reminder time</label>
+              <input id={`${ids.time}-prep`} className="input" type="time" required value={preferences.preparationAt.slice(0, 5)} onChange={e => {
+                if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ preparationAt: `${e.target.value}:00` })
+              }} />
+            </div>
+            <label className="session-done">
+              <input type="checkbox" checked={preferences.quietStart != null} onChange={e => changePreferences(e.target.checked
+                ? { quietStart: '22:00:00', quietEnd: '06:00:00' } : { quietStart: null, quietEnd: null })} />
+              Quiet hours
+            </label>
+            {preferences.quietStart != null && (
+              <div className="notification-quiet-times">
+                <label className="field">From
+                  <input className="input" type="time" required value={preferences.quietStart.slice(0, 5)} onChange={e => {
+                    if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ quietStart: `${e.target.value}:00` })
+                  }} />
+                </label>
+                <label className="field">Until
+                  <input className="input" type="time" required value={(preferences.quietEnd ?? '06:00').slice(0, 5)} onChange={e => {
+                    if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ quietEnd: `${e.target.value}:00` })
+                  }} />
+                </label>
+              </div>
+            )}
+            <p className="field-help">Quiet hours use your profile’s time zone. Updates wait until quiet hours end; preparation tips that would arrive after the preparation day are skipped. Review alerts never apply changes to your plan.</p>
+          </fieldset>
           <p className="field-help">
             In your own time zone, from Your details. Delivery can be delayed by your phone, connection or Taperday’s server; the app does
             not need to be open. Congratulations arrive when Strava syncs. Turning reminders off forgets this device; other devices keep

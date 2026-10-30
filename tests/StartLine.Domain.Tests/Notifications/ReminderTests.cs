@@ -165,7 +165,7 @@ public sealed class ReminderTests
 
         reminder.Title.ShouldBe("Week 2 of 3 · Build");
         reminder.Body.ShouldBe(
-            $"{Reminders.NoCoachYet} Last week you checked in 2 of 3 runs. "
+            $"{WeekGuidance.For(Plan.Weeks[1])} Last week you checked in 2 of 3 runs. "
             + "This week: 25 km, with Intervals on Wednesday and a 12 km long run on Saturday. Today: Easy run + strides, 6 km.");
     }
 

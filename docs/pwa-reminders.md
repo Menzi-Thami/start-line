@@ -4,6 +4,24 @@ Reminders are opt-in for each device in Account. New devices default to **06:00 
 
 Recent Strava activities receive one **Nice work — run finished!** notification per actual run, including rest-day runs and substitutions. Tapping opens the actual run. It never completes the prescribed workout automatically. The sender atomically claims an activity before sending, preventing repeated webhook/update/refresh notifications and concurrent duplicates. Each different run can be congratulated. Runs over two days old and future-dated activities are quiet. The marker belongs to the cached activity and disappears with it. Default messages contain no run metrics; the existing `Push__IncludeRunData` boundary remains in force.
 
+## Choose updates and quiet hours
+
+Account → Notifications has separate per-device choices for:
+
+- Congratulations when a recent Strava run arrives.
+- Training adjustments ready for review. Only a real, applicable pending change triggers an alert; the runner must review and accept it in the app.
+- Long-run preparation on the preceding evening, at a chosen preparation time (18:00 by default).
+- A race checklist on the preceding evening, linking to the runner's checklist and goal-time checkpoints.
+- Strava reconnect alerts, once per reconnect episode, rather than temporary service failures.
+
+Existing devices keep their earlier daily/weekly choices and congratulations. The four new categories start off for existing subscriptions. New opt-ins explain the update types and default quiet hours of 22:00–06:00; all choices are adjustable in Account. Requests from older clients that omit preferences preserve existing choices. There is no missed-run nudge.
+
+Quiet hours use the profile time zone, including overnight periods and daylight-saving changes. Morning reminders wait for the allowed time on that local day. Other events use a durable per-device queue and are claimed before sending, preventing duplicates across restarts and overlapping instances. Events are checked again before delivery: cancelled/changed plans, accepted reviews, deleted/expired runs, disabled categories and fixed connections suppress stale alerts. Preparation is skipped if quiet hours would defer it beyond its preparation day. Run congratulations expire after two days. Failed sends are not repeated after claiming.
+
+The queue stores event references and timings, not payloads, metrics or provider secrets. Its user-owned history and preferences appear in account export; deleting a device or account cascades to its delivery records. Old delivery history is pruned during sender passes; a reconnect episode's deduplication record remains while the connection still needs attention.
+
+Weekly views and Monday previews include original phase-specific coaching context. The race checklist includes elapsed-time checkpoints based on the runner's own goal, labelled as even-pace references rather than course predictions or official cutoff advice. Direct Garmin sync and outbound weekly email remain separate integrations; see [the product review](slow-miles-review.md).
+
 New notifications open the actual run instead of offering a quick Tick it action. Signed actions on older delivered notifications remain compatible. Manual logging provides immediate in-app feedback.
 
 ## Delivery requirements

@@ -376,6 +376,52 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("SessionCheckIns", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Notifications.NotificationDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("ClaimedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<DateTimeOffset>("NotBefore")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClaimedAt", "NotBefore");
+
+                    b.HasIndex("DeviceId", "Kind", "EventKey")
+                        .IsUnique();
+
+                    b.ToTable("NotificationDeliveries", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Notifications.PushSubscription", b =>
                 {
                     b.Property<Guid>("Id")
@@ -385,6 +431,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(3000)
                         .HasColumnType("nvarchar(3000)");
+
+                    b.Property<bool>("ConnectionAlerts")
+                        .HasColumnType("bit");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
@@ -410,16 +459,41 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("LastTestPushAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("LongRunPreparation")
+                        .HasColumnType("bit");
+
                     b.Property<string>("P256dh")
                         .IsRequired()
                         .HasMaxLength(3000)
                         .HasColumnType("nvarchar(3000)");
 
+                    b.Property<TimeOnly>("PreparationAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("time")
+                        .HasDefaultValue(new TimeOnly(18, 0, 0));
+
+                    b.Property<TimeOnly?>("QuietEnd")
+                        .HasColumnType("time");
+
+                    b.Property<TimeOnly?>("QuietStart")
+                        .HasColumnType("time");
+
+                    b.Property<bool>("RacePreparation")
+                        .HasColumnType("bit");
+
                     b.Property<TimeOnly>("RemindAt")
                         .HasColumnType("time");
 
+                    b.Property<bool>("RunCongratulations")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<Guid>("RunnerId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("TrainingReviews")
+                        .HasColumnType("bit");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
@@ -879,6 +953,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
                         .WithMany()
                         .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Notifications.NotificationDelivery", b =>
+                {
+                    b.HasOne("StartLine.Domain.Notifications.PushSubscription", null)
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

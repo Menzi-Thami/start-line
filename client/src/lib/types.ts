@@ -79,3 +79,5 @@ export const SHORT_DAY: Record<DayOfWeek, string> = {
   Saturday: 'Sat',
   Sunday: 'Sun',
 }
+
+export type NotificationPreferences = Schemas['NotificationPreferencesDto']

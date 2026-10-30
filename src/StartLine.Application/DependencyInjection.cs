@@ -40,6 +40,9 @@ public static class DependencyInjection
         services.AddScoped<IStravaSync, StravaSyncRunner>();
         services.AddScoped<IReminderRunner, ReminderRunner>();
         services.AddScoped<RunCelebrator>();
+        services.AddScoped<NotificationDeliverer>();
+        services.AddScoped<NotificationReview>();
+        services.AddScoped<AdditionalNotifications>();
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
         services.AddScoped(typeof(IPipelineBehaviour<,>), typeof(ValidationBehaviour<,>));
         return services;

@@ -20,6 +20,7 @@ import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
+import { FirstWeek } from './FirstWeek'
 import { change, todayInPlan, trainingTotals, weeklyBars, type Change } from './home-math'
 import { YourWeek } from './YourWeek'
 import { WeeklyChart } from './WeeklyChart'
@@ -105,6 +106,28 @@ function useHomePlan(
  * Current totals: saved running history plus valid Strava measurements. Refreshed after logs, sync changes,
  * returning to the app and cache expiry; never stored in a lasting client cache.
  */
+/** Every kept run since the runner started, summed once per visit for the All time tile. Null until it arrives. */
+function useAllTime(ownerId: string): { km: number; runs: number; since: string | null } | null {
+  const auth = useAuth()
+  const [total, setTotal] = useState<{ owner: string; km: number; runs: number; since: string | null } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    auth
+      .getToken()
+      .then((token) => (token ? api.me.allTimeRunning(token) : null))
+      .then((runs) => {
+        if (cancelled || !runs) return
+        const km = Math.round(runs.reduce((sum, r) => sum + r.distanceKm, 0) * 10) / 10
+        setTotal({ owner: ownerId, km, runs: runs.length, since: runs.map((r) => r.date).sort()[0] ?? null })
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [auth, ownerId])
+  return total && total.owner === ownerId ? total : null
+}
+
 function useRunningLog(version: number, activitiesVersion: string, ownerId: string): { log: LoggedRun[] | null; failed: boolean } {
   const auth = useAuth()
   const [loaded, setLoaded] = useState<{ ownerId: string; runs: LoggedRun[] } | null>(null)
@@ -428,6 +451,7 @@ export function Home({
         },
       }
     : undefined
+  const allTime = useAllTime(runner.id)
   const totals = trainingTotals(log ?? [], today)
   const bars = weeklyBars(log ?? [], today, plan)
   const week = plan?.weeks.find((w) => w.startDate <= today && today <= weekEnd(w)) ?? null
@@ -462,6 +486,7 @@ export function Home({
 
       <div className="home-panel home-focus" id="home-panel-today">
         {current && planFailed && <div className="home-data-state" role="alert"><p>{plan ? 'Your plan couldn’t refresh. Showing the last plan loaded on this device.' : 'Your plan couldn’t load. You can try again.'}</p><button type="button" className="button" onClick={retryPlan}>Retry plan</button></div>}
+        {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
         <TickCard plan={plan} today={today} coach={coach} runs={runs} />
         <div className="home-top">
           {current ? (
@@ -558,6 +583,9 @@ export function Home({
                 <Tile label="Weekly average" value={totals.weeklyAverageKm === 0 && totals.weeklyUnknownRuns ? '—' : amount(totals.weeklyAverageKm, units)} unit={units} sub="Last 4 full weeks">
                   {totals.weeklyUnknownRuns || totals.previousWeeklyUnknownRuns ? <p className="field-help">Comparison unavailable while distances are missing.</p> : <ChangeLine value={change(totals.weeklyAverageKm, totals.previousWeeklyAverageKm)} units={units} against="the 4 weeks before" />}
                 </Tile>
+                {allTime && allTime.runs > 0 && (
+                  <Tile label="All time" value={amount(allTime.km, units)} unit={units} sub={`${allTime.runs} ${allTime.runs === 1 ? 'run' : 'runs'}${allTime.since ? ` since ${formatDate(allTime.since, 'dayMonth')} ${allTime.since.slice(0, 4)}` : ''}`} />
+                )}
               </div>
               {log.length === 0 && pendingSyncedRuns.length === 0 && <div className="home-data-state"><p>Your first run starts the story. Upload a run or tick a completed session in your plan to build your totals.</p><button type="button" className="link-button" onClick={onOpenRuns}>Add your runs →</button></div>}
             </>

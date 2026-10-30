@@ -53,6 +53,8 @@ export const handlers = [
   http.post('*/api/v1/me/calendar/reset', () => HttpResponse.json({ token: newCalendarToken })),
   // No picture by default: the app shows initials.
   http.get('*/api/v1/me/photo', () => new HttpResponse(null, { status: 204 })),
+  // Taperday stats are for its maker only: everyone else is turned away.
+  http.get('*/api/v1/me/insights', () => HttpResponse.json({ title: 'Forbidden' }, { status: 403 })),
   http.get('*/api/v1/predictions', ({ request }) => {
     const url = new URL(request.url)
     return HttpResponse.json({ distanceKm: Number(url.searchParams.get('toKm')), predictedTime: '01:51:20', paceSecondsPerKm: 316.6 })

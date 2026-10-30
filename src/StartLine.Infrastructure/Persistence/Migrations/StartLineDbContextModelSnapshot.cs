@@ -669,6 +669,36 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("SavedPlans", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Runners.Feedback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Page")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("RunnerId");
+
+                    b.ToTable("Feedback", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Runners.Runner", b =>
                 {
                     b.Property<Guid>("Id")
@@ -985,6 +1015,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Runners.Feedback", b =>
                 {
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
                         .WithMany()

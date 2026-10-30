@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StartLine.Application.Common;
+using StartLine.Application.Features.Insights;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.CheckIns;
 using StartLine.Application.Features.Notifications;
@@ -110,6 +111,7 @@ public static class DependencyInjection
             .AddHttpMessageHandler<MarkPushRequests>()
             .RemoveAllLoggers();
         services.AddHostedService<ReminderWorker>();
+        services.AddSingleton<IInsightsAccess, ConfiguredInsightsAccess>();
         services.AddOptions<PushTestOptions>().BindConfiguration("PushTest").ValidateOnStart();
         services.AddSingleton<IValidateOptions<PushTestOptions>, PushTestOptionsValidator>();
         services.AddScoped<PushTestRunner>();

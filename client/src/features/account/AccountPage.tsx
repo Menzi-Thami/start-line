@@ -8,6 +8,7 @@ import { StravaSection } from '../sync/StravaSection'
 import { PhotoPicker } from './PhotoPicker'
 import { ProfileForm } from './ProfileForm'
 import { RunSources } from './RunSources'
+import { TaperdayStats } from './TaperdayStats'
 
 interface Props {
   /** The runner's picture, if they added one; the picker shows their initials otherwise. */
@@ -160,6 +161,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
           {status.message}
         </p>
       )}
+      <TaperdayStats />
     </section>
   )
 }

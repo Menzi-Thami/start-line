@@ -28,6 +28,7 @@ internal sealed partial class ReminderRunner(
     IPushAddressProtector protector,
     PlanBuilder builder,
     PlanCoach coach,
+    AdditionalNotifications additional,
     TimeProvider time,
     ILogger<ReminderRunner> logger)
     : IReminderRunner
@@ -42,10 +43,11 @@ internal sealed partial class ReminderRunner(
             return null;
         }
 
+        var next = await additional.RunAsync(cancellationToken);
         var devices = await db.PushSubscriptions.ToListAsync(cancellationToken);
         if (devices.Count == 0)
         {
-            return null;
+            return next;
         }
 
         var runnerIds = devices.Select(d => d.RunnerId).Distinct().ToList();
@@ -56,7 +58,6 @@ internal sealed partial class ReminderRunner(
             .Where(p => runnerIds.Contains(p.RunnerId) && p.Status == SavedPlanStatus.Active)
             .ToListAsync(cancellationToken);
 
-        DateTimeOffset? next = null;
         foreach (var runnerDevices in devices.GroupBy(d => d.RunnerId))
         {
             var runner = runners.GetValueOrDefault(runnerDevices.Key);
@@ -67,7 +68,9 @@ internal sealed partial class ReminderRunner(
             foreach (var device in runnerDevices)
             {
                 var localNow = time.LocalNow(zone);
-                if (runner is not null && saved is not null && Reminders.DueDay(device, plan, localNow) is { } day)
+                if (runner is not null && saved is not null && device.NextAllowed(localNow) == localNow
+                    && Reminders.DueDay(device, plan, localNow) is { } day
+                    && TimeProviderExtensions.FromLocal(day.ToDateTime(device.RemindAt), zone) <= time.GetUtcNow())
                 {
                     // Worked out once for all of a runner's devices: the coach's call is made at most once a week anyway.
                     facts ??= await FactsAsync(saved, runner, plan!, day, cancellationToken);
@@ -79,7 +82,9 @@ internal sealed partial class ReminderRunner(
 
                 if (Reminders.NextDue(device, plan, localNow) is { } due)
                 {
-                    var at = TimeProviderExtensions.FromLocal(due, zone);
+                    var scheduled = TimeProviderExtensions.FromLocal(DateOnly.FromDateTime(due).ToDateTime(device.RemindAt), zone);
+                    var now = time.GetUtcNow();
+                    var at = NotificationDeliverer.AllowedAt(device, scheduled > now ? scheduled : now, zone);
                     next = next is { } soonest && soonest <= at ? soonest : at;
                 }
             }

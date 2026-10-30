@@ -286,9 +286,27 @@ internal sealed class PushSubscriptionConfiguration : IEntityTypeConfiguration<P
         builder.Property(s => s.P256dh).HasMaxLength(PushSubscription.MaxProtectedLength).IsRequired();
         builder.Property(s => s.Auth).HasMaxLength(PushSubscription.MaxProtectedLength).IsRequired();
         builder.Property(s => s.Version).IsRowVersion();
+        builder.Property(s => s.RunCongratulations).HasDefaultValue(true).HasSentinel(true);
+        builder.Property(s => s.PreparationAt).HasDefaultValue(new TimeOnly(18, 0)).HasSentinel(new TimeOnly(18, 0));
         // One entry per device, whoever is signed in on it.
         builder.HasIndex(s => s.DeviceKey).IsUnique();
         builder.HasIndex(s => s.RunnerId);
+    }
+}
+
+internal sealed class NotificationDeliveryConfiguration : IEntityTypeConfiguration<NotificationDelivery>
+{
+    public void Configure(EntityTypeBuilder<NotificationDelivery> builder)
+    {
+        builder.ToTable("NotificationDeliveries");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Kind).HasConversion<string>().HasMaxLength(32);
+        builder.Property(d => d.EventKey).HasMaxLength(160).IsRequired();
+        builder.Property(d => d.Version).IsRowVersion();
+        builder.HasIndex(d => new { d.DeviceId, d.Kind, d.EventKey }).IsUnique();
+        builder.HasIndex(d => new { d.ClaimedAt, d.NotBefore });
+        builder.HasOne<PushSubscription>().WithMany().HasForeignKey(d => d.DeviceId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

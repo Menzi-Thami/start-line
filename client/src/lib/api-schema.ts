@@ -2252,6 +2252,7 @@ export interface components {
             reminders: components["schemas"]["ReminderDeviceDto"][];
             tickPrompts: components["schemas"]["TickPromptExportDto"][];
             photo: null | components["schemas"]["RunnerPhotoDto"];
+            notificationHistory?: null | components["schemas"]["NotificationHistoryDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -2544,6 +2545,35 @@ export interface components {
         };
         /** @enum {unknown} */
         LoggedRunSource: "Ticked" | "Uploaded" | "Strava";
+        NotificationHistoryDto: {
+            /** Format: uuid */
+            deviceId: string;
+            /** Format: uuid */
+            subjectId: string;
+            kind: components["schemas"]["NotificationKind"];
+            event: string;
+            /** Format: date-time */
+            notBefore: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: date-time */
+            claimedAt: null | string;
+        };
+        /** @enum {unknown} */
+        NotificationKind: "RunCongratulations" | "TrainingReview" | "LongRunPreparation" | "RacePreparation" | "ConnectionAlert";
+        NotificationPreferencesDto: {
+            runCongratulations: boolean;
+            trainingReviews: boolean;
+            longRunPreparation: boolean;
+            racePreparation: boolean;
+            connectionAlerts: boolean;
+            /** Format: time */
+            preparationAt: string;
+            /** Format: time */
+            quietStart?: null | string;
+            /** Format: time */
+            quietEnd?: null | string;
+        };
         OutlookReasonDto: {
             code: string;
             message: string;
@@ -2628,6 +2658,7 @@ export interface components {
             sessions: components["schemas"]["SessionDto"][];
             /** @default false */
             isReplanned: boolean;
+            guidance?: null | string;
         };
         PredictionDto: {
             /** Format: double */
@@ -2685,6 +2716,7 @@ export interface components {
             createdAt: string;
             /** @default false */
             daily: boolean;
+            preferences?: null | components["schemas"]["NotificationPreferencesDto"];
         };
         RemindersDto: {
             available: boolean;
@@ -2949,6 +2981,7 @@ export interface components {
             weekAhead: boolean;
             /** @default false */
             daily: boolean;
+            preferences?: null | components["schemas"]["NotificationPreferencesDto"];
         };
         /** @enum {unknown} */
         Units: "Kilometres" | "Miles";

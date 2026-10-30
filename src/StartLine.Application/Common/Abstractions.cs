@@ -35,6 +35,8 @@ public interface IApplicationDbContext
 
     DbSet<PushSubscription> PushSubscriptions { get; }
 
+    DbSet<NotificationDelivery> NotificationDeliveries { get; }
+
     DbSet<TickPrompt> TickPrompts { get; }
 
     DbSet<RunnerPhoto> RunnerPhotos { get; }

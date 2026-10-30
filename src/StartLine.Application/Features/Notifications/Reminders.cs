@@ -15,12 +15,23 @@ namespace StartLine.Application.Features.Notifications;
 /// One device with reminders on. Never its push address or keys: <c>DeviceKey</c> is a hash of the address, so the
 /// browser can tell which entry is itself without the API ever handing an address back.
 /// </summary>
-public sealed record ReminderDeviceDto(Guid Id, string DeviceKey, TimeOnly RemindAt, bool WeekAhead, DateTimeOffset CreatedAt, bool Daily = false)
+public sealed record NotificationPreferencesDto(bool RunCongratulations, bool TrainingReviews, bool LongRunPreparation,
+    bool RacePreparation, bool ConnectionAlerts, TimeOnly PreparationAt, TimeOnly? QuietStart = null, TimeOnly? QuietEnd = null)
+{
+    public static NotificationPreferencesDto From(PushSubscription s) => new(s.RunCongratulations, s.TrainingReviews,
+        s.LongRunPreparation, s.RacePreparation, s.ConnectionAlerts, s.PreparationAt, s.QuietStart, s.QuietEnd);
+
+    public void Apply(PushSubscription s) => s.SetNotificationPreferences(RunCongratulations, TrainingReviews,
+        LongRunPreparation, RacePreparation, ConnectionAlerts, PreparationAt, QuietStart, QuietEnd);
+}
+
+public sealed record ReminderDeviceDto(Guid Id, string DeviceKey, TimeOnly RemindAt, bool WeekAhead, DateTimeOffset CreatedAt,
+    bool Daily = false, NotificationPreferencesDto? Preferences = null)
 {
     public static ReminderDeviceDto From(PushSubscription s)
     {
         ArgumentNullException.ThrowIfNull(s);
-        return new(s.Id, s.DeviceKey, s.RemindAt, s.WeekAhead, s.CreatedAt, s.Daily);
+        return new(s.Id, s.DeviceKey, s.RemindAt, s.WeekAhead, s.CreatedAt, s.Daily, NotificationPreferencesDto.From(s));
     }
 }
 
@@ -69,7 +80,8 @@ internal sealed class GetRemindersHandler(IApplicationDbContext db, CurrentRunne
 /// keys), the local time for the day's run, and whether to hear about a new week on Mondays. The same device again
 /// updates its entry. A device someone else had reminders on moves to this runner: whoever signs in on it now gets them.
 /// </summary>
-public sealed record TurnOnRemindersCommand(string Endpoint, string P256dh, string Auth, TimeOnly RemindAt, bool WeekAhead, bool Daily = false) : IRequest<ReminderDeviceDto>;
+public sealed record TurnOnRemindersCommand(string Endpoint, string P256dh, string Auth, TimeOnly RemindAt, bool WeekAhead,
+    bool Daily = false, NotificationPreferencesDto? Preferences = null) : IRequest<ReminderDeviceDto>;
 
 internal sealed class TurnOnRemindersValidator : AbstractValidator<TurnOnRemindersCommand>
 {
@@ -90,6 +102,9 @@ internal sealed class TurnOnRemindersValidator : AbstractValidator<TurnOnReminde
         RuleFor(c => c.Auth)
             .Must(key => PushDevices.IsBase64UrlOf(key, PushDevices.AuthBytes))
             .WithMessage("That isn't a browser's push secret.");
+        RuleFor(c => c.Preferences).Must(p => p is null || p.QuietStart.HasValue == p.QuietEnd.HasValue
+            && (p.QuietStart is null || p.QuietStart != p.QuietEnd))
+            .WithMessage("Choose both quiet-hour times, with different start and end times.");
     }
 }
 
@@ -118,6 +133,7 @@ internal sealed class TurnOnRemindersHandler(
         if (device is not null && device.RunnerId == runner.Id)
         {
             device.Change(address, remindAt, request.WeekAhead, localNow, request.Daily);
+            request.Preferences?.Apply(device);
             await db.SaveChangesAsync(cancellationToken);
             return ReminderDeviceDto.From(device);
         }
@@ -135,6 +151,7 @@ internal sealed class TurnOnRemindersHandler(
         }
 
         device = PushSubscription.Start(runner.Id, key, address, remindAt, request.WeekAhead, localNow, request.Daily);
+        request.Preferences?.Apply(device);
         db.PushSubscriptions.Add(device);
         await db.SaveChangesAsync(cancellationToken);
         return ReminderDeviceDto.From(device);

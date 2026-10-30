@@ -28,6 +28,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 
+    public DbSet<NotificationDelivery> NotificationDeliveries => Set<NotificationDelivery>();
+
     public DbSet<TickPrompt> TickPrompts => Set<TickPrompt>();
 
     public DbSet<RunnerPhoto> RunnerPhotos => Set<RunnerPhoto>();

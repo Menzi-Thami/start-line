@@ -29,7 +29,7 @@ interface Props {
 /** Profile, where runs come from, a copy of everything we hold, and the way out. */
 export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
-  const [connectionsOpen, setConnectionsOpen] = useState(!!stravaNotice || stravaConnecting)
+  const [connectionsOpen, setConnectionsOpen] = useState(!!stravaNotice || stravaConnecting || new URLSearchParams(window.location.search).get('settings') === 'connections')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [newCalendarLink, setNewCalendarLink] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'error'; message: string }>({ kind: 'idle' })

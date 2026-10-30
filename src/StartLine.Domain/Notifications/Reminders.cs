@@ -149,7 +149,7 @@ public static class Reminders
     /// <summary>The coach's call, last week, this week, then today: most useful first, as a lock screen cuts the end off.</summary>
     private static string WeekBody(ReminderFacts facts, PlanWeek week, List<PlannedSession> today)
     {
-        List<string> lines = [facts.CoachSays is { Length: > 0 } coach ? $"Coach: {coach}" : NoCoachYet];
+        List<string> lines = [facts.CoachSays is { Length: > 0 } coach ? $"Coach: {coach}" : WeekGuidance.For(week)];
         if (facts.LastWeek is { RunsPlanned: > 0 } last)
         {
             if (last.KmRun is { } ran)

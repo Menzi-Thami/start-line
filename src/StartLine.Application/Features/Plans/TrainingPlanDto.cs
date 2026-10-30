@@ -39,7 +39,7 @@ public sealed record TrainingPlanDto(
                 [.. w.Sessions.Select(s => new SessionDto(s.Date, s.Type, s.Title, s.Detail, s.Purpose, s.DistanceKm, s.Zone,
                     [.. (s.Exercises ?? []).Select(e => new StrengthExerciseDto(e.Exercise, e.Sets, e.Reps, e.Unit, e.Summary))],
                     s.Steps?.Select(SessionStepDto.From).ToList() ?? []))],
-                w.IsReplanned))],
+                w.IsReplanned, WeekGuidance.For(w)))],
             [.. plan.Warnings.Select(w => new PlanWarningDto(w.Code, w.Message))],
             plan.Replan is { } replan ? new ReplanDto(replan.From, replan.Setback, replan.RecentWeeklyKm) : null,
             plan.SuggestedGoal,
@@ -79,7 +79,7 @@ public sealed record PlanWeekDto(
     bool IsCutback,
     double PlannedKm,
     IReadOnlyList<SessionDto> Sessions,
-    bool IsReplanned = false);
+    bool IsReplanned = false, string? Guidance = null);
 
 /// <summary>The plan was rebuilt from <c>From</c> after a setback; weeks before then are as first planned.</summary>
 public sealed record ReplanDto(DateOnly From, Setback Setback, double? RecentWeeklyKm);

@@ -9,5 +9,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="StartLine.Application.Tests" />
+    <InternalsVisibleTo Include="StartLine.Integration.Tests" />
   </ItemGroup>
 </Project>

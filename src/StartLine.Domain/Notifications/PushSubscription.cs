@@ -48,6 +48,22 @@ public sealed class PushSubscription
 
     public bool Daily { get; private set; }
 
+    public bool RunCongratulations { get; private set; } = true;
+
+    public bool TrainingReviews { get; private set; }
+
+    public bool LongRunPreparation { get; private set; }
+
+    public bool RacePreparation { get; private set; }
+
+    public bool ConnectionAlerts { get; private set; }
+
+    public TimeOnly PreparationAt { get; private set; } = new(18, 0);
+
+    public TimeOnly? QuietStart { get; private set; }
+
+    public TimeOnly? QuietEnd { get; private set; }
+
     /// <summary>The last day (the runner's own date) a reminder went to this device, or was skipped because it was set up too late for it.</summary>
     public DateOnly? LastRemindedOn { get; private set; }
 
@@ -132,5 +148,57 @@ public sealed class PushSubscription
         }
 
         LastTestPushAt = slot;
+    }
+
+    public void SetNotificationPreferences(bool congratulations, bool reviews, bool longRunPreparation, bool racePreparation,
+        bool connectionAlerts, TimeOnly preparationAt, TimeOnly? quietStart, TimeOnly? quietEnd)
+    {
+        if (quietStart.HasValue != quietEnd.HasValue || quietStart.HasValue && quietStart == quietEnd)
+        {
+            throw new DomainException("Choose both quiet-hour times, with different start and end times.");
+        }
+
+        RunCongratulations = congratulations;
+        TrainingReviews = reviews;
+        LongRunPreparation = longRunPreparation;
+        RacePreparation = racePreparation;
+        ConnectionAlerts = connectionAlerts;
+        PreparationAt = preparationAt;
+        QuietStart = quietStart;
+        QuietEnd = quietEnd;
+    }
+
+    public bool Allows(NotificationKind kind) => kind switch
+    {
+        NotificationKind.RunCongratulations => RunCongratulations,
+        NotificationKind.TrainingReview => TrainingReviews,
+        NotificationKind.LongRunPreparation => LongRunPreparation,
+        NotificationKind.RacePreparation => RacePreparation,
+        NotificationKind.ConnectionAlert => ConnectionAlerts,
+        _ => false,
+    };
+
+    /// <summary>The next allowed local time, including quiet periods that cross midnight.</summary>
+    public DateTime NextAllowed(DateTime local)
+    {
+        if (QuietStart is not { } start || QuietEnd is not { } end)
+        {
+            return local;
+        }
+
+        var at = TimeOnly.FromDateTime(local);
+        var quiet = start < end ? at >= start && at < end : at >= start || at < end;
+        if (!quiet)
+        {
+            return local;
+        }
+
+        var date = DateOnly.FromDateTime(local);
+        if (start > end && at >= start)
+        {
+            date = date.AddDays(1);
+        }
+
+        return date.ToDateTime(end);
     }
 }

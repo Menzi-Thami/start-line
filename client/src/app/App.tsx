@@ -96,6 +96,11 @@ export function App() {
   // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
   const [initial, setInitial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
   const [view, setView] = useState<View>(viewFromUrl)
+  const [preparationRequest, setPreparationRequest] = useState<{ mode: 'long' | 'race'; date: string | null } | null>(() => {
+    const params = new URLSearchParams(window.location.search)
+    const mode = params.get('prepare')
+    return mode === 'long' || mode === 'race' ? { mode, date: params.get('date') } : null
+  })
   // On a phone the app's navigation sits in a bar at the bottom, as an installed app's does; wider, it stays in the header.
   const phone = useMediaQuery('(max-width: 47.99rem)')
   // Plan navigation can return to the current week from any training detail.
@@ -417,6 +422,7 @@ export function App() {
   }
 
   const go = (next: View) => {
+    setPreparationRequest(null)
     // Going somewhere on purpose means the app no longer opens the current plan by itself.
     landing.current = true
     setLanded(true)
@@ -889,6 +895,7 @@ export function App() {
                 every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}
             {showPlan && (
               <PlanView
+                preparation={preparationRequest}
                 onEditStrength={changeAnswers}
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}

@@ -185,7 +185,11 @@ public sealed record AccountExportDto(
     IReadOnlyList<CoachExportDto> Coaching,
     IReadOnlyList<ReminderDeviceDto> Reminders,
     IReadOnlyList<TickPromptExportDto> TickPrompts,
-    RunnerPhotoDto? Photo);
+    RunnerPhotoDto? Photo,
+    IReadOnlyList<NotificationHistoryDto>? NotificationHistory = null);
+
+public sealed record NotificationHistoryDto(Guid DeviceId, Guid SubjectId, Domain.Notifications.NotificationKind Kind,
+    string Event, DateTimeOffset NotBefore, DateTimeOffset ExpiresAt, DateTimeOffset? ClaimedAt);
 
 /// <summary>A session the runner was asked to tick, after a run from Strava matched it: the session, and nothing of the run.</summary>
 public sealed record TickPromptExportDto(Guid PlanId, DateOnly Date, SessionType SessionType);
@@ -240,6 +244,10 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             .OrderBy(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
         var photo = await db.RunnerPhotos.AsNoTracking().SingleOrDefaultAsync(p => p.RunnerId == runner.Id, cancellationToken);
+        var deviceIds = reminders.Select(d => d.Id).ToList();
+        var notificationHistory = await db.NotificationDeliveries.AsNoTracking().Where(d => deviceIds.Contains(d.DeviceId))
+            .OrderBy(d => d.NotBefore).Select(d => new NotificationHistoryDto(d.DeviceId, d.SubjectId, d.Kind, d.EventKey,
+                d.NotBefore, d.ExpiresAt, d.ClaimedAt)).ToListAsync(cancellationToken);
         var asked = await db.TickPrompts.AsNoTracking()
             .Where(p => planIds.Contains(p.SavedPlanId))
             .OrderBy(p => p.Date)
@@ -253,7 +261,7 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             [.. coachWeeks.Select(w => new CoachExportDto(w.SavedPlanId, CoachNoteDto.From(w.ToDecision())))],
             [.. reminders.Select(ReminderDeviceDto.From)],
             [.. asked.Select(p => new TickPromptExportDto(p.SavedPlanId, p.Date, p.SessionType))],
-            photo is null ? null : RunnerPhotoDto.From(photo));
+            photo is null ? null : RunnerPhotoDto.From(photo), notificationHistory);
     }
 }
 

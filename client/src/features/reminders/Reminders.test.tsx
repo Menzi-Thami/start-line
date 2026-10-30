@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext, type Auth } from '../../app/auth-context'
 import { toBase64Url } from '../../lib/push'
-import type { ReminderDevice, Reminders } from '../../lib/types'
+import type { NotificationPreferences, ReminderDevice, Reminders } from '../../lib/types'
 import { remindersOff, server } from '../../test/server'
 import { RemindersSection } from './Reminders'
 
@@ -71,9 +71,9 @@ function section(reminders: Reminders, offer = false) {
   server.use(
     http.get('*/api/v1/me/reminders', () => HttpResponse.json(reminders)),
     http.put('*/api/v1/me/reminders/devices', async ({ request }) => {
-      const body = (await request.json()) as { remindAt: string; weekAhead: boolean; daily: boolean }
+      const body = (await request.json()) as { remindAt: string; weekAhead: boolean; daily: boolean; preferences?: NotificationPreferences }
       puts.push(body)
-      return HttpResponse.json({ ...thisPhone, remindAt: body.remindAt, weekAhead: body.weekAhead, daily: body.daily })
+      return HttpResponse.json({ ...thisPhone, remindAt: body.remindAt, weekAhead: body.weekAhead, daily: body.daily, preferences: body.preferences })
     }),
     http.delete('*/api/v1/me/reminders/devices/:id', ({ params }) => {
       deletes.push(String(params.id))
@@ -142,9 +142,9 @@ describe('reminders in Account', () => {
     const toggle = await screen.findByRole('switch', { name: 'Reminders on this device' })
     expect(toggle).not.toBeChecked()
     expect(screen.getByText(/never marks a planned workout complete for you/)).toBeInTheDocument()
-    expect(screen.getByLabelText('Time')).toHaveValue('06:00')
+    expect(screen.getByLabelText('Morning reminder time')).toHaveValue('06:00')
     expect(screen.getByRole('checkbox', { name: 'Include recovery and strength days' })).toBeChecked()
-    fireEvent.change(screen.getByLabelText('Time'), { target: { value: '06:30' } })
+    fireEvent.change(screen.getByLabelText('Morning reminder time'), { target: { value: '06:30' } })
     expect(puts).toHaveLength(0)
     await userEvent.click(toggle)
 
@@ -160,9 +160,64 @@ describe('reminders in Account', () => {
         remindAt: '06:30:00',
         weekAhead: true,
         daily: true,
+        preferences: {
+          runCongratulations: true, trainingReviews: true, longRunPreparation: true,
+          racePreparation: true, connectionAlerts: true, preparationAt: '18:00:00', quietStart: '22:00:00', quietEnd: '06:00:00',
+        },
       },
     ])
     expect(screen.getByRole('status')).toHaveTextContent('Reminders are on. Morning reminders are set for around 06:30')
+  })
+
+  it('preserves existing choices and saves preparation and quiet-hour preferences', async () => {
+    const { requestPermission } = pushCapableBrowser('granted', true)
+    const { puts } = section({ ...available, devices: [thisPhone] })
+    await waitFor(() => expect(screen.getByRole('switch')).toBeChecked())
+    const preparation = screen.getByRole('checkbox', { name: 'Preparation the evening before a long run' })
+    expect(preparation).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Congratulations when a Strava run arrives' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Quiet hours' })).not.toBeChecked()
+    await userEvent.click(preparation)
+    await waitFor(() => expect(puts).toHaveLength(1))
+    await waitFor(() => expect(preparation).toBeEnabled())
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Quiet hours' }))
+    await waitFor(() => expect(puts).toHaveLength(2))
+    expect(puts[1]).toMatchObject({ preferences: { longRunPreparation: true, trainingReviews: false, quietStart: '22:00:00', quietEnd: '06:00:00' } })
+    expect(requestPermission).not.toHaveBeenCalled()
+    expect(screen.queryByRole('checkbox', { name: /missed run/i })).not.toBeInTheDocument()
+  })
+
+  it('restores the saved preference after a failed update and lets the runner retry', async () => {
+    pushCapableBrowser('granted', true)
+    section({ ...available, devices: [thisPhone] })
+    await waitFor(() => expect(screen.getByRole('switch')).toBeChecked())
+    server.use(http.put('*/api/v1/me/reminders/devices', () => new HttpResponse(null, { status: 503 })))
+    const choice = screen.getByRole('checkbox', { name: 'Training adjustments ready to review' })
+    await userEvent.click(choice)
+    await screen.findByRole('alert')
+    expect(choice).not.toBeChecked()
+    await waitFor(() => expect(choice).toBeEnabled())
+    server.use(http.put('*/api/v1/me/reminders/devices', async ({ request }) => {
+      const body = await request.json() as { preferences: NotificationPreferences }
+      return HttpResponse.json({ ...thisPhone, preferences: body.preferences })
+    }))
+    await userEvent.click(choice)
+    await waitFor(() => expect(choice).toBeChecked())
+    await waitFor(() => expect(choice).toBeEnabled())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('does not request browser permission after token work when a saved subscription has expired', async () => {
+    const { pushManager, requestPermission } = pushCapableBrowser('granted', true)
+    const { puts } = section({ ...available, devices: [thisPhone] })
+    await waitFor(() => expect(screen.getByRole('switch')).toBeChecked())
+    pushManager.getSubscription.mockResolvedValueOnce(null)
+    const choice = screen.getByRole('checkbox', { name: 'Training adjustments ready to review' })
+    await userEvent.click(choice)
+    expect(await screen.findByRole('alert')).toHaveTextContent('reminders have expired')
+    expect(requestPermission).not.toHaveBeenCalled()
+    expect(puts).toHaveLength(0)
+    expect(choice).not.toBeChecked()
   })
 
   it('knows this device is on, saves a new time or choice straight away, and turning off forgets it', async () => {
@@ -171,10 +226,10 @@ describe('reminders in Account', () => {
 
     const toggle = await screen.findByRole('switch', { name: 'Reminders on this device' })
     await waitFor(() => expect(toggle).toBeChecked())
-    expect(screen.getByLabelText('Time')).toHaveValue('06:15')
+    expect(screen.getByLabelText('Morning reminder time')).toHaveValue('06:15')
     expect(screen.getByRole('checkbox', { name: 'On Mondays, tell me when a new week starts' })).not.toBeChecked()
 
-    fireEvent.change(screen.getByLabelText('Time'), { target: { value: '05:45' } })
+    fireEvent.change(screen.getByLabelText('Morning reminder time'), { target: { value: '05:45' } })
     await waitFor(() => expect(puts).toHaveLength(1))
     expect(puts[0]).toMatchObject({ endpoint: ENDPOINT, remindAt: '05:45:00', weekAhead: false })
     await userEvent.click(screen.getByRole('checkbox', { name: 'On Mondays, tell me when a new week starts' }))

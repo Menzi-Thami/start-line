@@ -5,9 +5,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StartLine.Application.Features.Notifications;
+using StartLine.Domain.Activities;
+using StartLine.Domain.Coaching;
 using StartLine.Domain.Notifications;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
+using StartLine.Domain.Sync;
 using StartLine.Infrastructure.Sync;
 
 namespace StartLine.Infrastructure.Push;
@@ -160,6 +163,11 @@ internal sealed class ReminderScheduleInterceptor(ReminderSignal signal) : SaveC
     {
         SavedPlan => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted,
         Runner => entry.State == EntityState.Modified && entry.Property(nameof(Runner.TimeZone)).IsModified,
+        SessionCheckIn or CoachWeek => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted,
+        Activity activity when activity.Source == ActivitySource.Upload => entry.State is EntityState.Added or EntityState.Modified or EntityState.Deleted,
+        ProviderConnection => entry.State is EntityState.Added or EntityState.Deleted
+            || entry.State == EntityState.Modified && entry.Property(nameof(ProviderConnection.Status)).IsModified,
+        NotificationDelivery => entry.State == EntityState.Added,
         PushSubscription => entry.State == EntityState.Added
             || (entry.State == EntityState.Modified && entry.Properties.Any(p => p.IsModified
                 && p.Metadata.Name is not (nameof(PushSubscription.LastRemindedOn) or nameof(PushSubscription.LastTestPushAt) or nameof(PushSubscription.UpdatedAt)))),

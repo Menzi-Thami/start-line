@@ -218,6 +218,7 @@ export interface paths {
             parameters: {
                 query?: {
                     includeSynced?: boolean;
+                    allTime?: boolean;
                 };
                 header?: never;
                 path?: never;
@@ -495,6 +496,56 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SendFeedbackCommand"];
+                    "text/json": components["schemas"]["SendFeedbackCommand"];
+                    "application/*+json": components["schemas"]["SendFeedbackCommand"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2029,6 +2080,7 @@ export interface paths {
                     RecentResultTime?: string;
                     RecentResultDate?: string;
                     StartOn?: string;
+                    RunWalk?: components["schemas"]["RunWalkMode"];
                     units?: string;
                 };
                 header?: never;
@@ -2253,6 +2305,7 @@ export interface components {
             tickPrompts: components["schemas"]["TickPromptExportDto"][];
             photo: null | components["schemas"]["RunnerPhotoDto"];
             notificationHistory?: null | components["schemas"]["NotificationHistoryDto"][];
+            feedback?: null | components["schemas"]["FeedbackNoteDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -2461,6 +2514,12 @@ export interface components {
          * @enum {unknown}
          */
         Experience: "New" | "Regular" | "Experienced";
+        FeedbackNoteDto: {
+            message: string;
+            page: string;
+            /** Format: date-time */
+            at: string;
+        };
         GeneratePlanQuery: {
             raceSlug: null | string;
             raceName: null | string;
@@ -2491,6 +2550,7 @@ export interface components {
             recentResultDate?: null | string;
             /** Format: date */
             startOn?: null | string;
+            runWalk?: null | components["schemas"]["RunWalkMode"];
         };
         GoalOutlookDto: {
             verdict: components["schemas"]["GoalVerdict"];
@@ -2770,6 +2830,14 @@ export interface components {
         RunnerPhotoDto: {
             dataUrl: string;
         };
+        RunWalkDto: {
+            /** Format: int32 */
+            runSeconds: number;
+            /** Format: int32 */
+            walkSeconds: number;
+        };
+        /** @enum {unknown} */
+        RunWalkMode: "Auto" | "On" | "Off";
         SavedPlanDto: {
             /** Format: uuid */
             id: string;
@@ -2824,6 +2892,10 @@ export interface components {
             maxHeartRate?: null | number;
             heartRateConsent?: null | boolean;
         };
+        SendFeedbackCommand: {
+            message: string;
+            page: null | string;
+        };
         SessionDto: {
             /** Format: date */
             date: string;
@@ -2836,6 +2908,7 @@ export interface components {
             zone: null | components["schemas"]["PaceZone"];
             exercises: components["schemas"]["StrengthExerciseDto"][];
             steps: components["schemas"]["SessionStepDto"][];
+            runWalk?: null | components["schemas"]["RunWalkDto"];
         };
         SessionRevision: {
             /** Format: date */

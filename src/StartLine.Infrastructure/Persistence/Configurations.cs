@@ -90,6 +90,8 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
             // Rows saved before the version stamp are version 1: they keep the shape they were built with.
             inputs.Property(i => i.GeneratorVersion).HasColumnName("GeneratorVersion").HasDefaultValue(TrainingPlanGenerator.OriginalVersion);
             inputs.Property(i => i.StartOn).HasColumnName("StartOn");
+            // Null is Auto: every plan saved before run/walk, and every plan that left it to the goal.
+            inputs.Property(i => i.RunWalk).HasColumnName("RunWalk").HasConversion<string>().HasMaxLength(8);
         });
     }
 }

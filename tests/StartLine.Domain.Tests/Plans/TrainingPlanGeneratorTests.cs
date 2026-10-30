@@ -396,5 +396,10 @@ public class TrainingPlanGeneratorTests
 
 public sealed class TrainingPlanGeneratorV2Tests : TrainingPlanGeneratorTests
 {
+    protected override int Version => TrainingPlanGenerator.ShapedVersion;
+}
+
+public sealed class TrainingPlanGeneratorV3Tests : TrainingPlanGeneratorTests
+{
     protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

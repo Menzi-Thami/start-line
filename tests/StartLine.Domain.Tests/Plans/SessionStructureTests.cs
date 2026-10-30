@@ -74,5 +74,10 @@ public class SessionStructureTests
 
 public sealed class SessionStructureV2Tests : SessionStructureTests
 {
+    protected override int Version => TrainingPlanGenerator.ShapedVersion;
+}
+
+public sealed class SessionStructureV3Tests : SessionStructureTests
+{
     protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

@@ -228,7 +228,8 @@ describe('Home', () => {
     const running = screen.getByRole('region', { name: 'Your running' })
     expect(await within(running).findByText('52.2')).toBeInTheDocument()
     expect(within(running).getByText(/Totals include your saved running history/)).toBeInTheDocument()
-    expect(within(running).getByText('64.2')).toBeInTheDocument()
+    // This year, and All time (the same runs here).
+    expect(within(running).getAllByText('64.2')).toHaveLength(2)
     expect(within(running).getByText(/40.2 km \(335%\) more than 1 Sept–23 Sept/)).toBeInTheDocument()
     await openDisclosure('Running insights')
     expect(screen.getByRole('table', { name: 'Weekly distance, last 12 weeks' })).toBeInTheDocument()
@@ -438,7 +439,7 @@ it('never shows the previous account’s totals while a different account loads'
   expect(within(running).queryByText('10')).not.toBeInTheDocument()
   expect(within(running).getByRole('status', { name: 'Loading running totals' })).toBeInTheDocument()
   release()
-  expect(await within(running).findAllByText('20')).toHaveLength(2)
+  expect(await within(running).findAllByText('20')).toHaveLength(3)
 })
 
 it('refreshes at imported expiry and does not claim a missing distance is level with zero', async () => {
@@ -456,6 +457,7 @@ it('refreshes at imported expiry and does not claim a missing distance is level 
     await vi.waitFor(() => expect(within(running).getAllByText('—')).toHaveLength(2))
     expect(within(running).getByText(/1 run has no available distance/)).toBeInTheDocument()
     expect(within(running).getByText('Comparison unavailable while distances are missing.')).toBeInTheDocument()
-    expect(reads).toBe(2)
+    // The two totals reads, and the one all-time read.
+    expect(reads).toBe(3)
   } finally { vi.useRealTimers() }
 })

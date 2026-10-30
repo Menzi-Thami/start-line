@@ -29,7 +29,7 @@ public static partial class TrainingPlanGenerator
         var profile = PlanProfile.For(parameters.RaceDistance);
         var shape = PlanShape.For(parameters, profile);
         var paces = TrainingPaces.FromGoal(parameters.RaceDistance, parameters.GoalTime);
-        var workouts = new WorkoutBuilder(profile.Category, paces, parameters.RaceDistance);
+        var workouts = new WorkoutBuilder(profile.Category, paces, parameters.RaceDistance, RunWalkRules.IsOn(parameters, profile.Category));
         var layout = WeekLayout.For(parameters.RunDays, parameters.LongRunDay);
 
         // A replan rebuilds on top of the plan as first built, so that plan is always generated first. Both use the
@@ -254,6 +254,11 @@ public static partial class TrainingPlanGenerator
         if (p.StartOn is { } startOn && (startOn < p.Today || startOn > p.RaceDate.AddDays(-7 * MinWeeks)))
         {
             throw new DomainException($"Start your plan between today and {MinWeeks} weeks before your race.");
+        }
+
+        if (!Enum.IsDefined(p.RunWalk))
+        {
+            throw new DomainException("Unknown run/walk choice.");
         }
 
         if (p.GeneratorVersion is < OriginalVersion or > LatestVersion)

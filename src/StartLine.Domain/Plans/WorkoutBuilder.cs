@@ -8,13 +8,18 @@ namespace StartLine.Domain.Plans;
 /// differently per race distance: a 5K runner's intervals are short and sharp, a marathoner's are
 /// longer, and an ultra runner's hills are long climbs with the descents practised too. Each session also gets its
 /// <see cref="SessionSteps"/>, built from the same numbers as its detail, with the paces of the week it's in.
+/// With <paramref name="runWalk"/>, the long runs, the medium-long run and race day are run/walk from the start, at a
+/// ratio set by this builder's long-run pace (<see cref="RunWalkRules.For"/>); easy runs and hard sessions are unchanged.
 /// </summary>
 internal sealed class WorkoutBuilder(
     DistanceCategory category,
     IReadOnlyDictionary<PaceZone, PaceRange> paces,
-    Distance raceDistance)
+    Distance raceDistance,
+    bool runWalk = false)
 {
     private const double WarmUpAndCoolDownKm = 3.5;
+
+    private readonly RunWalkRatio? ratio = runWalk ? RunWalkRules.For(paces[PaceZone.LongRun].Midpoint) : null;
 
     // The warm-up and cool-down that make up WarmUpAndCoolDownKm: a little longer to get going than to finish.
     private const double WarmUpKm = 2;
@@ -63,31 +68,34 @@ internal sealed class WorkoutBuilder(
             case SessionType.LongRunFastFinish:
                 var finish = Clamp(Round(km * 0.2), 2, 8);
                 return new(date, type, "Fast-finish long run",
-                    $"Run relaxed, then the last {Km(finish)} at {GoalPaceLabel}.{ultraNote}",
+                    $"Run relaxed, then the last {Km(finish)} at {GoalPaceLabel}.{ultraNote}{RunWalkWithGoalPace()}",
                     "Teaches you to hold pace on tired legs, which is how the end of a race feels.",
                     km, PaceZone.LongRun, SessionStructure.Continuous(finish, PaceZone.Race),
-                    Steps: Steps(At(PaceZone.LongRun, km: km - finish), At(PaceZone.Race, km: finish)));
+                    Steps: Steps(At(PaceZone.LongRun, km: km - finish), At(PaceZone.Race, km: finish)), RunWalk: ratio);
             case SessionType.LongRunRacePace:
                 var middle = Clamp(Round(km * 0.35), 3, IsUltra ? 15 : 16);
                 var start = Round((km - middle) / 2);
                 return new(date, type, "Race rehearsal long run",
-                    $"Easy start, {Km(middle)} at {GoalPaceLabel} in the middle, easy to finish. Use your race-day food, drink and kit.{ultraNote}",
+                    $"Easy start, {Km(middle)} at {GoalPaceLabel} in the middle, easy to finish. Use your race-day food, drink and kit.{ultraNote}{RunWalkWithGoalPace()}",
                     "A dress rehearsal: pace, fuelling and shoes all tested before race day.",
                     km, PaceZone.LongRun, SessionStructure.Continuous(middle, PaceZone.Race),
-                    Steps: Steps(At(PaceZone.LongRun, km: start), At(PaceZone.Race, km: middle), At(PaceZone.LongRun, km: km - middle - start)));
+                    Steps: Steps(At(PaceZone.LongRun, km: start), At(PaceZone.Race, km: middle), At(PaceZone.LongRun, km: km - middle - start)),
+                    RunWalk: ratio);
             default:
+                // With run/walk the breaks are planned, so "walk breaks are fine" becomes when to take them.
+                var walking = ratio is null ? " Walk breaks are fine." : RunWalkFromTheStart();
                 return new(date, SessionType.LongRun, "Long run",
-                    $"Steady and relaxed the whole way. Walk breaks are fine.{ultraNote}",
+                    $"Steady and relaxed the whole way.{walking}{ultraNote}",
                     IsUltra ? "Time on your feet: the single most important session for an ultra." : "Builds the endurance that carries you to the finish.",
-                    km, PaceZone.LongRun, Steps: Steps(At(PaceZone.LongRun, km: km)));
+                    km, PaceZone.LongRun, Steps: Steps(At(PaceZone.LongRun, km: km)), RunWalk: ratio);
         }
     }
 
     public PlannedSession MediumLong(DateOnly date, double km) => new(date, SessionType.MediumLongRun,
         "Back-to-back: medium-long run",
-        "Steady running the day before your long run, so tomorrow starts on tired legs. Keep it truly easy.",
+        $"Steady running the day before your long run, so tomorrow starts on tired legs. Keep it truly easy.{(ratio is null ? "" : RunWalkFromTheStart())}",
         "Builds the fatigue resistance an ultra needs without one enormous run.",
-        km, PaceZone.LongRun, Steps: Steps(At(PaceZone.LongRun, km: km)));
+        km, PaceZone.LongRun, Steps: Steps(At(PaceZone.LongRun, km: km)), RunWalk: ratio);
 
     public static PlannedSession Strength(DateOnly date, TrainingPhase phase, bool isCutback)
     {
@@ -125,11 +133,30 @@ internal sealed class WorkoutBuilder(
             new SessionStep(StepKind.CoolDown, 1, Zone: PaceZone.Easy, Pace: paces[PaceZone.Easy])));
 
     public PlannedSession RaceDay(DateOnly date) => new(date, SessionType.Race, "Race day",
-        IsUltra
+        (IsUltra
             ? $"{Km(raceDistance.Kilometres)}. Start slower than feels right, walk the climbs early, and eat before you're hungry."
-            : $"{Km(raceDistance.Kilometres)}. Start at {GoalPaceLabel}, not faster, and save something for the second half.",
+            : $"{Km(raceDistance.Kilometres)}. Start at {GoalPaceLabel}, not faster, and save something for the second half.")
+        + RaceDayWalkBreaks(),
         "This is what every run in the plan was for. Enjoy it.",
-        Math.Round(raceDistance.Kilometres, 1), PaceZone.Race, Steps: Steps(At(PaceZone.Race, km: Math.Round(raceDistance.Kilometres, 1))));
+        Math.Round(raceDistance.Kilometres, 1), PaceZone.Race, Steps: Steps(At(PaceZone.Race, km: Math.Round(raceDistance.Kilometres, 1))),
+        RunWalk: ratio);
+
+    /// <summary>The run/walk sentence for an easy-paced long run. Only called when the plan uses run/walk.</summary>
+    private string RunWalkFromTheStart() => $" Run/walk from the start: {ratio!.Describe()}.";
+
+    /// <summary>
+    /// The run/walk sentence for a long run with a stretch at goal pace: the breaks carry on through it, because the goal
+    /// pace of a run/walk runner is an average that includes them.
+    /// </summary>
+    private string RunWalkWithGoalPace() => ratio is null ? ""
+        : $" Run/walk from the start ({ratio.Describe()}), and keep the breaks in the {GoalPaceLabel} part too: your {GoalPaceLabel} includes them.";
+
+    /// <summary>
+    /// Race-day pacing for a run/walk runner. Breaks taken from the start keep the legs fresh for the end; breaks put off
+    /// until fatigue arrives come too late to help, and the goal pace already allows for them.
+    /// </summary>
+    private string RaceDayWalkBreaks() => ratio is null ? ""
+        : $" Take your walk breaks from the first kilometre, not when you get tired: {ratio.Describe()}. Your {GoalPaceLabel} already includes them.";
 
     public double KmIn(PaceZone zone, TimeSpan duration) => paces[zone].Midpoint.KilometresIn(duration);
 

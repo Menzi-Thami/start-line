@@ -61,6 +61,10 @@ public enum Experience
 /// How to run it, step by step (warm-up, the work and its recoveries, cool-down), each with its pace for that week. Built
 /// from the same numbers as <see cref="Detail"/>, which stays as the summary.
 /// </param>
+/// <param name="RunWalk">
+/// Run/walk from the start, at this ratio: set on long runs, the ultra medium-long run and race day when the plan uses
+/// run/walk (<see cref="RunWalkRules"/>). Null for every other session, and for every plan before version 3.
+/// </param>
 public sealed record PlannedSession(
     DateOnly Date,
     SessionType Type,
@@ -71,7 +75,8 @@ public sealed record PlannedSession(
     PaceZone? Zone,
     SessionStructure? Structure = null,
     IReadOnlyList<StrengthExercise>? Exercises = null,
-    SessionSteps? Steps = null)
+    SessionSteps? Steps = null,
+    RunWalkRatio? RunWalk = null)
 {
     /// <summary>How the session is built. Without one, the whole run is meant to sit in <see cref="Zone"/>.</summary>
     public SessionStructure Shape => Structure ?? SessionStructure.Steady;
@@ -111,6 +116,10 @@ public sealed record TrainingPlan(
 /// after <see cref="Today"/>, as every plan before this. Weeks still run Monday to Sunday, so a start mid-week makes a
 /// shorter first week with only the runs from that day on.
 /// </param>
+/// <param name="RunWalk">
+/// Run/walk on the long runs and race day: Auto (decided from the goal), On or Off. Version 3 plans and later only;
+/// older versions ignore it, so their plans never change.
+/// </param>
 public sealed record PlanParameters(
     Distance RaceDistance,
     TimeSpan GoalTime,
@@ -124,7 +133,8 @@ public sealed record PlanParameters(
     PlanReplan? Replan = null,
     IReadOnlyList<CoachDecision>? Coaching = null,
     int GeneratorVersion = TrainingPlanGenerator.OriginalVersion,
-    DateOnly? StartOn = null)
+    DateOnly? StartOn = null,
+    RunWalkMode RunWalk = RunWalkMode.Auto)
 {
     public int RunsPerWeek => RunDays.Where(Enum.IsDefined).Distinct().Count();
 }

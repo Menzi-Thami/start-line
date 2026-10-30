@@ -44,6 +44,11 @@ public sealed class GeneratorV1SnapshotTests
 
         var steps = type.Properties.Single(p => p.Name == nameof(PlannedSession.Steps));
         type.Properties.Remove(steps);
+
+        // Run/walk arrived with version 3 and is always null before it, so it is only left out while null: a version 1
+        // session that somehow gained it would still change the hash and fail here.
+        var runWalk = type.Properties.Single(p => p.Name == nameof(PlannedSession.RunWalk));
+        runWalk.ShouldSerialize = (_, value) => value is not null;
     }
 
     private static readonly Dictionary<string, PlanParameters> Cases = new()

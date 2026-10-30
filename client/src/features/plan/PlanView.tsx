@@ -29,10 +29,12 @@ import { WeekList } from './WeekList'
 import { PlanCalendar } from './PlanCalendar'
 import { WeekGlance } from './WeekGlance'
 import { WeekTotals } from './WeekTotals'
+import { PreparationGuide } from './PreparationGuide'
 
 const DaySummary = lazy(() => import('./DaySummary'))
 
 interface Props {
+  preparation?: { mode: 'long' | 'race'; date: string | null } | null
   onEditStrength?: () => void
   plan: TrainingPlan
   /** Just built: the race, the plan's shape and its weeks appear in turn, once, rather than all at once. */
@@ -99,8 +101,12 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, canCompleteRuns = true }: Props) {
+export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, canCompleteRuns = true }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const preparationRef = useRef<HTMLDetailsElement>(null)
+  const preparationQuery = new URLSearchParams(window.location.search)
+  const preparationMode = preparation?.mode ?? preparationQuery.get('prepare')
+  const [preparationOpen, setPreparationOpen] = useState(preparationMode === 'race' || preparationMode === 'long')
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -142,8 +148,11 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
   const ran = runs || coach ? ranKmByWeek(plan.weeks, runs ?? [], today, entries) : undefined
 
   useEffect(() => {
-    headingRef.current?.focus()
-  }, [plan])
+    if (preparationMode === 'race' || preparationMode === 'long') {
+      preparationRef.current?.scrollIntoView?.({ block: 'start' })
+      preparationRef.current?.querySelector('summary')?.focus({ preventScroll: true })
+    } else headingRef.current?.focus()
+  }, [plan, preparationMode])
 
   // Printing shows every tab and every week, not just the ones on screen.
   useEffect(() => {
@@ -328,6 +337,10 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
       {coach && <div ref={runLogRef} hidden={selectedDate !== null}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
       {coach && earlierEntries.length > 0 && <section aria-label="Earlier logged runs"><details className="disclosure"><summary>Earlier logged runs · {earlierEntries.length}</summary>{earlierEntries.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}</details></section>}
 
+      <details ref={preparationRef} className="disclosure preparation-card" open={preparationOpen} onToggle={event => setPreparationOpen(event.currentTarget.open)}>
+        <summary>{preparationMode === 'long' ? 'Long-run preparation' : 'Race-day checklist & pacing'}</summary>
+        <PreparationGuide plan={plan} units={units} mode={preparationMode} date={preparation?.date ?? preparationQuery.get('date')} />
+      </details>
       {plan.outlook?.verdict === 'AtRisk' && <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />}
       {plan.warnings.length > 0 && (
         <div className="callout plan-notes" role="note">
@@ -454,6 +467,7 @@ export function PlanView({ plan, reveal = false, openTab, onBack, units, onUnits
                   {PHASES[shown.week.phase]} · {formatDistance(trainingKm(shown.week), units)}
                 </p>
               </div>
+              {shown.week.guidance && <p className="week-guidance">{shown.week.guidance}</p>}
               {shown.when === 'now' && coachNotes?.find((n) => n.weekStart === shown.week.startDate) && (
                 <CoachNote
                   note={coachNotes.find((n) => n.weekStart === shown.week.startDate)!}

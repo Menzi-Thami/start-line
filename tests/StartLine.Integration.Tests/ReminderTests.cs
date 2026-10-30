@@ -422,7 +422,8 @@ public sealed class ReminderWeekTests
 
         var sent = factory.Push.To(endpoint).ShouldHaveSingleItem();
         sent.Title.ShouldStartWith($"Week 2 of {weeks.Count}");
-        sent.Body.ShouldStartWith(Reminders.NoCoachYet);
+        sent.Body.ShouldNotBeNullOrWhiteSpace();
+        sent.Body.ShouldNotStartWith(Reminders.NoCoachYet);
         var firstWeekRuns = runs.Count(r => r.Date < weeks[1]);
         sent.Body.ShouldContain($"Last week you checked in {firstWeekRuns} of {firstWeekRuns} runs.");
         sent.Body.ShouldContain("This week: ");

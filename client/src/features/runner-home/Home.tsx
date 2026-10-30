@@ -390,10 +390,15 @@ export function Home({
   photo = null,
 }: Props) {
   const auth = useAuth()
+  const [reviewOpen, setReviewOpen] = useState(() => new URLSearchParams(window.location.search).get('review') === '1')
+  const reviewRef = useRef<HTMLDetailsElement>(null)
   const [toolsOpen, setToolsOpen] = useState(() => tabFromUrl() === 'tools')
   const [toolsOpened, setToolsOpened] = useState(toolsOpen)
   const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
+  useEffect(() => {
+    if (plan && new URLSearchParams(window.location.search).get('review') === '1') reviewRef.current?.scrollIntoView?.({ block: 'start' })
+  }, [plan])
   // A tick or check-in made here changes the totals, so they're fetched again after each.
   const [logVersion, setLogVersion] = useState(0)
   const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
@@ -508,7 +513,7 @@ export function Home({
           <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
         </button>}
         </div>
-        {plan && week && progress?.kind !== 'race' && <details className="disclosure home-review"><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
+        {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
 
         <section className="section home-section" aria-labelledby="home-training">

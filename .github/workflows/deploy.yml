@@ -73,6 +73,14 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
+      # Provision a missing pair once; preserve all existing keys and subscriptions. Never log values.
+      - name: Configure notification delivery
+        env:
+          API_APP_NAME: ${{ vars.API_APP_NAME }}
+        run: |
+          node --test scripts/configure-push.test.mjs
+          node scripts/configure-push.mjs
+
       # Migrations run before the new API starts, so it never meets a schema older than it expects.
       # Keep migrations additive: the old API keeps serving until the deploy below swaps it out.
       # The free database pauses when idle and answers 40613 ("not currently available") while it wakes, which can

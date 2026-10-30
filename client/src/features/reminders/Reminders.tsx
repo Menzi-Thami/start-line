@@ -25,7 +25,7 @@ async function thisDevice(devices: readonly ReminderDevice[]): Promise<ReminderD
  * their plan has a run, built from the plan alone; on Mondays, if they like, that a new week and the coach's note are
  * waiting. Turning them off ends the browser's subscription and forgets the device.
  */
-export function RemindersSection() {
+export function RemindersSection({ offer = false }: { offer?: boolean }) {
   const auth = useAuth()
   const support = pushSupport()
   const ids = { heading: useId(), toggle: useId(), time: useId(), week: useId(), daily: useId() }
@@ -35,6 +35,7 @@ export function RemindersSection() {
   const [daily, setDaily] = useState(true)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'done' | 'error'; text: string } | null>(null)
+  const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -65,7 +66,9 @@ export function RemindersSection() {
     }
   }, [auth, support])
 
-  if (state.kind === 'hidden') return null
+  if (state.kind === 'hidden') return offer ? null : (
+    <p className="callout">Notifications are not available yet. Taperday needs to finish setting up notification delivery. Your phone’s permission alone does not turn on reminders.</p>
+  )
 
   const withToken = async (action: (token: string) => Promise<void>) => {
     setBusy(true)
@@ -89,16 +92,26 @@ export function RemindersSection() {
       setState({ kind: 'ready', publicKey, device })
     })
 
-  const turnOn = (publicKey: string) =>
-    withToken(async (token) => {
+  const turnOn = async (publicKey: string) => {
+    setBusy(true)
+    setMessage(null)
+    try {
+      // Request permission directly from the tap, before token/network work can lose iOS user activation.
       const address = await subscribe(publicKey)
+      const token = await auth.getToken()
+      if (!token) throw new Error('Your sign-in has expired. Sign in again to carry on.')
       const device = await api.me.reminders.turnOn(token, { ...address, remindAt: `${time}:00`, weekAhead, daily })
       setState({ kind: 'ready', publicKey, device })
       setMessage({
         tone: 'done',
         text: `Reminders are on. Morning reminders are set for around ${time} in your time zone${daily ? ', including recovery days' : ' on workout days'}.`,
       })
-    })
+    } catch (error) {
+      setMessage({ tone: 'error', text: error instanceof Error ? error.message : 'That didn’t work. Try again.' })
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const turnOff = (publicKey: string, device: ReminderDevice) =>
     withToken(async (token) => {
@@ -107,6 +120,25 @@ export function RemindersSection() {
       setState({ kind: 'ready', publicKey, device: null })
       setMessage({ tone: 'done', text: 'Reminders are off, and Taperday has forgotten this device.' })
     })
+
+  if (offer) {
+    if (dismissed || state.kind !== 'ready' || state.device || support === 'unsupported' || notificationsBlocked()) return null
+    return (
+      <section className="section callout" aria-label="Enable notifications">
+        <h3>Want a reminder for your day?</h3>
+        {support === 'home-screen-first' ? (
+          <p>On iPhone or iPad, add Taperday to your Home Screen from Safari’s Share menu, then open it from its icon to enable notifications.</p>
+        ) : (
+          <>
+            <p>Get workout and recovery reminders around 06:00 in your profile’s time zone. You can change this in Account → Notifications.</p>
+            <button type="button" className="button" disabled={busy} onClick={() => void turnOn(state.publicKey)}>Enable notifications</button>
+          </>
+        )}
+        <button type="button" className="button button-quiet" disabled={busy} onClick={() => setDismissed(true)}>Not now</button>
+        {message && <p role="alert" className="field-error">{message.text}</p>}
+      </section>
+    )
+  }
 
   return (
     <section className="section" aria-labelledby={ids.heading}>

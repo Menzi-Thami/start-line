@@ -65,7 +65,7 @@ function pushCapableBrowser(permission: NotificationPermission = 'granted', subs
   return { pushManager, requestPermission, unsubscribe }
 }
 
-function section(reminders: Reminders) {
+function section(reminders: Reminders, offer = false) {
   const puts: unknown[] = []
   const deletes: string[] = []
   server.use(
@@ -82,7 +82,7 @@ function section(reminders: Reminders) {
   )
   const view = render(
     <AuthContext.Provider value={auth}>
-      <RemindersSection />
+      <RemindersSection offer={offer} />
     </AuthContext.Provider>,
   )
   return { ...view, puts, deletes }
@@ -99,11 +99,40 @@ afterEach(() => {
 })
 
 describe('reminders in Account', () => {
-  it('stays hidden until push is configured on the server', async () => {
+  it('explains why notifications are unavailable until push is configured on the server', async () => {
     pushCapableBrowser()
-    const { container } = section(remindersOff)
+    section(remindersOff)
+    expect(await screen.findByText(/Notifications are not available yet/)).toBeInTheDocument()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+  })
 
+  it('offers notifications after sign-in without requesting permission until the runner taps', async () => {
+    const { requestPermission } = pushCapableBrowser()
+    const { puts } = section(available, true)
+    const enable = await screen.findByRole('button', { name: 'Enable notifications' })
+    expect(requestPermission).not.toHaveBeenCalled()
+    const token = vi.spyOn(auth, 'getToken')
+    token.mockClear()
+    fireEvent.click(enable)
+    expect(requestPermission).toHaveBeenCalledOnce()
+    expect(token).not.toHaveBeenCalled()
+    await waitFor(() => expect(puts).toHaveLength(1))
+    expect(screen.queryByRole('button', { name: 'Enable notifications' })).not.toBeInTheDocument()
+  })
+
+  it('lets the runner dismiss the offer without asking for permission', async () => {
+    const { requestPermission } = pushCapableBrowser()
+    section(available, true)
+    await userEvent.click(await screen.findByRole('button', { name: 'Not now' }))
+    expect(screen.queryByRole('button', { name: 'Enable notifications' })).not.toBeInTheDocument()
+    expect(requestPermission).not.toHaveBeenCalled()
+  })
+
+  it('does not offer permission when the server has no push setup', async () => {
+    const { requestPermission } = pushCapableBrowser()
+    const { container } = section(remindersOff, true)
     await waitFor(() => expect(container).toBeEmptyDOMElement())
+    expect(requestPermission).not.toHaveBeenCalled()
   })
 
   it('is off by default, and turning it on asks permission, subscribes and saves the time chosen', async () => {

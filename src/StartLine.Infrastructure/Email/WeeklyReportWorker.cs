@@ -42,6 +42,7 @@ internal sealed partial class WeeklyReportWorker(
         if (options.Value.SendTestTo is { Length: > 0 } test)
         {
             await SendAsync(test, isTest: true, stoppingToken);
+            await SendWhatsNewAsync(test, stoppingToken);
         }
 
         while (!stoppingToken.IsCancellationRequested)
@@ -62,6 +63,19 @@ internal sealed partial class WeeklyReportWorker(
             var counts = await WeeklyReport.CountAsync(db, now, cancellationToken);
             await email.SendAsync(WeeklyReport.Compose(counts, to, DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(now, Zone).Date), isTest), cancellationToken);
             LogSent(logger, isTest);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            LogFailed(logger, e);
+        }
+    }
+
+    // The latest "what's new" email, as a preview alongside the test report; runners don't get it until they can opt in.
+    private async Task SendWhatsNewAsync(string to, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await email.SendAsync(UpdateEmails.RacePlanV3(to, test: true), cancellationToken);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {

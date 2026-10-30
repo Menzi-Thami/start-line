@@ -55,5 +55,10 @@ public class ReviewRegressionTests
 
 public sealed class ReviewRegressionV2Tests : ReviewRegressionTests
 {
+    protected override int Version => TrainingPlanGenerator.ShapedVersion;
+}
+
+public sealed class ReviewRegressionV3Tests : ReviewRegressionTests
+{
     protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

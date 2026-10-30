@@ -5,8 +5,9 @@ name: ci
 # manual validation to conserve Actions minutes.
 on:
   workflow_dispatch:
+  pull_request:
   push:
-    branches: [feature/launch-qa-strength-persistence]
+    branches: [main]
 
 permissions:
   contents: read

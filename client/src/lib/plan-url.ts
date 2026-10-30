@@ -42,7 +42,7 @@ export interface ReplanInputs {
 }
 
 /** The generator version a new plan is built with. Older links and saved plans keep theirs. */
-export const LATEST_PLAN_VERSION = 2
+export const LATEST_PLAN_VERSION = 3
 
 // Short and readable in a shared link: ?re=2026-12-03&why=ill&last=18
 const SETBACK_CODES: Record<Setback, string> = {

@@ -118,5 +118,10 @@ public class DistanceSpecificTrainingTests
 
 public sealed class DistanceSpecificTrainingV2Tests : DistanceSpecificTrainingTests
 {
+    protected override int Version => TrainingPlanGenerator.ShapedVersion;
+}
+
+public sealed class DistanceSpecificTrainingV3Tests : DistanceSpecificTrainingTests
+{
     protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

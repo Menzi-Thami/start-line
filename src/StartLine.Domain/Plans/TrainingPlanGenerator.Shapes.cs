@@ -9,8 +9,32 @@ public static partial class TrainingPlanGenerator
     /// <summary>Plans built before the per-distance shapes, and every link or saved plan without a version.</summary>
     public const int OriginalVersion = 1;
 
-    /// <summary>The version every new plan is built with.</summary>
-    public const int LatestVersion = 2;
+    /// <summary>Per-distance shapes: front-loaded ramps, a long-run track, a real 10% limit.</summary>
+    public const int ShapedVersion = 2;
+
+    /// <summary>
+    /// The version every new plan is built with. On top of version 2: long runs reach a floor for the half and the
+    /// marathon, hard sessions are sized to the week, long tempos become reps, a short week keeps to two hard days, a new
+    /// runner starts with two easy weeks, and strength stays off hard days and the eve of the long run.
+    /// </summary>
+    public const int LatestVersion = 3;
+
+    // Version 3: the long run a half or a marathon should reach at its peak, as the classic plans agree (Pfitzinger,
+    // Higdon, Hansons): about 16 km and 26 km. Still never past the time cap or half the week.
+    private const double HalfLongRunFloorKm = 16;
+    private const double MarathonLongRunFloorKm = 26;
+
+    // Version 3: how much faster the long run may grow to reach its floor in time, over the distance's usual step.
+    private const double FloorStepStretch = 1.5;
+
+    private static bool IsV3(PlanParameters p) => p.GeneratorVersion >= LatestVersion;
+
+    private static double LongRunFloorKm(PlanParameters p, PlanProfile profile) => !IsV3(p) ? 0 : profile.Category switch
+    {
+        DistanceCategory.HalfMarathon => HalfLongRunFloorKm,
+        DistanceCategory.Marathon => MarathonLongRunFloorKm,
+        _ => 0,
+    };
 
     // A front-loaded build's last growth step is half the size of its first, until the build needs more than that: then
     // the early steps stay at 10% and the later ones grow towards it, so a build never reaches less than an even one would.
@@ -123,10 +147,19 @@ public static partial class TrainingPlanGenerator
         }
 
         var startKm = LongRunKm(p, profile, workouts, volumes[0]);
-        var peakKm = LongRunKm(p, profile, workouts, volumes.Max());
+        var peakKm = Math.Min(Math.Max(LongRunKm(p, profile, workouts, volumes.Max()), LongRunFloorKm(p, profile)), LongRunCapKm(p, profile, workouts));
         var track = new double[volumes.Length];
         var fullWeeks = 0;
         var current = startKm;
+
+        // Version 3: a floor above the usual peak may need a slightly bigger step to be reached before the taper.
+        var stepKm = shape.LongRunStepKm;
+        if (IsV3(p))
+        {
+            var steps = Math.Max(1, (Enumerable.Range(0, volumes.Length).Count(i => !isCutback(i)) + 1) / 2);
+            stepKm = Math.Min(shape.LongRunStepKm * FloorStepStretch, Math.Max(stepKm, (peakKm - startKm) / steps));
+        }
+
         for (var i = 0; i < volumes.Length; i++)
         {
             double km;
@@ -137,7 +170,7 @@ public static partial class TrainingPlanGenerator
             else
             {
                 // Full weeks 1, 3, 5… step up; 2, 4, 6… hold.
-                current = Math.Min(peakKm, startKm + shape.LongRunStepKm * ((fullWeeks + 1) / 2));
+                current = Math.Min(peakKm, startKm + stepKm * ((fullWeeks + 1) / 2));
                 km = current;
                 fullWeeks++;
             }

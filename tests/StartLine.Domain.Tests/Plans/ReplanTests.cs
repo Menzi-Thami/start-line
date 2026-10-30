@@ -380,5 +380,10 @@ public class ReplanTests
 
 public sealed class ReplanV2Tests : ReplanTests
 {
+    protected override int Version => TrainingPlanGenerator.ShapedVersion;
+}
+
+public sealed class ReplanV3Tests : ReplanTests
+{
     protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

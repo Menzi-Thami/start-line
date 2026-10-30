@@ -258,7 +258,7 @@ public sealed class GeneratePlanTests
 
     [Theory]
     [InlineData(0)]
-    [InlineData(3)]
+    [InlineData(4)]
     public void An_unknown_generator_version_is_rejected(int version) =>
         Validator().Validate(CustomRace() with { Version = version }).Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("Version");
 

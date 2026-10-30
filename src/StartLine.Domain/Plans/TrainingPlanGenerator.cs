@@ -362,10 +362,27 @@ public static partial class TrainingPlanGenerator
         return volumes;
     }
 
+    // Version 3: a hard session takes at most this share of the week (race pace a little more), so a big session never
+    // lands in a small week.
+    private const double QualityShareOfWeek = 0.25;
+    private const double RacePaceShareOfWeek = 0.30;
+
+    // Version 3: a new runner's first weeks are easy running and strides, before any hard session.
+    private const int NewRunnerEasyWeeks = 2;
+
     private static List<PlannedSession> TrainingWeek(
         PlanParameters p, PlanProfile profile, WorkoutBuilder workouts, WeekLayout layout, WeekContext week)
     {
         var (first, second) = Rotation(week.Phase, profile.Category, week.IndexInPhase);
+        if (IsV3(p) && p.Experience != Experience.Experienced && week.Phase == TrainingPhase.Peak
+            && profile.Category is not (DistanceCategory.FiveK or DistanceCategory.TenK))
+        {
+            // A long tempo is easier to hold as reps with short jogs: cruise intervals instead of one continuous block.
+            first = first == SessionType.Tempo ? SessionType.CruiseIntervals : first;
+            second = second == SessionType.Tempo ? SessionType.CruiseIntervals : second;
+        }
+
+        var easyStart = IsV3(p) && p.Experience == Experience.New && week.Phase == TrainingPhase.Base && week.IndexInPhase < NewRunnerEasyWeeks;
         var singleQuality = !layout.Days.Any(d => d.Role == DayRole.SecondQuality);
         if (singleQuality && second is { } alternate && week.IndexInPhase % 2 == 1)
         {
@@ -377,8 +394,8 @@ public static partial class TrainingPlanGenerator
         var longKm = week.LongRunKm switch
         {
             null => LongRunKm(p, profile, workouts, week.TargetKm),
-            { } track when week.LongRunFitsWeek => WorkoutBuilder.Round(Math.Max(MinLongRunKm, Math.Min(Math.Min(track, LongRunCapKm(profile, workouts)), week.TargetKm * LongRunMaxShareOfWeek))),
-            { } track => WorkoutBuilder.Round(Math.Min(track, LongRunCapKm(profile, workouts))),
+            { } track when week.LongRunFitsWeek => WorkoutBuilder.Round(Math.Max(MinLongRunKm, Math.Min(Math.Min(track, LongRunCapKm(p, profile, workouts)), week.TargetKm * LongRunMaxShareOfWeek))),
+            { } track => WorkoutBuilder.Round(Math.Min(track, LongRunCapKm(p, profile, workouts))),
         };
         var progress = Math.Clamp(week.Progress + week.DoseStep * DoseStepProgress, 0, 1);
         var sessions = new List<PlannedSession>(layout.Days.Count);
@@ -392,6 +409,12 @@ public static partial class TrainingPlanGenerator
                 .Select(d => (int?)d.DayIndex).FirstOrDefault()
             : null;
 
+        var longType = LongRunType(week.Phase, profile.Category, p.RunsPerWeek, week.IndexInPhase, week.IsEasier);
+
+        // Version 3: on four runs a week or fewer, a long run with goal-pace work counts as a hard day, so the week keeps
+        // to two: the second session becomes easy running with strides.
+        var hardLongRunFillsWeek = IsV3(p) && p.RunsPerWeek <= 4 && longType != SessionType.LongRun;
+
         foreach (var (dayIndex, role) in layout.Days)
         {
             var date = week.Start.AddDays(dayIndex);
@@ -404,15 +427,14 @@ public static partial class TrainingPlanGenerator
             switch (role)
             {
                 case DayRole.Long:
-                    var longType = LongRunType(week.Phase, profile.Category, p.RunsPerWeek, week.IndexInPhase, week.IsEasier);
                     sessions.Add(workouts.Long(date, longType, longKm));
                     break;
-                case DayRole.Quality when !week.IsEasier:
-                    hardSessions.Add((workouts.Quality(date, first, week.Phase, progress), false));
+                case DayRole.Quality when !week.IsEasier && !easyStart:
+                    hardSessions.Add((SizedQuality(p, workouts, date, first, week, progress), false));
                     sessions.Add(hardSessions[^1].Session);
                     break;
-                case DayRole.SecondQuality when !week.IsEasier && week.DoseStep >= 0 && second is { } secondType:
-                    hardSessions.Add((workouts.Quality(date, secondType, week.Phase, progress), true));
+                case DayRole.SecondQuality when !week.IsEasier && !easyStart && !hardLongRunFillsWeek && week.DoseStep >= 0 && second is { } secondType:
+                    hardSessions.Add((SizedQuality(p, workouts, date, secondType, week, progress), true));
                     sessions.Add(hardSessions[^1].Session);
                     break;
                 case DayRole.Recovery:
@@ -455,13 +477,59 @@ public static partial class TrainingPlanGenerator
                 Math.Max(MinRunKm, Math.Min(MaxEasyRunKm, longKm * 0.75))));
         sessions.AddRange(easyDays.Select(d => workouts.Easy(d.Date, d.Type, easyKm)));
 
-        // Strength goes on any chosen day except the long run's: that day is long enough already.
-        foreach (var day in (p.StrengthDays ?? []).Select(WeekLayout.MondayIndex).Distinct().Where(d => d != longDay))
+        // Strength goes on any chosen day except the long run's: that day is long enough already. From version 3 it also
+        // stays off hard days and the eve of the long run, moving to the nearest easier day when it can.
+        foreach (var day in StrengthDays(p, week, longDay, hardSessions.Select(h => h.Session.Date)))
         {
             sessions.Add(WorkoutBuilder.Strength(week.Start.AddDays(day), week.Phase, week.IsEasier));
         }
 
         return [.. sessions.OrderBy(s => s.Date).ThenBy(s => s.Type == SessionType.Strength)];
+    }
+
+    /// <summary>
+    /// A hard session at this week's dose. From version 3 the dose comes down (to the phase's lightest) until the session
+    /// fits its share of the week, so a long race-pace run or a big tempo never swamps a small week.
+    /// </summary>
+    private static PlannedSession SizedQuality(PlanParameters p, WorkoutBuilder workouts, DateOnly date, SessionType type, WeekContext week, double progress)
+    {
+        var session = workouts.Quality(date, type, week.Phase, progress);
+        if (!IsV3(p))
+        {
+            return session;
+        }
+
+        var limit = week.TargetKm * (type == SessionType.RacePace ? RacePaceShareOfWeek : QualityShareOfWeek);
+        for (var dose = progress - 0.25; session.DistanceKm > limit && dose > -0.25; dose -= 0.25)
+        {
+            session = workouts.Quality(date, type, week.Phase, Math.Max(0, dose));
+        }
+
+        return session;
+    }
+
+    /// <summary>The days strength goes on this week: the chosen ones, off the long run (and, from version 3, off hard days and its eve).</summary>
+    private static List<int> StrengthDays(PlanParameters p, WeekContext week, int longDay, IEnumerable<DateOnly> hardDates)
+    {
+        var chosen = (p.StrengthDays ?? []).Select(WeekLayout.MondayIndex).Distinct().Where(d => d != longDay).ToList();
+        if (!IsV3(p))
+        {
+            return chosen;
+        }
+
+        var hard = hardDates.Select(d => d.DayNumber - week.Start.DayNumber).ToHashSet();
+        var eve = (longDay + 6) % 7;
+        bool Fine(int d) => d != longDay && d != eve && !hard.Contains(d);
+        var placed = new List<int>();
+        foreach (var day in chosen)
+        {
+            // The chosen day if it suits, else the nearest one either side that does and isn't taken, else the chosen day.
+            var pick = Enumerable.Range(0, 7).SelectMany(n => new[] { day + n, day - n }).Where(d => d is >= 0 and < 7)
+                .Where(d => Fine(d) && !placed.Contains(d)).DefaultIfEmpty(day).First();
+            placed.Add(pick);
+        }
+
+        return [.. placed.Distinct()];
     }
 
     /// <summary>
@@ -532,15 +600,24 @@ public static partial class TrainingPlanGenerator
             share += 0.05;
         }
 
-        return WorkoutBuilder.Round(Math.Clamp(weeklyKm * share, MinLongRunKm, LongRunCapKm(profile, workouts)));
+        return WorkoutBuilder.Round(Math.Clamp(weeklyKm * share, MinLongRunKm, LongRunCapKm(p, profile, workouts)));
     }
 
     /// <summary>
     /// The longest a long run may be. Slower runners hit the time cap before the distance cap, so a long run never becomes
     /// an all-day effort.
     /// </summary>
-    private static double LongRunCapKm(PlanProfile profile, WorkoutBuilder workouts) =>
-        Math.Max(MinLongRunKm, Math.Min(profile.LongRunCapKm, workouts.KmIn(PaceZone.LongRun, profile.LongRunCapTime)));
+    private static double LongRunCapKm(PlanParameters p, PlanProfile profile, WorkoutBuilder workouts) =>
+        Math.Max(MinLongRunKm, Math.Min(DistanceCapKm(p, profile), workouts.KmIn(PaceZone.LongRun, profile.LongRunCapTime)));
+
+    // Version 3: an experienced marathoner may go to about 35 km, as Pfitzinger's plans do; still under the time cap and
+    // half the week, so it only happens on real volume. Everyone else keeps the distance's usual cap.
+    private const double ExperiencedMarathonCapKm = 35;
+
+    private static double DistanceCapKm(PlanParameters p, PlanProfile profile) =>
+        IsV3(p) && p.Experience == Experience.Experienced && profile.Category == DistanceCategory.Marathon
+            ? Math.Max(profile.LongRunCapKm, ExperiencedMarathonCapKm)
+            : profile.LongRunCapKm;
 
     // Short and light, with one brief touch of race pace early on and a shakeout close to the start.
     private static List<PlannedSession> RaceWeek(

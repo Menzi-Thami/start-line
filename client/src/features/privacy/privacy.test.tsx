@@ -22,6 +22,8 @@ const sipho: Runner = {
   privacyNoticeVersion: '2026-10-09',
   needsPrivacyConsent: true,
   heartRateConsent: false,
+  updateEmails: true,
+  updateEmailsOffAt: null,
 }
 
 const signedIn: Auth = {

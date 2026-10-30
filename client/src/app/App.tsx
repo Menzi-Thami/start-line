@@ -10,6 +10,7 @@ import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { FeedbackBox } from '../features/account/FeedbackBox'
 import { FindingPlan } from '../features/account/FindingPlan'
+import { Unsubscribe } from '../features/account/Unsubscribe'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
@@ -47,7 +48,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'home' | 'build' | 'runs' | 'account' | 'privacy' | 'sign-up'
+type View = 'home' | 'build' | 'runs' | 'account' | 'privacy' | 'sign-up' | 'unsubscribe'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -87,7 +88,7 @@ const viewFromUrl = (): View => {
   const view = new URLSearchParams(window.location.search).get('view')
   // A runner has one plan, so the old My plans page is now Home.
   if (view === 'plans') return 'home'
-  return view === 'home' || view === 'runs' || view === 'account' || view === 'privacy' ? view : 'build'
+  return view === 'home' || view === 'runs' || view === 'account' || view === 'privacy' || view === 'unsubscribe' ? view : 'build'
 }
 
 export function App() {
@@ -629,7 +630,7 @@ export function App() {
 
   // A runner who agreed to an older privacy notice reads the new one before anything else. The policy itself and Account
   // (to download or delete instead) stay open.
-  const gated = state.kind === 'ready' && state.runner.needsPrivacyConsent && view !== 'privacy' && view !== 'account'
+  const gated = state.kind === 'ready' && state.runner.needsPrivacyConsent && view !== 'privacy' && view !== 'account' && view !== 'unsubscribe'
 
   return (
     <div className="page">
@@ -686,7 +687,7 @@ export function App() {
 
       <ScrollProgress />
       {state.kind === 'ready' && !state.runner.needsPrivacyConsent && (
-        <div hidden={view === 'account' || view === 'privacy'}><RemindersSection key={state.runner.id} offer /></div>
+        <div hidden={view === 'account' || view === 'privacy' || view === 'unsubscribe'}><RemindersSection key={state.runner.id} offer /></div>
       )}
       <main key={view} className={navigated ? 'view-enter' : undefined}>
         <ScreenRecovery>
@@ -708,6 +709,7 @@ export function App() {
         )}
 
         {view === 'privacy' && <PrivacyPolicy />}
+        {view === 'unsubscribe' && <Unsubscribe token={new URLSearchParams(window.location.search).get('t')} onOpenAccount={() => go('account')} />}
 
         {!gated && (
           <>

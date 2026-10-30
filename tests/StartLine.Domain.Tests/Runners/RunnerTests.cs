@@ -143,3 +143,45 @@ public sealed class RunnerCalendarTests
         runner.CalendarToken.ShouldBeNull();
     }
 }
+
+public sealed class RunnerUpdateEmailTests
+{
+    private static readonly DateTimeOffset SignedUpAt = new(2026, 10, 9, 8, 0, 0, TimeSpan.Zero);
+
+    private static Runner Register() => Runner.Register(
+        "oid-4", "lerato@example.com", "Lerato", "Africa/Johannesburg", Units.Kilometres, false, "2026-10-09", SignedUpAt);
+
+    [Fact]
+    public void Update_emails_are_on_for_a_new_runner()
+    {
+        var runner = Register();
+
+        runner.UpdateEmails.ShouldBeTrue();
+        runner.UpdateEmailsOffAt.ShouldBeNull();
+    }
+
+    [Fact]
+    public void Turning_update_emails_off_twice_keeps_the_first_time()
+    {
+        var runner = Register();
+        var first = SignedUpAt.AddDays(3);
+
+        runner.TurnOffUpdateEmails(first);
+        runner.TurnOffUpdateEmails(first.AddHours(1));
+
+        runner.UpdateEmails.ShouldBeFalse();
+        runner.UpdateEmailsOffAt.ShouldBe(first);
+    }
+
+    [Fact]
+    public void Update_emails_can_be_turned_back_on()
+    {
+        var runner = Register();
+        runner.TurnOffUpdateEmails(SignedUpAt.AddDays(3));
+
+        runner.TurnOnUpdateEmails();
+
+        runner.UpdateEmails.ShouldBeTrue();
+        runner.UpdateEmailsOffAt.ShouldBeNull();
+    }
+}

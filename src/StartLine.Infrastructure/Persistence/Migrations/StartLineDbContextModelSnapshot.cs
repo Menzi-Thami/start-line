@@ -754,6 +754,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
+                    b.Property<DateTimeOffset?>("UpdateEmailsOffAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
 

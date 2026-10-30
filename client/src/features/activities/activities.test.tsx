@@ -27,6 +27,8 @@ const thandi: Runner = {
   privacyNoticeVersion: '2026-10-21',
   needsPrivacyConsent: false,
   heartRateConsent: true,
+  updateEmails: true,
+  updateEmailsOffAt: null,
 }
 
 const summaryOf = (run: Activity): ActivitySummary => ({

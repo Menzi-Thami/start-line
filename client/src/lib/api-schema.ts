@@ -2235,6 +2235,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UnsubscribeRequest"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2766,6 +2814,9 @@ export interface components {
             privacyNoticeVersion: string;
             needsPrivacyConsent: boolean;
             heartRateConsent: boolean;
+            updateEmails: boolean;
+            /** Format: date-time */
+            updateEmailsOffAt: null | string;
         };
         RunnerPhotoDto: {
             dataUrl: string;
@@ -2823,6 +2874,7 @@ export interface components {
             /** Format: int32 */
             maxHeartRate?: null | number;
             heartRateConsent?: null | boolean;
+            updateEmails?: null | boolean;
         };
         SessionDto: {
             /** Format: date */
@@ -2985,6 +3037,9 @@ export interface components {
         };
         /** @enum {unknown} */
         Units: "Kilometres" | "Miles";
+        UnsubscribeRequest: {
+            token: string;
+        };
         ValidationProblemDetails: {
             type?: null | string;
             title?: null | string;

@@ -5,13 +5,14 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StartLine.Application.Common;
-using StartLine.Application.Features.Insights;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.CheckIns;
+using StartLine.Application.Features.Insights;
 using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Races;
 using StartLine.Application.Features.Sync;
 using StartLine.Infrastructure.Activities;
+using StartLine.Infrastructure.Email;
 using StartLine.Infrastructure.Persistence;
 using StartLine.Infrastructure.Push;
 using StartLine.Infrastructure.Races;
@@ -111,7 +112,11 @@ public static class DependencyInjection
             .AddHttpMessageHandler<MarkPushRequests>()
             .RemoveAllLoggers();
         services.AddHostedService<ReminderWorker>();
-        services.AddSingleton<IInsightsAccess, ConfiguredInsightsAccess>();
+        services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section);
+        services.AddOptions<ReportOptions>().BindConfiguration(ReportOptions.Section);
+        // No request logging: the Brevo key travels in a header.
+        services.AddHttpClient<IEmailSender, BrevoEmailSender>(http => http.Timeout = TimeSpan.FromSeconds(30)).RemoveAllLoggers();
+        services.AddHostedService<WeeklyReportWorker>();
         services.AddOptions<PushTestOptions>().BindConfiguration("PushTest").ValidateOnStart();
         services.AddSingleton<IValidateOptions<PushTestOptions>, PushTestOptionsValidator>();
         services.AddScoped<PushTestRunner>();

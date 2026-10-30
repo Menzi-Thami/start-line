@@ -103,6 +103,12 @@ a `StartOn` column on saved plans), from the day it's built to two weeks before 
 Sunday, so a start mid-week makes a short first week holding only the runs from that day. Without it a plan starts the next
 Monday, exactly as before, so no plan changes and no generator version is needed.
 
+Run/walk (`RunWalkMode` Auto/On/Off: `PlanParameters.RunWalk`, `rw=on|off` in the link, `GeneratePlanQuery.RunWalk`, a
+`RunWalk` column on saved plans, null for Auto) puts Galloway-style walk breaks on the long runs, the ultra medium-long run
+and race day of version 3 plans (`RunWalkRules`, `PlannedSession.RunWalk`, the run/walk chip on the plan). Auto is on for a
+marathon of 5 h 30 min or slower and an ultra of 10 hours or more; the ratio comes from the long-run pace. Distances, easy
+runs and hard sessions never change, and versions 1 and 2 ignore it.
+
 Every run carries its `Steps` (`SessionSteps`, built in `WorkoutBuilder` from the same numbers as its `Detail`): warm-up,
 the work with its recoveries (a `Repeat` holds its block and count), cool-down. Every running step has a distance or a
 time and that week's pace range, so a runner with a watch has numbers to hold: fartlek and hills at interval pace (hills

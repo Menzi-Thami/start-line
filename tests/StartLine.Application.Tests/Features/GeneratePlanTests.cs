@@ -383,4 +383,29 @@ public sealed class GeneratePlanTests
         rep.FastestSecondsPerKm.ShouldBe(zone.FastestSecondsPerKm);
         rep.SlowestSecondsPerKm.ShouldBe(zone.SlowestSecondsPerKm);
     }
+
+    [Fact]
+    public void Run_walk_accepts_its_three_choices_or_none_and_rejects_anything_else()
+    {
+        foreach (var choice in new RunWalkMode?[] { null, RunWalkMode.Auto, RunWalkMode.On, RunWalkMode.Off })
+        {
+            Validator().Validate(CustomRace() with { RunWalk = choice }).IsValid.ShouldBeTrue();
+        }
+
+        Validator().Validate(CustomRace() with { RunWalk = (RunWalkMode)7 })
+            .Errors.ShouldHaveSingleItem().PropertyName.ShouldBe("RunWalk");
+    }
+
+    [Fact]
+    public async Task A_run_walk_choice_reaches_the_plan()
+    {
+        var on = await Handler().Handle(CustomRace() with { Version = TrainingPlanGenerator.LatestVersion, RunWalk = RunWalkMode.On }, CancellationToken.None);
+        var auto = await Handler().Handle(CustomRace() with { Version = TrainingPlanGenerator.LatestVersion }, CancellationToken.None);
+
+        // A two-hour half is not run/walk on Auto; asked for, its long runs and race day are.
+        auto.Weeks.SelectMany(w => w.Sessions).ShouldAllBe(s => s.RunWalk == null);
+        var race = on.Weeks.SelectMany(w => w.Sessions).Single(s => s.Type == SessionType.Race);
+        race.RunWalk.ShouldNotBeNull().WalkSeconds.ShouldBe(30);
+        on.Weeks.SelectMany(w => w.Sessions).Where(s => s.Type == SessionType.LongRun).ShouldAllBe(s => s.RunWalk != null);
+    }
 }

@@ -25,6 +25,8 @@ namespace StartLine.Application.Features.Plans;
 /// feed the goal outlook and never change the plan.
 /// <see cref="StartOn"/> is the day the runner chose to start, from the day the plan is built to two weeks before the race.
 /// Without it the plan starts the next Monday, as every plan did before.
+/// <see cref="RunWalk"/> is run/walk on the long runs and race day: Auto (or none) decides from the goal, On and Off are
+/// the runner's own choice. Plans before version 3 ignore it.
 /// </summary>
 public sealed record GeneratePlanQuery(
     string? RaceSlug,
@@ -45,7 +47,8 @@ public sealed record GeneratePlanQuery(
     double? RecentResultKm = null,
     TimeSpan? RecentResultTime = null,
     DateOnly? RecentResultDate = null,
-    DateOnly? StartOn = null) : IRequest<TrainingPlanDto>;
+    DateOnly? StartOn = null,
+    RunWalkMode? RunWalk = null) : IRequest<TrainingPlanDto>;
 
 internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuery>
 {
@@ -106,6 +109,7 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
             .WithMessage($"Choose at most {TrainingPlanGenerator.MaxStrengthDays} strength days.");
         RuleForEach(q => q.StrengthDays).IsInEnum();
         RuleFor(q => q.Experience).IsInEnum();
+        RuleFor(q => q.RunWalk).IsInEnum().WithMessage("Choose automatic, always or never for run/walk.");
         RuleFor(q => q.CurrentWeeklyKm).InclusiveBetween(0, 300).When(q => q.CurrentWeeklyKm is not null);
 
         // A replan is a day and a reason, always together.

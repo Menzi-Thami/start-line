@@ -1,4 +1,4 @@
-import { WEEK, type DayOfWeek, type Experience, type GeneratePlanRequest, type Setback } from './types'
+import { WEEK, type DayOfWeek, type Experience, type GeneratePlanRequest, type RunWalkMode, type Setback } from './types'
 import { parseTimeSpan, toTimeSpan } from './format'
 
 /** Everything needed to rebuild a plan. It lives in the URL, so a plan is shared by sharing the link. */
@@ -21,6 +21,11 @@ export interface PlanInputs {
    * shaped per distance, which keeps its shape. New plans get LATEST_PLAN_VERSION.
    */
   version?: number
+  /**
+   * Run/walk on the long runs and race day, when the runner chose: always ('On') or never ('Off'). Undefined is
+   * automatic, decided from the goal, so it never shows in a link.
+   */
+  runWalk?: Exclude<RunWalkMode, 'Auto'>
   /** "Replan from here": the plan is rebuilt from this day, after this setback. Both or neither. */
   replan?: ReplanInputs
   /** A recent race or hard effort. It never changes the plan: it lets the coach say whether the goal is realistic. */
@@ -62,6 +67,13 @@ const DAY_CODES: Record<DayOfWeek, string> = {
   Sunday: 'su',
 }
 
+// ?rw=on or ?rw=off. Automatic is the default and leaves it out.
+const RUN_WALK_CODES: Record<Exclude<RunWalkMode, 'Auto'>, string> = { On: 'on', Off: 'off' }
+
+/** The runner's own run/walk choice, or undefined for automatic. Anything else is dropped, not guessed at. */
+const explicitRunWalk = (value: RunWalkMode | string | null | undefined): PlanInputs['runWalk'] =>
+  value === 'On' || value === 'Off' ? value : undefined
+
 const EXPERIENCE: readonly Experience[] = ['New', 'Regular', 'Experienced']
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
 
@@ -94,6 +106,7 @@ export function toSearchParams(inputs: PlanInputs): URLSearchParams {
   if (inputs.planFrom) p.set('from', inputs.planFrom)
   if (inputs.startOn) p.set('start', inputs.startOn)
   if (inputs.version && inputs.version > 1) p.set('v', String(inputs.version))
+  if (inputs.runWalk) p.set('rw', RUN_WALK_CODES[inputs.runWalk])
   if (inputs.recent) {
     p.set('rk', String(inputs.recent.km))
     p.set('rt', String(Math.round(inputs.recent.seconds)))
@@ -164,6 +177,7 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
     planFrom: planFrom && ISO_DATE.test(planFrom) ? planFrom : undefined,
     startOn: startOn && ISO_DATE.test(startOn) ? startOn : undefined,
     version: generatorVersion(params.get('v')),
+    runWalk: (Object.keys(RUN_WALK_CODES) as Exclude<RunWalkMode, 'Auto'>[]).find((c) => RUN_WALK_CODES[c] === params.get('rw')),
     replan: replanFrom(params),
     recent: recentFrom(params),
   }
@@ -187,6 +201,7 @@ export function fromRequest(request: GeneratePlanRequest): PlanInputs | null {
     planFrom: request.planFrom ?? undefined,
     startOn: request.startOn ?? undefined,
     version: generatorVersion(request.version?.toString() ?? null),
+    runWalk: explicitRunWalk(request.runWalk),
     replan:
       request.replanFrom && request.setback
         ? { from: request.replanFrom, setback: request.setback, recentWeeklyKm: request.recentWeeklyKm ?? undefined }
@@ -217,6 +232,7 @@ export function toRequest(inputs: PlanInputs): GeneratePlanRequest {
     planFrom: inputs.planFrom ?? null,
     startOn: inputs.startOn ?? null,
     version: inputs.version ?? null,
+    runWalk: inputs.runWalk ?? null,
     replanFrom: inputs.replan?.from ?? null,
     setback: inputs.replan?.setback ?? null,
     recentWeeklyKm: inputs.replan?.recentWeeklyKm ?? null,

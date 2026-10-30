@@ -16,6 +16,7 @@ import { ScrollProgress } from './ScrollProgress'
 import { ScreenRecovery } from './ScreenRecovery'
 import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
+import { RemindersSection } from '../features/reminders/Reminders'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
@@ -677,6 +678,9 @@ export function App() {
       </header>
 
       <ScrollProgress />
+      {state.kind === 'ready' && !state.runner.needsPrivacyConsent && (
+        <div hidden={view === 'account' || view === 'privacy'}><RemindersSection key={state.runner.id} offer /></div>
+      )}
       <main key={view} className={navigated ? 'view-enter' : undefined}>
         <ScreenRecovery>
         <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>

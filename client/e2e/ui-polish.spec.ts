@@ -11,7 +11,7 @@ test('training views fit phone, tablet, desktop and ultrawide screens @phone', a
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
   for (const width of [320, 390, 768, 1024, 1440, 2560]) {
     await page.setViewportSize({ width, height: 900 })
-    for (const name of ['This week', 'All weeks', 'Progress']) {
+    for (const name of ['This week', 'Calendar', 'Progress']) {
       await page.getByRole('tab', { name, exact: true }).click()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
       expect(overflow, `${name} at ${width}px`).toBeLessThanOrEqual(1)

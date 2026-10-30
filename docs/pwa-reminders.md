@@ -8,10 +8,12 @@ New notifications open the actual run instead of offering a quick Tick it action
 
 ## Delivery requirements
 
-- HTTPS and configured VAPID keys, as in [deploy.md](deploy.md). Keys are never stored in the repository. Without configured keys, reminders stay hidden.
+- HTTPS and configured VAPID keys, as in [deploy.md](deploy.md). Deployment provisions a pair in App Service settings when both keys are missing, preserves existing pairs, and refuses to replace a partially configured pair. The default contact is `mailto:info@taperday.run`. Keys are never stored in the repository or printed in deployment logs. Without configured keys, Account → Notifications explains that notification delivery is not available yet.
 - iPhone/iPad needs iOS/iPadOS 16.4+, Taperday installed on the Home Screen and opened from its icon, and notification permission granted from the runner's action. An ordinary iPhone browser tab cannot subscribe. Supported Android/desktop browsers also require permission.
 - The app need not stay open. Focus modes, battery policies, offline devices, network and push services may delay delivery.
 - **Azure SQL Basic does not keep App Service F1 running.** The existing worker sleeps until the next due time and never polls SQL, but its API process must be running. F1 may sleep or exhaust its own quota. A liveness ping is best effort, not an exact 06:00 guarantee. Reliable server scheduling needs supported always-on API hosting or a separately scheduled sender; this PR does not provision or purchase infrastructure.
 - A reminder missed during sleep is sent later that same local day; a completely missed day is skipped. Devices are marked before sending, preferring a missed delivery to duplicates after a crash.
 
 Tests use fake push/Strava services and disposable SQL only. Production VAPID settings and physical iPhone/Android delivery still require deployment/device verification. No test sends a real notification or calls real Strava.
+
+After the signed-in profile loads, the app offers an Enable notifications button on supported devices that are not registered for that runner. Permission is requested only when the runner taps it, before token acquisition, to preserve the browser's user-activation requirement. Not now dismisses the offer; Account → Notifications remains available. An iPhone browser tab instead explains how to install the PWA. Blocked permissions and unavailable server configuration do not trigger permission requests.

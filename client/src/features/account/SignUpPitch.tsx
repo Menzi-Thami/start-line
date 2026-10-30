@@ -19,7 +19,7 @@ const BUILD_UP = [30, 36, 42, 26, 46, 52, 60, 38, 64, 72, 80, 50, 34, 18]
 const REASONS: { title: string; body: string; mini: ReactNode; wide?: boolean }[] = [
   {
     title: 'Built for your race',
-    body: 'Any distance, up to an ultra. Two Oceans, Comrades and more are already in.',
+    body: 'Your plan learns from every run you add, and adjusts the week ahead to match.',
     mini: (
       <span className="mini-chips">
         {['5K', '10K', 'Half', 'Marathon', '56 km', '90 km'].map((d) => (

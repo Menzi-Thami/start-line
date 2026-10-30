@@ -40,11 +40,20 @@ public static class EmailLayout
             {body}
             <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:26px;"><tr><td style="background:{Volt};border-radius:999px;"><a href="{buttonUrl}" style="display:inline-block;padding:14px 26px;font-family:{Font};font-size:16px;font-weight:800;color:{Paper};text-decoration:none;">{Encode(buttonText)}</a></td></tr></table>
             </td></tr>
-            <tr><td style="padding:18px 8px 0;font-family:{Font};font-size:12px;line-height:1.6;color:{Muted};">{footer}</td></tr>
+            <tr><td align="center" style="padding:26px 8px 0;font-family:{Font};">
+            <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;"><span style="color:{Ink};">taper</span><span style="color:{Volt};">day</span></div>
+            <div style="margin-top:4px;font-size:12px;color:{Muted};">Plans that keep up with how you run.</div>
+            <div style="margin-top:12px;font-size:12px;line-height:1.6;color:{Muted};">{footer}</div>
+            <div style="margin-top:10px;font-size:12px;"><a href="{Site}" style="color:{Volt};text-decoration:none;">taperday.run</a><span style="color:{Line};">&nbsp;&nbsp;·&nbsp;&nbsp;</span><a href="mailto:hello@taperday.run" style="color:{Volt};text-decoration:none;">hello@taperday.run</a></div>
+            </td></tr>
             </table></td></tr></table></body></html>
             """);
         return html.ToString();
     }
+
+    /// <summary>One item in a "what's new" list: a volt dot, a bold title and a line of detail.</summary>
+    public static string Item(string title, string detail) =>
+        string.Create(CultureInfo.InvariantCulture, $"<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 14px;\"><tr><td width=\"18\" valign=\"top\" style=\"padding-top:7px;\"><div style=\"width:8px;height:8px;border-radius:50%;background:{Volt};\"></div></td><td style=\"font-family:{Font};\"><div style=\"font-size:15px;font-weight:800;color:{Ink};\">{Encode(title)}</div><div style=\"margin-top:3px;font-size:14px;line-height:1.55;color:{Muted};\">{Encode(detail)}</div></td></tr></table>");
 
     /// <summary>Big figures side by side: the headline of an email.</summary>
     public static string Figures(params (string Label, string Value)[] figures)

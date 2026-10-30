@@ -1,6 +1,6 @@
 # Taperday
 
-A running-plan builder and training companion, from a first 5K to Comrades. Live at **[taperday.run](https://taperday.run)**.
+A running coach that builds a plan around your race and the days you can run, then adapts it every week to how you actually ran. Live at **[taperday.run](https://taperday.run)**.
 
 Choose a race, a goal time and the days you can run. Get a week-by-week plan with pace zones, workout instructions and optional strength sessions. Build and share a plan without an account; sign in with an email code to save your plan, log your running and review coaching suggestions.
 

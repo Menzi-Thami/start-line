@@ -24,7 +24,7 @@ public sealed class PlanShapesV2Tests
         Experience experience = Experience.Regular,
         DayOfWeek[]? runDays = null) => new(
             Distance.FromKilometres(km), goal, raceDate, Today, runDays ?? FiveDays, DayOfWeek.Sunday, currentWeeklyKm, experience,
-            GeneratorVersion: TrainingPlanGenerator.LatestVersion);
+            GeneratorVersion: TrainingPlanGenerator.ShapedVersion);
 
     private static PlanParameters Marathon(double? currentWeeklyKm = 40, TimeSpan? goal = null) =>
         Race(42.195, goal ?? TimeSpan.FromHours(4), new DateOnly(2027, 2, 28), currentWeeklyKm);
@@ -259,7 +259,7 @@ public sealed class PlanShapesV2Tests
 
     [Theory]
     [InlineData(0)]
-    [InlineData(3)]
+    [InlineData(4)]
     public void Rejects_an_unknown_version(int version) =>
         Should.Throw<DomainException>(() => TrainingPlanGenerator.Generate(Marathon() with { GeneratorVersion = version }));
 }

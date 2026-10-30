@@ -10,6 +10,7 @@ import { withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey } from './plan-math'
 import { SessionSteps } from './SessionSteps'
 import { SessionItem } from './WeekList'
+import { RunWalkChip } from './RunWalkChip'
 
 interface Props {
   id: string
@@ -101,6 +102,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
               {session.type === 'Strength' ? future ? <><h5>{session.title}</h5><p>{session.exercises.length} exercises · Upcoming</p><p>{session.detail}</p></> : <><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : 'No completion recorded'}</p><details className="session-more"><summary>View exercises and completion</summary><SessionItem session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></details></> : <>
                 <h5>{session.title}</h5>
                 <p className="mono">{formatDistance(session.distanceKm, units)}{pace ? ` · ${formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}` : ''}</p>
+                <RunWalkChip runWalk={session.runWalk} />
                 <p className="day-summary-status">{!historyReady ? 'Completion history unavailable' : entry?.status === 'Skipped' ? 'Skipped' : complete ? 'Completed' : future ? 'Upcoming' : date === today ? 'Scheduled today' : 'No completion recorded'}</p>
                 <details className="session-more"><summary>How to run it</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
                 {historyReady && coach && (!entry || entry.status === 'Skipped') && session.type !== 'Race' && <CheckInCard session={session} coach={coach} runs={dayRuns} completion compactActions done={complete} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}

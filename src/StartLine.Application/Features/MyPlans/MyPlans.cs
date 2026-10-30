@@ -47,11 +47,13 @@ internal static class SavedPlanMapping
         q.ReplanFrom is null ? null : q.Setback,
         q.ReplanFrom is null || q.Setback is null ? null : q.RecentWeeklyKm,
         q.Version ?? TrainingPlanGenerator.OriginalVersion,
-        q.StartOn);
+        q.StartOn,
+        // Auto is the default, so it is stored as null: one way to say it, as in a plan link.
+        q.RunWalk is RunWalkMode.Auto ? null : q.RunWalk);
 
     public static GeneratePlanQuery ToQuery(SavedPlanInputs i) => new(
         i.RaceSlug, i.RaceName, i.DistanceKm, i.RaceDate, i.GoalTime, i.RunDays, i.LongRunDay, i.CurrentWeeklyKm,
-        i.Experience, i.StrengthDays, i.PlanFrom, i.ReplanFrom, i.Setback, i.RecentWeeklyKm, i.GeneratorVersion, StartOn: i.StartOn);
+        i.Experience, i.StrengthDays, i.PlanFrom, i.ReplanFrom, i.Setback, i.RecentWeeklyKm, i.GeneratorVersion, StartOn: i.StartOn, RunWalk: i.RunWalk);
 }
 
 /// <summary>

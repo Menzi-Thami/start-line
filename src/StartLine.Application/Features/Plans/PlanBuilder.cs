@@ -52,7 +52,8 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
             request is { ReplanFrom: { } from, Setback: { } setback } ? new PlanReplan(from, setback, request.RecentWeeklyKm) : null,
             coaching,
             request.Version ?? TrainingPlanGenerator.OriginalVersion,
-            request.StartOn);
+            request.StartOn,
+            request.RunWalk ?? RunWalkMode.Auto);
         var plan = TrainingPlanGenerator.Generate(parameters);
         var active = (coaching ?? []).Where(c => c.WeekStart <= (paceDate ?? timeProvider.Today())).ToList();
         if (active.Count < (coaching?.Count ?? 0))

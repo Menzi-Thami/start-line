@@ -59,7 +59,7 @@ public static partial class TrainingPlanGenerator
 
             if (!built.TryGetValue(time, out var workouts))
             {
-                workouts = new WorkoutBuilder(profile.Category, PacesFor(p, time), p.RaceDistance);
+                workouts = new WorkoutBuilder(profile.Category, PacesFor(p, time), p.RaceDistance, RunWalkRules.IsOn(p, profile.Category));
                 built[time] = workouts;
             }
 

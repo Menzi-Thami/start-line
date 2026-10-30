@@ -532,3 +532,6 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .race-checkpoints { width: 100%; max-width: 32rem; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .race-checkpoints th, .race-checkpoints td { padding: var(--space-3) var(--space-2); text-align: left; border-bottom: 1px solid var(--line); }
 .week-guidance { max-width: 65ch; color: var(--muted); margin-block: var(--space-3); }
+@media (max-width: 27.5rem) {
+  .notification-quiet-times { grid-template-columns: minmax(0, 1fr); }
+}

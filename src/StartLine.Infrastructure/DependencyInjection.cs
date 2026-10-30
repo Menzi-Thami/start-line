@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StartLine.Application.Common;
+using StartLine.Application.Features.Account;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.CheckIns;
 using StartLine.Application.Features.Insights;
@@ -113,6 +114,9 @@ public static class DependencyInjection
             .RemoveAllLoggers();
         services.AddHostedService<ReminderWorker>();
         services.AddOptions<EmailOptions>().BindConfiguration(EmailOptions.Section);
+        services.AddSingleton<IEmailSettings, EmailSettings>();
+        // Same key ring again, under its own purpose; an unsubscribe key never expires (docs/email.md).
+        services.AddSingleton<IUnsubscribeTokens, DataProtectionUnsubscribeTokens>();
         services.AddOptions<ReportOptions>().BindConfiguration(ReportOptions.Section);
         // No request logging: the Brevo key travels in a header.
         services.AddHttpClient<IEmailSender, BrevoEmailSender>(http => http.Timeout = TimeSpan.FromSeconds(30)).RemoveAllLoggers();

@@ -6,13 +6,19 @@ namespace StartLine.Integration.Tests;
 
 public sealed class SecretPathsTests
 {
-    private static Activity Traced(string path)
+    private static Activity Traced(string path, string query = "")
     {
         var activity = new Activity("request");
         activity.SetTag("url.path", path);
-        activity.SetTag("url.full", $"https://api.taperday.run{path}");
+        if (query.Length > 0)
+        {
+            activity.SetTag("url.query", query.TrimStart('?'));
+        }
+
+        activity.SetTag("url.full", $"https://api.taperday.run{path}{query}");
         var context = new DefaultHttpContext();
         context.Request.Path = path;
+        context.Request.QueryString = new QueryString(query.Length > 0 ? query : null);
         SecretPaths.Redact(activity, context.Request);
         return activity;
     }
@@ -25,6 +31,16 @@ public sealed class SecretPathsTests
         var activity = Traced(path);
 
         activity.GetTagItem("url.path").ShouldBe(recorded);
+        activity.GetTagItem("url.full").ShouldBeNull();
+    }
+
+    [Fact]
+    public void An_unsubscribe_key_in_the_query_never_reaches_a_trace()
+    {
+        var activity = Traced("/api/v1/unsubscribe", "?t=CfDJ8-secret-unsubscribe-key");
+
+        activity.GetTagItem("url.path").ShouldBe("/api/v1/unsubscribe");
+        activity.GetTagItem("url.query").ShouldBeNull();
         activity.GetTagItem("url.full").ShouldBeNull();
     }
 

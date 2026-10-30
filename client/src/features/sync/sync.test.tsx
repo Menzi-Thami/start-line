@@ -150,6 +150,8 @@ describe('coming back from Strava', () => {
     privacyNoticeVersion: '2026-10-21',
     needsPrivacyConsent: false,
     heartRateConsent: true,
+    updateEmails: true,
+    updateEmailsOffAt: null,
   }
 
   it('finishes connecting with Strava’s code and state, then opens Account with the news', async () => {

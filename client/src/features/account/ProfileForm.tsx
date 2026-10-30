@@ -38,6 +38,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
   const [timeZone, setTimeZone] = useState(runner?.timeZone ?? detectedTimeZone())
   const [units, setUnits] = useState<Units>(runner?.units ?? 'Kilometres')
   const [weeklyEmails, setWeeklyEmails] = useState(runner?.weeklyEmails ?? true)
+  const [updateEmails, setUpdateEmails] = useState(runner?.updateEmails ?? true)
   const [maxHeartRate, setMaxHeartRate] = useState(runner?.maxHeartRate == null ? '' : String(runner.maxHeartRate))
   const [accepted, setAccepted] = useState(false)
   const [heartRateConsent, setHeartRateConsent] = useState(runner?.heartRateConsent ?? false)
@@ -66,6 +67,8 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
         acceptPrivacyNotice: accepted,
         maxHeartRate: Number.isInteger(bpm) ? bpm : null,
         heartRateConsent,
+        // Only Account shows the choice; signing up leaves it as the API sets it (on).
+        updateEmails: signingUp ? undefined : updateEmails,
       })
       setStatus({ kind: 'saved' })
       onSaved(saved)
@@ -137,6 +140,13 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
         <input type="checkbox" checked={weeklyEmails} onChange={(e) => setWeeklyEmails(e.target.checked)} />
         Send me a weekly email with how last week went and what’s next (coming soon)
       </label>
+
+      {!signingUp && (
+        <label className="session-done" style={{ color: 'var(--ink)' }}>
+          <input type="checkbox" checked={updateEmails} onChange={(e) => setUpdateEmails(e.target.checked)} />
+          Taperday news and updates: an email now and then when something new arrives
+        </label>
+      )}
 
       {signingUp && (
         <div className="notice">

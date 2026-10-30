@@ -148,8 +148,35 @@ public static class WeeklyReport
     }
 }
 
-/// <summary>One email to one address, as HTML with a plain-text copy.</summary>
-public sealed record EmailMessage(string To, string Subject, string Html, string Text);
+/// <summary>
+/// One email to one address, as HTML with a plain-text copy. An email to runners that isn't about their own account
+/// carries <see cref="Unsubscribe"/>, which the sender turns into the List-Unsubscribe headers mail apps show a button for.
+/// </summary>
+public sealed record EmailMessage(string To, string Subject, string Html, string Text, UnsubscribeLinks? Unsubscribe = null);
+
+/// <summary>
+/// The two ways out of an update email. <see cref="Page"/> is the link in the footer: Taperday's own page, which asks
+/// before it unsubscribes, so a mail scanner opening every link can't unsubscribe anyone. <see cref="OneClick"/> is for
+/// the List-Unsubscribe header (RFC 8058): the mail app posts to it directly when the runner taps its own button.
+/// </summary>
+public sealed record UnsubscribeLinks(Uri Page, Uri OneClick)
+{
+    public static UnsubscribeLinks For(string token, Uri apiBaseUrl)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        ArgumentNullException.ThrowIfNull(apiBaseUrl);
+        var key = Uri.EscapeDataString(token);
+        return new(
+            new Uri($"{EmailLayout.Site}/?view=unsubscribe&t={key}"),
+            new Uri($"{apiBaseUrl.AbsoluteUri.TrimEnd('/')}/api/v1/unsubscribe?t={key}"));
+    }
+}
+
+/// <summary>What composing an email needs from configuration: the API's public address, for one-click unsubscribe.</summary>
+public interface IEmailSettings
+{
+    Uri ApiBaseUrl { get; }
+}
 
 /// <summary>Sends email from hello@taperday.run (Brevo, see docs/email.md). Not configured means nothing is sent.</summary>
 public interface IEmailSender

@@ -6,8 +6,10 @@ using NSubstitute;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
+using StartLine.Application.Features.Account;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.CheckIns;
+using StartLine.Application.Features.Insights;
 using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Predictions;
@@ -37,6 +39,8 @@ public sealed class DispatcherPipelineTests
             .AddSingleton(Substitute.For<IPushSender>())
             .AddSingleton(Substitute.For<IPushAddressProtector>())
             .AddSingleton(Substitute.For<ITickTokens>())
+            .AddSingleton(Substitute.For<IUnsubscribeTokens>())
+            .AddSingleton(Substitute.For<IEmailSettings>())
             .AddScoped(_ => Substitute.For<IApplicationDbContext>())
             .AddScoped(_ => Substitute.For<ICurrentUser>())
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));

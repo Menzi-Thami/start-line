@@ -39,3 +39,49 @@ Brevo also issues **MCP** keys, which let an AI assistant (such as Claude Code) 
 - `Report__To`: who gets it. Defaults to `hello@taperday.run`, which forwards to the maker's Gmail.
 - `Report__SendTestTo`: set it to an address and the app sends one report (subject starts `[Test]`) when it next starts. Saving the setting restarts the app. **Clear it afterwards**, or every restart sends another.
 - No `Email__BrevoApiKey` means nothing is sent, and the log says so.
+
+## Update emails and unsubscribing
+
+"What's new" emails about Taperday itself (`UpdateEmails`, such as Race Plan v3) are the only email meant for runners in bulk. Every runner copy carries a way out; the Monday report goes to the maker, so it has none.
+
+### The preference
+
+- `Runner.UpdateEmailsOffAt`: null means the runner gets news and updates (the default, for new and existing runners alike); a time means they turned them off then. `Runner.UpdateEmails` reads it as a yes or no.
+- Runners turn it back on (or off) in Account: the "Taperday news and updates" box, saved with the profile (`SaveProfileCommand.UpdateEmails`). Leaving the field out changes nothing, so an older app can never re-subscribe anyone.
+- It's in `RunnerDto`, so the account export shows it and when it was turned off.
+- It's separate from `WeeklyEmails` (the runner's own weekly email, still coming soon) and is not marketing consent: campaigns still need their own opt-in (see the Brevo MCP section).
+
+### The unsubscribe key
+
+`IUnsubscribeTokens` (`DataProtectionUnsubscribeTokens`) encrypts and authenticates the runner's id with Data Protection under its own purpose, `StartLine.Email.Unsubscribe.v1`, on the same key ring as Strava tokens and "Tick it" keys. It has **no expiry**: an old email's link must still work. Data Protection keeps retired keys for reading, so key rotation doesn't break old links; only losing the key ring would. A key that's been tampered with, cut short or made for another purpose is refused (`ValidationException`, a 400). All a key can do is turn update emails off.
+
+### Two ways out of every email
+
+| Where | Address | What happens |
+|---|---|---|
+| Footer link (`EmailLayout.Wrap`'s `unsubscribeUrl`) | `https://taperday.run/?view=unsubscribe&t=KEY` | Taperday's own page, no sign-in. One line and an Unsubscribe button, which posts `{ "token": KEY }` to the API. It asks first, so a mail scanner that opens every link can't unsubscribe anyone. |
+| Mail app's own button (RFC 8058) | `{Email:ApiBaseUrl}/api/v1/unsubscribe?t=KEY` | The mail app posts `List-Unsubscribe=One-Click` as a form. Gmail and Yahoo expect this of bulk mail. |
+
+`BrevoEmailSender` adds these headers (Brevo's `headers` field) when the email carries `UnsubscribeLinks`:
+
+```
+List-Unsubscribe: <https://app-taperday-api-3ghg5t.azurewebsites.net/api/v1/unsubscribe?t=KEY>, <mailto:hello@taperday.run?subject=unsubscribe>
+List-Unsubscribe-Post: List-Unsubscribe=One-Click
+```
+
+A mailto unsubscribe lands in the maker's Gmail (via `hello@` forwarding) and has to be done by hand in the database or by asking the runner to use the link; it's there for the few mail apps that only offer email.
+
+`POST /api/v1/unsubscribe` is anonymous, rate-limited per IP like `POST /api/v1/ticks`, idempotent (a second unsubscribe keeps the first time) and answers 204. A good key for an account since deleted also gets 204, so the link never tells a stranger whether an account exists. The one-click address carries the key in the query, so `SecretPaths` drops `url.query` and `url.full` from its traces; ASP.NET Core's own request logs (which print the full URL) stay off because `Microsoft.AspNetCore` logs at Warning.
+
+### Settings
+
+- `Email__ApiBaseUrl`: the API's public address for the one-click header. Defaults to `https://app-taperday-api-3ghg5t.azurewebsites.net`, the live API; set it only if the API moves (a custom domain, say).
+- The footer link always goes to `https://taperday.run` (`EmailLayout.Site`).
+
+### Sending one to every runner
+
+`UpdateBroadcast` composes one email per runner with an email address and update emails on, each with that runner's own key (`RacePlanV3Async`, or `ComposeAsync` for any other update). It only composes: nothing sends a broadcast yet, and there's no schedule. Before wiring a trigger:
+
+- Make it one-off and safe across restarts: record what was sent to whom (a marker per runner and email, saved before sending) so an App Service restart can never send it twice.
+- Mind Brevo's free plan: **300 emails a day**. A broadcast bigger than that has to be spread over days.
+- Send a test to `hello@` first (`Report__SendTestTo` sends the preview, without unsubscribe links, as it's for the maker).

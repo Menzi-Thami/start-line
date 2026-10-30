@@ -23,6 +23,8 @@ const thandi: Runner = {
   privacyNoticeVersion: '2026-10-21',
   needsPrivacyConsent: false,
   heartRateConsent: true,
+  updateEmails: true,
+  updateEmailsOffAt: null,
 }
 
 /** The runner's saved plan as the account API returns it, without the plan itself. */

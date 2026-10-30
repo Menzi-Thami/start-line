@@ -5,6 +5,7 @@ using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Account;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.Coaching;
+using StartLine.Application.Features.Insights;
 using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Races;
@@ -43,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<NotificationDeliverer>();
         services.AddScoped<NotificationReview>();
         services.AddScoped<AdditionalNotifications>();
+        services.AddScoped<UpdateBroadcast>();
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
         services.AddScoped(typeof(IPipelineBehaviour<,>), typeof(ValidationBehaviour<,>));
         return services;

@@ -394,8 +394,8 @@ public static partial class TrainingPlanGenerator
         var longKm = week.LongRunKm switch
         {
             null => LongRunKm(p, profile, workouts, week.TargetKm),
-            { } track when week.LongRunFitsWeek => WorkoutBuilder.Round(Math.Max(MinLongRunKm, Math.Min(Math.Min(track, LongRunCapKm(profile, workouts)), week.TargetKm * LongRunMaxShareOfWeek))),
-            { } track => WorkoutBuilder.Round(Math.Min(track, LongRunCapKm(profile, workouts))),
+            { } track when week.LongRunFitsWeek => WorkoutBuilder.Round(Math.Max(MinLongRunKm, Math.Min(Math.Min(track, LongRunCapKm(p, profile, workouts)), week.TargetKm * LongRunMaxShareOfWeek))),
+            { } track => WorkoutBuilder.Round(Math.Min(track, LongRunCapKm(p, profile, workouts))),
         };
         var progress = Math.Clamp(week.Progress + week.DoseStep * DoseStepProgress, 0, 1);
         var sessions = new List<PlannedSession>(layout.Days.Count);
@@ -600,15 +600,24 @@ public static partial class TrainingPlanGenerator
             share += 0.05;
         }
 
-        return WorkoutBuilder.Round(Math.Clamp(weeklyKm * share, MinLongRunKm, LongRunCapKm(profile, workouts)));
+        return WorkoutBuilder.Round(Math.Clamp(weeklyKm * share, MinLongRunKm, LongRunCapKm(p, profile, workouts)));
     }
 
     /// <summary>
     /// The longest a long run may be. Slower runners hit the time cap before the distance cap, so a long run never becomes
     /// an all-day effort.
     /// </summary>
-    private static double LongRunCapKm(PlanProfile profile, WorkoutBuilder workouts) =>
-        Math.Max(MinLongRunKm, Math.Min(profile.LongRunCapKm, workouts.KmIn(PaceZone.LongRun, profile.LongRunCapTime)));
+    private static double LongRunCapKm(PlanParameters p, PlanProfile profile, WorkoutBuilder workouts) =>
+        Math.Max(MinLongRunKm, Math.Min(DistanceCapKm(p, profile), workouts.KmIn(PaceZone.LongRun, profile.LongRunCapTime)));
+
+    // Version 3: an experienced marathoner may go to about 35 km, as Pfitzinger's plans do; still under the time cap and
+    // half the week, so it only happens on real volume. Everyone else keeps the distance's usual cap.
+    private const double ExperiencedMarathonCapKm = 35;
+
+    private static double DistanceCapKm(PlanParameters p, PlanProfile profile) =>
+        IsV3(p) && p.Experience == Experience.Experienced && profile.Category == DistanceCategory.Marathon
+            ? Math.Max(profile.LongRunCapKm, ExperiencedMarathonCapKm)
+            : profile.LongRunCapKm;
 
     // Short and light, with one brief touch of race pace early on and a shakeout close to the start.
     private static List<PlannedSession> RaceWeek(

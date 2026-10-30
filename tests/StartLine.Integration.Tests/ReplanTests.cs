@@ -207,7 +207,7 @@ public sealed class ReplanTests : IClassFixture<ReplanClockFactory>
     [Fact]
     public async Task A_link_from_an_unknown_generator_version_is_rejected()
     {
-        var response = await _factory.CreateClient().PostAsJsonAsync(Url("/api/v1/plans"), With(("version", 3)));
+        var response = await _factory.CreateClient().PostAsJsonAsync(Url("/api/v1/plans"), With(("version", 4)));
 
         response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await Json(response)).GetProperty("errors").TryGetProperty("Version", out _).ShouldBeTrue();

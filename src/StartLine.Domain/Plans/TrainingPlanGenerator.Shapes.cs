@@ -147,7 +147,7 @@ public static partial class TrainingPlanGenerator
         }
 
         var startKm = LongRunKm(p, profile, workouts, volumes[0]);
-        var peakKm = Math.Min(Math.Max(LongRunKm(p, profile, workouts, volumes.Max()), LongRunFloorKm(p, profile)), LongRunCapKm(profile, workouts));
+        var peakKm = Math.Min(Math.Max(LongRunKm(p, profile, workouts, volumes.Max()), LongRunFloorKm(p, profile)), LongRunCapKm(p, profile, workouts));
         var track = new double[volumes.Length];
         var fullWeeks = 0;
         var current = startKm;

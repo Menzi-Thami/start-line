@@ -164,3 +164,25 @@ describe('a chosen start day', () => {
     expect(fromSearchParams(new URLSearchParams(`${toSearchParams(custom)}&start=soon`))?.startOn).toBeUndefined()
   })
 })
+
+describe('a run/walk choice', () => {
+  it('rides in the link as rw=on or rw=off and back through the request', () => {
+    for (const [runWalk, code] of [['On', 'on'], ['Off', 'off']] as const) {
+      const chosen = { ...custom, runWalk }
+      expect(toSearchParams(chosen).get('rw')).toBe(code)
+      expect(fromSearchParams(toSearchParams(chosen))?.runWalk).toBe(runWalk)
+      expect(toRequest(chosen).runWalk).toBe(runWalk)
+      expect(fromRequest(toRequest(chosen))?.runWalk).toBe(runWalk)
+    }
+  })
+
+  it('leaves automatic out of the link and the request', () => {
+    expect(toSearchParams(custom).has('rw')).toBe(false)
+    expect(toRequest(custom).runWalk).toBeNull()
+    expect(fromRequest({ ...toRequest(custom), runWalk: 'Auto' })?.runWalk).toBeUndefined()
+  })
+
+  it('drops anything else instead of guessing', () => {
+    expect(fromSearchParams(new URLSearchParams(`${toSearchParams(custom)}&rw=sometimes`))?.runWalk).toBeUndefined()
+  })
+})

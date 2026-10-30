@@ -153,6 +153,23 @@
   color: var(--muted);
 }
 
+/* Run/walk on a session: the long-run green, in mono like the other numbers a runner sets on a watch. */
+.chip-run-walk {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--effort-long);
+  background: var(--surface-sunk);
+  border-color: var(--line-strong);
+}
+
+/* On paper the long-run grey is too faint for words. */
+@media print {
+  .chip-run-walk {
+    color: var(--ink);
+  }
+}
+
 .overview-trend {
   display: grid;
   gap: var(--space-4);

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { addDays, formatDate, formatDistance, formatDuration, formatPace, toKilometres, type Units } from '../../lib/format'
 import { LATEST_PLAN_VERSION, type PlanInputs } from '../../lib/plan-url'
-import { SHORT_DAY, WEEK, type DayOfWeek, type Experience, type Race } from '../../lib/types'
+import { SHORT_DAY, WEEK, type DayOfWeek, type Experience, type Race, type RunWalkMode } from '../../lib/types'
 import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
 import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
@@ -30,6 +30,14 @@ const EXPERIENCE: { value: Experience; title: string; note: string }[] = [
   { value: 'New', title: 'Fairly new', note: 'Under a year of regular running, or coming back from a break.' },
   { value: 'Regular', title: 'Regular', note: 'You run most weeks and have raced before.' },
   { value: 'Experienced', title: 'Experienced', note: 'Years of steady training and a few of these races behind you.' },
+]
+
+// Automatic decides from the goal, as the API does: on for a marathon of 5 h 30 min or slower and an ultra of 10 hours
+// or more. Always and Never are the runner's call for any distance.
+const RUN_WALK: { value: RunWalkMode; title: string; note: string }[] = [
+  { value: 'Auto', title: 'Automatic', note: 'Recommended' },
+  { value: 'On', title: 'Always', note: 'Walk breaks on long runs' },
+  { value: 'Off', title: 'Never', note: 'Run all the way' },
 ]
 
 export type FieldErrors = Partial<Record<'race' | 'distance' | 'date' | 'goal' | 'runDays' | 'longRunDay' | 'startOn' | 'currentKm' | 'strength', string>>
@@ -94,6 +102,8 @@ interface Draft {
   experience: Experience
   currentKm: string
   strengthDays: DayOfWeek[]
+  /** Run/walk on the long runs and race day: automatic unless the runner chose. */
+  runWalk: RunWalkMode
   /** When to start: the next Monday (as every plan before), today, or a day the runner picks. */
   start: StartChoice
   startOn: string
@@ -114,6 +124,7 @@ function draftFrom(initial: PlanInputs | null, units: Units, today: string): Dra
       experience: 'Regular',
       currentKm: '',
       strengthDays: [],
+      runWalk: 'Auto',
       start: 'monday',
       startOn: '',
       recent: emptyRecent(),
@@ -131,6 +142,7 @@ function draftFrom(initial: PlanInputs | null, units: Units, today: string): Dra
     experience: initial.experience,
     currentKm: fromKm(initial.currentWeeklyKm),
     strengthDays: initial.strengthDays,
+    runWalk: initial.runWalk ?? 'Auto',
     start: !initial.startOn ? 'monday' : initial.startOn === today ? 'today' : 'day',
     startOn: initial.startOn ?? '',
     recent: recentDraft(initial.recent, today),
@@ -284,6 +296,12 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     setStep(next)
   }
 
+  const sameRace = initial !== null && (initial.raceSlug ? draft.race === initial.raceSlug
+    : draft.race === OTHER && draft.otherDate === initial.raceDate
+      && draft.otherName.trim().toLowerCase() === (initial.raceName ?? '').trim().toLowerCase())
+  // The same race keeps its plan's generator version, and versions before 3 have no run/walk.
+  const olderPlan = sameRace && (initial?.version ?? 1) < LATEST_PLAN_VERSION
+
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (step === 0 && !draft.race) {
@@ -292,9 +310,6 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     }
     // Compare the actual form answers, so adding strength preserves a saved plan's historical metadata too.
     const strengthOnly = initial !== null && JSON.stringify({ ...draft, strengthDays: [] }) === JSON.stringify({ ...draftFrom(initial, units, today), strengthDays: [] })
-    const sameRace = initial !== null && (initial.raceSlug ? draft.race === initial.raceSlug
-      : draft.race === OTHER && draft.otherDate === initial.raceDate
-        && draft.otherName.trim().toLowerCase() === (initial.raceName ?? '').trim().toLowerCase())
     const found = validate(draft, goalSeconds, today, raceDate, sameRace ? initial?.startOn : undefined)
 
     if (step < LAST_STEP) {
@@ -337,6 +352,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       replan: sameRace ? initial?.replan : undefined,
       recent: recentInputs(draft.recent, today),
       startOn: draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn : undefined,
+      runWalk: draft.runWalk === 'Auto' ? undefined : draft.runWalk,
     })
   }
 
@@ -576,6 +592,22 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     <p className="field-help">We build from here by no more than 10% a week.</p>
                     <FieldError id="km-error" message={errors.currentKm} />
                   </div>
+                  <fieldset className="field" style={{ border: 0, padding: 0 }}>
+                    <legend className="field-label">Run/walk</legend>
+                    <p className="field-help" id={`${id}-run-walk-help`}>
+                      Short walk breaks from the start of your long runs and on race day. Automatic uses them for marathons of 5 h 30 min or slower and ultras of 10 hours or more.
+                    </p>
+                    <div className="segmented" role="radiogroup" aria-label="Run/walk" aria-describedby={`${id}-run-walk-help`}>
+                      {RUN_WALK.map((r) => (
+                        <label className="segment" key={r.value}>
+                          <input type="radio" name="run-walk" checked={draft.runWalk === r.value} onChange={() => set('runWalk', r.value)} />
+                          <strong>{r.title}</strong>
+                          <span>{r.note}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {olderPlan && <p className="field-help">Your plan was built before run/walk was added, so it keeps the sessions it had.</p>}
+                  </fieldset>
                 </>
               )}
     
@@ -592,6 +624,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       `${experience.title} runner${Number(draft.currentKm) > 0 ? `, about ${draft.currentKm} ${units} a week now` : ''}.`,
                       3,
                     )}
+                    {reviewRow('Run/walk', RUN_WALK.find((r) => r.value === draft.runWalk)!.title, 3)}
                   </dl>
                   <p className="field-help">For a distant race, your plan may start later than your preferred date. The built plan will confirm when structured training starts.</p>
                   <details className="disclosure" open={strengthOpen} onToggle={(event) => setStrengthOpen(event.currentTarget.open)}>

@@ -643,6 +643,11 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                                 .HasColumnType("int")
                                 .HasColumnName("RunDays");
 
+                            b1.Property<string>("RunWalk")
+                                .HasMaxLength(8)
+                                .HasColumnType("nvarchar(8)")
+                                .HasColumnName("RunWalk");
+
                             b1.Property<string>("Setback")
                                 .HasMaxLength(16)
                                 .HasColumnType("nvarchar(16)")

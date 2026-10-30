@@ -38,7 +38,8 @@ public sealed record TrainingPlanDto(
                 w.PlannedKm,
                 [.. w.Sessions.Select(s => new SessionDto(s.Date, s.Type, s.Title, s.Detail, s.Purpose, s.DistanceKm, s.Zone,
                     [.. (s.Exercises ?? []).Select(e => new StrengthExerciseDto(e.Exercise, e.Sets, e.Reps, e.Unit, e.Summary))],
-                    s.Steps?.Select(SessionStepDto.From).ToList() ?? []))],
+                    s.Steps?.Select(SessionStepDto.From).ToList() ?? [],
+                    s.RunWalk is { } ratio ? new RunWalkDto(ratio.RunSeconds, ratio.WalkSeconds) : null))],
                 w.IsReplanned, WeekGuidance.For(w)))],
             [.. plan.Warnings.Select(w => new PlanWarningDto(w.Code, w.Message))],
             plan.Replan is { } replan ? new ReplanDto(replan.From, replan.Setback, replan.RecentWeeklyKm) : null,
@@ -93,7 +94,11 @@ public sealed record SessionDto(
     double DistanceKm,
     PaceZone? Zone,
     IReadOnlyList<StrengthExerciseDto> Exercises,
-    IReadOnlyList<SessionStepDto> Steps);
+    IReadOnlyList<SessionStepDto> Steps,
+    RunWalkDto? RunWalk = null);
+
+/// <summary>Run/walk from the start: run for <c>RunSeconds</c>, walk for <c>WalkSeconds</c>, and repeat. Null when the session is run throughout.</summary>
+public sealed record RunWalkDto(int RunSeconds, int WalkSeconds);
 
 /// <summary>
 /// One step of a session, the way a runner follows it on the day: a distance (<c>DistanceKm</c>) or a time

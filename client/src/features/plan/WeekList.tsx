@@ -10,6 +10,7 @@ import { reviewLine, reviewWeek } from '../coaching/week-review'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { ExerciseList } from '../strength/ExerciseList'
 import { SessionSteps } from './SessionSteps'
+import { RunWalkChip } from './RunWalkChip'
 import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey, trainingKm } from './plan-math'
 
@@ -86,6 +87,7 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
         {zone && <span className="effort-dot" style={{ background: zone.colour }} aria-hidden="true" />}
         <span className="session-title">{session.title}</span>
         {numbers.length > 0 && <span className="session-numbers">{numbers.join(' · ')}</span>}
+        <RunWalkChip runWalk={session.runWalk} />
       </div>
       {/* Compact: the session's name and numbers lead; how to run it and why open from the chevron (and always print). */}
       <details className="session-more">

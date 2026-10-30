@@ -41,6 +41,8 @@ public interface IApplicationDbContext
 
     DbSet<RunnerPhoto> RunnerPhotos { get; }
 
+    DbSet<Feedback> Feedback { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
 

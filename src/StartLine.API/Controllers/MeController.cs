@@ -5,6 +5,7 @@ using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Account;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.Calendar;
+using StartLine.Application.Features.Insights;
 
 namespace StartLine.API.Controllers;
 
@@ -45,10 +46,10 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
     [HttpGet("running")]
     [ProducesResponseType<IReadOnlyList<LoggedRunDto>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Running(CancellationToken cancellationToken, [FromQuery] bool includeSynced = false)
+    public async Task<IActionResult> Running(CancellationToken cancellationToken, [FromQuery] bool includeSynced = false, [FromQuery] bool allTime = false)
     {
         Response.Headers.CacheControl = "private, no-store";
-        return Ok(await dispatcher.Send(new GetRunningLogQuery(includeSynced), cancellationToken));
+        return Ok(await dispatcher.Send(new GetRunningLogQuery(includeSynced, allTime), cancellationToken));
     }
 
     /// <summary>Everything stored about the runner, as a downloadable file.</summary>
@@ -100,6 +101,16 @@ public sealed class MeController(IDispatcher dispatcher) : ControllerBase
     public async Task<IActionResult> DeletePhoto(CancellationToken cancellationToken)
     {
         await dispatcher.Send(new DeleteMyPhotoCommand(), cancellationToken);
+        return NoContent();
+    }
+
+    /// <summary>A note from the runner to Taperday's maker, with the page they sent it from.</summary>
+    [HttpPost("feedback")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Feedback(SendFeedbackCommand command, CancellationToken cancellationToken)
+    {
+        await dispatcher.Send(command, cancellationToken);
         return NoContent();
     }
 

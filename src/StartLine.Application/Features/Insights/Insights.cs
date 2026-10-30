@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net;
 using System.Text;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -73,52 +72,79 @@ public static class WeeklyReport
                 .Select(f => new FeedbackNoteDto(f.Message, f.Page, f.CreatedAt)).ToListAsync(cancellationToken));
     }
 
-    /// <summary>The email: a subject with the headline, and the same figures as HTML and plain text.</summary>
+    /// <summary>The email, in Taperday's look and voice (<see cref="EmailLayout"/>), with a plain-text copy.</summary>
     public static EmailMessage Compose(InsightsDto s, string to, DateOnly weekOf, bool test = false)
     {
         ArgumentNullException.ThrowIfNull(s);
-        string Share(int n) => s.Runners > 0 ? string.Create(CultureInfo.InvariantCulture, $" ({Math.Round(100.0 * n / s.Runners)}%)") : "";
-        var rows = new (string Label, string Value)[]
-        {
-            ("Runners", s.Runners.ToString(CultureInfo.InvariantCulture) + (s.NewThisWeek > 0 ? string.Create(CultureInfo.InvariantCulture, $" ({s.NewThisWeek} new this week)") : "")),
-            ("With a current plan", string.Create(CultureInfo.InvariantCulture, $"{s.WithCurrentPlan}{Share(s.WithCurrentPlan)}")),
-            ("With runs on Taperday", string.Create(CultureInfo.InvariantCulture, $"{s.WithRuns}{Share(s.WithRuns)}")),
-            ("Strava connected", string.Create(CultureInfo.InvariantCulture, $"{s.StravaConnected}{Share(s.StravaConnected)}")),
-            ("Reminders on", string.Create(CultureInfo.InvariantCulture, $"{s.RemindersOn}{Share(s.RemindersOn)}")),
-            ("Ran this week", s.RanThisWeek.ToString(CultureInfo.InvariantCulture)),
-            ("Runs stored", s.Runs.ToString(CultureInfo.InvariantCulture)),
-        };
-        var date = weekOf.ToString("d MMMM yyyy", CultureInfo.InvariantCulture);
-        var subject = (test ? "[Test] " : "") + string.Create(CultureInfo.InvariantCulture, $"Taperday this week: {s.Runners} runners, {s.NewThisWeek} new, {s.RanThisWeek} ran");
+        var ci = CultureInfo.InvariantCulture;
+        double Of(int n) => s.Runners > 0 ? (double)n / s.Runners : 0;
+        string Count(int n) => s.Runners > 0 ? string.Create(ci, $"{n} · {Math.Round(100.0 * n / s.Runners)}%") : n.ToString(ci);
+        var date = weekOf.ToString("d MMMM yyyy", ci);
+        var subject = (test ? "[Test] " : "") + string.Create(ci, $"Your Monday numbers: {s.Runners} runners, {s.RanThisWeek} ran this week");
+        var headline = s.NewThisWeek > 0
+            ? string.Create(ci, $"{s.NewThisWeek} new {(s.NewThisWeek == 1 ? "runner" : "runners")} joined this week.")
+            : "No new runners this week. Steady miles.";
 
-        var html = new StringBuilder();
-        html.Append(CultureInfo.InvariantCulture, $"<div style=\"font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#16171a\"><h2 style=\"margin:0 0 4px\">Taperday this week</h2><p style=\"margin:0 0 16px;color:#666\">Week of {date}. Counts only, no names.</p><table style=\"border-collapse:collapse;width:100%\">");
-        var text = new StringBuilder();
-        text.Append(CultureInfo.InvariantCulture, $"Taperday this week (week of {date})\n\n");
-        foreach (var (label, value) in rows)
+        var steps = new (string Label, int Count)[]
         {
-            html.Append(CultureInfo.InvariantCulture, $"<tr><td style=\"padding:8px;border-bottom:1px solid #eee\">{WebUtility.HtmlEncode(label)}</td><td style=\"padding:8px;border-bottom:1px solid #eee;text-align:right;font-weight:bold\">{WebUtility.HtmlEncode(value)}</td></tr>");
-            text.Append(CultureInfo.InvariantCulture, $"{label}: {value}\n");
+            ("Saved a plan", s.WithCurrentPlan),
+            ("Added their runs", s.WithRuns),
+            ("Connected Strava", s.StravaConnected),
+            ("Turned on reminders", s.RemindersOn),
+        };
+        var body = new StringBuilder();
+        body.Append(EmailLayout.Paragraph(string.Create(ci, $"Week of {date}. {headline}"), muted: true));
+        body.Append(EmailLayout.Figures(
+            ("Runners", s.Runners.ToString(ci)),
+            ("New this week", s.NewThisWeek.ToString(ci)),
+            ("Ran this week", s.RanThisWeek.ToString(ci))));
+        body.Append(EmailLayout.Heading("How far runners got"));
+        foreach (var (label, count) in steps)
+        {
+            body.Append(EmailLayout.Bar(label, Of(count), Count(count)));
         }
 
-        html.Append("</table><h3 style=\"margin:24px 0 8px\">Feedback this week</h3>");
-        text.Append("\nFeedback this week:\n");
+        body.Append(EmailLayout.Paragraph(string.Create(ci, $"{s.Runs} runs stored in all."), muted: true));
+        body.Append(EmailLayout.Heading("What runners told you"));
         if (s.Feedback.Count == 0)
         {
-            html.Append("<p style=\"color:#666\">None this week.</p>");
-            text.Append("None this week.\n");
+            body.Append(EmailLayout.Paragraph("No feedback this week. The Send feedback link is in the footer of every page.", muted: true));
         }
 
         foreach (var f in s.Feedback)
         {
-            var where = f.Page.Length > 0 ? $" · {f.Page}" : "";
-            var when = f.At.ToString("d MMM", CultureInfo.InvariantCulture);
-            html.Append(CultureInfo.InvariantCulture, $"<p style=\"border-left:3px solid #d7ff3e;padding-left:8px\">{WebUtility.HtmlEncode(f.Message)}<br><span style=\"color:#666;font-size:12px\">{when}{WebUtility.HtmlEncode(where)}</span></p>");
-            text.Append(CultureInfo.InvariantCulture, $"- {f.Message} ({when}{where})\n");
+            body.Append(EmailLayout.Note(f.Message, f.At.ToString("d MMM", ci) + (f.Page.Length > 0 ? $" · {f.Page}" : "")));
         }
 
-        html.Append("<p style=\"color:#999;font-size:12px;margin-top:24px\">Sent by Taperday every Monday morning.</p></div>");
-        return new EmailMessage(to, subject, html.ToString(), text.ToString());
+        var html = EmailLayout.Wrap(
+            preheader: string.Create(ci, $"{s.Runners} runners, {s.NewThisWeek} new, {s.RanThisWeek} ran this week."),
+            kicker: "Taperday · Monday numbers",
+            title: "Here's how Taperday ran this week.",
+            body: body.ToString(),
+            buttonText: "Open Taperday",
+            buttonUrl: EmailLayout.Site,
+            footer: "Counts only, never names. Sent to the maker every Monday at 07:00 from hello@taperday.run.");
+
+        var text = new StringBuilder();
+        text.Append(ci, $"Here's how Taperday ran this week (week of {date}).\n{headline}\n\n");
+        text.Append(ci, $"Runners: {s.Runners}\nNew this week: {s.NewThisWeek}\nRan this week: {s.RanThisWeek}\n\nHow far runners got:\n");
+        foreach (var (label, count) in steps)
+        {
+            text.Append(ci, $"- {label}: {Count(count)}\n");
+        }
+
+        text.Append(ci, $"\n{s.Runs} runs stored in all.\n\nWhat runners told you:\n");
+        if (s.Feedback.Count == 0)
+        {
+            text.Append("No feedback this week.\n");
+        }
+
+        foreach (var f in s.Feedback)
+        {
+            text.Append(ci, $"- {f.Message} ({f.At.ToString("d MMM", ci)}{(f.Page.Length > 0 ? $" · {f.Page}" : "")})\n");
+        }
+
+        return new EmailMessage(to, subject, html, text.Append("\nhttps://taperday.run\n").ToString());
     }
 }
 

@@ -76,6 +76,17 @@ public sealed class EngineV3Tests
     }
 
     [Fact]
+    public void An_experienced_marathoner_is_capped_at_35_km_and_everyone_else_at_32()
+    {
+        var experienced = Plan(Distance.Marathon, TimeSpan.FromHours(3), TrainingPlanGenerator.LatestVersion, [.. FiveDays, DayOfWeek.Monday], currentKm: 70, Experience.Experienced);
+        var regular = Plan(Distance.Marathon, TimeSpan.FromHours(3), TrainingPlanGenerator.LatestVersion, [.. FiveDays, DayOfWeek.Monday], currentKm: 70);
+
+        LongestRun(experienced).ShouldBeLessThanOrEqualTo(35);
+        // Past 32 km only on very high volume (the long run stays near 30% of the week), so the caps are what is checked.
+        LongestRun(regular).ShouldBeLessThanOrEqualTo(32);
+    }
+
+    [Fact]
     public void Plans_saved_on_version_2_keep_their_shape()
     {
         var before = Plan(Distance.Marathon, TimeSpan.FromHours(3.75), TrainingPlanGenerator.ShapedVersion, FiveDays);

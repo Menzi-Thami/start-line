@@ -123,7 +123,7 @@ public static class WeeklyReport
             body: body.ToString(),
             buttonText: "Open Taperday",
             buttonUrl: EmailLayout.Site,
-            footer: "Counts only, never names. Sent to the maker every Monday at 07:00 from hello@taperday.run.");
+            footer: "Your Monday report, just for you as Taperday's maker. Counts only, never names.");
 
         var text = new StringBuilder();
         text.Append(ci, $"Here's how Taperday ran this week (week of {date}).\n{headline}\n\n");

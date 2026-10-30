@@ -851,8 +851,8 @@ export function App() {
                       units={units}
                       lede={
                         auth.enabled
-                          ? 'A plan for any distance, up to an ultra.'
-                          : 'A plan for any distance, up to an ultra. Free.'
+                          ? 'A plan built around your race and your week, that keeps up with how you run.'
+                          : 'A plan built around your race and your week, that keeps up with how you run. Free.'
                       }
                     />
                     <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />

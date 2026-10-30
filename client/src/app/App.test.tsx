@@ -174,10 +174,10 @@ describe('building a plan', () => {
       longRunDay: 'Sunday',
       planFrom: '2026-10-08',
       // A new plan is built with the newest generator, and its link says so.
-      version: 2,
+      version: 3,
     })
     expect(window.location.search).toContain('goal=1470')
-    expect(window.location.search).toContain('&v=2')
+    expect(window.location.search).toContain('&v=3')
   })
 
   it('shows the pace a goal works out to', async () => {

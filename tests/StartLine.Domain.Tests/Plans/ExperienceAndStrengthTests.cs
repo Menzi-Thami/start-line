@@ -49,8 +49,11 @@ public class ExperienceAndStrengthTests
         var strength = plan.Weeks.Where(w => w.Phase != TrainingPhase.RaceWeek)
             .SelectMany(w => w.Sessions).Where(s => s.Type == SessionType.Strength).ToList();
         strength.Count.ShouldBe(2 * (plan.Weeks.Count - 1));
-        strength.ShouldAllBe(s => (s.Date.DayOfWeek == DayOfWeek.Monday || s.Date.DayOfWeek == DayOfWeek.Thursday)
-            && s.DistanceKm == 0 && s.Zone == null);
+        strength.ShouldAllBe(s => s.DistanceKm == 0 && s.Zone == null);
+        if (Version < TrainingPlanGenerator.LatestVersion)
+        {
+            strength.ShouldAllBe(s => s.Date.DayOfWeek == DayOfWeek.Monday || s.Date.DayOfWeek == DayOfWeek.Thursday);
+        }
     }
 
     [Fact]
@@ -58,9 +61,34 @@ public class ExperienceAndStrengthTests
     {
         var plan = Half(strengthDays: [DayOfWeek.Thursday]);
 
-        var thursday = plan.Weeks[1].Sessions.Where(s => s.Date.DayOfWeek == DayOfWeek.Thursday).ToList();
-        thursday.Count.ShouldBe(2);
-        thursday[^1].Type.ShouldBe(SessionType.Strength);
+        // Whichever day it lands on (from version 3 it may move off a hard day), it comes after that day's run.
+        var day = plan.Weeks[1].Sessions.Single(s => s.Type == SessionType.Strength).Date;
+        var sessions = plan.Weeks[1].Sessions.Where(s => s.Date == day).ToList();
+        sessions[^1].Type.ShouldBe(SessionType.Strength);
+    }
+
+    [Fact]
+    public void From_version_3_strength_stays_off_hard_days_and_the_eve_of_the_long_run()
+    {
+        if (Version < TrainingPlanGenerator.LatestVersion)
+        {
+            return;
+        }
+
+        var plan = Half(strengthDays: [DayOfWeek.Tuesday, DayOfWeek.Thursday, DayOfWeek.Saturday]);
+        var hardTypes = new[] { SessionType.Hills, SessionType.Fartlek, SessionType.Intervals, SessionType.Tempo, SessionType.CruiseIntervals, SessionType.ProgressionRun, SessionType.RacePace };
+        foreach (var week in plan.Weeks.Where(w => w.Phase != TrainingPhase.RaceWeek))
+        {
+            var longDay = week.Sessions.Where(s => s.Type is SessionType.LongRun or SessionType.LongRunFastFinish or SessionType.LongRunRacePace).Select(s => s.Date).FirstOrDefault();
+            foreach (var strength in week.Sessions.Where(s => s.Type == SessionType.Strength))
+            {
+                week.Sessions.ShouldNotContain(s => s.Date == strength.Date && hardTypes.Contains(s.Type));
+                if (longDay != default)
+                {
+                    strength.Date.ShouldNotBe(longDay.AddDays(-1));
+                }
+            }
+        }
     }
 
     [Fact]
@@ -161,6 +189,11 @@ public class ExperienceAndStrengthTests
 }
 
 public sealed class ExperienceAndStrengthV2Tests : ExperienceAndStrengthTests
+{
+    protected override int Version => TrainingPlanGenerator.ShapedVersion;
+}
+
+public sealed class ExperienceAndStrengthV3Tests : ExperienceAndStrengthTests
 {
     protected override int Version => TrainingPlanGenerator.LatestVersion;
 }

@@ -1,41 +1,41 @@
 /*
- * Taperday design tokens: "Night run" (docs/design/night-run/README.md).
- * Near-black ground, one electric accent (volt), frosted glass surfaces. Text on volt is always the ground colour.
+ * Taperday design tokens: "Race Signal" (docs/design/night-run/README.md).
+ * Midnight navy, warm signal coral, bone-white type and precise running instrumentation. Text on the signal accent is midnight.
  * Effort ramp: dim to bright as the effort rises, ending in coral for race pace. It always sits beside a text
  * label, so colour never carries meaning on its own.
  */
 :root {
   color-scheme: dark;
 
-  --paper: #0a0a0b;
-  --surface: #16171a;
-  --surface-sunk: #101113;
-  --glass: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
-  --ink: #f2f2f2;
-  --ink-2: #b9bcc3;
-  --muted: #9ea2aa;
-  --line: rgba(255, 255, 255, 0.12);
-  --line-strong: rgba(255, 255, 255, 0.22);
+  --paper: #101820;
+  --surface: #1b2830;
+  --surface-sunk: #0c141b;
+  --glass: linear-gradient(160deg, rgba(43, 62, 72, 0.96), rgba(23, 35, 43, 0.96));
+  --ink: #f2efe7;
+  --ink-2: #cad1d0;
+  --muted: #aab6ba;
+  --line: rgba(224, 233, 231, 0.13);
+  --line-strong: rgba(224, 233, 231, 0.27);
 
-  --accent: #d7ff3e;
-  --accent-strong: #ecff9e;
-  --accent-soft: rgba(215, 255, 62, 0.16);
-  --on-accent: #0a0a0b;
-  --coral: #ff5a36;
-  --violet: #7c5cff;
-  --glow: 0 0 0 1px rgba(215, 255, 62, 0.4), 0 10px 40px rgba(215, 255, 62, 0.25);
+  --accent: #ff694a;
+  --accent-strong: #ff9b84;
+  --accent-soft: rgba(255, 105, 74, 0.16);
+  --on-accent: #101820;
+  --coral: #ff694a;
+  --violet: #8db4c4;
+  --glow: 0 0 0 1px rgba(255, 105, 74, 0.34), 0 12px 32px rgba(255, 105, 74, 0.13);
 
   --warn-bg: rgba(255, 199, 44, 0.1);
   --warn-ink: #ffd76a;
   --warn-line: rgba(255, 199, 44, 0.35);
   --danger-ink: #ff8c7a;
 
-  --effort-recovery: #4f5a2a;
-  --effort-easy: #7f9330;
-  --effort-long: #aac835;
-  --effort-tempo: #d7ff3e;
-  --effort-interval: #ffb02e;
-  --effort-race: #ff5a36;
+  --effort-recovery: #7897a2;
+  --effort-easy: #8dabb2;
+  --effort-long: #b8c6bf;
+  --effort-tempo: #ff9b84;
+  --effort-interval: #ffa45a;
+  --effort-race: #ff694a;
 
   --font-display: 'Bricolage Grotesque Variable', 'Segoe UI', system-ui, sans-serif;
   --font-body: 'Atkinson Hyperlegible Next', 'Segoe UI', system-ui, sans-serif;
@@ -61,8 +61,8 @@
   --space-8: 4.5rem;
 
   --radius-sm: 10px;
-  --radius-md: 18px;
-  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
   --column: 44rem;
   --tap: 44px;
   --focus: 0 0 0 3px var(--paper), 0 0 0 5px var(--accent);

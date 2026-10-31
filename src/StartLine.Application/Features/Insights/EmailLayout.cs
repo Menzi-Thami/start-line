@@ -5,20 +5,21 @@ using System.Text;
 namespace StartLine.Application.Features.Insights;
 
 /// <summary>
-/// Taperday's email look, in the Night run colours: near-black ground, a dark card, one volt accent and the runner
-/// peeking over the top of the card, smiling. Built from tables with inline styles, which is what email apps render
+/// Taperday's email look, in the Frame colours: a grey ground, a white card, ink type with a serif headline, sage as
+/// the one colour, and the runner peeking over the top of the card, smiling. Built from tables with inline styles, which is what email apps render
 /// reliably; the mascot is a PNG on taperday.run because most email apps won't show SVG.
 /// </summary>
 public static class EmailLayout
 {
     public const string Site = "https://taperday.run";
-    public const string Paper = "#0a0a0b";
-    public const string Surface = "#16171a";
-    public const string Ink = "#f2f2f2";
-    public const string Muted = "#9a9ca3";
-    public const string Volt = "#d7ff3e";
-    public const string Line = "#2a2c31";
-    private const string Font = "'Bricolage Grotesque','Segoe UI',Helvetica,Arial,sans-serif";
+    public const string Paper = "#e4e4e4";
+    public const string Surface = "#ffffff";
+    public const string Ink = "#111111";
+    public const string Muted = "#666666";
+    public const string Sage = "#b4c7a8";
+    public const string Line = "#e2e2e2";
+    private const string Font = "'Instrument Sans','Segoe UI',Helvetica,Arial,sans-serif";
+    private const string Serif = "'Instrument Serif',Georgia,'Times New Roman',serif";
 
     public static string Encode(string text) => WebUtility.HtmlEncode(text);
 
@@ -31,24 +32,24 @@ public static class EmailLayout
     {
         var html = new StringBuilder();
         html.Append(CultureInfo.InvariantCulture, $"""
-            <!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark"><title>{Encode(title)}</title></head>
+            <!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"><title>{Encode(title)}</title></head>
             <body style="margin:0;padding:0;background:{Paper};">
             <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{Paper};">{Encode(preheader)}</div>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{Paper};"><tr><td align="center" style="padding:28px 12px 40px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-            <tr><td style="padding:0 4px 18px;font-family:{Font};font-size:22px;font-weight:800;letter-spacing:-0.5px;"><span style="color:{Ink};">taper</span><span style="color:{Volt};">day</span></td></tr>
+            <tr><td style="padding:0 4px 18px;font-family:{Font};font-size:22px;font-weight:700;letter-spacing:-0.5px;"><span style="color:{Ink};">taper</span><span style="color:{Ink};">day</span></td></tr>
             <tr><td align="center" style="line-height:0;"><img src="{Site}/email/peek.png" width="240" height="66" alt="The Taperday runner peeking over the page" style="display:block;border:0;width:240px;height:66px;"></td></tr>
-            <tr><td style="background:{Surface};border-top:3px solid {Volt};border-radius:20px;padding:12px 28px 30px;font-family:{Font};color:{Ink};">
-            <p style="margin:12px 0 6px;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:{Volt};">{Encode(kicker)}</p>
-            <h1 style="margin:0 0 18px;font-size:28px;line-height:1.15;font-weight:800;letter-spacing:-0.5px;color:{Ink};">{Encode(title)}</h1>
+            <tr><td style="background:{Surface};border-radius:28px;padding:12px 28px 30px;font-family:{Font};color:{Ink};">
+            <p style="margin:12px 0 6px;font-size:14px;font-weight:600;color:{Muted};">{Encode(kicker)}</p>
+            <h1 style="margin:0 0 18px;font-family:{Serif};font-size:34px;line-height:1.05;font-weight:400;letter-spacing:-0.3px;color:{Ink};">{Encode(title)}</h1>
             {body}
-            <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:26px;"><tr><td style="background:{Volt};border-radius:999px;"><a href="{buttonUrl}" style="display:inline-block;padding:14px 26px;font-family:{Font};font-size:16px;font-weight:800;color:{Paper};text-decoration:none;">{Encode(buttonText)}</a></td></tr></table>
+            <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:26px;"><tr><td style="background:{Ink};border-radius:999px;"><a href="{buttonUrl}" style="display:inline-block;padding:14px 26px;font-family:{Font};font-size:16px;font-weight:600;color:{Surface};text-decoration:none;">{Encode(buttonText)}</a></td></tr></table>
             </td></tr>
             <tr><td align="center" style="padding:26px 8px 0;font-family:{Font};">
-            <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;"><span style="color:{Ink};">taper</span><span style="color:{Volt};">day</span></div>
+            <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;"><span style="color:{Ink};">taper</span><span style="color:{Ink};">day</span></div>
             <div style="margin-top:4px;font-size:12px;color:{Muted};">Plans that keep up with how you run.</div>
             <div style="margin-top:12px;font-size:12px;line-height:1.6;color:{Muted};">{footer}</div>
-            <div style="margin-top:10px;font-size:12px;"><a href="{Site}" style="color:{Volt};text-decoration:none;">taperday.run</a><span style="color:{Line};">&nbsp;&nbsp;·&nbsp;&nbsp;</span><a href="mailto:hello@taperday.run" style="color:{Volt};text-decoration:none;">hello@taperday.run</a></div>
+            <div style="margin-top:10px;font-size:12px;"><a href="{Site}" style="color:{Sage};text-decoration:none;">taperday.run</a><span style="color:{Line};">&nbsp;&nbsp;·&nbsp;&nbsp;</span><a href="mailto:hello@taperday.run" style="color:{Sage};text-decoration:none;">hello@taperday.run</a></div>
             {Unsubscribe(unsubscribeUrl)}
             </td></tr>
             </table></td></tr></table></body></html>
@@ -59,11 +60,11 @@ public static class EmailLayout
     // Small and volt like the other footer links, but on its own line and underlined, so it's easy to find and plainly a link.
     private static string Unsubscribe(string? url) => url is null
         ? ""
-        : string.Create(CultureInfo.InvariantCulture, $"<div style=\"margin-top:10px;font-size:12px;\"><a href=\"{Encode(url)}\" style=\"color:{Volt};text-decoration:underline;\">Unsubscribe</a><span style=\"color:{Muted};\"> from Taperday news and updates</span></div>");
+        : string.Create(CultureInfo.InvariantCulture, $"<div style=\"margin-top:10px;font-size:12px;\"><a href=\"{Encode(url)}\" style=\"color:{Sage};text-decoration:underline;\">Unsubscribe</a><span style=\"color:{Muted};\"> from Taperday news and updates</span></div>");
 
     /// <summary>One item in a "what's new" list: a volt dot, a bold title and a line of detail.</summary>
     public static string Item(string title, string detail) =>
-        string.Create(CultureInfo.InvariantCulture, $"<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 14px;\"><tr><td width=\"18\" valign=\"top\" style=\"padding-top:7px;\"><div style=\"width:8px;height:8px;border-radius:50%;background:{Volt};\"></div></td><td style=\"font-family:{Font};\"><div style=\"font-size:15px;font-weight:800;color:{Ink};\">{Encode(title)}</div><div style=\"margin-top:3px;font-size:14px;line-height:1.55;color:{Muted};\">{Encode(detail)}</div></td></tr></table>");
+        string.Create(CultureInfo.InvariantCulture, $"<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 14px;\"><tr><td width=\"18\" valign=\"top\" style=\"padding-top:7px;\"><div style=\"width:8px;height:8px;border-radius:50%;background:{Sage};\"></div></td><td style=\"font-family:{Font};\"><div style=\"font-size:15px;font-weight:800;color:{Ink};\">{Encode(title)}</div><div style=\"margin-top:3px;font-size:14px;line-height:1.55;color:{Muted};\">{Encode(detail)}</div></td></tr></table>");
 
     /// <summary>Big figures side by side: the headline of an email.</summary>
     public static string Figures(params (string Label, string Value)[] figures)
@@ -72,7 +73,7 @@ public static class EmailLayout
         var html = new StringBuilder($"<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 20px;\"><tr>");
         foreach (var (label, value) in figures)
         {
-            html.Append(CultureInfo.InvariantCulture, $"<td width=\"{100 / figures.Length}%\" style=\"padding:14px 12px;border:1px solid {Line};border-radius:14px;font-family:{Font};\"><div style=\"font-size:30px;font-weight:800;color:{Volt};line-height:1;\">{Encode(value)}</div><div style=\"margin-top:6px;font-size:12px;color:{Muted};\">{Encode(label)}</div></td>");
+            html.Append(CultureInfo.InvariantCulture, $"<td width=\"{100 / figures.Length}%\" style=\"padding:14px 12px;border:1px solid {Line};border-radius:14px;font-family:{Font};\"><div style=\"font-family:{Serif};font-size:34px;font-weight:400;color:{Ink};line-height:1;\">{Encode(value)}</div><div style=\"margin-top:6px;font-size:12px;color:{Muted};\">{Encode(label)}</div></td>");
         }
 
         return html.Append("</tr></table>").ToString();
@@ -84,7 +85,7 @@ public static class EmailLayout
         var width = Math.Clamp((int)Math.Round(share * 100), 0, 100);
         return string.Create(CultureInfo.InvariantCulture, $"""
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;"><tr><td style="font-family:{Font};font-size:14px;color:{Ink};padding-bottom:6px;">{Encode(label)}</td><td align="right" style="font-family:{Font};font-size:14px;font-weight:700;color:{Ink};padding-bottom:6px;">{Encode(value)}</td></tr>
-            <tr><td colspan="2" style="background:{Line};border-radius:999px;height:8px;line-height:8px;font-size:0;"><div style="width:{width}%;background:{Volt};border-radius:999px;height:8px;line-height:8px;font-size:0;">&nbsp;</div></td></tr></table>
+            <tr><td colspan="2" style="background:{Line};border-radius:999px;height:8px;line-height:8px;font-size:0;"><div style="width:{width}%;background:{Sage};border-radius:999px;height:8px;line-height:8px;font-size:0;">&nbsp;</div></td></tr></table>
             """);
     }
 
@@ -96,5 +97,5 @@ public static class EmailLayout
 
     /// <summary>A quoted note with a volt rule down its left, and who/where/when underneath in grey.</summary>
     public static string Note(string text, string meta) =>
-        string.Create(CultureInfo.InvariantCulture, $"<div style=\"margin:0 0 12px;padding:10px 14px;border-left:3px solid {Volt};background:{Paper};border-radius:0 10px 10px 0;font-family:{Font};\"><div style=\"font-size:15px;line-height:1.5;color:{Ink};\">{Encode(text)}</div><div style=\"margin-top:4px;font-size:12px;color:{Muted};\">{Encode(meta)}</div></div>");
+        string.Create(CultureInfo.InvariantCulture, $"<div style=\"margin:0 0 12px;padding:10px 14px;border-left:3px solid {Sage};background:{Paper};border-radius:0 10px 10px 0;font-family:{Font};\"><div style=\"font-size:15px;line-height:1.5;color:{Ink};\">{Encode(text)}</div><div style=\"margin-top:4px;font-size:12px;color:{Muted};\">{Encode(meta)}</div></div>");
 }

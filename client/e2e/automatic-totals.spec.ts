@@ -21,6 +21,9 @@ async function history(page: Page) {
         state.writes++
         data = saved
       } else data = state.entries
+    } else if (path.endsWith('/running') && new URL(request.url()).searchParams.get('allTime') === 'true') {
+      // The All time tile's own read (kept runs only): this test is about the synced totals, so it has none.
+      data = []
     } else if (path.endsWith('/running')) {
       expect(new URL(request.url()).searchParams.get('includeSynced')).toBe('true')
       const own = state.entries.find(c => c.distanceKm != null && !c.distanceUnreported)

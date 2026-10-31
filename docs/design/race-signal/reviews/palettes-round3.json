@@ -1,0 +1,8 @@
+{
+  "Cape coast (sky, sand, protea)": { "bg": "#ffffff", "mast": "#ffffff", "mastInk": "#0a0a0a", "hero": "#cbe4f2", "heroInk": "#0a0a0a", "ink": "#0a0a0a", "accent": "#b0298f", "onAccent": "#ffffff", "bib": "#ffffff", "banner": "#ffc013", "bannerInk": "#0a0a0a", "today": "#f1e3b5", "week": "#cbe4f2" },
+  "Card pastels": { "bg": "#f7f7f5", "mast": "#f7f7f5", "mastInk": "#000000", "hero": "#97aaf6", "heroInk": "#000000", "ink": "#000000", "accent": "#d0106f", "onAccent": "#ffffff", "bib": "#ffffff", "banner": "#000000", "bannerInk": "#ffffff", "today": "#bbf697", "week": "#fed878" },
+  "Race poster (blue, red, black)": { "bg": "#ffffff", "mast": "#0a0a0a", "mastInk": "#ffffff", "hero": "#2436ff", "heroInk": "#ffffff", "ink": "#0a0a0a", "accent": "#ff3b1f", "onAccent": "#0a0a0a", "bib": "#ffffff", "banner": "#ff3b1f", "bannerInk": "#0a0a0a", "today": "#e6e9ff", "week": "#ffe1dc" },
+  "Ultramarine and yellow": { "bg": "#ffffff", "mast": "#1423b8", "mastInk": "#ffffff", "hero": "#1423b8", "heroInk": "#ffffff", "ink": "#0a0a0a", "accent": "#e9479f", "onAccent": "#ffffff", "bib": "#f7dd47", "banner": "#f7dd47", "bannerInk": "#0a0a0a", "today": "#fbf1b0", "week": "#e3e6fa" },
+  "Mint and pink": { "bg": "#f8f8f8", "mast": "#f8f8f8", "mastInk": "#0a0a0a", "hero": "#c3edce", "heroInk": "#0a0a0a", "ink": "#0a0a0a", "accent": "#e2366b", "onAccent": "#ffffff", "bib": "#ffffff", "banner": "#f8c7c9", "bannerInk": "#0a0a0a", "today": "#f8c7c9", "week": "#c3edce" },
+  "SA flag chapters": { "bg": "#ffffff", "mast": "#ffffff", "mastInk": "#000000", "hero": "#001489", "heroInk": "#ffffff", "ink": "#000000", "accent": "#e03c31", "onAccent": "#ffffff", "bib": "#ffffff", "banner": "#007749", "bannerInk": "#ffffff", "today": "#ffe7b0", "week": "#e5e9fb" }
+}

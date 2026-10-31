@@ -1,0 +1,117 @@
+/* Reference style (Thami's landing example): grey page, one white rounded frame, grey-gradient hero panel, huge
+ * mixed-case serif, light body, pill buttons, one saturated card with frosted cards floating over it. Real data only. */
+@import url('/node_modules/@fontsource/instrument-serif/index.css');
+:root {
+  --paper: #ffffff; --ink: #111111; --muted: #5f5f5f; --accent: #ff6a2b; --on-accent: #ffffff; --sky: #4aa3ff;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --radius-sm: 999px; --radius-md: 20px; --radius-lg: 28px;
+}
+body { background: #e4e4e4; }
+#root { background: #fff; margin: 24px; border-radius: 32px; overflow: clip; min-height: calc(100vh - 48px); }
+.masthead { background: #fff; border-bottom: 0; box-shadow: none; clip-path: none; padding-block: 28px; }
+.masthead::after { content: none; }
+.wordmark { font-family: var(--font-body); font-stretch: 100%; font-weight: 700; text-transform: none; letter-spacing: -0.02em; }
+.wordmark-accent { color: var(--ink) !important; }
+
+.intro.hero {
+  background: linear-gradient(180deg, #a9a9a9 0%, #d9d9d9 55%, #f4f4f4 100%);
+  border-radius: 28px; padding: clamp(28px, 5vw, 72px); gap: clamp(28px, 5vw, 64px); align-items: center;
+}
+.intro.hero::before { content: none; }
+.intro.hero h1, .intro.hero h1 em {
+  font-family: var(--font-display); font-stretch: 100%; font-weight: 400; font-style: normal; text-transform: none;
+  letter-spacing: -0.02em; line-height: 0.95; font-size: clamp(3.2rem, 1.2rem + 6vw, 7.4rem); color: var(--ink);
+}
+.intro.hero p {
+  font-weight: 300; font-size: clamp(1.1rem, 1rem + 0.5vw, 1.45rem); line-height: 1.5; color: #1d1d1d;
+  border-block: 1px solid rgba(0, 0, 0, 0.18); padding-block: 24px; margin-top: 28px; max-width: 34rem;
+}
+
+/* The one saturated card: the real countdown. */
+.countdown {
+  position: relative; overflow: visible; background: var(--accent) !important; border: 0; border-radius: 32px;
+  box-shadow: none; transform: none; padding: 48px 28px 120px; min-height: 26rem; max-width: 22rem; align-content: center;
+}
+.countdown::before { content: none !important; }
+.countdown-track { stroke: rgba(255, 255, 255, 0.35); }
+.countdown-fill { stroke: #fff; }
+.countdown-number span { font-family: var(--font-display); font-stretch: 100%; font-weight: 400; color: #fff; font-size: clamp(4rem, 3rem + 3vw, 6rem); }
+.countdown-number small { color: #fff; font-weight: 500; text-transform: none; }
+/* Frosted card hanging off the edge with the real race. */
+.countdown-race {
+  position: absolute; right: -36px; bottom: 28px; text-align: left; justify-items: start;
+  padding: 18px 22px; border-radius: 22px; background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.8); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+}
+.countdown-race strong { font-family: var(--font-display); font-stretch: 100%; font-weight: 400; text-transform: none; font-size: 1.6rem; color: var(--ink); }
+.countdown-race .mono { color: #333; text-transform: none; }
+/* Floating pill: what the plan does, as a ticked item. */
+.countdown::after {
+  content: 'Built around your week'; position: absolute; left: -64px; top: 64px; white-space: nowrap;
+  padding: 12px 18px 12px 46px; border-radius: 999px; background: #fff; color: var(--ink);
+  font: 500 0.95rem/1 var(--font-body); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Crect width='22' height='22' rx='6' fill='%234aa3ff'/%3E%3Cpath d='M6 11.5l3.2 3L16 8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 14px center;
+}
+
+/* Race names as the logo strip. */
+.ticker { background: #fff; color: var(--ink); border: 0; box-shadow: none; margin-block: 8px; }
+.ticker-track { font-family: var(--font-body); font-stretch: 100%; font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; text-transform: none; }
+
+.button { border-radius: 999px; }
+.button-primary { background: var(--ink); color: #fff; }
+
+@media (max-width: 47.99rem) {
+  #root { margin: 8px; border-radius: 24px; }
+  .countdown { min-height: 22rem; max-width: none; width: 100%; padding-bottom: 130px; }
+  .countdown-race { right: 16px; left: 16px; bottom: 16px; }
+  .countdown::after { left: 12px; top: 14px; }
+}
+
+/* Fixes from review 1: grey behind the frame everywhere, a wide page, and the hero as two columns on desktop. */
+html { background: #e4e4e4; }
+@media (min-width: 64rem) {
+  .page:has(.hero), .masthead > * { max-width: min(100% - 48px, 82rem); }
+  .page:has(.hero) { width: 100%; }
+  .intro.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  .intro.hero h1, .intro.hero h1 em { font-size: clamp(4rem, 1rem + 5vw, 7rem); }
+  .countdown { justify-self: center; width: 100%; }
+}
+html, body { background: #e4e4e4 !important; }
+body { margin: 0; padding-top: 0.02px; }
+.countdown-number span { font-size: clamp(3.4rem, 2.6rem + 2vw, 4.6rem); }
+
+/* Landing tweaks: proof line, hero actions, centred nav, outlined Sign in pill. */
+.hero-proof { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; font-size: 1rem; line-height: 1.35; color: #1d1d1d; }
+.hero-proof strong { font-weight: 600; font-size: 1.1rem; }
+.hero-proof-mark { flex: none; width: 44px; height: 44px; border-radius: 50%; background: #111 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13.5 4.5a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM9 20l2.2-6.2-2.4-2.3 1.5-3.5 3.3 1.2 2 2.8h2.6M11.2 13.8l2.6 1.8V20' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 24px no-repeat; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; margin-top: 32px; }
+.hero-actions .button-primary { padding: 16px 28px; font-weight: 600; }
+.hero-link { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.masthead { display: flex; align-items: center; }
+.masthead-nav { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+.landing-links { margin-inline: auto; display: flex; gap: 8px; align-items: center; }
+.landing-links .nav-link + .nav-link::before { content: '.'; margin-right: 8px; color: #999; }
+.landing-links .nav-link { font-weight: 500; color: var(--ink); background: none; text-decoration: none; }
+.masthead-nav > .button-quiet { border: 1.5px solid var(--ink); border-radius: 999px; padding: 12px 22px; background: #fff; color: var(--ink); font-weight: 600; }
+
+/* Photo card: the runner in black and white, toned with the card colour (multiply), and the countdown in a frosted
+ * card on top. Review renders hotlink the Unsplash photo; the real build self-hosts it (CSP is img-src 'self'). */
+.countdown {
+  background: var(--accent) url('https://images.unsplash.com/photo-1726195221766-e4594ff9d025?w=900&q=70') center 30% / cover no-repeat !important;
+  background-blend-mode: multiply; min-height: 30rem; padding: 0; align-content: end;
+}
+.countdown-ring {
+  position: absolute; right: -40px; top: 40px; width: 9.5rem; height: auto; aspect-ratio: auto; padding: 14px;
+  border-radius: 22px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
+}
+.countdown-track { stroke: rgba(0, 0, 0, 0.1); }
+.countdown-fill { stroke: #111; }
+.countdown-number span { color: #111; font-size: 2.6rem; }
+.countdown-number small { color: #333; font-size: 0.7rem; }
+@media (max-width: 47.99rem) {
+  .countdown { min-height: 28rem; }
+  .countdown-ring { right: 12px; top: 64px; width: 8rem; }
+}

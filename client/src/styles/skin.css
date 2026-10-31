@@ -1,0 +1,245 @@
+/*
+ * FRAME / UI skin (docs/design/race-signal/style_guide.md)
+ * A grey page holding one white rounded frame; soft grey cards; Instrument Serif headlines over Instrument Sans; pill
+ * buttons in ink; sage as the one colour. Layered after the component styles: no changes to routing, user input, API
+ * calls or training logic.
+ */
+:root { --signal: var(--accent); }
+html, body { background: var(--page); }
+/* The serif has one weight: never let the browser fake a bold. */
+html { font-synthesis-weight: none; }
+::selection { background: var(--sage); color: var(--ink); }
+
+/* The frame: everything sits on one white sheet with rounded corners. */
+#root { background: var(--paper); margin: 24px; border-radius: 32px; overflow: clip; min-height: calc(100dvh - 48px); }
+@media (max-width: 47.99rem) {
+  #root { margin: 8px; border-radius: 24px; min-height: calc(100dvh - 16px); }
+}
+
+/* Type: serif headlines, mixed case; numbers in the sans with tabular figures. */
+:is(h1, h2, .home-title, .home-today-title, .home-race-state, .plan-title, .wizard-title) {
+  font-family: var(--font-display);
+  font-stretch: 100%;
+  font-weight: 400;
+  font-style: normal;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  text-wrap: balance;
+}
+h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; text-transform: none; }
+.mono, .home-tile-value, .home-best-time { font-variant-numeric: tabular-nums; letter-spacing: 0; }
+.home-card-heading, .home-tile-label, .home-best-name, .home-countdown-label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
+.home-tile-value, .home-countdown > .mono, .overview-figure .mono {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1;
+}
+.home-tile-value { font-size: clamp(2.2rem, 3.4vw, 3.4rem); }
+.home-countdown > .mono { color: var(--ink); font-size: clamp(3.4rem, 2.4rem + 4vw, 6rem); }
+
+/* Masthead: a quiet bar inside the frame; on the landing page, centred links and an outlined Sign in pill. */
+.masthead { display: flex; align-items: center; background: var(--paper); border-bottom: 0; box-shadow: none; padding-block: 28px; }
+.masthead::after { content: none; }
+.wordmark { font-family: var(--font-body); font-stretch: 100%; font-weight: 700; letter-spacing: -0.02em; text-transform: none; }
+.wordmark-accent { color: var(--ink); }
+.masthead-nav { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+.landing-links { margin-inline: auto; display: flex; gap: 8px; align-items: center; }
+.landing-links .nav-link { font-weight: 500; color: var(--ink); background: none; text-decoration: none; }
+.landing-links .nav-link + .nav-link::before { content: '.'; margin-right: 8px; color: var(--muted); }
+.masthead-nav > .button-quiet { border: 1.5px solid var(--ink); border-radius: 999px; padding: 12px 22px; background: var(--paper); color: var(--ink); font-weight: 600; }
+
+/* Cards: soft grey panels with no borders; the Today card is the sage field. */
+:is(.home-card, .home-tile, .overview-card, .week-glance, .panel, .home-history, .home-records, .home-best, .home-race-card) {
+  background: var(--surface);
+  border: 0;
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+.panel.home-card.home-today { background: var(--sage); color: var(--on-sage); }
+.panel.home-card.home-today :is(h2, h3, .mono, a, .link-button, small, p, span, strong, .home-today-title):not(.button):not(.button *) { color: var(--on-sage); }
+.panel.home-card.home-today .button-primary { background: var(--on-sage); border-color: var(--on-sage); color: #ffffff; }
+.home-race-card::before, .home-race-card::after { content: none; }
+
+/* Data: ink and greys, sage for progress. */
+.home-bars { border-bottom: 1px solid var(--line-strong); background: none; }
+.home-bar-ran { opacity: 1; border-radius: 6px 6px 0 0; }
+.home-ring-fill { stroke: var(--accent); }
+.home-ring-track { stroke: var(--line-strong); }
+.sparkline-line { stroke: var(--ink); }
+.sparkline-dot { fill: var(--accent); }
+.meter { background: var(--surface-sunk); border-radius: 999px; }
+.meter-fill { background: var(--accent); border-radius: 999px; }
+
+/* Buttons and tabs: pills. */
+.button { border-radius: 999px; box-shadow: none; }
+.button-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.button-primary:hover { background: var(--hover-ink); border-color: var(--hover-ink); color: var(--paper); box-shadow: none; }
+:is(.nav-link, .tab, .calc-chip, .button) { transition-duration: var(--dur-base); }
+:is(.tab, .calc-chip) { border-radius: 999px; }
+:is(.tab, .calc-chip)[aria-selected='true'], .calc-chip[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  box-shadow: none;
+}
+.scroll-progress { background: var(--sage); box-shadow: none; }
+
+/* Landing hero: a grey-gradient panel, the serif headline, and the runner card with frosted cards over it. */
+.intro.hero {
+  background: linear-gradient(180deg, var(--hero-top) 0%, var(--hero-mid) 55%, var(--hero-end) 100%);
+  border-radius: 28px;
+  padding: clamp(28px, 5vw, 72px);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: center;
+  animation: none;
+}
+.intro.hero h1, .intro.hero h1 em {
+  font-weight: 400;
+  font-style: normal;
+  line-height: 0.95;
+  font-size: clamp(3.2rem, 1.2rem + 6vw, 7.4rem);
+  color: var(--ink);
+}
+.intro.hero .hero-copy > p {
+  font-weight: 300;
+  font-size: clamp(1.1rem, 1rem + 0.5vw, 1.45rem);
+  line-height: 1.5;
+  color: var(--ink-2);
+  border-block: 1px solid var(--line-strong);
+  padding-block: 24px;
+  margin-top: 28px;
+  max-width: 34rem;
+}
+.hero-proof { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; font-size: 1rem; line-height: 1.35; color: var(--ink-2); }
+.hero-proof strong { font-weight: 600; font-size: 1.1rem; }
+.hero-proof-mark {
+  flex: none; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13.5 4.5a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM9 20l2.2-6.2-2.4-2.3 1.5-3.5 3.3 1.2 2 2.8h2.6M11.2 13.8l2.6 1.8V20' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 24px no-repeat;
+}
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; margin-top: 32px; }
+.hero-actions .button-primary { padding: 16px 28px; font-weight: 600; }
+.hero-link { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+
+/* The runner card: the photo toned sage, the real countdown and race in frosted cards over it. */
+.countdown {
+  position: relative; overflow: visible; border: 0; border-radius: 32px; box-shadow: none; transform: none;
+  padding: 0; min-height: 30rem; max-width: 22rem; align-content: end;
+  background: var(--sage) url('/landing/runner.webp') 42% 92% / auto 150% no-repeat;
+  background-blend-mode: luminosity;
+}
+.countdown::before { content: none; }
+.countdown-ring {
+  position: absolute; right: -40px; top: 40px; width: 9.5rem; height: auto; padding: 14px;
+  border-radius: 22px; background: var(--glass); border: 1px solid var(--frost-edge);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
+}
+.countdown-track { stroke: rgba(0, 0, 0, 0.1); }
+.countdown-fill { stroke: var(--ink); filter: none; }
+.countdown-number span { font-family: var(--font-display); font-weight: 400; color: var(--ink); font-size: 2.6rem; }
+.countdown-number small { font-family: var(--font-body); color: var(--ink-2); font-size: 0.7rem; font-weight: 500; }
+.countdown-race {
+  position: absolute; right: -36px; bottom: 28px; text-align: left; justify-items: start;
+  padding: 18px 22px; border-radius: 22px; background: var(--glass); border: 1px solid var(--frost-edge);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
+}
+.countdown-race strong { font-family: var(--font-display); font-weight: 400; text-transform: none; font-size: 1.6rem; color: var(--ink); }
+.countdown-race .mono { color: var(--ink-2); text-transform: none; }
+/* What the plan does, as a ticked pill. Decorative: the lede says the same in words. */
+.countdown::after {
+  content: 'Built around your week'; position: absolute; left: -64px; top: 64px; white-space: nowrap;
+  padding: 12px 18px 12px 46px; border-radius: 999px; color: var(--ink); font: 500 0.95rem/1 var(--font-body);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Crect width='22' height='22' rx='6' fill='%23111111'/%3E%3Cpath d='M6 11.5l3.2 3L16 8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 14px center no-repeat;
+}
+
+/* Race names as the logo strip. */
+.ticker { background: var(--paper); color: var(--ink); border: 0; box-shadow: none; margin-block: 8px; }
+.ticker-track { font-family: var(--font-body); font-weight: 700; font-size: 1.25rem; letter-spacing: -0.02em; text-transform: none; }
+
+@media (min-width: 64rem) {
+  .page:has(.hero) { width: 100%; max-width: min(100% - 48px, 82rem); }
+  .page:has(.plan) { max-width: min(100% - 4rem, 76rem); }
+  .page:has(.home) { max-width: min(100% - 4rem, 80rem); }
+  .intro.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+  .intro.hero h1, .intro.hero h1 em { font-size: clamp(4rem, 1rem + 5vw, 7rem); }
+  .countdown { justify-self: center; width: 100%; }
+  .home-top { gap: clamp(1.25rem, 2vw, 2rem); }
+  .home-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .home-title { max-width: 28ch; }
+}
+@media (min-width: 90rem) {
+  .page:has(.plan), .page:has(.home) { max-width: 84rem; }
+}
+@media (max-width: 47.99rem) {
+  .masthead { padding-block: 20px; }
+}
+/* Below desktop the hero stacks: the runner card spans the width with its frosted cards inside it. */
+@media (max-width: 63.99rem) {
+  .intro.hero { flex-direction: column; align-items: stretch; }
+  .countdown { min-height: 28rem; max-width: none; width: 100%; background-size: auto 165%; background-position: 40% 95%; }
+  .countdown-ring { right: 12px; top: 64px; width: 8rem; }
+  .countdown-race { right: 16px; left: 16px; bottom: 16px; }
+  .countdown::after { left: 12px; top: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero, .home-bar-ran, .home-ring-fill, .sparkline, .home-panel, .scroll-progress, .home-done-chip {
+    animation: none !important;
+  }
+  :is(.home-card, .home-tile, .overview-card, .week-glance, .button-primary) {
+    transform: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+@media print {
+  html, body, #root { background: white; margin: 0; border-radius: 0; }
+  .countdown { background: white; }
+}
+
+/* Race-day confetti in the Frame colours: sage, ink and deep sage. */
+.race-day-confetti i { background: var(--sage); }
+.race-day-confetti i:nth-child(3n) { background: var(--ink); }
+.race-day-confetti i:nth-child(3n + 1) { background: var(--accent); }
+
+/* Headings take focus only to move the reader (after a step or a route change): no ring on them. */
+:is(h1, h2, h3, [tabindex='-1']):focus-visible { outline: none; box-shadow: none; }
+
+/* Plan tabs: a frosted white pill that stays in reach while scrolling. */
+.tabs {
+  background: var(--bar);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.tabs .tab { color: var(--muted); }
+.tabs .tab[aria-selected='true'] { color: var(--paper); }
+
+/* Phone tab bar: frosted white, ink icons, a soft sage pill under the current page. */
+.tab-bar {
+  background: var(--bar);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.tab-bar-indicator { background: var(--accent-soft); border: 0; border-radius: 999px; }
+.tab-bar-item { color: var(--muted); }
+.tab-bar-item[aria-current='page'] { color: var(--ink); }
+.tab-bar-item[aria-current='page'] svg { color: var(--ink); }
+
+/* The website's light/dark switch: a quiet round button at the end of the masthead. */
+.theme-toggle {
+  flex: none; display: inline-grid; place-items: center; width: var(--tap); height: var(--tap); margin-left: 12px;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--paper); color: var(--ink); cursor: pointer;
+}
+.theme-toggle:hover { background: var(--surface); }
+/* The proof mark keeps its ink disc in both themes, so the white runner stays visible. */
+.hero-proof-mark { background-color: #111111; }

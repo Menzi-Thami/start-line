@@ -3,9 +3,12 @@ import { createRoot } from 'react-dom/client'
 import { AuthContext, accountsOff } from '../../src/app/auth-context'
 import { api } from '../../src/lib/api-client'
 import { PhotoPicker } from '../../src/features/account/PhotoPicker'
+import '@fontsource/instrument-serif'
+import '@fontsource-variable/instrument-sans'
 import '../../src/styles/tokens.css'
 import '../../src/styles/app.css'
 import '../../src/styles/polish.css'
+import '../../src/styles/skin.css'
 
 const auth = { ...accountsOff, enabled: true, getToken: async () => 'synthetic-token' }
 

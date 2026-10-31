@@ -1,0 +1,6 @@
+{
+  "Sky and sand": { "bg": "#cbe4f2", "surface": "#ffffff", "ink": "#0a0a0a", "accent": "#b0298f", "onAccent": "#ffffff", "bib": "#ffffff", "banner": "#ffc013", "bannerInk": "#0a0a0a", "tile": "#f1e3b5" },
+  "Card pastels": { "bg": "#f7f7f5", "surface": "#ffffff", "ink": "#000000", "accent": "#d0106f", "onAccent": "#ffffff", "bib": "#97aaf6", "banner": "#000000", "bannerInk": "#ffffff", "tile": "#bbf697" },
+  "Blue, red, black": { "bg": "#ffffff", "surface": "#ffffff", "ink": "#0a0a0a", "accent": "#ff3b1f", "onAccent": "#0a0a0a", "bib": "#ffffff", "banner": "#2436ff", "bannerInk": "#ffffff", "tile": "#eef0ff" },
+  "Sky and navy": { "bg": "#ffffff", "surface": "#ffffff", "ink": "#0e1822", "accent": "#ff5a1f", "onAccent": "#0e1822", "bib": "#6bb4ee", "banner": "#0e1822", "bannerInk": "#ffffff", "tile": "#e3f0fb" }
+}

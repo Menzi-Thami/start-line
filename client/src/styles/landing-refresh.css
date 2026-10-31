@@ -1,0 +1,112 @@
+/* Focused landing-page redesign. Existing race data and runner photo are reused. */
+.page:has(.intro.hero) { --landing-night: #121619; --landing-cream: #f2efe7; --landing-coral: #ff8973; }
+.intro.hero {
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+  gap: clamp(1.15rem,2.7vw,2rem);
+  padding: clamp(1.25rem,4vw,3.25rem);
+  background: var(--landing-night);
+  color: var(--landing-cream);
+  border-radius: clamp(18px,3vw,28px);
+  margin-bottom: 1.25rem;
+  animation: none;
+  overflow: hidden;
+  align-items: stretch;
+}
+.intro.hero .hero-copy { min-width: 0; }
+.intro.hero h1,.intro.hero h1 em {
+  color: var(--landing-cream);
+  font-family: var(--font-display);
+  font-size: clamp(3.2rem,6.2vw,6.3rem);
+  font-weight: 400;
+  line-height: .96;
+  max-width: none;
+  text-wrap: balance;
+}
+.intro.hero .hero-copy > p {
+  border: 0;
+  padding: 0;
+  margin: .9rem 0 0;
+  max-width: 32rem;
+  color: #ccd0d0;
+  font-size: clamp(1rem,1.7vw,1.25rem);
+  font-weight: 400;
+  line-height: 1.45;
+}
+.intro.hero .landing-visual { min-width:0; width: 100%; }
+.intro.hero .countdown {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-height: clamp(24rem,70vw,39rem);
+  margin: 0;
+  background: var(--sage);
+  border-radius: 28px;
+  overflow: hidden;
+}
+.intro.hero .countdown::before { background-position: center 35%; }
+.intro.hero .countdown::after { content: none; }
+.intro.hero .countdown-ring {
+  right: 5%;
+  top: 8%;
+  width: clamp(7.6rem,24%,11rem);
+  aspect-ratio: 1;
+  border-radius: 22px;
+  background: rgba(32,39,34,.77);
+  border: 1px solid rgba(255,255,255,.17);
+  color: var(--landing-cream);
+  padding: 8px;
+}
+.intro.hero .countdown-track { stroke: rgba(255,255,255,.18); }
+.intro.hero .countdown-fill { stroke: var(--landing-cream); }
+.intro.hero .countdown-number span { color: var(--landing-cream); font-size: clamp(2rem,4vw,3.4rem); }
+.intro.hero .countdown-number small { color: #e0e2dd; font-size: clamp(.52rem,1vw,.7rem); }
+.intro.hero .countdown-race {
+  left: 5%; right: 5%; bottom: 4%; text-align: left; border-radius: 20px;
+  background: rgba(32,39,34,.83); border: 1px solid rgba(255,255,255,.16);
+  padding: clamp(14px,2.5vw,25px);
+}
+.intro.hero .countdown-race strong { color: var(--landing-cream); font-size: clamp(1.5rem,3vw,2.4rem); }
+.intro.hero .countdown-race .mono { color: #dadfd9; }
+.intro.hero .landing-benefits { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .65rem; }
+.intro.hero .landing-benefits span {
+  display: grid; place-items: center; text-align: center; min-width: 0;
+  min-height: 72px; padding: 12px 9px; border: 1px solid #343839;
+  border-radius: 16px; background: #242628; color: var(--landing-cream);
+  font-size: clamp(.72rem,1.3vw,.94rem); line-height: 1.3; font-weight: 600;
+}
+.intro.hero .landing-benefits span::before {
+  content: '✓'; display: block; font-size: 1.15rem; font-weight: 700;
+  color: var(--landing-coral); margin-bottom: .25rem;
+}
+.intro.hero .hero-actions { margin: .25rem 0 0; display: block; }
+.intro.hero .hero-actions .button-primary {
+  display: block; width: 100%; min-height: 58px;
+  border-radius: 999px; background: var(--landing-coral); color: #151819;
+  border-color: var(--landing-coral); font-weight: 700; font-size: 1.05rem;
+}
+.intro.hero .hero-actions .button-primary:hover { background:#ff9c89; border-color:#ff9c89; color:#151819; }
+.page:has(.intro.hero) .masthead { padding-block: 12px 18px; }
+.page:has(.intro.hero) .masthead-nav > .button-quiet {
+  padding: 6px 15px; border-width: 1px; font-size: .94rem; min-height: 40px;
+}
+.page:has(.intro.hero) .landing-links { display: none; }
+@media (min-width: 68rem) {
+  .intro.hero { grid-template-columns: minmax(0,.84fr) minmax(0,1.16fr); align-items:center; }
+  .intro.hero .hero-copy { grid-column:1; grid-row:1; }
+  .intro.hero .landing-visual { grid-column:2; grid-row:1 / span 3; }
+  .intro.hero .landing-benefits { grid-column:1; grid-row:2; }
+  .intro.hero .hero-actions { grid-column:1; grid-row:3; }
+  .intro.hero .countdown { min-height: min(62vw,43rem); }
+}
+@media (max-width: 39rem) {
+  .intro.hero { padding: 17px; gap: 1.25rem; }
+  .intro.hero h1,.intro.hero h1 em { font-size: clamp(2.85rem,12vw,4.3rem); }
+  .intro.hero .countdown { min-height: clamp(20rem,113vw,35rem); }
+  .intro.hero .countdown-ring { width: 38%; }
+  .intro.hero .landing-benefits span { min-height: 68px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .intro.hero .countdown-fill { animation:none !important; }
+  .intro.hero .hero-actions .button-primary { transition:none !important; }
+}

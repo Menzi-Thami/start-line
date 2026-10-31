@@ -99,7 +99,7 @@ body { margin: 0; padding-top: 0.02px; }
 /* Photo card: the runner in black and white, toned with the card colour (multiply), and the countdown in a frosted
  * card on top. Review renders hotlink the Unsplash photo; the real build self-hosts it (CSP is img-src 'self'). */
 .countdown {
-  background: var(--accent) url('https://images.unsplash.com/photo-1726195221766-e4594ff9d025?w=900&q=70') center 30% / cover no-repeat !important;
+  background: var(--accent) url('/landing/runner.webp') 40% 72% / cover no-repeat !important;
   background-blend-mode: multiply; min-height: 30rem; padding: 0; align-content: end;
 }
 .countdown-ring {
@@ -115,4 +115,9 @@ body { margin: 0; padding-top: 0.02px; }
   .countdown { min-height: 28rem; }
   .countdown-ring { right: 12px; top: 64px; width: 8rem; }
 }
-:root { --accent: #b4c7a8; } .countdown::after { background-color: #fff; }
+
+:root { --accent: #b4c7a8; }
+/* Review 2: crop onto the runner (the sign and its phone number stay out of frame) and a lighter sage tint. */
+.countdown { background-size: auto 150% !important; background-position: 42% 92% !important; background-blend-mode: luminosity !important; }
+@media (max-width: 47.99rem) { .countdown { background-size: auto 165% !important; background-position: 40% 95% !important; } }
+.countdown::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Crect width='22' height='22' rx='6' fill='%23111111'/%3E%3Cpath d='M6 11.5l3.2 3L16 8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }

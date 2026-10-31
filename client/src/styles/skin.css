@@ -44,8 +44,13 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .home-tile-value { font-size: clamp(2.2rem, 3.4vw, 3.4rem); }
 .home-countdown > .mono { color: var(--ink); font-size: clamp(3.4rem, 2.4rem + 4vw, 6rem); }
 
-/* Masthead: a quiet bar inside the frame; on the landing page, centred links and an outlined Sign in pill. */
-.masthead { display: flex; align-items: center; background: var(--paper); border-bottom: 0; box-shadow: none; padding-block: 28px; }
+/* Masthead: a quiet bar inside the frame; on the landing page, centred links and an outlined Sign in pill.
+ * Its paper bleeds sideways across the frame's gutters (clipped top and bottom, so no shadow shows), or the full-bleed
+ * ticker scrolling under it would show beside it. */
+.masthead {
+  display: flex; align-items: center; background: var(--paper); border-bottom: 0; padding-block: 28px;
+  box-shadow: 0 0 0 100vmax var(--paper); clip-path: inset(0 -100vmax);
+}
 .masthead::after { content: none; }
 .wordmark { font-family: var(--font-body); font-stretch: 100%; font-weight: 700; letter-spacing: -0.02em; text-transform: none; }
 .wordmark-accent { color: var(--ink); }

@@ -7,7 +7,7 @@
   width: 100%;
   height: 3px;
   background: linear-gradient(90deg, var(--accent), var(--accent-strong) 65%, var(--coral));
-  box-shadow: 0 0 16px rgba(215, 255, 62, 0.4);
+  box-shadow: 0 0 16px rgba(255, 105, 74, 0.4);
   transform: scaleX(0);
   transform-origin: left center;
   opacity: 0;
@@ -55,7 +55,7 @@
 
 /* Both touch selection and keyboard exploration leave a legible marker on the training chart. */
 .volume-plot:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 8px; }
-.volume-week.is-selected .volume-bar { filter: brightness(1.2); box-shadow: 0 0 18px rgba(215, 255, 62, 0.3); }
+.volume-week.is-selected .volume-bar { filter: brightness(1.2); box-shadow: 0 0 18px rgba(255, 105, 74, 0.3); }
 .volume-week { cursor: crosshair; }
 
 /* Tablet and desktop are first-class canvases: cards breathe, data can sit side by side. */
@@ -108,7 +108,7 @@
   .home-tile:hover,
   .overview-card:hover,
   .week-glance:hover {
-    border-color: rgba(215, 255, 62, 0.28);
+    border-color: rgba(255, 105, 74, 0.28);
     box-shadow: 0 16px 38px rgba(0, 0, 0, 0.17), inset 0 1px rgba(255, 255, 255, 0.055);
     transform: translateY(-3px);
   }
@@ -301,7 +301,7 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .home-chart-detail { min-height: 3em; margin-block: var(--space-3); font-size: var(--text-sm); color: var(--ink-2); }
 .home-top { align-items: start; }
 .home-panel { padding-top: var(--space-3); }
-.home-today { border-color: rgba(215, 255, 62, 0.35); background: linear-gradient(140deg, var(--accent-soft), transparent 65%), var(--glass); }
+.home-today { border-color: rgba(255, 105, 74, 0.35); background: linear-gradient(140deg, var(--accent-soft), transparent 65%), var(--glass); }
 .home-today-run { width: 100%; }
 .home-workout-facts { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); margin: var(--space-3) 0; }
 .home-workout-facts dt { font-size: var(--text-xs); color: var(--muted); margin-bottom: var(--space-1); }

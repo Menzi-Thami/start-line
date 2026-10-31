@@ -1,0 +1,14 @@
+{
+  "name": "taperday-launch-film",
+  "private": true,
+  "description": "Renders the Taperday launch film. Playwright and the fonts come from client/node_modules; this only adds ffmpeg.",
+  "type": "module",
+  "scripts": {
+    "capture": "node capture-screens.mjs",
+    "sheet": "node render.mjs --sheet",
+    "render": "node render.mjs --film && node render.mjs --poster --loop"
+  },
+  "devDependencies": {
+    "@ffmpeg-installer/ffmpeg": "1.1.0"
+  }
+}

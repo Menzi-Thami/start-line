@@ -21,8 +21,12 @@ for (const [label, hex] of Object.entries(accents)) for (const s of screens) for
   await page.goto(base + s.url, { waitUntil: 'networkidle' })
   if (s.wait) await page.locator(s.wait).first().waitFor({ timeout: 20000 }).catch(() => {})
   const p = palettes[label]
+  if (p.css) await page.addStyleTag({ path: new URL(p.css, 'file:///' + process.argv[3]).pathname.slice(1) })
+  else {
   const bleed = c => `background:${c};box-shadow:0 0 0 100vmax ${c};clip-path:inset(0 -100vmax)`
   await page.addStyleTag({ content: `:root{--paper:${p.bg};--surface:#ffffff;--surface-sunk:color-mix(in srgb,${p.ink} 8%,#fff);--ink:${p.ink};--accent:${p.accent};--on-accent:${p.onAccent};--accent-strong:color-mix(in srgb,${p.accent} 80%,#000)} body{background:${p.bg}} .masthead{${bleed(p.mast)};border-bottom-color:${p.ink}} .masthead *{color:${p.mastInk}} .intro.hero{${bleed(p.hero)};padding-block:2rem} .intro.hero h1,.intro.hero h1 em,.intro.hero p{color:${p.heroInk}} .countdown,.home-race-card{background:var(--pin-holes),${p.bib}!important} .ticker{background:${p.banner};color:${p.bannerInk}} .panel.home-card.home-today{background:${p.today}!important} .panel.home-card.home-week{background:${p.week}!important} *{animation:none!important;transition:none!important}` })
+  }
+  await page.addStyleTag({ content: `*{animation:none!important;transition:none!important}` })
   await page.evaluate(() => document.fonts.ready)
   await page.waitForTimeout(400)
   const file = `${out}/${label}-${s.name}-${z.w}.png`

@@ -88,6 +88,10 @@ const landing = await page.evaluate(() => {
 writeFileSync(`${out}/landing.json`, JSON.stringify({ today: TODAY.slice(0, 10), ...landing }, null, 2) + '\n')
 console.log('landing', landing)
 
+// The race-name ticker sits above the builder, off these shots, but at 390px its text peeks past the sticky masthead's
+// right edge as the page scrolls (an app bug, reported separately), so it's hidden from here on. Layout doesn't change.
+await page.addStyleTag({ content: '.ticker{visibility:hidden!important}' })
+
 // The builder, one question at a time: Thami's own race.
 await page.getByRole('radio', { name: /Another race/ }).check({ force: true })
 await page.getByRole('group', { name: /distance/i }).getByText('Half', { exact: true }).click()

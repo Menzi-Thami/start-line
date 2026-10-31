@@ -3,6 +3,7 @@
 //   node marketing/launch-film/render.mjs --poster          poster PNGs
 //   node marketing/launch-film/render.mjs --film [v|w]      the MP4s (needs ffmpeg: see README.md)
 //   node marketing/launch-film/render.mjs --loop            last and first frames side by side
+//   node marketing/launch-film/render.mjs --at 6.4,7.4      full-size stills into stills/, for a closer look
 // The page is served from the repo root so it can use the app's own fonts and photo.
 import { createServer } from 'node:http'
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
@@ -15,7 +16,7 @@ const root = resolve(here, '../..')
 const { chromium } = await import(pathToFileURL(resolve(root, 'client/node_modules/@playwright/test/index.mjs')).href)
 const args = process.argv.slice(2)
 const FORMATS = { v: { width: 1080, height: 1920 }, w: { width: 1920, height: 1080 } }
-const SHEET_TIMES = [0.6, 2.0, 3.6, 5.4, 6.4, 7.4, 8.2, 9.7, 11.0, 12.6, 13.8, 15.6, 16.9]
+const SHEET_TIMES = [0.6, 2.2, 3.5, 5.0, 6.0, 7.0, 7.9, 9.3, 10.6, 12.2, 13.6, 15.6, 16.9]
 const POSTER_T = 2.2
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2' }
@@ -65,6 +66,17 @@ if (args.includes('--sheet')) {
   console.log('contact-sheet.png')
 }
 
+const atAt = args.indexOf('--at')
+if (atAt !== -1) {
+  await mkdir(resolve(here, 'stills'), { recursive: true })
+  for (const format of ['v', 'w']) {
+    const page = await open(format)
+    for (const t of args[atAt + 1].split(',').map(Number)) await writeFile(resolve(here, `stills/${format}-${t.toFixed(2)}.png`), await still(page, t))
+    await page.close()
+  }
+  console.log('stills/')
+}
+
 if (args.includes('--poster')) {
   for (const format of ['v', 'w']) {
     const page = await open(format)
@@ -94,7 +106,8 @@ if (args.includes('--loop')) {
 const filmAt = args.indexOf('--film')
 if (filmAt !== -1) {
   const only = args[filmAt + 1]
-  const ffmpeg = process.env.FFMPEG ?? (await import(pathToFileURL(resolve(here, 'node_modules/ffmpeg-static/index.js')).href).catch(() => ({ default: 'ffmpeg' }))).default
+  // FFMPEG overrides; otherwise the film folder's own ffmpeg (npm install here), then one on the PATH.
+  const ffmpeg = process.env.FFMPEG ?? (await import('@ffmpeg-installer/ffmpeg').then((m) => m.default.path).catch(() => 'ffmpeg'))
   for (const format of only in FORMATS ? [only] : ['v', 'w']) {
     const page = await open(format)
     const fps = await page.evaluate(() => window.FPS), frames = (await page.evaluate(() => window.DURATION)) * fps

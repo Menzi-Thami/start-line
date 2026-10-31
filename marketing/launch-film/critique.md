@@ -18,3 +18,17 @@ Each round renders `contact-sheet.png` (`node marketing/launch-film/render.mjs -
   - Wide still leans left in the hook, where the card sits alone in a wide frame.
   - The problem beat's three seconds of type may feel long once it's in motion.
   - At 6.4 s the scroll-progress line shows at the top of the phone (it's the app's own, but it reads as a stray mark).
+
+## Round 4: about 8/10 (after Thami's go-ahead for the full render)
+1. **The wide hook left the card alone in a wide frame.** *Fixed:* the card moves right and the landing page's own proof line ("Plans for Two Oceans Ultra, Cape Town Marathon and 2 more / or any race you name", with its runner mark) springs in beside it. In vertical, the line sits under the card.
+2. **The problem beat dragged.** *Fixed:* it's 0.4 s shorter (3.0–5.6 s), and the plan proof gets the time. The new timings live in `film.html`; `shotlist.md` keeps the gate 1 plan.
+3. **A stray "e" sat in the phone's top-right corner.** It isn't the progress line: it's the landing page's race-name ticker ("Cape Town Marathon · 42.2 km") peeking past the right edge of the sticky masthead as the page scrolls. That's a real app bug at 390 px, and it's reported for the race-signal branch. *Fixed:* the builder captures hide the ticker, which is off-screen in those shots anyway. Layout is unchanged.
+
+## Round 5: about 8.5/10 (poster and MP4 frames)
+1. **The proof line orphaned "more" in wide.** *Fixed:* it now uses balanced wrapping.
+2. **"DAYS TO GO" was clipped against the ring.** The landing page clips it the same way at 1440 px, so that's another small app bug. *Fixed in the film:* the label's letter spacing goes from .12em to .06em, and the size from 11.2 px to 10.4 px.
+3. **MP4 frames checked:** one per second of each encoded file, against the composition. They match. The loop check shows frame 539 identical to frame 0.
+
+## Known and kept
+- **The yellow note on the plan** ("More than 16 weeks of structured training rarely helps…") is real: the Hoka Half is 17 weeks out from 1 November. It stays.
+- **The frosted race card's blur stops at the photo's edge.** The landing card does the same.

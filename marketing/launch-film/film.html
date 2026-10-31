@@ -39,7 +39,8 @@
   .ring .track { stroke: rgba(0, 0, 0, .1); } .ring .fill { stroke: var(--ink); stroke-linecap: round; }
   .ring .num { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
   .ring .num span { font-family: var(--display); font-size: 41.6px; line-height: 1; }
-  .ring .num small { font-size: 11.2px; font-weight: 500; letter-spacing: .12em; color: #333; }
+  /* Tighter than the landing (.12em), which clips "GO" against the ring at this size. */
+  .ring .num small { font-size: 10.4px; font-weight: 500; letter-spacing: .06em; color: #333; }
   .race { position: absolute; right: -36px; bottom: 28px; display: grid; gap: 2px; padding: 18px 22px; border-radius: 22px; background: var(--glass);
     border: 1px solid rgba(255, 255, 255, .8); backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, .12); }
   .race strong { font-family: var(--display); font-weight: 400; font-size: 25.6px; line-height: 1.1; }
@@ -49,6 +50,10 @@
   .chip i { position: absolute; left: 14px; top: 50%; width: 22px; height: 22px; margin-top: -11px; border-radius: 6px; background: var(--ink); }
   .chip i::after { content: ''; position: absolute; left: 7px; top: 4px; width: 6px; height: 10px; border: solid #fff; border-width: 0 2.2px 2.2px 0; transform: rotate(45deg); }
 
+  /* The proof line above the landing headline (skin.css .hero-proof). */
+  #hookProof { display: flex; align-items: center; gap: .6em; line-height: 1.3; color: #1d1d1d; transform-origin: 0 50%; }
+  #hookProof strong { display: block; font-weight: 600; text-wrap: balance; } #hookProof small { font-size: .8em; }
+  #hookProof .mark { flex: none; width: 1.9em; height: 1.9em; border-radius: 50%; background: var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13.5 4.5a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM9 20l2.2-6.2-2.4-2.3 1.5-3.5 3.3 1.2 2 2.8h2.6M11.2 13.8l2.6 1.8V20' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 55% no-repeat; }
   .type { font-family: var(--display); font-weight: 400; line-height: .98; letter-spacing: -0.01em; }
   .type > div { will-change: transform, opacity; }
   .rule { height: 3px; background: var(--ink); transform-origin: 0 50%; }
@@ -77,6 +82,7 @@
       <div class="num"><span id="days"></span><small id="daysLabel"></small></div></div>
     <div class="race" id="race"><strong id="raceName"></strong><span id="raceMeta"></span></div>
   </div></div>
+  <div class="layer" id="hookProof"><span class="mark"></span><span><strong id="proofLine"></strong><small id="proofSmall"></small></span></div>
 
   <!-- 2. Problem -->
   <div class="layer type" id="problem">
@@ -124,7 +130,8 @@ const W = format === 'w' ? 1920 : 1080, H = format === 'w' ? 1080 : 1920
 // Layout per format. Everything else is shared.
 const L = format === 'w' ? {
   inset: 24, logo: [84, 70, 40],
-  card: { x: 960, y: 560, s: 1.5 },
+  card: { x: 1250, y: 560, s: 1.5 },
+  hookProof: { x: 200, y: 450, w: 760, size: 46 },
   problem: { x: 170, y: 0, w: 1500, size: 124 },
   phone: { x: 1170, y: 86, w: 420, h: 909 },
   ask: { x: 330, y: 330, w: 760, size: 112 },
@@ -132,7 +139,8 @@ const L = format === 'w' ? {
   close: { x: 170, y: 0, w: 1400, size: 150, cta: 36, url: 30 },
 } : {
   inset: 24, logo: [84, 96, 52],
-  card: { x: 540, y: 980, s: 2.05 },
+  card: { x: 540, y: 880, s: 2.05 },
+  hookProof: { x: 96, y: 1500, w: 890, size: 38 },
   problem: { x: 96, y: 0, w: 890, size: 150 },
   phone: { x: 260, y: 590, w: 560, h: 1212 },
   ask: { x: 96, y: 210, w: 890, size: 104 },
@@ -147,6 +155,7 @@ Object.assign($('frame').style, { left: L.inset + 'px', top: L.inset + 'px', wid
 Object.assign($('logo').style, { left: L.logo[0] + 'px', top: L.logo[1] + 'px', fontSize: L.logo[2] + 'px', transformOrigin: '0 0' })
 
 const place = (el, box, extra = {}) => Object.assign(el.style, { left: box.x + 'px', top: box.y + 'px', width: box.w ? box.w + 'px' : '', ...extra })
+place($('hookProof'), L.hookProof, { fontSize: L.hookProof.size + 'px' })
 place($('problem'), L.problem, { fontSize: L.problem.size + 'px', transformOrigin: '0 0' })
 place($('ask'), L.ask, { fontSize: L.ask.size + 'px', transformOrigin: '0 0' })
 place($('proof'), L.proof, { transformOrigin: '0 0' })
@@ -173,6 +182,8 @@ $('days').textContent = landing.days
 $('daysLabel').textContent = landing.daysLabel
 $('raceName').textContent = landing.race
 $('raceMeta').textContent = landing.raceMeta
+$('proofLine').textContent = landing.proof
+$('proofSmall').textContent = landing.proofSmall
 const RING = 2 * Math.PI * 88
 $('ringFill').style.strokeDasharray = RING
 const words = landing.headline.split(' ')
@@ -213,77 +224,79 @@ function seek(t) {
     set($('race'), { y: (1 - rc) * 60, o: fadeIn(t, 0.9, 0.25) })
     const ch = inAt(t, 1.3, 260, 22)
     set($('chip'), { s: 0.8 + 0.2 * ch, o: fadeIn(t, 1.3, 0.2) })
+    const pr = inAt(t, 1.55, 180, 24)
+    set($('hookProof'), { y: (1 - pr) * 30 - exit * H * 0.9, o: fadeIn(t, 1.55, 0.3) })
   }
 
-  // 2. Problem, 3–6 s: type only.
+  // 2. Problem, 3–5.6 s: type only.
   {
     const lines = [...$('problem').children].slice(0, 3)
-    const cues = [3.15, 3.95, 4.55]
-    const dim = ramp(t, 5.25, 5.6)
+    const cues = [3.1, 3.7, 4.2]
+    const dim = ramp(t, 4.75, 5.1)
     lines.forEach((line, i) => {
       const p = inAt(t, cues[i], 180, 24)
       set(line, { y: (1 - p) * 40, o: fadeIn(t, cues[i]) * (i === 0 ? 1 - 0.65 * dim : 1) })
     })
-    $('rule').style.transform = `scaleX(${easeInOut(ramp(t, 5.1, 5.6))})`
-    const out = ramp(t, 5.75, 6.1)
+    $('rule').style.transform = `scaleX(${easeInOut(ramp(t, 4.6, 5.05))})`
+    const out = ramp(t, 5.3, 5.65)
     set($('problem'), { y: -60 * ease(out), o: t < 3 ? 0 : 1 - out })
   }
 
-  // 3. Reveal, 6–10.5 s: the real builder, one question at a time.
+  // 3. Reveal, 5.6–10.1 s: the real builder, one question at a time.
   const phone = $('phone')
   {
-    const up = inAt(t, 6.0, 140, 20)
+    const up = inAt(t, 5.6, 140, 20)
     const down = inAt(t, 14.9, 120, 22)
     const push = 1 + 0.035 * ease(ramp(t, 13.2, 15))
-    set(phone, { y: (1 - up) * H * 0.75 + down * H, s: push, o: t < 5.95 ? 0 : 1 })
+    set(phone, { y: (1 - up) * H * 0.75 + down * H, s: push, o: t < 5.55 ? 0 : 1 })
 
     const a = anchors['builder-race']
     // From the question under the masthead (as the app scrolls to it) down to the filled-in Another race fields.
     const viewH = L.phone.h / zoom
-    const scroll = lerp(a.title - a.masthead - 8, Math.min(a.other - a.masthead - 8, a.nav + navH - viewH), easeInOut(ramp(t, 6.55, 7.25)))
+    const scroll = lerp(a.title - a.masthead - 8, Math.min(a.other - a.masthead - 8, a.nav + navH - viewH), easeInOut(ramp(t, 6.15, 6.85)))
     $('raceScroll').style.transform = `translateY(${-scroll * zoom}px)`
     // The app keeps its masthead and button bar stuck to the screen edges; the bar sits in the flow once it's reached.
     $('raceNav').style.transform = `translateY(${Math.min(viewH - navH, a.nav - scroll) * zoom}px)`
     // Each screen pushes the one before it off to the left.
     const pushIn = (cue) => inAt(t, cue, 200, 26)
-    const toDays = pushIn(7.55), toCheck = pushIn(8.75), toPlan = pushIn(10.1)
+    const toDays = pushIn(7.15), toCheck = pushIn(8.35), toPlan = pushIn(9.7)
     const pw = L.phone.w
     set(sheets['builder-race'], { x: -toDays * pw * 0.3, o: 1 - 0.6 * toDays })
-    set(sheets['builder-days'], { x: (1 - toDays) * pw - toCheck * pw * 0.3, o: t < 7.5 ? 0 : 1 - 0.6 * toCheck })
-    set(sheets['builder-check'], { x: (1 - toCheck) * pw - toPlan * pw * 0.3, o: t < 8.7 ? 0 : 1 - 0.6 * toPlan })
+    set(sheets['builder-days'], { x: (1 - toDays) * pw - toCheck * pw * 0.3, o: t < 7.1 ? 0 : 1 - 0.6 * toCheck })
+    set(sheets['builder-check'], { x: (1 - toCheck) * pw - toPlan * pw * 0.3, o: t < 8.3 ? 0 : 1 - 0.6 * toPlan })
 
     // A tap on "Build my plan" (where the app draws it: about 273, 806 in its CSS pixels).
-    const tp = ramp(t, 9.45, 9.95)
+    const tp = ramp(t, 9.05, 9.55)
     set(tap, { x: 273 * zoom - 28 * zoom, y: 806 * zoom - 28 * zoom, s: 0.6 + 0.6 * ease(tp), o: tp > 0 && tp < 1 ? Math.sin(Math.PI * tp) : 0 })
 
-    // 4. Proof, 10.5–15 s: the plan, then its calendar, scrolled to the same tabs.
+    // 4. Proof, 10.1–15 s: the plan, then its calendar, scrolled to the same tabs.
     const w = anchors['plan-week']
-    const planScroll = lerp(0, w.tabs - 12, easeInOut(ramp(t, 11.3, 12.3)))
-    const cal = ramp(t, 12.9, 13.15)
-    set(sheets['plan-week'], { x: (1 - toPlan) * pw, y: -planScroll * zoom, o: t < 10.05 ? 0 : 1 })
+    const planScroll = lerp(0, w.tabs - 12, easeInOut(ramp(t, 10.9, 11.9)))
+    const cal = ramp(t, 12.6, 12.85)
+    set(sheets['plan-week'], { x: (1 - toPlan) * pw, y: -planScroll * zoom, o: t < 9.65 ? 0 : 1 })
     set(sheets['plan-calendar'], { x: (1 - toPlan) * pw, y: -planScroll * zoom, o: cal })
   }
   {
     const lines = [...$('ask').children]
-    const cues = [6.25, 7.65, 8.85]
+    const cues = [5.85, 7.25, 8.45]
     lines.forEach((line, i) => {
       const p = inAt(t, cues[i], 180, 24)
       const next = i < 2 ? ramp(t, cues[i + 1], cues[i + 1] + 0.3) : 0
       set(line, { y: (1 - p) * 36, o: fadeIn(t, cues[i]) * (1 - 0.65 * next) })
     })
-    const out = ramp(t, 10.15, 10.45)
-    set($('ask'), { y: -50 * ease(out), o: t < 6.2 ? 0 : 1 - out })
+    const out = ramp(t, 9.75, 10.05)
+    set($('ask'), { y: -50 * ease(out), o: t < 5.8 ? 0 : 1 - out })
   }
   {
     const head = [...$('proofHead').children]
     head.forEach((line, i) => {
-      const p = inAt(t, 10.55 + i * 0.35, 180, 24)
-      set(line, { y: (1 - p) * 36, o: fadeIn(t, 10.55 + i * 0.35) })
+      const p = inAt(t, 10.15 + i * 0.35, 180, 24)
+      set(line, { y: (1 - p) * 36, o: fadeIn(t, 10.15 + i * 0.35) })
     })
-    const sp = inAt(t, 11.4, 180, 26)
-    set($('proofSub'), { y: (1 - sp) * 24, o: fadeIn(t, 11.4, 0.4) })
+    const sp = inAt(t, 11.0, 180, 26)
+    set($('proofSub'), { y: (1 - sp) * 24, o: fadeIn(t, 11.0, 0.4) })
     const out = ramp(t, 14.75, 15.1)
-    set($('proof'), { y: -50 * ease(out), o: t < 10.5 ? 0 : 1 - out })
+    set($('proof'), { y: -50 * ease(out), o: t < 10.1 ? 0 : 1 - out })
   }
 
   // 5. Close, 15–18 s: the landing headline and its button, then back to the empty frame for the loop.

@@ -127,14 +127,21 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .hero-actions .button-primary { padding: 16px 28px; font-weight: 600; }
 .hero-link { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
 
-/* The runner card: the photo toned sage, the real countdown and race in frosted cards over it. */
+/* The runner card: the photo toned sage, the real countdown and race in frosted cards over it.
+ * Photo: April Laugh on Unsplash (unsplash.com/photos/Zl4mBgNZEAk), free under the Unsplash License. */
 .countdown {
   position: relative; overflow: visible; border: 0; border-radius: 32px; box-shadow: none; transform: none;
   padding: 0; min-height: 30rem; max-width: 22rem; align-content: end;
-  background: var(--sage) url('/landing/runner.webp') 42% 92% / auto 150% no-repeat;
-  background-blend-mode: luminosity;
+  background: var(--sage);
+  isolation: isolate;
 }
-.countdown::before { content: none; }
+/* The photo in black and white, multiplied into the sage, so the card stays one colour whatever the runner wears. */
+.countdown::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit;
+  background: url('/landing/runner.webp') 50% 30% / cover no-repeat;
+  filter: grayscale(1) contrast(1.05);
+  mix-blend-mode: multiply;
+}
 .countdown-ring {
   position: absolute; right: -40px; top: 40px; width: 9.5rem; height: auto; padding: 14px;
   border-radius: 22px; background: var(--glass); border: 1px solid var(--frost-edge);
@@ -143,7 +150,7 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .countdown-track { stroke: rgba(0, 0, 0, 0.1); }
 .countdown-fill { stroke: var(--ink); filter: none; }
 .countdown-number span { font-family: var(--font-display); font-weight: 400; color: var(--ink); font-size: 2.6rem; }
-.countdown-number small { font-family: var(--font-body); color: var(--ink-2); font-size: 0.7rem; font-weight: 500; }
+.countdown-number small { font-family: var(--font-body); color: var(--ink-2); font-size: 0.62rem; font-weight: 500; letter-spacing: 0; }
 .countdown-race {
   position: absolute; right: -36px; bottom: 28px; text-align: left; justify-items: start;
   padding: 18px 22px; border-radius: 22px; background: var(--glass); border: 1px solid var(--frost-edge);
@@ -183,8 +190,8 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 /* Below desktop the hero stacks: the runner card spans the width with its frosted cards inside it. */
 @media (max-width: 63.99rem) {
   .intro.hero { flex-direction: column; align-items: stretch; }
-  .countdown { min-height: 28rem; max-width: none; width: 100%; background-size: auto 165%; background-position: 40% 95%; }
-  .countdown-ring { right: 12px; top: 64px; width: 8rem; }
+  .countdown { min-height: 28rem; max-width: none; width: 100%; }
+  .countdown-ring { right: 12px; top: 64px; width: 9rem; }
   .countdown-race { right: 16px; left: 16px; bottom: 16px; }
   .countdown::after { left: 12px; top: 14px; }
 }

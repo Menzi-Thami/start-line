@@ -31,8 +31,12 @@ Each round renders `contact-sheet.png` (`node marketing/launch-film/render.mjs -
 
 ## Round 6: the app bugs, fixed at the source
 - **The ticker peeking past the masthead.** Frame's `skin.css` had set `.masthead { box-shadow: none }`, which dropped the paper bleed that covers the frame's gutters. The masthead now bleeds its paper sideways only (`box-shadow: 0 0 0 100vmax var(--paper)` with `clip-path: inset(0 -100vmax)`), so the full-bleed ticker can't show beside it. Checked at 320, 390, 768, 1024 and 1440 px. The film no longer hides the ticker, and it pins the masthead as the full-width band the app shows.
-- **"DAYS TO GO" in the countdown ring.** Measured as the hole's width at the label's cap height, not the ring's diameter, the label was 80 px against 57–65 px of room below 1024 px. It's now 0.62rem with .06em spacing. On phones the ring is 9rem (was 8rem), the number 2.2rem (was 2.6rem) and the spacing .04em. The label is now 63–65 px against 67–69 px of room at every width. The film's ring mirrors the new CSS exactly.
+- **"DAYS TO GO" in the countdown ring.** Measured as the hole's width at the label's cap height, not the ring's diameter, the label was 80 px against 57–65 px of room below 1024 px. Main fixed this alongside the new photo (#133): 0.62rem with no letter spacing, and a 9rem phone ring. Re-measured with Instrument Sans loaded, the label is 59 px against 62 px of room on phones and 69 px on desktop. It clears the arc, so this branch keeps main's fix and adds nothing. The film's ring mirrors it.
 - **A sub-pixel sliver of page under the pinned button bar.** *Fixed:* the bar is seated 3 px lower, into its own padding.
+
+## Round 7: the new landing photo (#133)
+- **The card:** the film's runner card now mirrors the landing's new treatment. That's April Laugh's Unsplash photo in black and white, multiplied into the sage (`50% 30% / cover`), in place of the earlier photo toned with `luminosity`.
+- **The chip sat over the runner's face.** At desktop proportions, the "Built around your week" chip covered the runner's forehead, on the live landing as well as in the film. *Fixed at Thami's request:* it now straddles the card's top edge as a tab (`top: -22px`) on the landing and in the film. Phones keep it inside the card's top-left corner, above her head.
 
 ## Checked and kept, by design
 - **The yellow note on the plan** ("More than 16 weeks of structured training rarely helps…") is real product behaviour: the Hoka Half is 17 weeks out from 1 November. It stays.

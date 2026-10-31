@@ -163,9 +163,10 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 }
 .countdown-race strong { font-family: var(--font-display); font-weight: 400; text-transform: none; font-size: 1.6rem; color: var(--ink); }
 .countdown-race .mono { color: var(--ink-2); text-transform: none; }
-/* What the plan does, as a ticked pill. Decorative: the lede says the same in words. */
+/* What the plan does, as a ticked pill. Decorative: the lede says the same in words. It straddles the card's top edge,
+ * clear of the runner's face. */
 .countdown::after {
-  content: 'Built around your week'; position: absolute; left: -64px; top: 64px; white-space: nowrap;
+  content: 'Built around your week'; position: absolute; left: -64px; top: -22px; white-space: nowrap;
   padding: 12px 18px 12px 46px; border-radius: 999px; color: var(--ink); font: 500 0.95rem/1 var(--font-body);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Crect width='22' height='22' rx='6' fill='%23111111'/%3E%3Cpath d='M6 11.5l3.2 3L16 8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 14px center no-repeat;

@@ -21,7 +21,7 @@ An 18-second launch film for Taperday in the Frame look, rendered from code. It 
   - Scroll anchors, written to `anchors.json`.
 
   The browser clock is pinned to 1 November 2026, so every number is what the app shows on that day.
-- **`render.mjs`** serves the repo root, so the film uses the app's own fonts (Instrument Serif and Instrument Sans, from Fontsource, under the OFL) and photo (`client/public/landing/runner.webp`). It opens the page in Playwright, captures each frame with `seek(i / 30)` and pipes the PNGs to ffmpeg.
+- **`render.mjs`** serves the repo root, so the film uses the app's own fonts (Instrument Serif and Instrument Sans, from Fontsource, under the OFL) and photo (`client/public/landing/runner.webp`: April Laugh on Unsplash, free under the Unsplash License, in black and white on the sage card, as the landing shows it since #133). It opens the page in Playwright, captures each frame with `seek(i / 30)` and pipes the PNGs to ffmpeg.
 
 Nothing on screen is invented. One adjustment is disclosed: while the race step scrolls, the builder's sticky masthead band and button bar are captured separately and pinned to the phone's edges, where the app keeps them. The film's runner card mirrors the landing CSS (`skin.css`). The two app bugs the film once worked around (see `critique.md`) are fixed in the app itself, so the film has no workarounds left.
 

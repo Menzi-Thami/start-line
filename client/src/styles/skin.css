@@ -88,7 +88,6 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
   color: var(--paper);
   box-shadow: none;
 }
-:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .scroll-progress { background: var(--sage); box-shadow: none; }
 
 /* Landing hero: a grey-gradient panel, the serif headline, and the runner card with frosted cards over it. */
@@ -206,3 +205,31 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .race-day-confetti i { background: var(--sage); }
 .race-day-confetti i:nth-child(3n) { background: var(--ink); }
 .race-day-confetti i:nth-child(3n + 1) { background: var(--accent); }
+
+/* Headings take focus only to move the reader (after a step or a route change): no ring on them. */
+:is(h1, h2, h3, [tabindex='-1']):focus-visible { outline: none; box-shadow: none; }
+
+/* Plan tabs: a frosted white pill that stays in reach while scrolling. */
+.tabs {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.tabs .tab { color: var(--muted); }
+.tabs .tab[aria-selected='true'] { color: var(--paper); }
+
+/* Phone tab bar: frosted white, ink icons, a soft sage pill under the current page. */
+.tab-bar {
+  background: rgba(255, 255, 255, 0.92);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.tab-bar-indicator { background: var(--accent-soft); border: 0; border-radius: 999px; }
+.tab-bar-item { color: var(--muted); }
+.tab-bar-item[aria-current='page'] { color: var(--ink); }
+.tab-bar-item[aria-current='page'] svg { color: var(--ink); }

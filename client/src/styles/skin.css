@@ -52,7 +52,7 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .masthead-nav { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
 .landing-links { margin-inline: auto; display: flex; gap: 8px; align-items: center; }
 .landing-links .nav-link { font-weight: 500; color: var(--ink); background: none; text-decoration: none; }
-.landing-links .nav-link + .nav-link::before { content: '.'; margin-right: 8px; color: #999999; }
+.landing-links .nav-link + .nav-link::before { content: '.'; margin-right: 8px; color: var(--muted); }
 .masthead-nav > .button-quiet { border: 1.5px solid var(--ink); border-radius: 999px; padding: 12px 22px; background: var(--paper); color: var(--ink); font-weight: 600; }
 
 /* Cards: soft grey panels with no borders; the Today card is the sage field. */
@@ -62,8 +62,9 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
   border-radius: var(--radius-md);
   box-shadow: none;
 }
-.panel.home-card.home-today { background: var(--sage); }
-.panel.home-card.home-today :is(.mono, a, .link-button, small, p, span):not(.button):not(.button *) { color: var(--ink); }
+.panel.home-card.home-today { background: var(--sage); color: var(--on-sage); }
+.panel.home-card.home-today :is(h2, h3, .mono, a, .link-button, small, p, span, strong, .home-today-title):not(.button):not(.button *) { color: var(--on-sage); }
+.panel.home-card.home-today .button-primary { background: var(--on-sage); border-color: var(--on-sage); color: #ffffff; }
 .home-race-card::before, .home-race-card::after { content: none; }
 
 /* Data: ink and greys, sage for progress. */
@@ -79,7 +80,7 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 /* Buttons and tabs: pills. */
 .button { border-radius: 999px; box-shadow: none; }
 .button-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.button-primary:hover { background: #2a2a2a; border-color: #2a2a2a; color: var(--paper); box-shadow: none; }
+.button-primary:hover { background: var(--hover-ink); border-color: var(--hover-ink); color: var(--paper); box-shadow: none; }
 :is(.nav-link, .tab, .calc-chip, .button) { transition-duration: var(--dur-base); }
 :is(.tab, .calc-chip) { border-radius: 999px; }
 :is(.tab, .calc-chip)[aria-selected='true'], .calc-chip[aria-pressed='true'] {
@@ -92,7 +93,7 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 
 /* Landing hero: a grey-gradient panel, the serif headline, and the runner card with frosted cards over it. */
 .intro.hero {
-  background: linear-gradient(180deg, #a9a9a9 0%, #d9d9d9 55%, #f4f4f4 100%);
+  background: linear-gradient(180deg, var(--hero-top) 0%, var(--hero-mid) 55%, var(--hero-end) 100%);
   border-radius: 28px;
   padding: clamp(28px, 5vw, 72px);
   gap: clamp(28px, 5vw, 64px);
@@ -110,13 +111,13 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
   font-weight: 300;
   font-size: clamp(1.1rem, 1rem + 0.5vw, 1.45rem);
   line-height: 1.5;
-  color: #1d1d1d;
-  border-block: 1px solid rgba(0, 0, 0, 0.18);
+  color: var(--ink-2);
+  border-block: 1px solid var(--line-strong);
   padding-block: 24px;
   margin-top: 28px;
   max-width: 34rem;
 }
-.hero-proof { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; font-size: 1rem; line-height: 1.35; color: #1d1d1d; }
+.hero-proof { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; font-size: 1rem; line-height: 1.35; color: var(--ink-2); }
 .hero-proof strong { font-weight: 600; font-size: 1.1rem; }
 .hero-proof-mark {
   flex: none; width: 44px; height: 44px; border-radius: 50%;
@@ -136,26 +137,26 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .countdown::before { content: none; }
 .countdown-ring {
   position: absolute; right: -40px; top: 40px; width: 9.5rem; height: auto; padding: 14px;
-  border-radius: 22px; background: var(--glass); border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 22px; background: var(--glass); border: 1px solid var(--frost-edge);
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
 }
 .countdown-track { stroke: rgba(0, 0, 0, 0.1); }
 .countdown-fill { stroke: var(--ink); filter: none; }
 .countdown-number span { font-family: var(--font-display); font-weight: 400; color: var(--ink); font-size: 2.6rem; }
-.countdown-number small { font-family: var(--font-body); color: #333333; font-size: 0.7rem; font-weight: 500; }
+.countdown-number small { font-family: var(--font-body); color: var(--ink-2); font-size: 0.7rem; font-weight: 500; }
 .countdown-race {
   position: absolute; right: -36px; bottom: 28px; text-align: left; justify-items: start;
-  padding: 18px 22px; border-radius: 22px; background: var(--glass); border: 1px solid rgba(255, 255, 255, 0.8);
+  padding: 18px 22px; border-radius: 22px; background: var(--glass); border: 1px solid var(--frost-edge);
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
 }
 .countdown-race strong { font-family: var(--font-display); font-weight: 400; text-transform: none; font-size: 1.6rem; color: var(--ink); }
-.countdown-race .mono { color: #333333; text-transform: none; }
+.countdown-race .mono { color: var(--ink-2); text-transform: none; }
 /* What the plan does, as a ticked pill. Decorative: the lede says the same in words. */
 .countdown::after {
   content: 'Built around your week'; position: absolute; left: -64px; top: 64px; white-space: nowrap;
   padding: 12px 18px 12px 46px; border-radius: 999px; color: var(--ink); font: 500 0.95rem/1 var(--font-body);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Crect width='22' height='22' rx='6' fill='%23111111'/%3E%3Cpath d='M6 11.5l3.2 3L16 8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 14px center no-repeat;
+  background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Crect width='22' height='22' rx='6' fill='%23111111'/%3E%3Cpath d='M6 11.5l3.2 3L16 8' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") 14px center no-repeat;
 }
 
 /* Race names as the logo strip. */
@@ -211,7 +212,7 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 
 /* Plan tabs: a frosted white pill that stays in reach while scrolling. */
 .tabs {
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--bar);
   border: 1px solid var(--line);
   border-radius: 999px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
@@ -223,7 +224,7 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 
 /* Phone tab bar: frosted white, ink icons, a soft sage pill under the current page. */
 .tab-bar {
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--bar);
   border-top: 1px solid var(--line);
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.06);
   backdrop-filter: blur(16px);
@@ -233,3 +234,12 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .tab-bar-item { color: var(--muted); }
 .tab-bar-item[aria-current='page'] { color: var(--ink); }
 .tab-bar-item[aria-current='page'] svg { color: var(--ink); }
+
+/* The website's light/dark switch: a quiet round button at the end of the masthead. */
+.theme-toggle {
+  flex: none; display: inline-grid; place-items: center; width: var(--tap); height: var(--tap); margin-left: 12px;
+  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--paper); color: var(--ink); cursor: pointer;
+}
+.theme-toggle:hover { background: var(--surface); }
+/* The proof mark keeps its ink disc in both themes, so the white runner stays visible. */
+.hero-proof-mark { background-color: #111111; }

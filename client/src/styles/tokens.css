@@ -20,6 +20,7 @@
   --line-strong: #c9c9c9;
 
   --sage: #b4c7a8;
+  --on-sage: #111111;
   --accent: #4f6f45;
   --accent-strong: #3d5735;
   --accent-soft: #e3ebdd;
@@ -39,6 +40,14 @@
   --effort-tempo: #7f9a73;
   --effort-interval: var(--accent);
   --effort-race: var(--ink);
+
+  /* Surfaces the skin draws directly: the hero panel, frosted cards and bars, secondary hero text. */
+  --hero-top: #a9a9a9;
+  --hero-mid: #d9d9d9;
+  --hero-end: #f4f4f4;
+  --frost-edge: rgba(255, 255, 255, 0.85);
+  --bar: rgba(255, 255, 255, 0.9);
+  --hover-ink: #2a2a2a;
 
   --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
   --font-body: 'Instrument Sans Variable', 'Segoe UI', system-ui, sans-serif;
@@ -91,6 +100,95 @@
   --ease-glide: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-fill: cubic-bezier(0.3, 0.8, 0.3, 1);
   --ease-spring: cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+/*
+ * Dark Frame, when the device asks for it and no choice was made on the website, or when the website's switch says so: a near-black page, a charcoal frame, light ink, and sage as the accent
+ * itself (light enough to read on charcoal). Sage fields keep dark text.
+ */
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --page: #0b0b0b;
+    --paper: #161616;
+    --surface: #202020;
+    --surface-sunk: #2a2a2a;
+    --glass: rgba(28, 28, 28, 0.62);
+    --ink: #f2f2f2;
+    --ink-2: #c9c9c9;
+    --muted: #9c9c9c;
+    --line: #2c2c2c;
+    --line-strong: #3d3d3d;
+
+    --accent: #b4c7a8;
+    --accent-strong: #cddbc4;
+    --accent-soft: #26301f;
+    --on-accent: #111111;
+    --violet: #9c9c9c;
+
+    --warn-bg: #2b2410;
+    --warn-ink: #f1d27a;
+    --warn-line: #6b5520;
+    --danger-ink: #ff8a80;
+
+    --effort-recovery: #3a3a3a;
+    --effort-easy: #555555;
+    --effort-long: #7f9a73;
+    --effort-tempo: #9fb592;
+    --effort-interval: var(--sage);
+    --effort-race: var(--ink);
+
+    --hero-top: #2e2e2e;
+    --hero-mid: #1f1f1f;
+    --hero-end: #171717;
+    --frost-edge: rgba(255, 255, 255, 0.12);
+    --bar: rgba(22, 22, 22, 0.92);
+    --hover-ink: #d9d9d9;
+  }
+}
+
+/* The website's switch (src/lib/theme.ts) can choose dark on any device. */
+@media screen {
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+
+    --page: #0b0b0b;
+    --paper: #161616;
+    --surface: #202020;
+    --surface-sunk: #2a2a2a;
+    --glass: rgba(28, 28, 28, 0.62);
+    --ink: #f2f2f2;
+    --ink-2: #c9c9c9;
+    --muted: #9c9c9c;
+    --line: #2c2c2c;
+    --line-strong: #3d3d3d;
+
+    --accent: #b4c7a8;
+    --accent-strong: #cddbc4;
+    --accent-soft: #26301f;
+    --on-accent: #111111;
+    --violet: #9c9c9c;
+
+    --warn-bg: #2b2410;
+    --warn-ink: #f1d27a;
+    --warn-line: #6b5520;
+    --danger-ink: #ff8a80;
+
+    --effort-recovery: #3a3a3a;
+    --effort-easy: #555555;
+    --effort-long: #7f9a73;
+    --effort-tempo: #9fb592;
+    --effort-interval: var(--sage);
+    --effort-race: var(--ink);
+
+    --hero-top: #2e2e2e;
+    --hero-mid: #1f1f1f;
+    --hero-end: #171717;
+    --frost-edge: rgba(255, 255, 255, 0.12);
+    --bar: rgba(22, 22, 22, 0.92);
+    --hover-ink: #d9d9d9;
+  }
 }
 
 /* Paper is white: printing goes back to dark ink on light, whatever the screen shows. */

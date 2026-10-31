@@ -13,7 +13,10 @@ import { readAuthConfig } from './app/auth-context'
 import { AppAuth } from './app/AppAuth'
 import { wakeApi } from './lib/api-client'
 import { setUpInstall } from './lib/install-app'
+import { applyStoredTheme } from './lib/theme'
 
+// The runner's light or dark choice on the website, before the first paint.
+applyStoredTheme()
 // The free API sleeps when idle; start it waking now, while the page and any sign-in redirect are still loading.
 wakeApi()
 // Taperday can be added to a home screen: catch the browser's offer before React starts, and register the service worker.

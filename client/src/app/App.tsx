@@ -14,6 +14,7 @@ import { Unsubscribe } from '../features/account/Unsubscribe'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
+import { ThemeToggle } from './ThemeToggle'
 import { ScrollProgress } from './ScrollProgress'
 import { ScreenRecovery } from './ScreenRecovery'
 import { SignInWait } from '../features/account/SignInWait'
@@ -698,6 +699,7 @@ export function App() {
             )}
           </nav>
         )}
+        <ThemeToggle />
       </header>
 
       <ScrollProgress />

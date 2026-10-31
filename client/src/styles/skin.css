@@ -243,3 +243,10 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .theme-toggle:hover { background: var(--surface); }
 /* The proof mark keeps its ink disc in both themes, so the white runner stays visible. */
 .hero-proof-mark { background-color: #111111; }
+
+/* The landing links need desktop room: below 1024px the masthead keeps only Sign in and the theme switch. */
+.landing-links { display: none; }
+.landing-links .nav-link { display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: 10px; line-height: 1; }
+@media (min-width: 64rem) {
+  .landing-links { display: flex; }
+}

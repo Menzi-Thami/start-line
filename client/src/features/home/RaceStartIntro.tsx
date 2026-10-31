@@ -62,7 +62,7 @@ export function RaceStartIntro({ onDone }: Props) {
             <path d="M30 54 L30 60 L36 60" />
           </g>
           <g className="race-intro-smoke">
-            <circle cx="46" cy="2" r="9" fill="rgba(242,242,242,0.35)" stroke="none" />
+            <circle cx="46" cy="2" r="9" fill="rgba(242,239,231,0.35)" stroke="none" />
           </g>
           <g className="race-intro-flash">
             <path d="M46 -14 L49 -2 L62 2 L49 6 L46 18 L43 6 L30 2 L43 -2 Z" fill="var(--accent)" stroke="none" />

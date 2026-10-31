@@ -43,3 +43,13 @@ Known defects to fix once a palette is chosen:
 - The ring track on a coloured bib.
 
 `render-sheet.mjs` re-renders the sheet. It needs the dev server on port 5199. Run it as `node render-sheet.mjs <outDir> <palettes.json>` from `client/`.
+
+## Chosen: Frame (2026-10-31)
+Thami picked a landing-page reference: a grey frame, a serif hero and pill buttons. The orange was swapped for sage, and the runner photo is Thami's own. It's now the shipped skin (`client/src/styles/skin.css`), across the app, icons, mascot, share card, sticker and emails.
+
+Final QA ran at 320, 390, 768, 1024, 1440 and 2560px, with these fixes:
+- The hero stacks below 1024px.
+- The ring track is visible again.
+- Faux bold is gone (`font-synthesis-weight: none`).
+
+`palettes-final.json` re-renders the shipped skin unchanged.

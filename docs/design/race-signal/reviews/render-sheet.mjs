@@ -14,7 +14,7 @@ const screens = [
 const sizes = [{ w: 390, h: 844 }, { w: 1440, h: 900 }]
 const browser = await chromium.launch()
 const shots = []
-for (const [label, hex] of Object.entries(accents)) for (const s of screens) for (const z of sizes) {
+for (const [label, hex] of Object.entries(accents)) for (const s of screens) for (const z of (palettes[label].sizes ?? sizes)) {
   if (palettes[label].only && palettes[label].only !== s.name) continue
   const page = await browser.newPage({ viewport: { width: z.w, height: z.h }, deviceScaleFactor: 1, reducedMotion: 'reduce' })
   await page.route('**/e2e/fixtures/**/api/**', r => r.fulfill({ json: [] }))
@@ -36,7 +36,7 @@ for (const [label, hex] of Object.entries(accents)) for (const s of screens) for
   shots.push({ label, screen: s.name, w: z.w, file })
   await page.close()
 }
-const rows = Object.keys(accents).map(l => `<h2>${l} ${accents[l]}</h2><div class=row>${shots.filter(s => s.label === l).map(s => `<figure><img src="file:///${s.file}" style="height:${s.w === 390 ? 420 : 300}px"><figcaption>${s.screen} ${s.w}</figcaption></figure>`).join('')}</div>`).join('')
+const rows = Object.keys(accents).map(l => `<h2>${l} ${accents[l]}</h2><div class=row>${shots.filter(s => s.label === l).map(s => `<figure><img src="file:///${s.file}" style="height:${s.w < 768 ? 420 : 300}px"><figcaption>${s.screen} ${s.w}</figcaption></figure>`).join('')}</div>`).join('')
 writeFileSync(`${out}/sheet.html`, `<body style="margin:16px;font:14px system-ui;background:#888">${rows}<style>.row{display:flex;gap:8px;align-items:flex-start}figure{margin:0}img{display:block;border:1px solid #000}h2{margin:12px 0 6px}</style>`)
 const page = await browser.newPage({ viewport: { width: 2600, height: 800 } })
 await page.goto(`file:///${out}/sheet.html`)

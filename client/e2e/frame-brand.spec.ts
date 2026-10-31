@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-// Brand regression: the rendered app (not just token source) must use Race Signal.
-test('Race Signal colors, SVG animation accents and responsive shell @phone', async ({ page }) => {
+// Brand regression: the rendered app (not just token source) must use the Frame skin.
+test('Frame colors, SVG animation accents and responsive shell @phone', async ({ page }) => {
   await page.goto('/')
   const design = await page.evaluate(() => {
     const style = getComputedStyle(document.documentElement)
@@ -12,10 +12,10 @@ test('Race Signal colors, SVG animation accents and responsive shell @phone', as
       bodyFont: getComputedStyle(document.body).fontFamily,
     }
   })
-  expect(design.paper).toBe('#101820')
-  expect(design.accent).toBe('#ff694a')
-  expect(design.ink).toBe('#f2efe7')
-  expect(design.bodyFont).toContain('Atkinson')
+  expect(['#fff', '#ffffff']).toContain(design.paper)
+  expect(design.accent).toBe('#4f6f45')
+  expect(['#111', '#111111']).toContain(design.ink)
+  expect(design.bodyFont).toContain('Instrument Sans')
 
   const introAccent = await page.evaluate(() => {
     const el = document.createElement('div')
@@ -25,16 +25,16 @@ test('Race Signal colors, SVG animation accents and responsive shell @phone', as
     el.remove()
     return value
   })
-  expect(introAccent).toBe('rgb(255, 105, 74)')
+  expect(introAccent).toBe('rgb(79, 111, 69)')
 
   for (const width of [320, 390, 768, 1024, 1440, 2560]) {
     await page.setViewportSize({ width, height: 900 })
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)
-    expect(overflow, `Race Signal shell at ${width}px`).toBeLessThanOrEqual(1)
+    expect(overflow, `Frame shell at ${width}px`).toBeLessThanOrEqual(1)
   }
 })
 
-test('Race Signal reduced motion removes decorative animations', async ({ page }) => {
+test('Frame reduced motion removes decorative animations', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/')
   const running = await page.evaluate(() =>

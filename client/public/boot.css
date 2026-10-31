@@ -1,6 +1,6 @@
 /* Available before the JavaScript bundle, including on a slow mobile connection. */
-html { color-scheme: dark; background: #101820; }
-.boot-screen { position: fixed; inset: 0; display: grid; align-content: center; justify-items: center; gap: 1rem; padding: 1rem; background: #101820; color: #cad1d0; font: 1rem/1.5 system-ui, sans-serif; }
+html { color-scheme: light; background: #e4e4e4; }
+.boot-screen { position: fixed; inset: 0; display: grid; align-content: center; justify-items: center; gap: 1rem; padding: 1rem; background: #e4e4e4; color: #3a3a3a; font: 1rem/1.5 system-ui, sans-serif; }
 .boot-screen p { margin: 0; }
-.boot-screen .boot-brand { color: #f2efe7; font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
-.boot-brand span { color: #ff694a; }
+.boot-screen .boot-brand { color: #111111; font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
+.boot-brand span { color: #111111; }

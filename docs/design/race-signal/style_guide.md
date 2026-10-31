@@ -1,89 +1,45 @@
-# Race bib: style guide
+# Frame: style guide
 
-## Reference
-Take the look of race-day paper, never its logos or copy:
-- **The bib:** white Tyvek, huge black condensed numbers, one coloured sponsor band, four safety-pin holes.
-- **The timing slip:** mono figures, dotted leaders, a perforated tear line.
-- **The finisher stamp:** a slightly rotated ink stamp.
-- **The track:** lane lines and numbered lanes.
+Chosen by Thami on 2026-10-31 from a landing-page reference.
 
-The same grammar shows up in the designeer.xyz finds (boarding pass, crumpled receipt, stamps, ID card, ticket) and fits nowhere else in running apps.
+**How we got here:**
+- Rejected first: Race bib's single accents (tartan, cobalt, pacer), the colour-field palettes, Cape coast, and the Xhosa beadwork and umbhaco rounds.
+- Kept in `reviews/` for the record.
 
-## Palette (one accent)
-| Token | Value | Use |
-|---|---|---|
-| `--paper` | `#F4F5F7` | page: cool Tyvek grey, not cream |
-| `--surface` | `#FFFFFF` | bibs and cards |
-| `--surface-sunk` | `#E9EBEF` | wells, inputs, tracks |
-| `--ink` | `#000000` | type, numbers, 2px bib rules: bibs print true black, not a tinted near-black |
-| `--ink-2` | `#3A414C` | secondary text |
-| `--muted` | `#5B6472` | labels (4.5:1 or better on white) |
-| `--line` | `#D5D9E0` | hairlines |
-| `--accent` | candidate below | the sponsor band, the active lane, primary buttons, race pace |
-
-**Accent candidates.** Each is tested on real screens in the contact sheet, and one wins.
-- **Tartan** `#C8361F`: athletics-track rubber.
-- **Cobalt** `#1F3FD1`: timing-mat blue.
-- **Pacer** `#B0175A`: pacer-flag magenta. No one in running uses it.
-
-(Swiss red was dropped: frontend-design flags red on heavy black as a generated-look default.)
-
-The effort ramp is ink tints (recovery is lightest, interval is ink) ending in the accent for race pace, and it always sits beside a text label.
+## The look
+- **Frame:** a grey page (`--page` `#e4e4e4`) holding one white rounded frame (`#root`, 32px corners, 8px on a phone).
+- **Cards:** soft grey panels (`--surface` `#f3f3f3`, 20px corners), with no borders and no shadows.
+- **Landing hero:** a grey-gradient panel with a huge serif headline.
+- **Runner card:** the runner photo toned sage, with frosted cards on top (the real countdown and the real race) and a ticked pill.
+- **Logo strip:** the bottom strip is the real race list.
+- **Buttons:** pills, primary in ink. Selected tabs and chips are ink pills.
+- **One colour, sage:**
+  - Soft sage `--sage` `#b4c7a8` fills fields: the Today card, the runner card and confetti.
+  - Deep sage `--accent` `#4f6f45` is the accent wherever it is text or a thin stroke, so it keeps 4.5:1 on white.
 
 ## Type
 | Role | Face | Rules |
 |---|---|---|
-| Display and numbers | **Archivo** (variable, wdth 62–125) | Condensed (wdth 75), weight 800, tabular numbers. Caps only for the bib number and page titles; everything else is sentence case |
-| Body and UI | **Instrument Sans** (variable) | 400 and 600, normal case |
-| Timing | **Martian Mono** (variable) | Real timing values only (paces, splits, clock), weight 500. Never small labels |
+| Headlines and big numbers | **Instrument Serif** (OFL, one weight) | 400 only, mixed case. `font-synthesis-weight: none`, so the browser never fakes a bold |
+| Everything else | **Instrument Sans** (OFL, variable) | 300 for the hero lede, 400 to 700 for UI. Numbers use tabular figures; there's no monospace face |
 
-All three are OFL-1.1 through Fontsource. Fluid sizes use clamp (Utopia method). Bib numbers scale from 3rem at 320px to 7rem at 1440px.
+## Effort ramp
+Greys rising into sage, ending in ink for race pace: recovery `#dcdcdc`, easy `#c2c2c2`, long sage, tempo `#7f9a73`, interval deep sage, race ink. It always sits beside a text label.
 
-## Shape
-- Squared corners: radius 2px on buttons and chips, 4px on cards.
-- **Bib card:** white, a 2px ink border, the accent band on top (6px) and four pin holes (6px circles in `--paper`) inset in the corners.
-- **Timing slip:** a dashed top tear line and mono rows with dotted leaders.
-- **Lane tabs:** an underline that slides under the active tab, with the lane number in mono.
-- **Buttons:** primary is ink fill with white text, accent on hover and focus. Secondary is a 2px ink outline.
-- **Focus:** a 3px accent outline, offset 2px.
+## Assets
+| Asset | Where | Notes |
+|---|---|---|
+| Runner photo | `client/public/landing/runner.webp` | Supplied by Thami. Self-hosted, because the CSP is `img-src 'self'`. Cropped clear of the shop sign; the shoe brand is still visible |
+| Icons | `app-icon.svg`, `home-icon.svg`, `favicon.svg` | Rasters re-rendered from them: a sage tile with ink taper bars, and "td" in white and sage on ink |
+| Mascot | `email/peek.svg` and `.png` | Sage body, ink face |
+| Share card | `og-image.png` | The frame, the headline and the runner card |
+| Run sticker | — | Sits on runners' photos, so it stays a dark card: ink and sage |
+| Emails | `EmailLayout` | A grey ground, a white 28px card, a serif title, ink pill buttons and sage markers. Email apps fall back to Georgia and Segoe UI |
+| Boot screen, theme colour, manifest | — | Grey `#e4e4e4` |
 
-## Motion (springs, not slides)
-| Object | Rule |
-|---|---|
-| Small UI (checks, chips, toggles) | Snaps in 160ms, overshoot ≤ 4% |
-| Panels and sheets | Settle in 260ms with no overshoot |
-| Headlines and bib numbers | Land hard in 220ms, then hold |
-| Mascot | Bounces on purpose, the only playful thing |
-| Numbers | NumberFlow (MIT) rolls only to a real value |
-
-Signature moments:
-- **Session done:** the bib stub tears along the perforation.
-- **Run ticked:** a spring check and a finisher stamp.
-- **Sync status:** status marks for idle, working, done and failed.
-
-Reduced motion: all of these become instant state changes.
-
-## The one bold thing
-The bib: race countdown on home, the plan header and the run sticker. Everything around it stays quiet. Before shipping a screen, remove one accessory.
-
-## Banned
-- Tracked-out ALL-CAPS eyebrow labels, 'A · B · C' meta strings, '→' on buttons, 01/02/03 markers on things that are not a sequence.
-- Fade-and-slide-up on every section; one orchestrated moment per screen at most.
-- Dark-first pages, glows, gradients on text, glass, aurora or particles.
-- Centred hero on a gradient, and everything fading in at once.
-- Cream, dark green or gold (Slow Miles). Coral (the old skin). Volt `#d7ff3e` (the old brand).
-- More than one accent on a screen.
-
-## Checks before delivery (ui-ux-pro-max)
-Contrast 4.5:1 for text and 3:1 for icons and control edges, 44px targets, visible focus, no layout shift on press, tokens only (no raw hex in components), 375px and landscape, reduced motion, largest text size, safe areas.
-
-## Free resources used (from designeer.xyz)
-- **Fontsource:** fonts.
-- **NumberFlow:** MIT, number rolls.
-- **Lucide:** ISC, icons, only if needed.
-- **Utopia:** fluid type maths.
-- **OKLCH, Huetone and APCA:** palette and contrast checks.
-
-Skipped:
-- Fontshare and Klim: not OFL, or paid.
-- Paper Shaders and the paid kits.
+## Checks before delivery
+- **Contrast:** 4.5:1 for text and 3:1 for icons and control edges.
+- **Interaction:** 44px targets and visible focus (a 3px ink outline).
+- **Layout:** no horizontal scroll at 320, 390, 768, 1024, 1440 and 2560px. The hero stacks below 1024px.
+- **Motion:** reduced motion is respected.
+- **Print:** white.

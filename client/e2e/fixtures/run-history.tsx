@@ -2,11 +2,15 @@ import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { ActivitySummary } from '../../src/lib/types'
 import { Journey } from '../../src/test/run-history-journey'
+import '@fontsource-variable/archivo/wdth.css'
+import '@fontsource-variable/instrument-sans'
+import '@fontsource-variable/martian-mono'
 import '../../src/styles/tokens.css'
 import '../../src/styles/app.css'
 import '../../src/styles/overview.css'
 import '../../src/styles/home.css'
 import '../../src/styles/polish.css'
+import '../../src/styles/race-signal.css'
 
 // Served only by Playwright's local Vite server; never included in the production build.
 export function Fixture() {

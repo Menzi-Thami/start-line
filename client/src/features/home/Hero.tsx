@@ -7,9 +7,8 @@ interface Props {
   races: Race[]
   today: string
   units: Units
-  /** The line under the headline, which depends on whether accounts are switched on. */
+  /** Optional supporting copy; retained for existing caller compatibility. */
   lede: string
-  /** Signing in, offered beside the main button to a runner who already has a plan. */
   onSignIn?: () => void
 }
 
@@ -24,7 +23,7 @@ function startPlan() {
 const RING = 2 * Math.PI * 88
 
 /** The home page's opening: the headline, and a ring counting down to the next big race. */
-export function Hero({ races, today, units, lede, onSignIn }: Props) {
+export function Hero({ races, today, units }: Props) {
   const next = races.find((r) => daysBetween(today, r.date) >= 0)
   const days = next ? daysBetween(today, next.date) : null
   // The ring closes over the year before race day, so it fills as the race gets closer.
@@ -33,65 +32,42 @@ export function Hero({ races, today, units, lede, onSignIn }: Props) {
   return (
     <div className="intro hero">
       <div className="hero-copy">
-        {races.length > 1 && (
-          <div className="hero-proof">
-            <span className="hero-proof-mark" aria-hidden="true" />
-            <span>
-              <strong>
-                Plans for {races[0]!.name}, {races[1]!.name}
-                {races.length > 2 && ` and ${races.length - 2} more`}
-              </strong>
-              <br />
-              or any race you name
-            </span>
-          </div>
-        )}
-        <h1>
-          You’ve entered the race. <em>Let’s get you to the start.</em>
-        </h1>
-        <p>{lede}</p>
-        <div className="hero-actions">
-          <button type="button" className="button button-primary" onClick={startPlan}>
-            Start your plan
-          </button>
-          {onSignIn && (
-            <button type="button" className="link-button hero-link" onClick={onSignIn}>
-              Sign in to your plan
-              <svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">
-                <path d="M3 9l6-6M4 3h5v5" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              </svg>
-            </button>
-          )}
-        </div>
+        <h1>Your race. <em>Your plan.</em></h1>
+        <p>Training that fits your life and adapts as you run.</p>
       </div>
 
-      {next && days !== null && (
-        <div className="countdown" role="group" aria-label={`${days === 0 ? 'Race day' : `${days} days to go`}: ${next.name}`}>
-          <div className="countdown-ring">
-            <svg viewBox="0 0 220 220" aria-hidden="true">
-              <circle cx="110" cy="110" r="88" className="countdown-track" />
-              <circle
-                cx="110"
-                cy="110"
-                r="88"
-                className="countdown-fill"
-                transform="rotate(-90 110 110)"
-                style={{ strokeDasharray: RING, ['--ring-offset' as string]: `${RING * (1 - filled)}` }}
-              />
-            </svg>
-            <div className="countdown-number" aria-hidden="true">
-              <span className="mono">{days}</span>
-              <small className="mono">{days === 1 ? 'DAY TO GO' : days === 0 ? 'RACE DAY' : 'DAYS TO GO'}</small>
+      <div className="landing-visual">
+        {next && days !== null && (
+          <div className="countdown" role="group" aria-label={`${days === 0 ? 'Race day' : `${days} days to go`}: ${next.name}`}>
+            <div className="countdown-ring">
+              <svg viewBox="0 0 220 220" aria-hidden="true">
+                <circle cx="110" cy="110" r="88" className="countdown-track" />
+                <circle cx="110" cy="110" r="88" className="countdown-fill" transform="rotate(-90 110 110)"
+                  style={{ strokeDasharray: RING, ['--ring-offset' as string]: `${RING * (1 - filled)}` }} />
+              </svg>
+              <div className="countdown-number" aria-hidden="true">
+                <span className="mono">{days}</span>
+                <small className="mono">{days === 1 ? 'DAY TO GO' : days === 0 ? 'RACE DAY' : 'DAYS TO GO'}</small>
+              </div>
+            </div>
+            <div className="countdown-race" aria-hidden="true">
+              <strong>{next.name}</strong>
+              <span className="mono">{formatDate(next.date, 'dayMonth').toUpperCase()} · {formatDistance(next.distanceKm, units).toUpperCase()}</span>
             </div>
           </div>
-          <div className="countdown-race" aria-hidden="true">
-            <strong>{next.name}</strong>
-            <span className="mono">
-              {formatDate(next.date, 'dayMonth').toUpperCase()} · {formatDistance(next.distanceKm, units).toUpperCase()}
-            </span>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      <div className="landing-benefits" aria-label="Why Taperday">
+        <span>Built around your week</span>
+        <span>Adapts as you run</span>
+        <span>Race-day ready</span>
+      </div>
+      <div className="hero-actions">
+        <button type="button" className="button button-primary" onClick={startPlan}>Start your free plan</button>
+      </div>
+
+
     </div>
   )
 }

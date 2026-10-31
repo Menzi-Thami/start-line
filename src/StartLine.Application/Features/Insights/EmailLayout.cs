@@ -49,7 +49,7 @@ public static class EmailLayout
             <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;"><span style="color:{Ink};">taper</span><span style="color:{Ink};">day</span></div>
             <div style="margin-top:4px;font-size:12px;color:{Muted};">Plans that keep up with how you run.</div>
             <div style="margin-top:12px;font-size:12px;line-height:1.6;color:{Muted};">{footer}</div>
-            <div style="margin-top:10px;font-size:12px;"><a href="{Site}" style="color:{Sage};text-decoration:none;">taperday.run</a><span style="color:{Line};">&nbsp;&nbsp;·&nbsp;&nbsp;</span><a href="mailto:hello@taperday.run" style="color:{Sage};text-decoration:none;">hello@taperday.run</a></div>
+            <div style="margin-top:10px;font-size:12px;"><a href="{Site}" style="color:{Ink};text-decoration:none;">taperday.run</a><span style="color:{Line};">&nbsp;&nbsp;·&nbsp;&nbsp;</span><a href="mailto:hello@taperday.run" style="color:{Ink};text-decoration:none;">hello@taperday.run</a></div>
             {Unsubscribe(unsubscribeUrl)}
             </td></tr>
             </table></td></tr></table></body></html>
@@ -60,7 +60,7 @@ public static class EmailLayout
     // Small and volt like the other footer links, but on its own line and underlined, so it's easy to find and plainly a link.
     private static string Unsubscribe(string? url) => url is null
         ? ""
-        : string.Create(CultureInfo.InvariantCulture, $"<div style=\"margin-top:10px;font-size:12px;\"><a href=\"{Encode(url)}\" style=\"color:{Sage};text-decoration:underline;\">Unsubscribe</a><span style=\"color:{Muted};\"> from Taperday news and updates</span></div>");
+        : string.Create(CultureInfo.InvariantCulture, $"<div style=\"margin-top:10px;font-size:12px;\"><a href=\"{Encode(url)}\" style=\"color:{Ink};text-decoration:underline;\">Unsubscribe</a><span style=\"color:{Muted};\"> from Taperday news and updates</span></div>");
 
     /// <summary>One item in a "what's new" list: a volt dot, a bold title and a line of detail.</summary>
     public static string Item(string title, string detail) =>

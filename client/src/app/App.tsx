@@ -14,6 +14,7 @@ import { Unsubscribe } from '../features/account/Unsubscribe'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
+import { ThemeToggle } from './ThemeToggle'
 import { ScrollProgress } from './ScrollProgress'
 import { ScreenRecovery } from './ScreenRecovery'
 import { SignInWait } from '../features/account/SignInWait'
@@ -653,9 +654,24 @@ export function App() {
         {state.kind !== 'off' && (state.kind !== 'ready' || !phone) && (
           <nav className="masthead-nav" aria-label={state.kind === 'ready' ? 'Main' : 'Account'}>
             {state.kind === 'signed-out' && (
-              <button type="button" className="button button-quiet" onClick={auth.signIn}>
-                Sign in
-              </button>
+              <>
+                {!phone && view === 'build' && (
+                  <span className="landing-links">
+                    <button type="button" className="nav-link" onClick={() => document.querySelector<HTMLElement>('.wizard-title')?.scrollIntoView({ block: 'start' })}>
+                      Build a plan
+                    </button>
+                    <button type="button" className="nav-link" onClick={() => go('privacy')}>
+                      Privacy
+                    </button>
+                    <a className="nav-link" href={`mailto:${PRIVACY_CONTACT.email}`}>
+                      Contact
+                    </a>
+                  </span>
+                )}
+                <button type="button" className="button button-quiet" onClick={auth.signIn}>
+                  Sign in
+                </button>
+              </>
             )}
             {/* Signed in but still waiting on the account: Sign out stays reachable, so a slow server never traps anyone. */}
             {(state.kind === 'ready' || state.kind === 'needs-sign-up' || state.kind === 'error' || (state.kind === 'loading' && auth.account !== null)) && (
@@ -683,6 +699,7 @@ export function App() {
             )}
           </nav>
         )}
+        <ThemeToggle />
       </header>
 
       <ScrollProgress />
@@ -856,6 +873,7 @@ export function App() {
                           ? 'A plan built around your race and your week, that keeps up with how you run.'
                           : 'A plan built around your race and your week, that keeps up with how you run. Free.'
                       }
+                      onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                     />
                     <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
                   </>

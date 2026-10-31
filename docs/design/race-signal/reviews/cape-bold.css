@@ -1,0 +1,26 @@
+/* Cape coast, Bold: two oceans meet behind the hero; the bib is pinned on the seam. */
+:root {
+  --atlantic: #0b3a6b; --indian: #19b3b1; --sun: #ffc72c; --protea: #d6246e; --fynbos: #c9d8c5;
+  --paper: #ffffff; --ink: #0a1a2b; --accent: var(--protea); --on-accent: #ffffff;
+}
+body { background: var(--paper); }
+.masthead { background: var(--paper); }
+.intro.hero { isolation: isolate; padding-block: 2.5rem 3rem; background: none; }
+.intro.hero::before {
+  content: ''; position: absolute; z-index: -1; inset-block: 0; left: calc(50% - 50vw); width: 100vw;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect width='100' height='100' fill='%2319b3b1'/%3E%3Cpath d='M0 0H100V52C86 47 74 58 60 53S34 46 20 54 6 57 0 55Z' fill='%230b3a6b'/%3E%3Cpath d='M100 52C86 47 74 58 60 53S34 46 20 54 6 57 0 55' fill='none' stroke='%23ffffff' stroke-width='4' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+@media (min-width: 48rem) {
+  .intro.hero::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect width='100' height='100' fill='%2319b3b1'/%3E%3Cpath d='M0 0H64C60 14 69 26 64 40S57 66 62 80 60 94 58 100H0Z' fill='%230b3a6b'/%3E%3Cpath d='M64 0C60 14 69 26 64 40S57 66 62 80 60 94 58 100' fill='none' stroke='%23ffffff' stroke-width='4' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat; }
+}
+.intro.hero h1, .intro.hero h1 em { color: #fff; }
+.intro.hero p { color: #d8e6f3; }
+.countdown { transform: rotate(-2deg); box-shadow: 6px 6px 0 var(--ink); }
+.countdown-fill { stroke: var(--protea); }
+.ticker { background: var(--sun); color: var(--ink); }
+.panel.home-card.home-today { background: var(--sun) !important; border: 2px solid var(--ink); }
+.panel.home-card.home-week { background: var(--fynbos) !important; }
+.home-race-card { background: var(--pin-holes), #fff !important; }
+
+/* Text on the sun and sea fields stays ink, so it keeps 4.5:1. */
+.panel.home-card.home-today :is(.mono, a, strong, span), .panel.home-card.home-week, .panel.home-card.home-week * { color: var(--ink) !important; }

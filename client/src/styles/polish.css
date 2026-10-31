@@ -7,7 +7,7 @@
   width: 100%;
   height: 3px;
   background: linear-gradient(90deg, var(--accent), var(--accent-strong) 65%, var(--coral));
-  box-shadow: 0 0 16px rgba(215, 255, 62, 0.4);
+  box-shadow: none;
   transform: scaleX(0);
   transform-origin: left center;
   opacity: 0;
@@ -25,7 +25,7 @@
   height: 3rem;
   padding: 0;
   color: var(--accent);
-  background: rgba(22, 23, 26, 0.94);
+  background: var(--surface);
   border: 1px solid var(--line-strong);
   border-radius: 50%;
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
@@ -45,7 +45,7 @@
   width: 73%;
   height: 1rem;
   border-radius: 999px;
-  background: linear-gradient(100deg, rgba(255,255,255,0.065) 10%, rgba(255,255,255,0.14) 45%, rgba(255,255,255,0.065) 80%);
+  background: linear-gradient(100deg, rgba(0, 0, 0, 0.065) 10%, rgba(0, 0, 0, 0.14) 45%, rgba(0, 0, 0, 0.065) 80%);
   background-size: 220% 100%;
   animation: skeleton-shimmer 1.8s linear infinite;
 }
@@ -55,7 +55,7 @@
 
 /* Both touch selection and keyboard exploration leave a legible marker on the training chart. */
 .volume-plot:focus-visible { outline: 2px solid var(--accent); outline-offset: 5px; border-radius: 8px; }
-.volume-week.is-selected .volume-bar { filter: brightness(1.2); box-shadow: 0 0 18px rgba(215, 255, 62, 0.3); }
+.volume-week.is-selected .volume-bar { filter: brightness(1.2); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 30%, transparent); }
 .volume-week { cursor: crosshair; }
 
 /* Tablet and desktop are first-class canvases: cards breathe, data can sit side by side. */
@@ -108,8 +108,8 @@
   .home-tile:hover,
   .overview-card:hover,
   .week-glance:hover {
-    border-color: rgba(215, 255, 62, 0.28);
-    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.17), inset 0 1px rgba(255, 255, 255, 0.055);
+    border-color: color-mix(in srgb, var(--accent) 28%, transparent);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.17), inset 0 1px rgba(0, 0, 0, 0.055);
     transform: translateY(-3px);
   }
   .nav-link,
@@ -132,7 +132,7 @@
     color: var(--accent);
     background: var(--accent-soft);
   }
-  .masthead-nav .nav-link:hover { background: rgba(255,255,255,0.075); }
+  .masthead-nav .nav-link:hover { background: rgba(0, 0, 0, 0.075); }
   .masthead-nav .nav-link[aria-current='page']:hover { background: var(--accent-soft); }
 }
 
@@ -147,7 +147,7 @@
   position: absolute;
   z-index: -1;
   inset: 0;
-  background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.4) 48%, transparent 70%);
+  background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.6) 48%, transparent 70%);
   transform: translateX(-130%);
   pointer-events: none;
 }
@@ -204,7 +204,7 @@
   padding: var(--space-4) var(--space-5);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-lg);
-  background: radial-gradient(ellipse at top right, rgba(255, 90, 54, 0.13), transparent 70%), var(--glass);
+  background: radial-gradient(ellipse at top right, color-mix(in srgb, var(--accent) 13%, transparent), transparent 70%), var(--glass);
 }
 .home-race-card h2 { margin: 0; font-family: var(--font-display); font-size: clamp(1.25rem, 2vw, 1.6rem); letter-spacing: -0.03em; }
 .home-race-card .home-card-heading { color: var(--muted); margin-bottom: var(--space-2); }
@@ -301,7 +301,7 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .home-chart-detail { min-height: 3em; margin-block: var(--space-3); font-size: var(--text-sm); color: var(--ink-2); }
 .home-top { align-items: start; }
 .home-panel { padding-top: var(--space-3); }
-.home-today { border-color: rgba(215, 255, 62, 0.35); background: linear-gradient(140deg, var(--accent-soft), transparent 65%), var(--glass); }
+.home-today { border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: linear-gradient(140deg, var(--accent-soft), transparent 65%), var(--glass); }
 .home-today-run { width: 100%; }
 .home-workout-facts { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); margin: var(--space-3) 0; }
 .home-workout-facts dt { font-size: var(--text-xs); color: var(--muted); margin-bottom: var(--space-1); }
@@ -356,7 +356,7 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .plan-adjustment li { margin-block: var(--space-2); overflow-wrap: anywhere; }
 .sticker-panel { padding: var(--space-3); margin-block: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
 .sticker-panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.sticker-preview { max-width: 22rem; margin: var(--space-3) auto; border-radius: var(--radius-md); background: repeating-conic-gradient(#252824 0% 25%, #1b1e1a 0% 50%) 50% / 24px 24px; }
+.sticker-preview { max-width: 22rem; margin: var(--space-3) auto; border-radius: var(--radius-md); background: repeating-conic-gradient(#e9ebef 0% 25%, #f4f5f7 0% 50%) 50% / 24px 24px; }
 .sticker-preview img { display: block; width: 100%; height: auto; }
 .sticker-panel .submit-row { flex-wrap: wrap; }
 

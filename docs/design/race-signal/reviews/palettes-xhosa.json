@@ -1,0 +1,10 @@
+{
+  "Umbhaco very bold": {
+    "css": "xhosa-umbhaco.css",
+    "accent": "#c8102e"
+  },
+  "Beadwork very bold": {
+    "css": "xhosa-beadwork.css",
+    "accent": "#c8102e"
+  }
+}

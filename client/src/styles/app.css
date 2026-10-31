@@ -10,7 +10,7 @@ html {
 
 body {
   margin: 0;
-  background: radial-gradient(90rem 40rem at 100% -10%, rgba(215, 255, 62, 0.08), transparent 60%) no-repeat, var(--paper);
+  background: radial-gradient(90rem 40rem at 100% -10%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%) no-repeat, var(--paper);
   min-height: 100vh;
   color: var(--ink);
   font-family: var(--font-body);
@@ -188,8 +188,8 @@ select {
   /* Speed lines stream past behind the headline for a few passes as the page arrives, then hold still, so they set the
    * pace without competing with the words. One pass ends where it began, so the stop doesn't jump. */
   background:
-    repeating-linear-gradient(0deg, transparent 0 37px, rgba(215, 255, 62, 0.05) 37px 38px),
-    repeating-linear-gradient(90deg, transparent 0 140px, rgba(255, 255, 255, 0.035) 140px 220px, transparent 220px 380px);
+    repeating-linear-gradient(0deg, transparent 0 37px, color-mix(in srgb, var(--accent) 5%, transparent) 37px 38px),
+    repeating-linear-gradient(90deg, transparent 0 140px, rgba(0, 0, 0, 0.035) 140px 220px, transparent 220px 380px);
   background-size: 100% 100%, 760px 100%;
   animation: speed-lines 3.2s linear 3;
   border-bottom: 0;
@@ -239,7 +239,7 @@ select {
 }
 
 .countdown-track {
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: rgba(0, 0, 0, 0.1);
 }
 
 /* The ring draws itself in, once the page has settled. */
@@ -544,7 +544,7 @@ select {
   right: 0;
   bottom: 30%;
   height: 3px;
-  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.35) 0 28px, transparent 28px 44px);
+  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.35) 0 28px, transparent 28px 44px);
 }
 
 .race-intro-startline {
@@ -863,7 +863,7 @@ select {
 
 @media (hover: hover) {
   .bento-card:hover {
-    border-color: rgba(215, 255, 62, 0.5);
+    border-color: color-mix(in srgb, var(--accent) 50%, transparent);
     transform: translateY(-3px);
   }
 }
@@ -897,7 +897,7 @@ select {
 .mini-chips span {
   padding: var(--space-1) var(--space-3);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.08);
   font-size: var(--text-sm);
   font-weight: 700;
 }
@@ -915,7 +915,7 @@ select {
   place-items: center;
   font-weight: 700;
   font-size: var(--text-sm);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.08);
   color: var(--muted);
 }
 
@@ -973,7 +973,7 @@ select {
 }
 
 .mini-build .is-easier {
-  background: rgba(215, 255, 62, 0.35);
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
 .mini-build .is-taper {
@@ -1038,7 +1038,7 @@ select {
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.06);
   width: 100%;
 }
 
@@ -1261,16 +1261,16 @@ select {
 
 .bib-colour-1 {
   background: var(--coral);
-  color: #0a0a0b;
+  color: var(--on-accent);
 }
 
 .bib-colour-2 {
   background: #f2f2f2;
-  color: #0a0a0b;
+  color: var(--on-accent);
 }
 
 .bib-colour-3 {
-  background: #1d1f24;
+  background: var(--surface-sunk);
   color: var(--ink);
   border: 1px solid var(--line-strong);
 }
@@ -1306,7 +1306,7 @@ select {
   justify-content: center;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.05);
   font-weight: 700;
   font-size: var(--text-sm);
   cursor: pointer;
@@ -1432,7 +1432,7 @@ select {
   padding: 0 var(--space-5);
   border-radius: 999px;
   border: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.06);
   font-weight: 800;
   transition: transform var(--dur-quick) var(--ease-spring), background-color var(--dur-quick) var(--ease-standard), box-shadow var(--dur-quick) var(--ease-standard);
   cursor: pointer;
@@ -1446,7 +1446,7 @@ select {
 /* The lift is for a mouse: on a phone a tap would leave the button raised until the next tap somewhere else. */
 @media (hover: hover) {
   .button:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.1);
     transform: translateY(-2px);
   }
 }
@@ -1518,9 +1518,9 @@ select {
 }
 
 .form-errors {
-  border: 1px solid rgba(255, 140, 122, 0.4);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
   border-radius: var(--radius-md);
-  background: rgba(255, 140, 122, 0.08);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-5);
 }
@@ -1608,7 +1608,7 @@ select {
 }
 
 .plan-ring-track {
-  stroke: rgba(255, 255, 255, 0.12);
+  stroke: rgba(0, 0, 0, 0.12);
 }
 
 .plan-ring-fill {
@@ -1661,7 +1661,7 @@ select {
   bottom: 6px;
   height: 6px;
   border-radius: 999px;
-  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 10px, transparent 10px 16px);
+  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.18) 0 10px, transparent 10px 16px);
 }
 
 .course-done {
@@ -3264,7 +3264,7 @@ a.menu-item {
   position: relative;
   width: min(80vw, 420px);
   height: 64px;
-  border-bottom: 3px dashed rgba(255, 255, 255, 0.2);
+  border-bottom: 3px dashed rgba(0, 0, 0, 0.2);
   overflow: hidden;
 }
 
@@ -3350,7 +3350,7 @@ a.menu-item {
   padding: var(--space-5) var(--space-4) var(--space-4);
   border-radius: var(--radius-md);
   background: #f2f2f2;
-  color: #0a0a0b;
+  color: var(--on-accent);
   border-top: 10px solid var(--accent);
   box-shadow: 0 18px 40px rgb(0 0 0 / 0.5);
   transform: rotate(-1.5deg);
@@ -3891,7 +3891,7 @@ a.menu-item {
 }
 
 .tag-hardest {
-  background: rgba(255, 90, 54, 0.16);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
   color: var(--danger-ink);
 }
 
@@ -4440,7 +4440,7 @@ select.input {
   appearance: none;
   -webkit-appearance: none;
   padding-right: 2.75rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' fill='none' stroke='%23d7ff3e' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='M5 7.5l5 5 5-5' fill='none' stroke='%23111111' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.9rem center;
   background-size: 16px;
@@ -4473,8 +4473,8 @@ select.input option {
 }
 
 .datepick-button:hover {
-  border-color: rgba(255, 255, 255, 0.34);
-  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(0, 0, 0, 0.34);
+  background-color: rgba(0, 0, 0, 0.08);
 }
 
 .datepick-button[aria-expanded='true'] {
@@ -4537,7 +4537,7 @@ select.input option {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.015)),
     var(--surface);
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.6),
@@ -4579,7 +4579,7 @@ select.input option {
 }
 
 .datepick-title:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .datepick-title .datepick-chevron {
@@ -4611,7 +4611,7 @@ select.input option {
   flex: none;
   border: 1px solid var(--line);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.04);
   color: var(--ink);
   cursor: pointer;
   transition:
@@ -4621,7 +4621,7 @@ select.input option {
 
 .datepick-nav:hover:not(:disabled) {
   border-color: var(--line-strong);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .datepick-nav:disabled {
@@ -4678,7 +4678,7 @@ select.input option {
 }
 
 .datepick-day:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.09);
 }
 
 .datepick-day:active:not(:disabled) {
@@ -4707,7 +4707,7 @@ select.input option {
   background: var(--accent);
   color: var(--on-accent);
   font-weight: 700;
-  box-shadow: 0 6px 18px rgba(215, 255, 62, 0.3);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .datepick-day:disabled {
@@ -4726,7 +4726,7 @@ select.input option {
   min-height: 52px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.03);
   color: var(--ink);
   font-weight: 700;
   cursor: pointer;
@@ -4734,7 +4734,7 @@ select.input option {
 }
 
 .datepick-month:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(0, 0, 0, 0.09);
 }
 
 .datepick-month.is-today {
@@ -4817,10 +4817,10 @@ select.input option {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.05), rgba(0, 0, 0, 0.015)),
     var(--surface-sunk);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 rgba(0, 0, 0, 0.05),
     inset 0 18px 24px -18px rgba(0, 0, 0, 0.7),
     inset 0 -18px 24px -18px rgba(0, 0, 0, 0.7);
   overflow: hidden;
@@ -4836,7 +4836,7 @@ select.input option {
   height: var(--wheel-row);
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px rgba(215, 255, 62, 0.32);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent);
   pointer-events: none;
 }
 
@@ -4845,8 +4845,8 @@ select.input option {
 }
 
 .wheels.is-invalid::before {
-  background: rgba(255, 90, 54, 0.14);
-  box-shadow: inset 0 0 0 1px rgba(255, 140, 122, 0.5);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
 .wheel {
@@ -5080,8 +5080,8 @@ select.input option {
   width: calc((100% - 2 * var(--space-2)) / var(--tab-count, 4));
   height: 44px;
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(215, 255, 62, 0.16), rgba(215, 255, 62, 0.045));
-  border: 1px solid rgba(215, 255, 62, 0.14);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, transparent), color-mix(in srgb, var(--accent) 5%, transparent));
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
   transition: left var(--dur-slide) var(--ease-glide);
   pointer-events: none;
 }

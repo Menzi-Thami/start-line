@@ -29,28 +29,28 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
     return pngOf(canvas)
   }
   const { distance, time, pace } = stickerLines(run, units)
-  const ink = '#f4f5ed',
-    muted = '#aab0a1',
-    lime = '#d6ff32'
+  const ink = '#ffffff',
+    muted = '#b8b8b8',
+    lime = '#b4c7a8'
   const rounded = (x: number, y: number, w: number, h: number, radius: number) => {
     ctx.beginPath()
     ctx.roundRect(x, y, w, h, radius)
   }
   rounded(64, 64, 952, 1152, 64)
-  ctx.fillStyle = '#10130ff5'
+  ctx.fillStyle = '#111111f5'
   ctx.fill()
-  ctx.strokeStyle = '#d6ff3255'
+  ctx.strokeStyle = '#b4c7a855'
   ctx.lineWidth = 3
   ctx.stroke()
   ctx.save()
   rounded(64, 64, 952, 1152, 64)
   ctx.clip()
   const glow = ctx.createRadialGradient(880, 120, 10, 880, 120, 630)
-  glow.addColorStop(0, '#d6ff3228')
-  glow.addColorStop(1, '#d6ff3200')
+  glow.addColorStop(0, '#b4c7a828')
+  glow.addColorStop(1, '#b4c7a800')
   ctx.fillStyle = glow
   ctx.fillRect(64, 64, 952, 1152)
-  ctx.strokeStyle = '#d6ff3220'
+  ctx.strokeStyle = '#b4c7a820'
   ctx.lineWidth = 2
   for (let i = 0; i < 9; i++) {
     ctx.beginPath()
@@ -65,16 +65,16 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
     y: number,
     size: number,
     color = ink,
-    family = 'Atkinson Hyperlegible Next, sans-serif',
+    family = 'Instrument Sans Variable, sans-serif',
     weight = '700',
   ) => {
     ctx.font = `${weight} ${size}px "${family.split(',')[0]}", ${family.split(',').slice(1).join(',') || 'sans-serif'}`
     ctx.fillStyle = color
     ctx.fillText(value, x, y)
   }
-  text('TAPER', 126, 170, 54, ink, 'Bricolage Grotesque Variable, sans-serif', '800')
+  text('TAPER', 126, 170, 54, ink, 'Instrument Serif, serif', '400')
   const wordWidth = ctx.measureText('TAPER').width
-  text('DAY', 126 + wordWidth, 170, 54, lime, 'Bricolage Grotesque Variable, sans-serif', '800')
+  text('DAY', 126 + wordWidth, 170, 54, lime, 'Instrument Serif, serif', '400')
   text('THE WORK. LOGGED.', 128, 248, 28, lime)
   const title = run.title.length > 38 ? `${run.title.slice(0, 35)}…` : run.title
   text(title, 128, 334, 42)
@@ -82,12 +82,12 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
   text(distance ? 'DISTANCE' : 'RUN TIME', 128, 500, 25, muted)
   const hero = distance ? distance.split(' ')[0]! : (time ?? 'COMPLETED')
   let heroSize = 176
-  ctx.font = `800 ${heroSize}px "Bricolage Grotesque Variable", sans-serif`
+  ctx.font = `400 ${heroSize}px "Instrument Serif", serif`
   while (ctx.measureText(hero).width > 816 && heroSize > 70) {
     heroSize -= 4
-    ctx.font = `800 ${heroSize}px "Bricolage Grotesque Variable", sans-serif`
+    ctx.font = `400 ${heroSize}px "Instrument Serif", serif`
   }
-  text(hero, 120, 685, heroSize, lime, 'Bricolage Grotesque Variable, sans-serif', '800')
+  text(hero, 120, 685, heroSize, lime, 'Instrument Serif, serif', '400')
   if (distance) text(units.toUpperCase(), 134, 746, 40, lime)
   ctx.fillStyle = '#ffffff20'
   ctx.fillRect(128, 814, 824, 2)
@@ -119,27 +119,27 @@ function pngOf(canvas: HTMLCanvasElement): Promise<Blob> {
 /** A wide composition, with a genuinely transparent alternative for layering over a runner's own photo. */
 function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: Units, transparent: boolean) {
   const { distance, time, pace } = stickerLines(run, units)
-  const ink = '#f4f5ed',
-    lime = '#d6ff32',
-    muted = transparent ? '#f4f5ed' : '#aab0a1'
-  const display = '"Bricolage Grotesque Variable", sans-serif'
-  const body = '"Atkinson Hyperlegible Next", sans-serif'
+  const ink = '#ffffff',
+    lime = '#b4c7a8',
+    muted = transparent ? '#ffffff' : '#b8b8b8'
+  const display = '"Instrument Serif", serif'
+  const body = '"Instrument Sans Variable", sans-serif'
   if (!transparent) {
     ctx.beginPath()
     ctx.roundRect(48, 48, 1504, 804, 56)
-    ctx.fillStyle = '#10130ff5'
+    ctx.fillStyle = '#111111f5'
     ctx.fill()
-    ctx.strokeStyle = '#d6ff3255'
+    ctx.strokeStyle = '#b4c7a855'
     ctx.lineWidth = 3
     ctx.stroke()
     ctx.save()
     ctx.clip()
     const glow = ctx.createRadialGradient(1420, 100, 10, 1420, 100, 1000)
-    glow.addColorStop(0, '#d6ff3228')
-    glow.addColorStop(1, '#d6ff3200')
+    glow.addColorStop(0, '#b4c7a828')
+    glow.addColorStop(1, '#b4c7a800')
     ctx.fillStyle = glow
     ctx.fillRect(48, 48, 1504, 804)
-    ctx.strokeStyle = '#d6ff3220'
+    ctx.strokeStyle = '#b4c7a820'
     ctx.lineWidth = 2
     for (let i = 0; i < 10; i++) {
       ctx.beginPath()

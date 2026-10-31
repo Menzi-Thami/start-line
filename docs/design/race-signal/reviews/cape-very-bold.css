@@ -1,0 +1,30 @@
+/* Cape coast, Very bold: the whole app sits on the sea; ocean fields everywhere, protea and sun as the loud notes. */
+:root {
+  --atlantic: #0b3a6b; --indian: #19b3b1; --sun: #ffc72c; --protea: #d6246e; --fynbos: #c9d8c5;
+  --paper: #e3f6f5; --ink: #0a1a2b; --accent: var(--protea); --on-accent: #ffffff;
+}
+body { background: var(--paper); }
+.masthead { background: var(--atlantic); box-shadow: 0 0 0 100vmax var(--atlantic); clip-path: inset(0 -100vmax); border-bottom-color: var(--atlantic); }
+.masthead, .masthead * { color: #fff; }
+.wordmark-accent { color: var(--sun) !important; }
+.intro.hero { isolation: isolate; padding-block: 2.5rem 3.5rem; background: none; }
+.intro.hero::before {
+  content: ''; position: absolute; z-index: -1; inset-block: 0; left: calc(50% - 50vw); width: 100vw;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect width='100' height='100' fill='%2319b3b1'/%3E%3Cpath d='M0 0H100V52C86 47 74 58 60 53S34 46 20 54 6 57 0 55Z' fill='%230b3a6b'/%3E%3Cpath d='M100 52C86 47 74 58 60 53S34 46 20 54 6 57 0 55' fill='none' stroke='%23ffc72c' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+}
+@media (min-width: 48rem) {
+  .intro.hero::before { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Crect width='100' height='100' fill='%2319b3b1'/%3E%3Cpath d='M0 0H64C60 14 69 26 64 40S57 66 62 80 60 94 58 100H0Z' fill='%230b3a6b'/%3E%3Cpath d='M64 0C60 14 69 26 64 40S57 66 62 80 60 94 58 100' fill='none' stroke='%23ffc72c' stroke-width='8' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat; }
+}
+.intro.hero h1 { color: #fff; font-size: clamp(2.8rem, 1rem + 6vw, 6.4rem); }
+.intro.hero h1 em { color: var(--sun); }
+.intro.hero p { color: #d8e6f3; }
+.countdown { transform: rotate(-3deg); box-shadow: 8px 8px 0 var(--protea); }
+.countdown::before { background: var(--protea) !important; }
+.countdown-fill { stroke: var(--protea); }
+.ticker { background: var(--protea); color: #fff; }
+.panel.home-card.home-today { background: var(--sun) !important; border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); }
+.panel.home-card.home-week { background: var(--indian) !important; }
+.home-race-card { background: var(--pin-holes), #fff !important; transform: rotate(-1deg); }
+
+/* Text on the sun and sea fields stays ink, so it keeps 4.5:1. */
+.panel.home-card.home-today :is(.mono, a, strong, span), .panel.home-card.home-week, .panel.home-card.home-week * { color: var(--ink) !important; }

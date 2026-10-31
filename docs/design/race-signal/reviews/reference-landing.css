@@ -81,3 +81,37 @@ html { background: #e4e4e4; }
 html, body { background: #e4e4e4 !important; }
 body { margin: 0; padding-top: 0.02px; }
 .countdown-number span { font-size: clamp(3.4rem, 2.6rem + 2vw, 4.6rem); }
+
+/* Landing tweaks: proof line, hero actions, centred nav, outlined Sign in pill. */
+.hero-proof { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; font-size: 1rem; line-height: 1.35; color: #1d1d1d; }
+.hero-proof strong { font-weight: 600; font-size: 1.1rem; }
+.hero-proof-mark { flex: none; width: 44px; height: 44px; border-radius: 50%; background: #111 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M13.5 4.5a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6zM9 20l2.2-6.2-2.4-2.3 1.5-3.5 3.3 1.2 2 2.8h2.6M11.2 13.8l2.6 1.8V20' fill='none' stroke='white' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 24px no-repeat; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; margin-top: 32px; }
+.hero-actions .button-primary { padding: 16px 28px; font-weight: 600; }
+.hero-link { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.masthead { display: flex; align-items: center; }
+.masthead-nav { flex: 1; display: flex; align-items: center; justify-content: flex-end; gap: 24px; }
+.landing-links { margin-inline: auto; display: flex; gap: 8px; align-items: center; }
+.landing-links .nav-link + .nav-link::before { content: '.'; margin-right: 8px; color: #999; }
+.landing-links .nav-link { font-weight: 500; color: var(--ink); background: none; text-decoration: none; }
+.masthead-nav > .button-quiet { border: 1.5px solid var(--ink); border-radius: 999px; padding: 12px 22px; background: #fff; color: var(--ink); font-weight: 600; }
+
+/* Photo card: the runner in black and white, toned with the card colour (multiply), and the countdown in a frosted
+ * card on top. Review renders hotlink the Unsplash photo; the real build self-hosts it (CSP is img-src 'self'). */
+.countdown {
+  background: var(--accent) url('https://images.unsplash.com/photo-1726195221766-e4594ff9d025?w=900&q=70') center 30% / cover no-repeat !important;
+  background-blend-mode: multiply; min-height: 30rem; padding: 0; align-content: end;
+}
+.countdown-ring {
+  position: absolute; right: -40px; top: 40px; width: 9.5rem; height: auto; aspect-ratio: auto; padding: 14px;
+  border-radius: 22px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, 0.14);
+}
+.countdown-track { stroke: rgba(0, 0, 0, 0.1); }
+.countdown-fill { stroke: #111; }
+.countdown-number span { color: #111; font-size: 2.6rem; }
+.countdown-number small { color: #333; font-size: 0.7rem; }
+@media (max-width: 47.99rem) {
+  .countdown { min-height: 28rem; }
+  .countdown-ring { right: 12px; top: 64px; width: 8rem; }
+}

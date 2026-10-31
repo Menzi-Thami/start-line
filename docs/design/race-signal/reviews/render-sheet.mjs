@@ -29,8 +29,9 @@ for (const [label, hex] of Object.entries(accents)) for (const s of screens) for
   }
   await page.addStyleTag({ content: `*{animation:none!important;transition:none!important}` })
   await page.evaluate(() => document.fonts.ready)
-  await page.waitForTimeout(400)
-  const file = `${out}/${label}-${s.name}-${z.w}.png`
+  await page.waitForLoadState('networkidle')
+  await page.waitForTimeout(600)
+  const file = `${out}/${label.replace(/[^a-z0-9]+/gi, '-')}-${s.name}-${z.w}.png`
   await page.screenshot({ path: file })
   shots.push({ label, screen: s.name, w: z.w, file })
   await page.close()

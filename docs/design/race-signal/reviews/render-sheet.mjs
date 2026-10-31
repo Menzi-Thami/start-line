@@ -15,6 +15,7 @@ const sizes = [{ w: 390, h: 844 }, { w: 1440, h: 900 }]
 const browser = await chromium.launch()
 const shots = []
 for (const [label, hex] of Object.entries(accents)) for (const s of screens) for (const z of sizes) {
+  if (palettes[label].only && palettes[label].only !== s.name) continue
   const page = await browser.newPage({ viewport: { width: z.w, height: z.h }, deviceScaleFactor: 1, reducedMotion: 'reduce' })
   await page.route('**/e2e/fixtures/**/api/**', r => r.fulfill({ json: [] }))
   if (s.url.startsWith('/e2e')) await page.route('**/api/v1/**', r => r.fulfill({ json: new URL(r.request().url()).pathname.endsWith('/coach') ? { id: 'qa', plan: JSON.parse(readFileSync('src/test/fixtures/plan-5k.json', 'utf8')), coaching: [] } : [] }))

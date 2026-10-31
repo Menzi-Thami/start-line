@@ -1,0 +1,156 @@
+/*
+ * RACE SIGNAL / UI skin
+ * Deliberately layered after the existing component styles:
+ * no changes to routing, user input, API calls or training logic.
+ */
+:root {
+  --signal: #ff694a;
+  --signal-soft: rgba(255, 105, 74, .12);
+  --race-grid: rgba(184, 203, 207, .045);
+  --race-edge: rgba(224, 233, 231, .15);
+  --race-instrument: #8db4c4;
+}
+body {
+  background:
+    radial-gradient(ellipse 70rem 32rem at 110% -8%, rgba(255,105,74,.075), transparent 70%),
+    linear-gradient(180deg, #101820 0%, #101a22 72%, #0c151d 100%);
+}
+::selection { background: rgba(255,105,74,.3); color: var(--ink); }
+:is(h1,h2,h3,.home-title,.home-today-title,.home-race-state) {
+  text-wrap: balance;
+}
+.masthead {
+  border-bottom: 1px solid var(--race-edge);
+  position: relative;
+}
+.masthead::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: clamp(3rem,12vw,9rem);
+  height: 2px;
+  background: var(--signal);
+}
+.wordmark-accent { color: var(--signal); }
+.intro {
+  background-image: repeating-linear-gradient(90deg, var(--race-edge) 0 2px, transparent 2px 12.5%);
+}
+.hero {
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 11.9%, var(--race-grid) 12% 12.06%, transparent 12.12% 24%),
+    linear-gradient(110deg, rgba(255,105,74,.045), transparent 62%);
+  background-size: auto;
+  animation: none;
+}
+.intro h1, .hero h1 {
+  letter-spacing: -.055em;
+  line-height: .96;
+}
+:is(.home-card,.home-tile,.overview-card,.week-glance,.panel,.home-race-card,.home-history,.home-records) {
+  border-color: var(--race-edge);
+  border-radius: var(--radius-lg);
+}
+.home-tile, .home-best, .home-history, .home-records {
+  background: linear-gradient(160deg, rgba(30,46,55,.88), rgba(18,30,38,.92));
+}
+.home-card-heading, .home-tile-label, .home-best-name, .home-countdown-label {
+  font-size: .73rem;
+  letter-spacing: .115em;
+  text-transform: uppercase;
+}
+.home-tile-value,.home-best-time,.home-countdown > .mono,.overview-figure .mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.065em;
+}
+.home-tile-value { font-size: clamp(1.8rem, 3vw, 2.8rem); line-height: 1.08; }
+.home-countdown > .mono { color: var(--ink); letter-spacing: -.07em; }
+.home-race-card {
+  isolation: isolate;
+  background: linear-gradient(115deg, rgba(255,105,74,.085), transparent 46%), var(--surface);
+}
+.home-race-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--signal);
+  pointer-events: none;
+}
+.home-race-card::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: 14rem;
+  height: 14rem;
+  border: 1px solid rgba(255,105,74,.12);
+  border-radius: 50%;
+  right: -7rem;
+  bottom: -8rem;
+  box-shadow: 0 0 0 2.8rem rgba(255,105,74,.025), 0 0 0 5.8rem rgba(255,105,74,.018);
+  pointer-events: none;
+}
+.home-bars {
+  border-bottom-color: var(--line-strong);
+  background: repeating-linear-gradient(to top, rgba(220,229,228,.055) 0 1px, transparent 1px 25%);
+}
+.home-bar-ran { opacity: .75; border-radius: 3px 3px 0 0; }
+.home-bar-now .home-bar-ran { opacity: 1; }
+.home-ring-fill { stroke: var(--signal); }
+.home-ring-track { stroke: #344650; }
+.sparkline-line { stroke: var(--signal); }
+.sparkline-dot { fill: var(--signal); }
+.meter { background: #344650; }
+.meter-fill { background: var(--signal); }
+.button-primary {
+  border-radius: var(--radius-sm);
+  box-shadow: none;
+}
+.button-primary:hover { box-shadow: 0 8px 24px rgba(255,105,74,.13); }
+:is(.nav-link,.tab,.calc-chip,.button) { transition-duration: var(--dur-base); }
+:is(.tab,.calc-chip)[aria-selected='true'], .calc-chip[aria-pressed='true'] {
+  border-color: var(--signal);
+}
+.scroll-progress {
+  background: linear-gradient(90deg, #8db4c4, var(--signal));
+  box-shadow: 0 0 10px rgba(255,105,74,.23);
+}
+@media (hover:hover) and (pointer:fine) {
+  :is(.home-card,.home-tile,.overview-card,.week-glance):hover {
+    border-color: rgba(255,105,74,.4);
+    box-shadow: 0 14px 32px rgba(0,0,0,.18);
+    transform: translateY(-2px);
+  }
+}
+@media (min-width: 64rem) {
+  .page:has(.plan) { max-width: min(100% - 4rem, 76rem); }
+  .page:has(.home) { max-width: min(100% - 4rem, 80rem); }
+  .home-top { gap: clamp(1.25rem,2vw,2rem); }
+  .home-tiles { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .home-title { max-width: 28ch; }
+}
+@media (min-width: 90rem) {
+  .page:has(.plan), .page:has(.home) { max-width: 84rem; }
+}
+@media (max-width: 47.99rem) {
+  .home-race-card { padding: var(--space-4); }
+  .home-tile-value { font-size: clamp(1.6rem,7vw,2.25rem); }
+  .masthead { padding-block: var(--space-4); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero, .home-bar-ran, .home-ring-fill, .sparkline, .home-panel,
+  .scroll-progress, .home-done-chip {
+    animation: none !important;
+  }
+  :is(.home-card,.home-tile,.overview-card,.week-glance,.button-primary) {
+    transform: none !important;
+    transition-duration: .01ms !important;
+  }
+}
+@media print {
+  body { background: white; }
+  .masthead::after,.home-race-card::before,.home-race-card::after { display: none; }
+  :is(.home-tile,.home-best,.home-history,.home-records) { background: white; }
+}

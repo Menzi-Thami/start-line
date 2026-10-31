@@ -23,10 +23,7 @@ An 18-second launch film for Taperday in the Frame look, rendered from code. It 
   The browser clock is pinned to 1 November 2026, so every number is what the app shows on that day.
 - **`render.mjs`** serves the repo root, so the film uses the app's own fonts (Instrument Serif and Instrument Sans, from Fontsource, under the OFL) and photo (`client/public/landing/runner.webp`). It opens the page in Playwright, captures each frame with `seek(i / 30)` and pipes the PNGs to ffmpeg.
 
-Nothing on screen is invented. There are three disclosed adjustments, all explained in `critique.md`:
-- The builder's sticky masthead and button bar are captured separately and pinned to the phone's edges while the race step scrolls.
-- The race-name ticker is hidden in the builder captures (an app bug).
-- The ring's "DAYS TO GO" label is tightened so it isn't clipped (also an app bug).
+Nothing on screen is invented. One adjustment is disclosed: while the race step scrolls, the builder's sticky masthead band and button bar are captured separately and pinned to the phone's edges, where the app keeps them. The film's runner card mirrors the landing CSS (`skin.css`). The two app bugs the film once worked around (see `critique.md`) are fixed in the app itself, so the film has no workarounds left.
 
 ## Re-render
 You need Node 22+, `npm ci` in `client/`, and Playwright's Chromium (`npx playwright install chromium` in `client/`).

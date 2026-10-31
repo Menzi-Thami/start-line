@@ -29,6 +29,11 @@ Each round renders `contact-sheet.png` (`node marketing/launch-film/render.mjs -
 2. **"DAYS TO GO" was clipped against the ring.** The landing page clips it the same way at 1440 px, so that's another small app bug. *Fixed in the film:* the label's letter spacing goes from .12em to .06em, and the size from 11.2 px to 10.4 px.
 3. **MP4 frames checked:** one per second of each encoded file, against the composition. They match. The loop check shows frame 539 identical to frame 0.
 
-## Known and kept
-- **The yellow note on the plan** ("More than 16 weeks of structured training rarely helps…") is real: the Hoka Half is 17 weeks out from 1 November. It stays.
-- **The frosted race card's blur stops at the photo's edge.** The landing card does the same.
+## Round 6: the app bugs, fixed at the source
+- **The ticker peeking past the masthead.** Frame's `skin.css` had set `.masthead { box-shadow: none }`, which dropped the paper bleed that covers the frame's gutters. The masthead now bleeds its paper sideways only (`box-shadow: 0 0 0 100vmax var(--paper)` with `clip-path: inset(0 -100vmax)`), so the full-bleed ticker can't show beside it. Checked at 320, 390, 768, 1024 and 1440 px. The film no longer hides the ticker, and it pins the masthead as the full-width band the app shows.
+- **"DAYS TO GO" in the countdown ring.** Measured as the hole's width at the label's cap height, not the ring's diameter, the label was 80 px against 57–65 px of room below 1024 px. It's now 0.62rem with .06em spacing. On phones the ring is 9rem (was 8rem), the number 2.2rem (was 2.6rem) and the spacing .04em. The label is now 63–65 px against 67–69 px of room at every width. The film's ring mirrors the new CSS exactly.
+- **A sub-pixel sliver of page under the pinned button bar.** *Fixed:* the bar is seated 3 px lower, into its own padding.
+
+## Checked and kept, by design
+- **The yellow note on the plan** ("More than 16 weeks of structured training rarely helps…") is real product behaviour: the Hoka Half is 17 weeks out from 1 November. It stays.
+- **The frosted cards' blur changes where they hang off the photo.** The countdown and race cards deliberately overhang the runner photo on desktop, so past its edge they blur the page instead. That's the landing design, not a defect.

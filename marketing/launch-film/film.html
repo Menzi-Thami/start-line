@@ -39,8 +39,7 @@
   .ring .track { stroke: rgba(0, 0, 0, .1); } .ring .fill { stroke: var(--ink); stroke-linecap: round; }
   .ring .num { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
   .ring .num span { font-family: var(--display); font-size: 41.6px; line-height: 1; }
-  /* Tighter than the landing (.12em), which clips "GO" against the ring at this size. */
-  .ring .num small { font-size: 10.4px; font-weight: 500; letter-spacing: .06em; color: #333; }
+  .ring .num small { font-size: 9.92px; font-weight: 500; letter-spacing: .06em; color: #3a3a3a; }
   .race { position: absolute; right: -36px; bottom: 28px; display: grid; gap: 2px; padding: 18px 22px; border-radius: 22px; background: var(--glass);
     border: 1px solid rgba(255, 255, 255, .8); backdrop-filter: blur(16px); box-shadow: 0 18px 40px rgba(0, 0, 0, .12); }
   .race strong { font-family: var(--display); font-weight: 400; font-size: 25.6px; line-height: 1.1; }
@@ -256,7 +255,8 @@ function seek(t) {
     const scroll = lerp(a.title - a.masthead - 8, Math.min(a.other - a.masthead - 8, a.nav + navH - viewH), easeInOut(ramp(t, 6.15, 6.85)))
     $('raceScroll').style.transform = `translateY(${-scroll * zoom}px)`
     // The app keeps its masthead and button bar stuck to the screen edges; the bar sits in the flow once it's reached.
-    $('raceNav').style.transform = `translateY(${Math.min(viewH - navH, a.nav - scroll) * zoom}px)`
+    // Seated 3px low so sub-pixel rounding never leaves a sliver of page under it (that much is its own padding).
+    $('raceNav').style.transform = `translateY(${Math.min(viewH - navH + 3, a.nav - scroll) * zoom}px)`
     // Each screen pushes the one before it off to the left.
     const pushIn = (cue) => inAt(t, cue, 200, 26)
     const toDays = pushIn(7.15), toCheck = pushIn(8.35), toPlan = pushIn(9.7)

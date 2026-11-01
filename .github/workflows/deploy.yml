@@ -1,8 +1,9 @@
 name: deploy
 
-# Ships main to production on every merge. Each change is checked in full before it's merged (scripts/check.sh, run
-# locally), so this doesn't wait for CI to repeat it; it still builds everything first and stops on any failure, so a
-# broken build never reaches production. Also runnable by hand (Actions → deploy → Run workflow).
+# Ships main in two steps. Every merge deploys to staging first (its own API, database and website environment), so a
+# change can be tried on real infrastructure without touching runners. Production waits for approval on the
+# production environment (Settings → Environments → production → required reviewers), then deploys the same commit.
+# Also runnable by hand (Actions → deploy → Run workflow).
 on:
   push:
     branches: [main]
@@ -10,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write
 
 # One deployment at a time, and never cancel one halfway through a migration.
 concurrency:
@@ -17,106 +19,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    # The environment holds the settings, and is the only thing Azure trusts (see docs/deploy.md).
-    environment:
-      name: production
-      url: ${{ vars.API_URL }}
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v7
+  staging:
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: staging
+      website-environment: staging
+    secrets: inherit
 
-      # Microsoft's current install script, not actions/setup-dotnet: the copy bundled in setup-dotnet@v6 downloads from
-      # a storage account that began refusing public access on 25 Oct 2026 (409 PublicAccessNotPermitted). The current
-      # script downloads from builds.dotnet.microsoft.com, but only for an exact version: asked for a channel, it still
-      # tries an aka.ms link that leads to the blocked account. So look up the latest 10.0 SDK first (global.json's
-      # rollForward allows any 10.0 feature band from its own up).
-      - name: Install .NET
-        run: |
-          curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
-          version=$(curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json | jq -r '."latest-sdk"')
-          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$version" --install-dir "$HOME/.dotnet"
-          echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
-          echo "$HOME/.dotnet" >> "$GITHUB_PATH"
-          "$HOME/.dotnet/dotnet" --version
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: client/.nvmrc
-          cache: npm
-          cache-dependency-path: client/package-lock.json
-
-      # Build everything before touching production, so a broken build can't leave it half-deployed.
-      - name: Build API
-        run: |
-          dotnet tool restore
-          dotnet publish src/StartLine.API -c Release -o publish
-          (cd publish && zip -qr ../api.zip .)
-      - name: Build website
-        working-directory: client
-        env:
-          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
-          VITE_AUTH_CLIENT_ID: ${{ vars.VITE_AUTH_CLIENT_ID }}
-          VITE_AUTH_AUTHORITY: ${{ vars.VITE_AUTH_AUTHORITY }}
-          VITE_AUTH_SCOPE: ${{ vars.VITE_AUTH_SCOPE }}
-          VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
-        run: |
-          npm ci
-          npm run build
-
-      # No stored Azure password: GitHub's OIDC token is exchanged for one scoped to this environment.
-      - uses: azure/login@v3
-        with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      # Provision a missing pair once; preserve all existing keys and subscriptions. Never log values.
-      - name: Configure notification delivery
-        env:
-          API_APP_NAME: ${{ vars.API_APP_NAME }}
-        run: |
-          node --test scripts/configure-push.test.mjs
-          node scripts/configure-push.mjs
-
-      # Migrations run before the new API starts, so it never meets a schema older than it expects.
-      # Keep migrations additive: the old API keeps serving until the deploy below swaps it out.
-      # The free database pauses when idle and answers 40613 ("not currently available") while it wakes, which can
-      # take a minute or two, so keep trying. Retrying is safe: migrations that already ran are skipped.
-      - name: Migrate database
-        run: |
-          dotnet build src/StartLine.Infrastructure -c Release -v q
-          for attempt in 1 2 3 4 5 6; do
-            if dotnet ef database update --no-build --configuration Release \
-              --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure \
-              --connection "Server=tcp:${{ vars.SQL_SERVER }},1433;Database=${{ vars.SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True;Connect Timeout=120;"; then
-              exit 0
-            fi
-            echo "Attempt $attempt failed; the database may still be waking. Trying again in 30 s."
-            sleep 30
-          done
-          echo "Database migration failed after 6 attempts" && exit 1
-
-      - name: Deploy API
-        run: az webapp deploy -g rg-taperday -n "${{ vars.API_APP_NAME }}" --src-path api.zip --type zip --restart true
-
-      - name: Deploy website
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          action: upload
-          app_location: client/dist
-          skip_app_build: true
-          skip_api_build: true
-
-      # The free tier cold-starts in 30-40 s, so allow a few minutes before calling it broken.
-      - name: Smoke test
-        run: |
-          for attempt in $(seq 1 12); do
-            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 "${{ vars.API_URL }}/health/ready" || true)
-            if [ "$status" = "200" ]; then echo "API healthy"; exit 0; fi
-            echo "attempt $attempt: $status"; sleep 15
-          done
-          echo "API did not become healthy" && exit 1
+  production:
+    needs: staging
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: production
+    secrets: inherit

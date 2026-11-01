@@ -103,6 +103,53 @@ later release, once nothing reads them).
 If a setting changes (for example a new domain), update the environment's variables in GitHub (Settings →
 Environments → production) and the CSP in `client/public/staticwebapp.config.json`.
 
+## Staging, then production
+
+Every merge to `main` deploys to **staging** first, then waits for your approval before the same commit goes to
+**production** (`deploy.yml` calls `deploy-environment.yml` once per environment). Staging costs nothing extra:
+
+| Piece | Production | Staging |
+|---|---|---|
+| API | `app-taperday-api-3ghg5t` | `app-taperday-api-staging-3ghg5t`, on the same free F1 plan |
+| Database | `sqldb-taperday`, Basic, always on | `sqldb-taperday-staging`, the free serverless offer; **pauses** when its monthly allowance runs out instead of billing |
+| Website | `taperday.run` | Static Web Apps environment `staging`: `https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net` |
+| GitHub environment | `production` (required reviewer: you) | `staging` (main only) |
+
+Staging has **no Strava, email or push-test settings**, so it can never reach a real runner, send an email, or touch
+Strava's athlete limit. Its database starts empty; sign up on the staging site with a test account.
+
+To release: merge to `main`, check the change on the staging site, then **Actions → deploy → Review deployments →
+Approve** for production.
+
+### One-time setup (done by the owner; permission changes can't be automated here)
+
+1. **Database access**, in the portal: SQL databases → `sqldb-taperday-staging` → Query editor, signed in as the Entra
+   admin:
+   ```sql
+   CREATE USER [app-taperday-api-staging-3ghg5t] FROM EXTERNAL PROVIDER;
+   ALTER ROLE db_datareader ADD MEMBER [app-taperday-api-staging-3ghg5t];
+   ALTER ROLE db_datawriter ADD MEMBER [app-taperday-api-staging-3ghg5t];
+   CREATE USER [Taperday GitHub deploy] FROM EXTERNAL PROVIDER;
+   ALTER ROLE db_ddladmin ADD MEMBER [Taperday GitHub deploy];
+   ALTER ROLE db_datareader ADD MEMBER [Taperday GitHub deploy];
+   ALTER ROLE db_datawriter ADD MEMBER [Taperday GitHub deploy];
+   ```
+2. **Deploy permission on the staging API only**:
+   ```bash
+   az role assignment create --assignee 7f076390-5180-4af6-b078-67c1661931e8 --role "Website Contributor" --scope "$(az webapp show -g rg-taperday -n app-taperday-api-staging-3ghg5t --query id -o tsv)"
+   ```
+3. **Trust the staging environment** (Azure: app registration *Taperday GitHub deploy* → Certificates & secrets →
+   Federated credentials), or:
+   ```bash
+   az ad app federated-credential create --id 7f076390-5180-4af6-b078-67c1661931e8 --parameters '{"name":"github-staging","issuer":"https://token.actions.githubusercontent.com","subject":"repo:Menzi-Thami@43884343/start-line@1410876756:environment:staging","audiences":["api://AzureADTokenExchange"]}'
+   ```
+4. **Website token for staging**: copy the `AZURE_STATIC_WEB_APPS_API_TOKEN` secret into the `staging` environment
+   (Settings → Environments → staging → Add secret). The same token deploys every environment of the site.
+5. **Sign-in redirect**: in the External ID tenant, app registration for the website → Authentication → Single-page
+   application → add `https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net` (and `/` variants as for
+   production).
+6. **Approval**: Settings → Environments → production → Required reviewers → add yourself.
+
 ## Investigating a failed deploy
 
 Open **Actions → deploy → latest failed run**, expand the red step, and copy its name and error message.

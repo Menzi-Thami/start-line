@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { beginnerSessionSummary, couchTo5k } from './couch-to-5k'
-import { BEGINNER_DAYS, countCompleted, defaultBeginnerProgress, parseBeginnerProgress, sessionDate, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
+import { countCompleted, defaultBeginnerProgress, parseBeginnerProgress, sessionDate, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
 
 const STORAGE_KEY = 'taperday:beginner-progress:v1'
 const programme = couchTo5k()
@@ -20,24 +20,24 @@ const read = (): BeginnerProgress => {
  */
 export function CouchTo5K() {
   const [progress, setProgress] = useState<BeginnerProgress>(read)
-  const [message, setMessage] = useState('')
   const sessions = programme.filter(s => s.week === progress.week)
   const done = countCompleted(progress, programme)
-  const update = (next: BeginnerProgress) => { setProgress(next); setMessage('') }
+  const update = (next: BeginnerProgress) => setProgress(next)
   useEffect(() => {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)) }
     catch { /* Private browsing / restricted storage: continue in memory */ }
   }, [progress])
 
-  const chooseDay = (day: BeginnerDay) => {
-    const next = progress.days.includes(day)
-      ? progress.days.filter(d => d !== day)
-      : [...progress.days, day]
-    if (next.length === 3 && validRunDays(next)) {
-      update({ ...progress, days: next as unknown as [BeginnerDay, BeginnerDay, BeginnerDay] })
-    } else {
-      setMessage('Choose three training days with at least one rest day between each, including across weekends.')
-    }
+  const schedules: readonly (readonly [BeginnerDay, BeginnerDay, BeginnerDay])[] = [
+    ['Monday', 'Wednesday', 'Friday'],
+    ['Tuesday', 'Thursday', 'Saturday'],
+    ['Wednesday', 'Friday', 'Sunday'],
+    ['Monday', 'Thursday', 'Saturday'],
+    ['Tuesday', 'Friday', 'Sunday'],
+  ]
+  const chooseSchedule = (value: string) => {
+    const selected = schedules.find(days => days.join('|') === value)
+    if (selected && validRunDays(selected)) update({ ...progress, days: [...selected] as [BeginnerDay, BeginnerDay, BeginnerDay] })
   }
   const toggle = (id: string) => {
     const set = new Set(progress.completed)
@@ -46,8 +46,8 @@ export function CouchTo5K() {
     update({ ...progress, completed: [...set] })
   }
   const resetWeek = () => {
-    const revision = progress.revision + 1
-    update({ ...progress, revision, completed: progress.completed, paused: false })
+    const ids = new Set(sessions.map(s => sessionId(s, progress.revision)))
+    update({ ...progress, completed: progress.completed.filter(id => !ids.has(id)), paused: false })
   }
   return (
     <section className="panel" aria-labelledby="beginner-title">
@@ -64,13 +64,9 @@ export function CouchTo5K() {
       <fieldset className="field">
         <legend className="field-label">Your three run days</legend>
         <p className="field-help">Keep a rest day between sessions. Choose your schedule before recording progress.</p>
-        <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
-          {BEGINNER_DAYS.map(day => (
-            <button key={day} type="button" className={progress.days.includes(day) ? 'button button-primary' : 'button button-quiet'}
-              aria-pressed={progress.days.includes(day)} onClick={() => chooseDay(day)}>{day.slice(0, 3)}</button>
-          ))}
-        </div>
-        {message && <p role="status" className="field-help">{message}</p>}
+        <select className="input" aria-label="Choose a three-day running schedule" value={progress.days.join('|')} onChange={e => chooseSchedule(e.target.value)}>
+          {schedules.map(days => <option key={days.join('|')} value={days.join('|')}>{days.join(' · ')}</option>)}
+        </select>
       </fieldset>
       <div className="wizard-nav">
         <button className="button button-quiet" type="button" disabled={progress.week === 1} onClick={() => update({ ...progress, week: Math.max(1, progress.week - 1) })}>Previous week</button>

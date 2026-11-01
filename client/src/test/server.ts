@@ -32,7 +32,6 @@ export const newCalendarToken = 'new-calendar-token-0123456789abcdefghijklmn'
 export const runDataEmpty: RunData = {
   sources: { uploads: 0, fit: 0, gpx: 0, tcx: 0, unknownFormat: 0, strava: 0, stravaConnected: false, stravaStatus: null, lastSyncedAt: null, stravaPending: 0 },
   totals: [],
-  possibleDuplicates: [],
   missing: { runs: 0, withoutHeartRate: 0, withoutElevation: 0, withoutSplits: 0, heartRateConsent: true },
   syncIssues: [],
 }

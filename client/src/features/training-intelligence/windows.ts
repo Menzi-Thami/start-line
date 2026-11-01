@@ -11,14 +11,14 @@ export interface TrainingWindow {
 
 function offset(date: string, days: number): string {
   const value = new Date(date + 'T12:00:00Z')
-  if (!Number.isFinite(value.getTime())) throw new Error('Invalid date')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(value.getTime()) || value.toISOString().slice(0, 10) !== date) throw new Error('Invalid date')
   value.setUTCDate(value.getUTCDate() + days)
   return value.toISOString().slice(0, 10)
 }
 
 export function trainingWindows(runs: readonly ActivitySummary[], today: string): { current: TrainingWindow; previous: TrainingWindow } {
   const summarize = (from: string, to: string): TrainingWindow => {
-    const selected = runs.filter(run => run.localDate >= from && run.localDate <= to && run.kind !== 'Other')
+    const selected = runs.filter(run => run.localDate >= from && run.localDate <= to && run.kind !== 'Other' && /^\d{4}-\d{2}-\d{2}$/.test(run.localDate))
     const measured = selected.filter(run => Number.isFinite(run.distanceKm) && run.distanceKm > 0)
     return {
       from, to, runs: selected.length,

@@ -5664,3 +5664,73 @@ button.plan-calendar-day {
   white-space: nowrap;
   padding-left: var(--space-3);
 }
+/* ---------- Shoes: pairs, their distance towards the limit, and the picker on a run ---------- */
+.shoe-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.shoe {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.shoe[data-retired] {
+  opacity: 0.75;
+}
+.shoe-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.shoe-distance {
+  margin: var(--space-1) 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+.shoe-meter {
+  height: 6px;
+}
+.shoe-wear {
+  margin: var(--space-2) 0 0;
+  font-weight: 600;
+}
+.shoe[data-wear='PastLimit'] .shoe-meter .meter-fill {
+  background: var(--ink);
+}
+.shoe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.shoe-form {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 32rem;
+  margin-top: var(--space-3);
+}
+.shoe-form-numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-3);
+}
+.shoe-runs {
+  display: grid;
+  gap: var(--space-2);
+  border: 0;
+  padding: 0;
+  margin: var(--space-3) 0;
+  max-height: 20rem;
+  overflow: auto;
+}
+.shoe-target {
+  min-width: 12rem;
+}
+.shoe-picker {
+  max-width: 22rem;
+  margin-top: var(--space-4);
+}

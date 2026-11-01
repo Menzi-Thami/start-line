@@ -44,6 +44,8 @@ export const handlers = [
   http.get('*/health/ready', () => new HttpResponse('Healthy')),
   http.get('*/api/v1/races', () => HttpResponse.json(racesFixture)),
   http.get('*/api/v1/me/run-data', () => HttpResponse.json(runDataEmpty)),
+  http.get('*/api/v1/me/shoes', () => HttpResponse.json([])),
+  http.get('*/api/v1/me/shoes/unworn-runs', () => HttpResponse.json([])),
   http.post('*/api/v1/plans', async ({ request }) => {
     lastPlanRequest.body = await request.json()
     return HttpResponse.json(planFixture)

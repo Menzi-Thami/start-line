@@ -175,6 +175,8 @@ public sealed class PushSubscription
         NotificationKind.LongRunPreparation => LongRunPreparation,
         NotificationKind.RacePreparation => RacePreparation,
         NotificationKind.ConnectionAlert => ConnectionAlerts,
+        // The runner asked for this on the shoes themselves; every device they have allowed notifications on gets it.
+        NotificationKind.ShoeMileage => true,
         _ => false,
     };
 

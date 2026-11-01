@@ -9,6 +9,9 @@ public enum NotificationKind
     LongRunPreparation,
     RacePreparation,
     ConnectionAlert,
+
+    /// <summary>A pair of shoes reached the distance its runner set. Opted into per pair, not per device.</summary>
+    ShoeMileage,
 }
 
 /// <summary>A per-device event and delivery claim. Payloads and provider secrets are never stored here.</summary>

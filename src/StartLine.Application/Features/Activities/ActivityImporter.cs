@@ -19,7 +19,7 @@ namespace StartLine.Application.Features.Activities;
 /// dispatch another handler. Scoped: each saved plan is built at most once per request (or sync pass), so a batch of
 /// runs from the same weeks doesn't regenerate the same plan for every file.
 /// </summary>
-internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileReader reader, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time)
+internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileReader reader, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time, Shoes.ShoeKeeper shoes)
 {
     private readonly Dictionary<Guid, TrainingPlan> builtPlans = [];
 
@@ -58,10 +58,16 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
             throw Duplicate();
         }
 
+        var followed = false;
         if (existing is not null)
         {
-            await RelinkAsync(existing.Id, activity.Id, cancellationToken);
+            followed = await RelinkAsync(existing.Id, activity.Id, cancellationToken);
             db.Activities.Remove(existing);
+        }
+
+        if (!followed)
+        {
+            await shoes.WearDefaultAsync(runner.Id, activity, cancellationToken);
         }
 
         db.Activities.Add(activity);
@@ -113,13 +119,18 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
         return Activity.Record(runner.Id, recording, localDate, await PlannedOnAsync(runner.Id, localDate, cancellationToken), origin);
     }
 
-    /// <summary>Points everything linked to a replaced recording of a run at the recording that's kept. Doesn't save.</summary>
-    public async Task RelinkAsync(Guid replaced, Guid kept, CancellationToken cancellationToken)
+    /// <summary>
+    /// Points everything linked to a replaced recording of a run (check-ins, the pair of shoes it was worn in) at the
+    /// recording that's kept. Doesn't save. True when the run was on a pair, which the kept recording now is too.
+    /// </summary>
+    public async Task<bool> RelinkAsync(Guid replaced, Guid kept, CancellationToken cancellationToken)
     {
         foreach (var checkIn in await db.SessionCheckIns.Where(c => c.ActivityId == replaced).ToListAsync(cancellationToken))
         {
             checkIn.RelinkActivity(replaced, kept);
         }
+
+        return await shoes.FollowAsync(replaced, kept, cancellationToken);
     }
 
     public const string DuplicateCode = "activity_exists";

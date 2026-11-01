@@ -205,6 +205,7 @@ export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
                 <span className="week-meta mono">
                   {formatDate(run.localDate, 'short')} · {formatDistance(run.distanceKm, units)} · {formatDuration(run.movingSeconds)} ·{' '}
                   {formatPace(run.paceSecondsPerKm, units)}
+                  {run.shoe ? ` · ${run.shoe.name}` : ''}
                 </span>
               </span>
               <span aria-hidden="true" className="run-feed-arrow">›</span></button>

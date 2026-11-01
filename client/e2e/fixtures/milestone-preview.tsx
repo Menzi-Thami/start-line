@@ -1,7 +1,11 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { MilestoneCards } from '../../src/features/milestones/MilestoneCards'
+import '@fontsource/instrument-serif'
+import '@fontsource-variable/instrument-sans'
+import '../../src/styles/tokens.css'
 import '../../src/styles/app.css'
+import '../../src/styles/skin.css'
 import type { ActivitySummary } from '../../src/lib/types'
 
 const run = (id: string, localDate: string, distanceKm: number): ActivitySummary => ({

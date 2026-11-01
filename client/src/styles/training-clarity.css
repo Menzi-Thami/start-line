@@ -1,0 +1,42 @@
+/* Training clarity: one primary workout, secondary supporting information. */
+.home-focus .home-top { display:grid; grid-template-columns:minmax(0,1fr); gap:1rem; align-items:stretch; }
+.home-focus .home-today { order:0; }
+.home-focus .home-week { order:1; }
+.home-focus .home-race-brief { order:2; }
+.home-focus .home-today .home-card-heading { margin-bottom:.85rem; }
+.home-focus .home-today-title { font-size:clamp(1.45rem,3.2vw,2.3rem); line-height:1.1; }
+.home-focus .home-workout-facts { gap:clamp(1rem,2.5vw,2rem); margin-block:1.25rem; }
+.home-focus .home-week { background:var(--surface); }
+.home-focus .home-race-brief { min-height:100%; border-radius:var(--radius-md); }
+.home-focus .home-review,.home-focus .home-sync,.home-focus .home-insights,.home-focus .home-tools {
+  margin-block:clamp(.85rem,1.8vw,1.5rem); border-top:1px solid var(--line); padding-block:.85rem;
+}
+.home-focus .home-insights > summary,.home-focus .home-tools > summary {
+  cursor:pointer; min-height:48px; font-weight:600;
+}
+.plan .plan-facts { display:flex; flex-wrap:wrap; gap:.55rem 1.25rem; max-width:100%; margin-bottom:1.4rem; }
+.plan .plan-facts li { line-height:1.4; }
+.plan .tabs-frame { margin-top:clamp(1.25rem,3vw,2rem); }
+.plan .training-guide,.plan .plan-options { border-top:1px solid var(--line); padding-block:.75rem; }
+.plan .training-guide > summary,.plan .plan-options > summary {
+  min-height:48px; cursor:pointer; padding-block:.6rem;
+}
+.wizard .wizard-title { max-width:22ch; font-size:clamp(1.65rem,3vw,2.5rem); }
+.wizard .wizard-hint { max-width:40ch; margin-top:.65rem; margin-bottom:1.5rem; }
+.wizard .wizard-nav { gap:1rem; }
+.wizard .wizard-nav > .button-primary { min-width:min(52vw,12rem); }
+@media(min-width:64rem) {
+  .home-focus .home-top { grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:1.5rem; }
+  .home-focus .home-today { grid-row:1 / 3; }
+  .home-focus .home-week { grid-column:2; }
+  .home-focus .home-race-brief { grid-column:2; }
+  .page:has(.plan) { max-width:min(100% - 4rem,76rem); }
+}
+@media(max-width:35rem) {
+  .home-focus .home-top { gap:.85rem; }
+  .plan .plan-facts { gap:.45rem .85rem; font-size:.89rem; }
+  .wizard .wizard-nav .button-primary { min-width:0; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .home-focus .home-top > *,.plan .training-guide,.wizard .wizard-panel { animation:none!important; }
+}

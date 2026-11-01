@@ -52,7 +52,7 @@ const nextMonday = (today: string) => addDays(today, (8 - new Date(`${today}T00:
 // runner straight back to the screen that needs fixing.
 const STEPS = [
   { title: 'Which race?', hint: 'Choose a race or add your own.', fields: ['race', 'distance', 'date'] },
-  { title: 'What’s your goal time?', hint: 'We'll use this to set your training paces.', fields: ['goal'] },
+  { title: 'What’s your goal time?', hint: 'Your goal sets your training paces.', fields: ['goal'] },
   { title: 'When can you run?', hint: 'Choose the days that work for you.', fields: ['runDays', 'longRunDay', 'startOn'] },
   { title: 'About you', hint: 'Start at your current fitness level.', fields: ['currentKm'] },
   { title: 'Check and build', hint: 'Review your choices before building.', fields: ['strength'] },

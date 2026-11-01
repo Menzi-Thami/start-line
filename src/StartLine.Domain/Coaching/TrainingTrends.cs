@@ -130,10 +130,11 @@ public static class TrainingTrends
         return new(Round(recent), Round(baseline), baselineWeeksRun, Math.Round((ratio - 1) * 100), signal);
     }
 
-    private static SessionAdherence AdherenceOf(DateOnly today, IReadOnlyList<PlannedSession> checkable, IReadOnlyList<TrendCheckIn> checkIns, IReadOnlyList<TrendRun> runs)
+    /// <summary>Planned sessions in the <paramref name="windowDays"/> before today: run (ticked or uploaded), skipped, or not logged.</summary>
+    public static SessionAdherence AdherenceOf(DateOnly today, IReadOnlyList<PlannedSession> sessions, IReadOnlyList<TrendCheckIn> checkIns, IReadOnlyList<TrendRun> runs, int windowDays = WindowDays)
     {
-        var from = today.AddDays(-WindowDays);
-        var due = checkable.Where(s => s.Date >= from && s.Date < today).ToList();
+        var from = today.AddDays(-windowDays);
+        var due = sessions.Where(s => SessionCheckIn.IsCheckable(s.Type) && s.Type != SessionType.Race && s.Date >= from && s.Date < today).ToList();
         int done = 0, skipped = 0;
         foreach (var session in due)
         {
@@ -146,7 +147,8 @@ public static class TrainingTrends
         return new(due.Count, done, skipped, due.Count - done - skipped, due.Count == 0 ? null : Math.Round((double)done / due.Count, 2));
     }
 
-    private static EffortPace EasyPaceOf(DateOnly today, IReadOnlyList<TrendCheckIn> checkIns, IReadOnlyList<TrendRun> runs)
+    /// <summary>Easy runs in the last <paramref name="windowDays"/> against the same span before, by pace and heart rate.</summary>
+    public static EffortPace EasyPaceOf(DateOnly today, IReadOnlyList<TrendCheckIn> checkIns, IReadOnlyList<TrendRun> runs, int windowDays = WindowDays)
     {
         var easy = runs.Where(r => r.DistanceKm >= MinEasyRunKm && r.MovingTime > TimeSpan.Zero && r.Date <= today).Where(r =>
         {
@@ -154,8 +156,8 @@ public static class TrainingTrends
                 ?? checkIns.FirstOrDefault(c => !c.IsAdditional && c.Date == r.Date && r.SessionType == c.SessionType && c.Effort is not null)?.Effort;
             return effort is { } rated ? rated <= 4 : r.SessionType is { } type && EasyTypes.Contains(type);
         }).ToList();
-        var recentFrom = today.AddDays(-(WindowDays - 1));
-        var earlierFrom = recentFrom.AddDays(-WindowDays);
+        var recentFrom = today.AddDays(-(windowDays - 1));
+        var earlierFrom = recentFrom.AddDays(-windowDays);
         var recent = easy.Where(r => r.Date >= recentFrom).ToList();
         var earlier = easy.Where(r => r.Date >= earlierFrom && r.Date < recentFrom).ToList();
         var recentPace = PaceOf(recent);

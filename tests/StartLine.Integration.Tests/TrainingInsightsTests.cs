@@ -75,4 +75,26 @@ public sealed class TrainingInsightsTests
         (await factory.CreateClient().As(Guid.NewGuid().ToString()).GetAsync(Url($"/api/v1/me/plans/{id}/insights"))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await factory.CreateClient().As(Guid.NewGuid().ToString()).PostAsJsonAsync(Url($"/api/v1/me/plans/{id}/coach/decline"), new { token = new string('0', 64) })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task Progress_tells_the_story_over_four_eight_or_twelve_weeks_and_is_private()
+    {
+        await using var factory = new StartLineApiFactory(); var (client, id, _) = await Reviewed(factory);
+        var response = await client.GetAsync(Url($"/api/v1/me/plans/{id}/progress?weeks=4"));
+        response.Headers.CacheControl?.NoStore.ShouldBeTrue();
+        var story = (await Json(response)).GetProperty("story");
+        story.GetProperty("weeks").GetInt32().ShouldBe(4);
+        var rows = story.GetProperty("weekRows").EnumerateArray().ToList();
+        rows.Count.ShouldBe(4);
+        rows[^1].GetProperty("ranKm").GetDouble().ShouldBeGreaterThan(0);
+        story.GetProperty("current").GetProperty("km").GetDouble().ShouldBeGreaterThan(0);
+        var goal = story.GetProperty("raceGoal");
+        goal.GetProperty("goal").GetString().ShouldBe("00:52:00");
+        goal.GetProperty("raceKm").GetDouble().ShouldBe(10);
+        story.GetProperty("gaps").EnumerateArray().Select(g => g.GetString()).ShouldContain("NoRaceEstimate");
+
+        (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}/progress")))).GetProperty("story").GetProperty("weekRows").GetArrayLength().ShouldBe(12);
+        (await client.GetAsync(Url($"/api/v1/me/plans/{id}/progress?weeks=6"))).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await factory.CreateClient().As(Guid.NewGuid().ToString()).GetAsync(Url($"/api/v1/me/plans/{id}/progress"))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
 }

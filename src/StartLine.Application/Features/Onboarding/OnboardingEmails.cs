@@ -1,5 +1,4 @@
 using StartLine.Application.Features.Insights;
-using StartLine.Domain.Runners;
 
 namespace StartLine.Application.Features.Onboarding;
 

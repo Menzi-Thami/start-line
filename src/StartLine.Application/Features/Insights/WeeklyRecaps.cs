@@ -47,8 +47,8 @@ public static class WeeklyRecap
         var km = Km(recap.Km);
         var title = recap.Runs == 0 ? "A quiet week." : $"{km} km over {Plural(recap.Runs, "run")}.";
         var intro = recap.Runs == 0
-            ? "No runs logged this week. That's fine: your plan is ready when you are."
-            : "Here's what you logged this week, and what's next.";
+            ? "No runs logged. That's fine: your plan is ready when you are."
+            : "Here's what you logged, and what's next.";
 
         // Laid out like the Monday report: figures up top, then sage bars for how much of the plan got run.
         List<(string, string)> figures = [("Runs", recap.Runs.ToString(En)), ("Distance", $"{km} km")];
@@ -73,7 +73,7 @@ public static class WeeklyRecap
             body.Append(EmailLayout.Heading("Your progress"));
             if (lastWeek is { } week)
             {
-                body.Append(EmailLayout.Bar("Planned sessions run this week", (double)week.Done / week.Planned, $"{week.Done} of {week.Planned}"));
+                body.Append(EmailLayout.Bar("Planned sessions run", (double)week.Done / week.Planned, $"{week.Done} of {week.Planned}"));
             }
 
             if (month is not null)
@@ -108,7 +108,7 @@ public static class WeeklyRecap
             body: body.ToString(),
             buttonText: "Open this week",
             buttonUrl: EmailLayout.Site,
-            footer: "You're getting this because you turned on the weekly recap in Taperday.",
+            footer: "Taperday sends every runner a weekly recap. Stop it any time with the button below, or in Account.",
             unsubscribeUrl: unsubscribe?.Page.AbsoluteUri,
             unsubscribeFrom: "the weekly recap");
 
@@ -164,9 +164,9 @@ public static class WeeklyRecap
 
         List<(string, string)> lines = [("Next step", trends.NextStep switch
         {
-            NextStep.HoldVolume => "Hold your distance next week" + (trends.Reasons.Contains(NextStepReason.LoadSpike) ? ": this week jumped well above your usual." : ": a week you can manage beats building on gaps."),
+            NextStep.HoldVolume => "Hold your distance in the week ahead" + (trends.Reasons.Contains(NextStepReason.LoadSpike) ? ": the week just gone jumped well above your usual." : ": a week you can manage beats building on gaps."),
             NextStep.EaseOff => "Ease off: you reported pain that changed how you ran. Run easy until it settles, and see a professional if it doesn't.",
-            NextStep.LogMore => "Log your runs next week, so your trends can take shape.",
+            NextStep.LogMore => "Log your runs in the week ahead, so your trends can take shape.",
             _ => "Carry on as planned.",
         })];
         if (trends.Load is { Signal: not LoadSignal.NotEnoughHistory, ChangePercent: { } change })
@@ -212,9 +212,10 @@ public interface IWeeklyRecaps
 }
 
 /// <summary>
-/// Sends the weekly recap to every runner who turned it on, at 19:00 on their own Sunday, about the week ending that day. Each
+/// Sends the weekly recap to every runner who hasn't turned it off, between 19:00 and 20:00 on their own Sunday, about the
+/// week ending that day (before <see cref="SundaysFrom"/>, 07:00 on their Monday about the week before). Each
 /// runner and week is claimed in <see cref="WeeklyRecapDelivery"/> first, so it's sent once however often this runs or
-/// however many app instances run it. A Sunday evening the app missed entirely is skipped, never sent late on Monday.
+/// however many app instances run it. An hour the app missed entirely is skipped, never sent late.
 /// </summary>
 internal sealed partial class WeeklyRecapSender(
     IApplicationDbContext db,
@@ -225,16 +226,27 @@ internal sealed partial class WeeklyRecapSender(
     IEmailSettings settings,
     ILogger<WeeklyRecapSender> logger) : IWeeklyRecaps
 {
+    /// <summary>The Sunday send's hour: 19:00 to 19:59 in the runner's own time zone.</summary>
     public const int SendHour = 19;
 
-    /// <summary>The Monday of the week to recap for this runner now, or null when it isn't their Sunday evening.</summary>
+    /// <summary>
+    /// The first Sunday send. Before it the recap kept its old slot, 07:00 on the runner's Monday about the week before, so
+    /// Monday 2 November 2026 still went out; that week and the first Sunday's are different weeks, so nobody gets one twice.
+    /// </summary>
+    public static readonly DateOnly SundaysFrom = new(2026, 11, 8);
+
+    /// <summary>The Monday of the week to recap for this runner now, or null when it isn't their send time.</summary>
     public static DateOnly? WeekDue(Runner runner, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(runner);
         var local = TimeZoneInfo.ConvertTime(now, TimeProviderExtensions.ZoneOf(runner.TimeZone));
-        return local.DayOfWeek == DayOfWeek.Sunday && local.Hour >= SendHour
-            ? DateOnly.FromDateTime(local.Date).AddDays(-6)
-            : null;
+        var today = DateOnly.FromDateTime(local.Date);
+        if (today < SundaysFrom)
+        {
+            return local.DayOfWeek == DayOfWeek.Monday && local.Hour >= 7 ? today.AddDays(-7) : null;
+        }
+
+        return local.DayOfWeek == DayOfWeek.Sunday && local.Hour == SendHour ? today.AddDays(-6) : null;
     }
 
     public async Task<int> SendDueAsync(DateTimeOffset now, CancellationToken cancellationToken)

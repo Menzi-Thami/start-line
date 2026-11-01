@@ -355,7 +355,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </div>
       )}
 
-      <LifeHappens />
+      <LifeHappens plan={plan} today={today} units={units} actions={coach?.adjustments?.life} />
       <WorkoutExport plan={plan} units={units} />
       <RaceWeek plan={plan} today={today} />
       <details className="disclosure plan-options"><summary>Plan options</summary>

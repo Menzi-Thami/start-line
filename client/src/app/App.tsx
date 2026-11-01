@@ -954,6 +954,11 @@ export function App() {
                     setCoachNotes({ planId: savedOnScreen, notes: result.proposed.coaching ?? [] })
                   },
                   decline: async (proposalToken, recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to answer the review.'); await api.me.declineCoaching(token, savedOnScreen, proposalToken, recovery) },
+                  life: {
+                    preview: async (change) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to change your plan.'); return api.me.previewLifeChange(token, savedOnScreen, change) },
+                    apply: async (change, proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to change your plan.'); const result = await api.me.applyLifeChange(token, savedOnScreen, change, proposalToken); setPlan({ kind: 'ready', plan: result.proposed, inputs: plan.inputs }) },
+                    restore: async (dates) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to change your plan.'); const result = await api.me.restoreSessions(token, savedOnScreen, dates); setPlan({ kind: 'ready', plan: result.plan, inputs: plan.inputs }) },
+                  },
                 }, saveAdditional: checkIns.saveAdditional, removeAdditional: checkIns.removeAdditional } : undefined}
                 coachNotes={notes}
                 onInjuryReplan={() => replanWith({ from: today, setback: 'Injury' })}

@@ -1569,6 +1569,196 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/life-happens/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LifeChange"];
+                    "text/json": components["schemas"]["LifeChange"];
+                    "application/*+json": components["schemas"]["LifeChange"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["LifeProposalDto"];
+                        "application/json": components["schemas"]["LifeProposalDto"];
+                        "text/json": components["schemas"]["LifeProposalDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/life-happens/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ApplyLifeChangeRequest"];
+                    "text/json": components["schemas"]["ApplyLifeChangeRequest"];
+                    "application/*+json": components["schemas"]["ApplyLifeChangeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["LifeProposalDto"];
+                        "application/json": components["schemas"]["LifeProposalDto"];
+                        "text/json": components["schemas"]["LifeProposalDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/adjustments/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RestoreSessionsRequest"];
+                    "text/json": components["schemas"]["RestoreSessionsRequest"];
+                    "application/*+json": components["schemas"]["RestoreSessionsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SavedPlanDto"];
+                        "application/json": components["schemas"]["SavedPlanDto"];
+                        "text/json": components["schemas"]["SavedPlanDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans/{id}/remaining-week/proposal": {
         parameters: {
             query?: never;
@@ -3231,6 +3421,10 @@ export interface components {
             token: string;
             recovery?: components["schemas"]["RecoveryReadiness"];
         };
+        ApplyLifeChangeRequest: {
+            change: components["schemas"]["LifeChange"];
+            token: string;
+        };
         BestEffortDto: {
             name: string;
             /** Format: double */
@@ -3500,6 +3694,29 @@ export interface components {
         InsightGap: "FewWeeks" | "MissingDistances" | "StravaWindow" | "FewEasyRuns" | "UnloggedSessions";
         /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
+        LifeChange: {
+            situation: components["schemas"]["LifeSituation"];
+            /** Format: date */
+            date?: null | string;
+            /** Format: date */
+            until?: null | string;
+            /** Format: int32 */
+            minutes?: null | number;
+            /** @default true */
+            canRun: boolean;
+            /** Format: int32 */
+            days?: null | number;
+            /** Format: date */
+            moveTo?: null | string;
+        };
+        LifeProposalDto: {
+            token: string;
+            changes: components["schemas"]["SessionRevision"][];
+            moveTargets: string[];
+            proposed: components["schemas"]["TrainingPlanDto"];
+        };
+        /** @enum {unknown} */
+        LifeSituation: "MissedRun" | "ShortOnTime" | "Travelling" | "Unwell" | "MoveLongRun";
         /** @enum {unknown} */
         LoadSignal: "NotEnoughHistory" | "Lower" | "Steady" | "Rising" | "RisingFast";
         LoadTrend: {
@@ -3826,6 +4043,9 @@ export interface components {
         };
         /** @enum {unknown} */
         RepUnit: "Reps" | "RepsEachLeg" | "Seconds" | "SecondsEachSide";
+        RestoreSessionsRequest: {
+            dates: string[];
+        };
         RetriedDto: {
             /** Format: int32 */
             retried: number;
@@ -4018,6 +4238,8 @@ export interface components {
             easyFastestSecondsPerKm?: null | number;
             /** Format: double */
             easySlowestSecondsPerKm?: null | number;
+            /** Format: date */
+            movedFrom?: null | string;
         };
         SessionStepDto: {
             kind: components["schemas"]["StepKind"];

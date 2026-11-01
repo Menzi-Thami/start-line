@@ -121,12 +121,43 @@ public sealed class SavedPlan
             || r.EasyKm is < RemainingWeek.MinimumRunKm || r.EasyKm is { } km && !double.IsFinite(km)
             || r.EasyKm > r.OriginalKm || r.EasyKm > RemainingWeek.ResetRunLimitKm))
             throw new DomainException("Only upcoming runs in the current week can be eased. Past sessions stay unchanged.");
-        var changes = Adjustments.ToDictionary(r => r.Date);
+        var changes = Adjustments.ToDictionary(r => (r.Date, r.MovedFrom));
         foreach (var revision in revisions)
-            changes[revision.Date] = changes.TryGetValue(revision.Date, out var original)
+            changes[(revision.Date, revision.MovedFrom)] = changes.TryGetValue((revision.Date, revision.MovedFrom), out var original)
                 ? revision with { OriginalType = original.OriginalType, OriginalTitle = original.OriginalTitle, OriginalKm = original.OriginalKm }
                 : revision;
         Adjustments = [.. changes.Values.OrderBy(r => r.Date)];
+    }
+
+    /// <summary>
+    /// Applies a Life Happens change (<see cref="LifeHappens"/>): upcoming days in the next two weeks only, never the race or
+    /// strength. A day changed before keeps its original prescription, so restoring it puts back the plan as first written.
+    /// </summary>
+    public void ApplyLifeChange(IReadOnlyList<SessionRevision> revisions, DateOnly today)
+    {
+        ArgumentNullException.ThrowIfNull(revisions);
+        if (Status != SavedPlanStatus.Active || revisions.Count == 0 || revisions.Any(r => r.AppliedOn != today || r.Date < today
+            || r.Date >= today.AddDays(LifeHappens.HorizonDays) || r.OriginalType is SessionType.Strength or SessionType.Race
+            || r.EasyKm is { } km && (!double.IsFinite(km) || km < RemainingWeek.MinimumRunKm || km > r.OriginalKm)))
+            throw new DomainException("Only upcoming runs in the next two weeks can change. Past sessions stay unchanged.");
+        var changes = Adjustments.ToDictionary(r => (r.Date, r.MovedFrom));
+        foreach (var revision in revisions)
+            changes[(revision.Date, revision.MovedFrom)] = changes.TryGetValue((revision.Date, revision.MovedFrom), out var original)
+                ? revision with { OriginalType = original.OriginalType, OriginalTitle = original.OriginalTitle, OriginalKm = original.OriginalKm }
+                : revision;
+        Adjustments = [.. changes.Values.OrderBy(r => r.Date)];
+    }
+
+    /// <summary>Puts upcoming days back as the plan first wrote them. Past days keep whatever was applied then.</summary>
+    public void RestoreOriginal(IReadOnlyCollection<DateOnly> dates, DateOnly today)
+    {
+        ArgumentNullException.ThrowIfNull(dates);
+        if (Status != SavedPlanStatus.Active)
+            throw new DomainException("Only your current plan can change.");
+        // A move is undone whole: restoring either end restores both.
+        var moves = Adjustments.Where(r => r.MovedFrom is { } from && (dates.Contains(r.Date) || dates.Contains(from))).ToList();
+        var restore = dates.Concat(moves.Select(m => m.Date)).Concat(moves.Select(m => m.MovedFrom!.Value)).Where(d => d >= today).ToHashSet();
+        Adjustments = [.. Adjustments.Where(r => !restore.Contains(r.Date))];
     }
 
     /// <summary>Is this the same race as <paramref name="inputs"/>: the same catalogue race, or the same named race on the same date.</summary>

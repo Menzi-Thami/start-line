@@ -18,14 +18,17 @@ public sealed record ActivitySummaryDto(
     SessionType? PlannedSessionType,
     PaceVerdict? Pace,
     int? AverageHeartRate,
-    SourceDto Source)
+    SourceDto Source,
+    Shoes.ShoeRefDto? Shoe = null)
 {
-    public static ActivitySummaryDto From(Activity a)
+    public static ActivitySummaryDto From(Activity a) => From(a, null);
+
+    public static ActivitySummaryDto From(Activity a, Shoes.ShoeRefDto? shoe)
     {
         ArgumentNullException.ThrowIfNull(a);
         return new(a.Id, a.StartedAt, a.LocalDate, a.Kind, Round(a.DistanceKm, 2), Math.Round(a.MovingTime.TotalSeconds),
             Round(a.PaceSecondsPerKm, 1), a.PlannedSession?.Title, a.PlannedSession?.SessionType, a.ComparedWithPlan?.Pace,
-            a.AverageHeartRate, SourceDto.From(a));
+            a.AverageHeartRate, SourceDto.From(a), shoe);
     }
 
     internal static double Round(double value, int digits) => Math.Round(value, digits, MidpointRounding.AwayFromZero);
@@ -56,7 +59,8 @@ public sealed record ActivityDto(
     HalvesDto Halves,
     IReadOnlyList<BestEffortDto> BestEfforts,
     HeartRateDto? HeartRate,
-    SourceDto Source)
+    SourceDto Source,
+    Shoes.ShoeRefDto? Shoe = null)
 {
     /// <param name="bestFromOtherRuns">The runner's fastest time per standard distance across their other runs.</param>
     /// <param name="runnerMaxHeartRate">The max heart rate the runner set, or null: no zones without it.</param>
@@ -64,7 +68,7 @@ public sealed record ActivityDto(
     /// False when the runner hasn't agreed to Taperday keeping heart rate: anything stored from before they were asked
     /// isn't shown. The account export passes true, because it lists everything held.
     /// </param>
-    public static ActivityDto From(Activity a, IReadOnlyDictionary<double, TimeSpan> bestFromOtherRuns, int? runnerMaxHeartRate, bool showHeartRate = true)
+    public static ActivityDto From(Activity a, IReadOnlyDictionary<double, TimeSpan> bestFromOtherRuns, int? runnerMaxHeartRate, bool showHeartRate = true, Shoes.ShoeRefDto? shoe = null)
     {
         ArgumentNullException.ThrowIfNull(a);
         var review = a.Review();
@@ -90,7 +94,8 @@ public sealed record ActivityDto(
             HalvesDto.From(a.Halves),
             [.. a.BestEfforts.OrderBy(e => e.DistanceMetres).Select(e => BestEffortDto.From(e, bestFromOtherRuns, isRace))],
             HeartRateDto.From(a, runnerMaxHeartRate),
-            SourceDto.From(a));
+            SourceDto.From(a),
+            shoe);
         return showHeartRate
             ? dto
             : dto with

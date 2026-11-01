@@ -161,13 +161,14 @@ public sealed record EmailMessage(string To, string Subject, string Html, string
 /// </summary>
 public sealed record UnsubscribeLinks(Uri Page, Uri OneClick)
 {
-    public static UnsubscribeLinks For(string token, Uri apiBaseUrl)
+    /// <param name="weekly">A weekly recap's link: the page words itself for the recap. The key itself says which list it stops.</param>
+    public static UnsubscribeLinks For(string token, Uri apiBaseUrl, bool weekly = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);
         ArgumentNullException.ThrowIfNull(apiBaseUrl);
         var key = Uri.EscapeDataString(token);
         return new(
-            new Uri($"{EmailLayout.Site}/?view=unsubscribe&t={key}"),
+            new Uri($"{EmailLayout.Site}/?view=unsubscribe&t={key}{(weekly ? "&list=weekly" : "")}"),
             new Uri($"{apiBaseUrl.AbsoluteUri.TrimEnd('/')}/api/v1/unsubscribe?t={key}"));
     }
 }

@@ -11,6 +11,7 @@ using StartLine.Domain.Activities;
 using StartLine.Domain.Coaching;
 using StartLine.Domain.Common;
 using StartLine.Domain.Plans;
+using StartLine.Domain.Runners;
 
 namespace StartLine.Application.Features.Coaching;
 
@@ -46,16 +47,6 @@ internal sealed class GetTrainingInsightsHandler(IApplicationDbContext db, Curre
         var saved = await OwnPlan.FindAsync(db, current, request.PlanId, cancellationToken);
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         var today = CoachCalls.LocalToday(runner, time);
-        var from = TrainingTrends.From(today);
-
-        // Totals include the Strava runs Taperday holds now: shown, never stored.
-        var logged = await reader.ReadAsync(runner, from, today, includeSynced: true, cancellationToken);
-        var checkIns = await db.SessionCheckIns.AsNoTracking()
-            .Where(c => c.SavedPlanId == saved.Id && c.Date >= from && c.Date <= today)
-            .ToListAsync(cancellationToken);
-        var runs = await db.Activities.AsNoTracking().Visible(time.GetUtcNow())
-            .Where(a => a.RunnerId == runner.Id && a.Kind != ActivityKind.Other && a.LocalDate >= from && a.LocalDate <= today)
-            .ToListAsync(cancellationToken);
         IReadOnlyList<PlannedSession> sessions;
         try
         {
@@ -68,17 +59,41 @@ internal sealed class GetTrainingInsightsHandler(IApplicationDbContext db, Curre
             sessions = [];
         }
 
-        var trends = TrainingTrends.Of(
-            today,
-            logged,
-            sessions,
-            [.. checkIns.Select(c => new TrendCheckIn(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.ActivityId, c.IsAdditional))],
-            [.. runs.Select(a => new TrendRun(a.Id, a.LocalDate, a.DistanceKm, a.MovingTime, a.AverageHeartRate, a.Source, a.PlannedSession?.SessionType))]);
+        var trends = await TrainingTrendsReader.ReadAsync(db, reader, runner, saved.Id, sessions, today, time.GetUtcNow(), cancellationToken);
         var decisions = await db.CoachingDecisions.AsNoTracking()
             .Where(d => d.SavedPlanId == saved.Id)
             .OrderByDescending(d => d.DecidedAt)
             .Take(DecisionsShown)
             .ToListAsync(cancellationToken);
         return new(today, trends, [.. decisions.Select(CoachingDecisionDto.From)]);
+    }
+}
+
+/// <summary>
+/// Reads what <see cref="TrainingTrends"/> needs for one runner and plan, up to <c>today</c>, and works the trends out.
+/// Shared by the insights on Home and the weekly recap email, so both say the same thing. Nothing is stored.
+/// </summary>
+internal static class TrainingTrendsReader
+{
+    public static async Task<TrainingTrendsResult> ReadAsync(
+        IApplicationDbContext db, RunningLogReader reader, Runner runner, Guid planId, IReadOnlyList<PlannedSession> sessions,
+        DateOnly today, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var from = TrainingTrends.From(today);
+
+        // Totals include the Strava runs Taperday holds now: shown, never stored.
+        var logged = await reader.ReadAsync(runner, from, today, includeSynced: true, cancellationToken);
+        var checkIns = await db.SessionCheckIns.AsNoTracking()
+            .Where(c => c.SavedPlanId == planId && c.Date >= from && c.Date <= today)
+            .ToListAsync(cancellationToken);
+        var runs = await db.Activities.AsNoTracking().Visible(now)
+            .Where(a => a.RunnerId == runner.Id && a.Kind != ActivityKind.Other && a.LocalDate >= from && a.LocalDate <= today)
+            .ToListAsync(cancellationToken);
+        return TrainingTrends.Of(
+            today,
+            logged,
+            sessions,
+            [.. checkIns.Select(c => new TrendCheckIn(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.ActivityId, c.IsAdditional))],
+            [.. runs.Select(a => new TrendRun(a.Id, a.LocalDate, a.DistanceKm, a.MovingTime, a.AverageHeartRate, a.Source, a.PlannedSession?.SessionType))]);
     }
 }

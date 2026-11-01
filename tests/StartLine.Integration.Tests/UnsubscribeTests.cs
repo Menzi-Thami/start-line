@@ -114,7 +114,7 @@ public sealed class UnsubscribeTests(StartLineApiFactory factory) : IClassFixtur
         email.Html.ShouldContain(email.Unsubscribe.Page.AbsoluteUri.Replace("&", "&amp;", StringComparison.Ordinal));
         email.Text.ShouldContain(email.Unsubscribe.Page.AbsoluteUri);
         var key = Uri.UnescapeDataString(email.Unsubscribe.OneClick.Query.Split("t=")[1]);
-        factory.Services.GetRequiredService<IUnsubscribeTokens>().Read(key).ShouldNotBe(Guid.Empty);
+        factory.Services.GetRequiredService<IUnsubscribeTokens>().Read(key).List.ShouldBe(EmailList.Updates);
 
         var headers = BrevoEmailSender.Headers(email.Unsubscribe)!;
         headers["List-Unsubscribe"].ShouldBe($"<{email.Unsubscribe.OneClick.AbsoluteUri}>, <mailto:hello@taperday.run?subject=unsubscribe>");
@@ -141,7 +141,8 @@ public sealed class UnsubscribeTokenTests
     {
         var runner = Guid.NewGuid();
 
-        tokens.Read(tokens.Issue(runner)).ShouldBe(runner);
+        tokens.Read(tokens.Issue(runner)).ShouldBe(new UnsubscribeKey(runner, EmailList.Updates));
+        tokens.Read(tokens.Issue(runner, EmailList.Weekly)).ShouldBe(new UnsubscribeKey(runner, EmailList.Weekly));
     }
 
     [Fact]

@@ -21,7 +21,7 @@ There is only one SPF record. If a provider ever needs SPF too, add an `include:
 
 - **Where it lives:** the App Service setting `Email__BrevoApiKey` on `app-taperday-api-3ghg5t`, and nowhere else. Not in the repo, appsettings, chat or email.
 - **Permissions:** Restricted, with **Transactional email: All** and everything else None.
-- **Expiry:** 1 year (made 2026-10-30, so it expires 2027-10-30). Brevo also expires keys after **90 days unused**. The weekly report uses it every Monday, which keeps it alive.
+- **Expiry:** 1 year (made 2026-10-30, so it expires 2027-10-30). Brevo also expires keys after **90 days unused**. The maker's Monday report used to keep it alive; it's retired, so **turn the weekly recap on (`RunnerWeeklyRecap__Enabled`) within 90 days of the last send**, or the key lapses and needs replacing.
 - **Lost, leaked or expired:** generate a new key in Brevo (SMTP & API → API Keys), paste it into the same App Service setting, then delete the old key in Brevo. No code change is needed.
 
 ### Brevo MCP key (future: email campaigns with an AI assistant)
@@ -32,28 +32,28 @@ Brevo also issues **MCP** keys, which let an AI assistant (such as Claude Code) 
 - **When running campaigns:** generate it then, with only the permissions the campaign needs (contacts and email campaigns), add it to Claude Code's MCP configuration on the maker's PC through an environment variable, and keep the backup in a password manager.
 - **Never** commit it to this repo, put it in App Service settings, or paste it into chat. Campaigns also need runners' consent to marketing email (POPIA), which Taperday doesn't collect yet: the `WeeklyEmails` setting covers Taperday's own weekly email, not marketing.
 
-## The Monday report
+## The weekly recap
 
-`WeeklyReportWorker` (Infrastructure/Email) emails the maker every **Monday at 07:00 South African time**. It covers runners (and new ones), how far they got (current plan, runs, Strava, reminders), who ran this week, runs stored and the week's feedback. Counts only, no names.
+The runner's own weekly email, for runners who tick **weekly recap** in their profile (`Runner.WeeklyEmails`). It replaces the maker's Monday report, which is retired. The full write-up is in [runner-weekly-recap.md](runner-weekly-recap.md).
 
-- `Report__To`: who gets it. Defaults to `hello@taperday.run`, which forwards to the maker's Gmail.
-- `Report__SendTestTo`: set it to an address and the app sends one report (subject starts `[Test]`) when it next starts. Saving the setting restarts the app. **Clear it afterwards**, or every restart sends another.
+- `RunnerWeeklyRecap__Enabled`: `true` sends recaps at 07:00 on each runner's own Monday. **Off by default.**
+- `RunnerWeeklyRecap__TestTo`: set it to an address and the app sends one made-up preview (subject starts `[Test]`) when it next starts. Saving the setting restarts the app. **Clear it afterwards**, or every restart sends another.
 - No `Email__BrevoApiKey` means nothing is sent, and the log says so.
 
 ## Update emails and unsubscribing
 
-"What's new" emails about Taperday itself (`UpdateEmails`, such as Race Plan v3) are the only email meant for runners in bulk. Every runner copy carries a way out; the Monday report goes to the maker, so it has none.
+"What's new" emails about Taperday itself (`UpdateEmails`, such as Race Plan v3) and the weekly recap are the emails meant for runners. Every runner copy carries a way out, for its own list only; a preview to the maker has none.
 
 ### The preference
 
 - `Runner.UpdateEmailsOffAt`: null means the runner gets news and updates (the default, for new and existing runners alike); a time means they turned them off then. `Runner.UpdateEmails` reads it as a yes or no.
 - Runners turn it back on (or off) in Account: the "Taperday news and updates" box, saved with the profile (`SaveProfileCommand.UpdateEmails`). Leaving the field out changes nothing, so an older app can never re-subscribe anyone.
 - It's in `RunnerDto`, so the account export shows it and when it was turned off.
-- It's separate from `WeeklyEmails` (the runner's own weekly email, still coming soon) and is not marketing consent: campaigns still need their own opt-in (see the Brevo MCP section).
+- It's separate from `WeeklyEmails` (the weekly recap, which has its own unsubscribe key) and is not marketing consent: campaigns still need their own opt-in (see the Brevo MCP section).
 
 ### The unsubscribe key
 
-`IUnsubscribeTokens` (`DataProtectionUnsubscribeTokens`) encrypts and authenticates the runner's id with Data Protection under its own purpose, `StartLine.Email.Unsubscribe.v1`, on the same key ring as Strava tokens and "Tick it" keys. It has **no expiry**: an old email's link must still work. Data Protection keeps retired keys for reading, so key rotation doesn't break old links; only losing the key ring would. A key that's been tampered with, cut short or made for another purpose is refused (`ValidationException`, a 400). All a key can do is turn update emails off.
+`IUnsubscribeTokens` (`DataProtectionUnsubscribeTokens`) encrypts and authenticates the runner's id with Data Protection under its own purpose, `StartLine.Email.Unsubscribe.v1`, on the same key ring as Strava tokens and "Tick it" keys. It has **no expiry**: an old email's link must still work. Data Protection keeps retired keys for reading, so key rotation doesn't break old links; only losing the key ring would. A key that's been tampered with, cut short or made for another purpose is refused (`ValidationException`, a 400). A key names its list: `u1` keys (all keys issued before the recap) turn update emails off, `w1` keys turn the weekly recap off. A key can only ever turn its own list off.
 
 ### Two ways out of every email
 
@@ -84,4 +84,4 @@ A mailto unsubscribe lands in the maker's Gmail (via `hello@` forwarding) and ha
 
 - Make it one-off and safe across restarts: record what was sent to whom (a marker per runner and email, saved before sending) so an App Service restart can never send it twice.
 - Mind Brevo's free plan: **300 emails a day**. A broadcast bigger than that has to be spread over days.
-- Send a test to `hello@` first (`Report__SendTestTo` sends the preview, without unsubscribe links, as it's for the maker).
+- Send a test to `hello@` first: the preview, without unsubscribe links, as it's for the maker.

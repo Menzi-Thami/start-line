@@ -3,6 +3,11 @@ using Microsoft.Extensions.Logging;
 using StartLine.Application.Common;
 using StartLine.Application.Features.Activities;
 using StartLine.Application.Features.Notifications;
+using StartLine.Application.Features.Plans;
+using StartLine.Application.Features.MyPlans;
+using StartLine.Application.Features.Coaching;
+using StartLine.Domain.Coaching;
+using StartLine.Domain.Plans;
 using StartLine.Domain.Activities;
 using StartLine.Domain.Common;
 using StartLine.Domain.Notifications;
@@ -28,6 +33,7 @@ internal sealed partial class StravaSyncRunner(
     StravaTokens tokens,
     ActivityImporter importer,
     RunCelebrator prompter,
+    PlanBuilder planBuilder,
     Shoes.ShoeKeeper shoes,
     TimeProvider time,
     ILogger<StravaSyncRunner> logger) : IStravaSync
@@ -125,12 +131,61 @@ internal sealed partial class StravaSyncRunner(
         await db.SaveChangesAsync(cancellationToken);
         foreach (var run in synced)
         {
+            await AutoCompletePlannedRunAsync(run, cancellationToken);
             await prompter.OfferAsync(run, cancellationToken);
         }
 
         if (synced.Count > 0)
         {
             await shoes.RemindAsync(job.RunnerId, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Preserve a plain Taperday session tick after a verified synced run. No Strava
+    /// distance, duration, external id or activity link is copied into the check-in.
+    /// Product/legal review is required before production rollout: a completion
+    /// inferred from Strava may itself count as derived Strava data.
+    /// </summary>
+    private async Task AutoCompletePlannedRunAsync(Activity run, CancellationToken cancellationToken)
+    {
+        if (run.Source != ActivitySource.Strava || run.DistanceKm <= 0)
+            return;
+
+        var plan = await db.SavedPlans.AsNoTracking()
+            .SingleOrDefaultAsync(p => p.RunnerId == run.RunnerId && p.Status == SavedPlanStatus.Active, cancellationToken);
+        if (plan is null)
+            return;
+
+        // A day can include several planned sessions. Never guess which one was run.
+        var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
+        var sessions = planBuilder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls, plan.Adjustments, run.LocalDate)
+            .Weeks.SelectMany(w => w.Sessions)
+            .Where(s => s.Date == run.LocalDate && SessionCheckIn.IsCheckable(s.Type))
+            .ToArray();
+        if (sessions.Length != 1)
+            return;
+
+        var session = sessions[0];
+        if (await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == plan.Id && c.Date == run.LocalDate &&
+            c.SessionType == session.Type && !c.IsAdditional, cancellationToken))
+            return; // honour existing manual Done, Skipped, CutShort and edits.
+
+        var tick = SessionCheckIn.Create(plan.Id, run.LocalDate, session.Type,
+            new CheckInAnswers(CheckInStatus.Done, Effort: null));
+        tick.RememberPrescription(session.DistanceKm);
+        db.SessionCheckIns.Add(tick);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException)
+        {
+            // Webhook and backfill can race. Let the existing unique session win.
+            db.SessionCheckIns.Entry(tick).State = EntityState.Detached;
+            if (!await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == plan.Id && c.Date == run.LocalDate &&
+                c.SessionType == session.Type && !c.IsAdditional, cancellationToken))
+                throw;
         }
     }
 

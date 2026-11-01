@@ -26,6 +26,7 @@ In the app the colours come from the `--ink` and `--accent` tokens (`client/src/
 so dark mode follows automatically. Don't hard-code them in components.
 
 - **Type:** Instrument Sans, bold, letter-spacing −0.03em, letters sitting on one baseline.
+- **The peeking runner:** the sage runner from the emails peeks out from behind "day", leaning 22° to the right, about 1.3× the letter height. On the site it rises once as the page loads (not with reduced motion), then rests (`client/src/app/Wordmark.tsx`). Emails use a still PNG of the same logo (`client/public/email/wordmark.png`), and so does the Entra sign-in page.
 - **Everywhere the logo appears, it's this taper:** the masthead, the sign-in intro, the loading screen (`client/index.html`, `client/public/boot.css`) and every email's header and footer (`EmailLayout.Wordmark`, where the fades are solid greys mixed with the page, as some email apps ignore opacity). In sentences it stays **Taperday**.
 - **The taper**, relative to the size of "day":
 

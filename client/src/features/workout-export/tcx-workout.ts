@@ -45,7 +45,19 @@ export function flattenWorkout(steps: Step[], limit = 500): Flat[] {
 export function exportTcxWorkout(session: Session): string {
   if (!session.steps.length || session.type === 'Strength') throw new Error('This session has no structured running workout.')
   const steps = flattenWorkout(session.steps)
-  const notes = steps.map((step, i) => `${i + 1}. ${step.kind}${step.effort ? ': ' + step.effort : ''}`).join('; ')
+  // Preserve prescribed pace as human-readable guidance. TCX's typed Speed_t targets
+  // need destination-specific validation before we can safely emit them.
+  const pace = (value: number): string => {
+    const whole = Math.round(value)
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}/km`
+  }
+  const notes = steps.map((step, i) => {
+    const target = step.fastestSecondsPerKm !== null && step.slowestSecondsPerKm !== null
+      && Number.isFinite(step.fastestSecondsPerKm) && step.fastestSecondsPerKm > 0
+      && Number.isFinite(step.slowestSecondsPerKm) && step.slowestSecondsPerKm > 0
+      ? ` · pace ${pace(step.fastestSecondsPerKm)}–${pace(step.slowestSecondsPerKm)}` : ''
+    return `${i + 1}. ${step.kind}${target}${step.effort ? ': ' + step.effort : ''}`
+  }).join('; ')
   const body = steps.map((step, index) => {
     // Duration wins if both are supplied: a TCX step can have exactly one duration type.
     const duration = positive(step.durationSeconds)

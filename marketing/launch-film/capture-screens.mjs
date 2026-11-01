@@ -88,10 +88,6 @@ const landing = await page.evaluate(() => {
 writeFileSync(`${out}/landing.json`, JSON.stringify({ today: TODAY.slice(0, 10), ...landing }, null, 2) + '\n')
 console.log('landing', landing)
 
-// The race-name ticker sits above the builder, off these shots, but at 390px its text peeks past the sticky masthead's
-// right edge as the page scrolls (an app bug, reported separately), so it's hidden from here on. Layout doesn't change.
-await page.addStyleTag({ content: '.ticker{visibility:hidden!important}' })
-
 // The builder, one question at a time: Thami's own race.
 await page.getByRole('radio', { name: /Another race/ }).check({ force: true })
 await page.getByRole('group', { name: /distance/i }).getByText('Half', { exact: true }).click()
@@ -104,7 +100,9 @@ await page.locator('#race-name').blur()
 // The film scrolls this step, so it's shot as a whole page with the app's sticky masthead and button bar cut out and
 // shot on their own; the film pins them back to the phone's top and bottom edges, where the app keeps them.
 await shootStep('builder-race-view')
-await page.locator('.masthead').screenshot({ path: `${out}/builder-race-masthead.png` })
+// The masthead's paper bleeds across the frame's gutters, so it's shot as the whole top band of the screen.
+const mastBand = await page.locator('.masthead').evaluate((m) => Math.ceil(m.getBoundingClientRect().bottom))
+await page.screenshot({ path: `${out}/builder-race-masthead.png`, clip: { x: 0, y: 0, width: 390, height: mastBand } })
 await page.locator('.wizard-nav').screenshot({ path: `${out}/builder-race-nav.png` })
 const unstick = await page.addStyleTag({ content: '.masthead,.wizard-nav{position:static!important}.back-to-top{display:none!important}' })
 await anchor('builder-race', { title: '.wizard-title', other: '.choice-other', name: '#race-name', nav: '.wizard-nav' })

@@ -120,7 +120,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       <h2 className="plan-title" id="activity-title">
         {title}
       </h2>
-      <RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} />
+      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
       {run.source.kind === 'Strava' && (
         <p className="activity-source">
           <span>From Strava{run.source.recordedOnGarmin ? ' · recorded on Garmin' : ''}</span>
@@ -155,22 +155,26 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         {verdict.next && <p className="verdict-next">{verdict.next}</p>}
       </section>
 
-      <dl className="activity-stats">
+      <dl className="activity-stats activity-stats-primary">
         <Stat label="Distance" value={formatDistance(run.distanceKm, units)} lead />
         <Stat label="Moving time" value={formatDuration(run.movingSeconds)} lead />
         <Stat label="Pace" value={formatPace(run.paceSecondsPerKm, units)} lead />
+      </dl>
+      <details className="activity-more-stats"><summary>More run statistics</summary><dl className="activity-stats activity-stats-secondary">
         {run.elevationGainMetres != null && <Stat label="Elevation gain" value={`${run.elevationGainMetres} m`} />}
         {run.averageHeartRate != null && <Stat label="Avg heart rate" value={`${run.averageHeartRate} bpm`} />}
         {run.maxHeartRate != null && <Stat label="Max heart rate" value={`${run.maxHeartRate} bpm`} />}
         {run.calories != null && <Stat label="Calories" value={`${run.calories}`} />}
         {run.elapsedSeconds - run.movingSeconds >= 60 && <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />}
-      </dl>
+      </dl></details>
 
-      <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
+      <div className="activity-analysis-grid">
+        {run.splits.length > 0 && <details className="activity-section"><summary>Splits &amp; pacing</summary><Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /></details>}
 
-      {run.heartRate && <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} />}
+      {run.heartRate && <details className="activity-section"><summary>Heart rate &amp; effort</summary><HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /></details>}
 
-      <BestEfforts efforts={run.bestEfforts} units={units} />
+      {run.bestEfforts.length > 0 && <details className="activity-section"><summary>Best efforts</summary><BestEfforts efforts={run.bestEfforts} units={units} /></details>}
+      </div>
 
       {run.source.kind === 'Strava' ? (
         <section className="section">

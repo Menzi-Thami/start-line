@@ -1,0 +1,37 @@
+/* Account settings and global navigation polish. No route or authentication changes. */
+.account-settings { max-width:min(100%,56rem); margin-inline:auto; }
+.account-settings > .plan-title { margin-bottom:.5rem; }
+.account-settings > .plan-focus { margin:0; }
+.account-intro-note { margin:.4rem 0 1.7rem; font-size:.94rem; color:var(--muted); line-height:1.5; }
+.account-settings .settings-group {
+  border:1px solid var(--line); border-radius:var(--radius-md);
+  background:var(--surface); margin:0 0 .8rem; padding:0;
+  overflow:clip;
+}
+.account-settings .settings-group > summary {
+  display:list-item; cursor:pointer; min-height:56px;
+  padding:1rem 1.25rem; font-weight:600; font-size:1.04rem;
+}
+.account-settings .settings-group[open] > summary { border-bottom:1px solid var(--line); }
+.account-settings .settings-group > :not(summary) { margin-inline:clamp(1rem,2.6vw,1.5rem); }
+.account-settings .settings-group > .section { margin-top:1.2rem; margin-bottom:1.2rem; }
+.account-settings .danger-zone { padding-top:1.25rem; border-top:1px solid var(--line); }
+.account-settings .account-sign-out { margin:1.5rem 0 1rem; }
+.masthead-nav { gap:clamp(.4rem,1.2vw,.85rem); }
+.masthead-nav .nav-link {
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:44px; padding-inline:.75rem;
+}
+.tab-bar-item { min-height:56px; touch-action:manipulation; }
+.tab-bar-item:focus-visible { outline-offset:-3px; }
+@media(min-width:64rem) {
+ .account-settings { max-width:60rem; }
+ .account-settings .settings-group > summary { padding:1.25rem 1.5rem; }
+}
+@media(max-width:47.99rem) {
+ .account-settings .settings-group > summary { padding:.9rem 1rem; }
+ .tab-bar { padding-bottom:max(.35rem,env(safe-area-inset-bottom)); }
+}
+@media(prefers-reduced-motion:reduce) {
+ .tab-bar-indicator,.tab-bar-item { transition:none!important; }
+}

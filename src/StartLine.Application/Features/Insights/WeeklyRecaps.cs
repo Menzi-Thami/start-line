@@ -17,7 +17,7 @@ using StartLine.Domain.Runners;
 
 namespace StartLine.Application.Features.Insights;
 
-/// <summary>What one runner's recap says: last week's running, how the plan went, and the week ahead.</summary>
+/// <summary>What one runner's recap says: the week's running, how the plan went, and the week ahead.</summary>
 public sealed record WeeklyRecapContent(
     string DisplayName,
     DateOnly WeekStart,
@@ -47,8 +47,8 @@ public static class WeeklyRecap
         var km = Km(recap.Km);
         var title = recap.Runs == 0 ? "A quiet week." : $"{km} km over {Plural(recap.Runs, "run")}.";
         var intro = recap.Runs == 0
-            ? "No runs logged last week. That's fine: your plan is ready when you are."
-            : "Here's what you logged last week, and what's next.";
+            ? "No runs logged this week. That's fine: your plan is ready when you are."
+            : "Here's what you logged this week, and what's next.";
 
         // Laid out like the Monday report: figures up top, then sage bars for how much of the plan got run.
         List<(string, string)> figures = [("Runs", recap.Runs.ToString(En)), ("Distance", $"{km} km")];
@@ -73,7 +73,7 @@ public static class WeeklyRecap
             body.Append(EmailLayout.Heading("Your progress"));
             if (lastWeek is { } week)
             {
-                body.Append(EmailLayout.Bar("Planned sessions run last week", (double)week.Done / week.Planned, $"{week.Done} of {week.Planned}"));
+                body.Append(EmailLayout.Bar("Planned sessions run this week", (double)week.Done / week.Planned, $"{week.Done} of {week.Planned}"));
             }
 
             if (month is not null)
@@ -164,9 +164,9 @@ public static class WeeklyRecap
 
         List<(string, string)> lines = [("Next step", trends.NextStep switch
         {
-            NextStep.HoldVolume => "Hold your distance this week" + (trends.Reasons.Contains(NextStepReason.LoadSpike) ? ": last week jumped well above your usual." : ": a week you can manage beats building on gaps."),
+            NextStep.HoldVolume => "Hold your distance next week" + (trends.Reasons.Contains(NextStepReason.LoadSpike) ? ": this week jumped well above your usual." : ": a week you can manage beats building on gaps."),
             NextStep.EaseOff => "Ease off: you reported pain that changed how you ran. Run easy until it settles, and see a professional if it doesn't.",
-            NextStep.LogMore => "Log your runs this week, so your trends can take shape.",
+            NextStep.LogMore => "Log your runs next week, so your trends can take shape.",
             _ => "Carry on as planned.",
         })];
         if (trends.Load is { Signal: not LoadSignal.NotEnoughHistory, ChangePercent: { } change })
@@ -212,9 +212,9 @@ public interface IWeeklyRecaps
 }
 
 /// <summary>
-/// Sends the weekly recap to every runner who turned it on, at 07:00 on their own Monday, about the week before. Each
+/// Sends the weekly recap to every runner who turned it on, at 19:00 on their own Sunday, about the week ending that day. Each
 /// runner and week is claimed in <see cref="WeeklyRecapDelivery"/> first, so it's sent once however often this runs or
-/// however many app instances run it. A Monday the app missed entirely is skipped, never sent late on Tuesday.
+/// however many app instances run it. A Sunday evening the app missed entirely is skipped, never sent late on Monday.
 /// </summary>
 internal sealed partial class WeeklyRecapSender(
     IApplicationDbContext db,
@@ -225,15 +225,15 @@ internal sealed partial class WeeklyRecapSender(
     IEmailSettings settings,
     ILogger<WeeklyRecapSender> logger) : IWeeklyRecaps
 {
-    public const int SendHour = 7;
+    public const int SendHour = 19;
 
-    /// <summary>The Monday of the week to recap for this runner now, or null when it isn't their Monday morning yet.</summary>
+    /// <summary>The Monday of the week to recap for this runner now, or null when it isn't their Sunday evening.</summary>
     public static DateOnly? WeekDue(Runner runner, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(runner);
         var local = TimeZoneInfo.ConvertTime(now, TimeProviderExtensions.ZoneOf(runner.TimeZone));
-        return local.DayOfWeek == DayOfWeek.Monday && local.Hour >= SendHour
-            ? DateOnly.FromDateTime(local.Date).AddDays(-7)
+        return local.DayOfWeek == DayOfWeek.Sunday && local.Hour >= SendHour
+            ? DateOnly.FromDateTime(local.Date).AddDays(-6)
             : null;
     }
 

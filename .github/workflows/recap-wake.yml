@@ -1,0 +1,20 @@
+name: Wake the API for the weekly recap
+
+# The free (F1) API sleeps after about 20 idle minutes, and its timers sleep with it. The weekly recap goes at 19:00 on
+# each runner's own Sunday, so this keeps the API awake across Sunday evening in every likely time zone
+# (docs/runner-weekly-recap.md). A ping is one tiny request; nothing else runs.
+on:
+  schedule:
+    - cron: '*/15 14-23 * * 0'
+    - cron: '*/15 0-5 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Ping the API
+        run: curl -fsS --retry 3 --retry-delay 10 --max-time 60 -o /dev/null https://app-taperday-api-3ghg5t.azurewebsites.net/health/live

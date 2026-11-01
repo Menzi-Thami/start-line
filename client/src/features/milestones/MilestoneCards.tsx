@@ -7,13 +7,14 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
   const milestones = useMemo(() => milestonesFromRuns(runs), [runs])
   const [choice, setChoice] = useState('longest')
   const [includeName, setIncludeName] = useState(false)
+  const [showBrand, setShowBrand] = useState(true)
   const [name, setName] = useState('')
   const [prepared, setPrepared] = useState<{ key: string; url: string; file: File } | null>(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const selected = milestones.find(item => item.id === choice) ?? milestones[0]
 
-  const cardKey = JSON.stringify([selected?.id, selected?.value, selected?.detail, includeName ? name : ''])
+  const cardKey = JSON.stringify([selected?.id, selected?.value, selected?.detail, includeName ? name : '', showBrand])
   const current = prepared?.key === cardKey ? prepared : null
 
   useEffect(() => {
@@ -21,7 +22,7 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
     let cancelled = false
     let url: string | null = null
     import('./render-milestone').then(({ renderMilestoneCard }) =>
-      renderMilestoneCard(selected, { displayName: includeName ? name : undefined })
+      renderMilestoneCard(selected, { displayName: includeName ? name : undefined, showBrand })
     ).then(blob => {
       if (cancelled) return
       url = URL.createObjectURL(blob)
@@ -33,7 +34,7 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
       if (url) URL.revokeObjectURL(url)
       setPrepared(null)
     }
-  }, [selected, includeName, name, cardKey])
+  }, [selected, includeName, name, showBrand, cardKey])
 
   if (!selected) return <p className="field-help">Add a recorded run to create a milestone card.</p>
   const share = async () => {
@@ -59,6 +60,7 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
     </div>
     <p><strong>{selected.value} {selected.unit}</strong> — {selected.detail}</p>
     <label className="field"><input type="checkbox" checked={includeName} onChange={event => setIncludeName(event.target.checked)} /> Add my name to the image (optional)</label>
+    <label className="field"><input type="checkbox" checked={showBrand} onChange={event => setShowBrand(event.target.checked)} /> Include Taperday branding on the image</label>
     {includeName && <div className="field"><label htmlFor="milestone-display-name">Name on card</label><input id="milestone-display-name" value={name} maxLength={36} onChange={event => setName(event.target.value)} /></div>}
     </div><div className="milestone-share-preview">{current ? <div>
       <img src={current.url} width={270} height={338} alt={`Preview of ${selected.title} milestone card`} style={{ width: 'min(100%,270px)', height: 'auto', borderRadius: 'var(--radius-md)' }} />

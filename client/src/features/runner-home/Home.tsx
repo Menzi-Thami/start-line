@@ -636,7 +636,7 @@ export function Home({
         setToolsOpen(open)
         if (open) setToolsOpened(true)
         tabToUrl(open ? 'tools' : 'today')
-      }}><summary>Running calculators <span className="field-help">Pace, race time & heart rate</span></summary>
+      }}><summary>Running tools <span className="field-help">Pace, race time & heart rate</span></summary>
         {toolsOpened && (
           <ScreenRecovery>
           <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading running tools"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>}>

@@ -65,7 +65,7 @@ internal sealed class ImportActivitiesValidator : AbstractValidator<ImportActivi
     }
 }
 
-internal sealed class ImportActivitiesHandler(CurrentRunner current, ActivityImporter importer)
+internal sealed class ImportActivitiesHandler(CurrentRunner current, ActivityImporter importer, Shoes.ShoeKeeper shoes)
     : IRequestHandler<ImportActivitiesCommand, BulkImportDto>
 {
     public async Task<BulkImportDto> Handle(ImportActivitiesCommand request, CancellationToken cancellationToken)
@@ -73,6 +73,7 @@ internal sealed class ImportActivitiesHandler(CurrentRunner current, ActivityImp
         var runner = await current.RequireConsentedAsync(cancellationToken);
         List<BulkImportFileDto> results = [];
         var full = false;
+        var imported = false;
         foreach (var file in request.Files)
         {
             if (full)
@@ -87,6 +88,7 @@ internal sealed class ImportActivitiesHandler(CurrentRunner current, ActivityImp
             {
                 var activity = await importer.ImportAsync(runner, file.Content, cancellationToken, file.Name);
                 results.Add(new(file.Name, ImportStatus.Imported, null, ActivitySummaryDto.From(activity)));
+                imported = true;
             }
             catch (ValidationException e)
             {
@@ -105,6 +107,11 @@ internal sealed class ImportActivitiesHandler(CurrentRunner current, ActivityImp
                 full = true;
                 results.Add(new(file.Name, ImportStatus.LimitReached, e.Message, null));
             }
+        }
+
+        if (imported)
+        {
+            await shoes.RemindAsync(runner.Id, cancellationToken);
         }
 
         return new BulkImportDto(results);

@@ -9,6 +9,7 @@ import { StravaSection } from '../sync/StravaSection'
 import { PhotoPicker } from './PhotoPicker'
 import { ProfileForm } from './ProfileForm'
 import { RunSources } from './RunSources'
+import { ShoeTracker } from './ShoeTracker'
 
 interface Props {
   /** The runner's picture, if they added one; the picker shows their initials otherwise. */
@@ -30,6 +31,8 @@ interface Props {
 /** Profile, where runs come from, a copy of everything we hold, and the way out. */
 export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
+  // A shoe reminder links straight here (?settings=shoes).
+  const [shoesOpen, setShoesOpen] = useState(new URLSearchParams(window.location.search).get('settings') === 'shoes')
   const [connectionsOpen, setConnectionsOpen] = useState(!!stravaNotice || stravaConnecting || new URLSearchParams(window.location.search).get('settings') === 'connections')
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [newCalendarLink, setNewCalendarLink] = useState(false)
@@ -97,6 +100,9 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
 
       <RunSources onOpenRuns={onOpenRuns} />
 
+      </details>
+      <details className="settings-group" open={shoesOpen} onToggle={event => setShoesOpen(event.currentTarget.open)}><summary>Shoes</summary>
+        <ShoeTracker units={runner.units === 'Miles' ? 'mi' : 'km'} />
       </details>
       <details className="settings-group"><summary>App & calendars</summary>
       <InstallSection />

@@ -16,6 +16,9 @@ import type {
   Prediction,
   Race,
   RunData,
+  SaveShoe,
+  Shoe,
+  UnwornRun,
   ReminderDevice,
   Reminders,
   Runner,
@@ -252,6 +255,17 @@ export const api = {
     bests: (token: string) => request<PersonalBest[]>('/api/v1/me/activities/bests', {}, token),
     /** Where the runner's runs came from, what makes up this week's and month's totals, duplicates, gaps and sync problems. */
     runData: (token: string) => request<RunData>('/api/v1/me/run-data', { cache: 'no-store' }, token),
+    shoes: (token: string) => request<Shoe[]>('/api/v1/me/shoes', { cache: 'no-store' }, token),
+    createShoe: (token: string, shoe: SaveShoe) => request<Shoe>('/api/v1/me/shoes', { method: 'POST', body: JSON.stringify(shoe) }, token),
+    updateShoe: (token: string, id: string, shoe: SaveShoe) =>
+      request<Shoe>(`/api/v1/me/shoes/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(shoe) }, token),
+    deleteShoe: (token: string, id: string) => request<void>(`/api/v1/me/shoes/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
+    /** Puts one run (or a check-in with a distance) on a pair; no pair takes it off. */
+    wearShoe: (token: string, shoeId: string | null, run: { activityId?: string; checkInId?: string }) =>
+      request<void>('/api/v1/me/shoes/worn', { method: 'PUT', body: JSON.stringify({ shoeId, ...run }) }, token),
+    addRunsToShoe: (token: string, id: string, activityIds: readonly string[], checkInIds: readonly string[]) =>
+      request<{ added: number }>(`/api/v1/me/shoes/${encodeURIComponent(id)}/runs`, { method: 'POST', body: JSON.stringify({ activityIds, checkInIds }) }, token),
+    unwornRuns: (token: string) => request<UnwornRun[]>('/api/v1/me/shoes/unworn-runs', { cache: 'no-store' }, token),
     retryStrava: (token: string) => request<{ retried: number }>('/api/v1/me/run-data/retry-strava', { method: 'POST' }, token),
     deleteActivities: (token: string, activityIds: readonly string[]) =>
       request<{ deleted: number }>('/api/v1/me/run-data/delete', { method: 'POST', body: JSON.stringify({ activityIds }) }, token),

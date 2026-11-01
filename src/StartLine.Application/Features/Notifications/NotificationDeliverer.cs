@@ -121,6 +121,14 @@ internal sealed partial class NotificationDeliverer(IApplicationDbContext db, IP
                 ? new("Reconnect Strava", "Strava needs your permission again. Open Connections to resume importing runs.", "/?view=account&settings=connections", tag) : null;
         }
 
+        if (delivery.Kind == NotificationKind.ShoeMileage)
+        {
+            var shoe = await db.Shoes.AsNoTracking().SingleOrDefaultAsync(s => s.Id == delivery.SubjectId && s.RunnerId == device.RunnerId, cancellationToken);
+            return shoe is { RemindAtLimit: true, RetiredAt: null }
+                ? new("Time for new shoes?", $"Your {shoe.Name} have reached the {shoe.LimitKm:0} km you set. Retire them or raise the limit in Account › Shoes.", "/?view=account&settings=shoes", tag)
+                : null;
+        }
+
         var saved = await db.SavedPlans.AsNoTracking().SingleOrDefaultAsync(p => p.Id == delivery.SubjectId
             && p.RunnerId == device.RunnerId && p.Status == SavedPlanStatus.Active, cancellationToken);
         if (saved is null) return null;

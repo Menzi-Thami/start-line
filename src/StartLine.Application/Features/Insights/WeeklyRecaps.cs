@@ -28,7 +28,8 @@ public sealed record WeeklyRecapContent(
     int? SessionsDone,
     IReadOnlyList<(DateOnly Date, string Title, double Km)> NextWeek,
     string? RaceName,
-    int? DaysToRace);
+    int? DaysToRace,
+    TrainingTrendsResult? Trends = null);
 
 /// <summary>
 /// The weekly recap email, in Taperday's look (<see cref="EmailLayout"/>): figures only, no claims the numbers don't
@@ -49,10 +50,11 @@ public static class WeeklyRecap
             ? "No runs logged last week. That's fine: your plan is ready when you are."
             : "Here's what you logged last week, and what's next.";
 
+        // Laid out like the Monday report: figures up top, then sage bars for how much of the plan got run.
         List<(string, string)> figures = [("Runs", recap.Runs.ToString(En)), ("Distance", $"{km} km")];
-        if (recap is { SessionsPlanned: > 0, SessionsDone: { } done })
+        if (recap is { DaysToRace: >= 0 and var countdown })
         {
-            figures.Add(("Planned sessions", $"{done} of {recap.SessionsPlanned}"));
+            figures.Add(("Days to race", countdown.ToString(En)));
         }
 
         var body = new StringBuilder();
@@ -61,6 +63,28 @@ public static class WeeklyRecap
         if (recap.RunsWithoutDistance > 0)
         {
             body.Append(EmailLayout.Paragraph($"{Plural(recap.RunsWithoutDistance, "run")} counted without a distance: ticked off with none given.", muted: true));
+        }
+
+        var progress = Progress(recap.Trends);
+        var lastWeek = recap is { SessionsPlanned: > 0, SessionsDone: { } done } ? (Done: done, Planned: recap.SessionsPlanned.Value) : ((int Done, int Planned)?)null;
+        var month = recap.Trends?.Adherence is { Planned: > 0 } adherence ? adherence : null;
+        if (progress.Count > 0 || lastWeek is not null || month is not null)
+        {
+            body.Append(EmailLayout.Heading("Your progress"));
+            if (lastWeek is { } week)
+            {
+                body.Append(EmailLayout.Bar("Planned sessions run last week", (double)week.Done / week.Planned, $"{week.Done} of {week.Planned}"));
+            }
+
+            if (month is not null)
+            {
+                body.Append(EmailLayout.Bar("Planned sessions run, last 4 weeks", (double)month.Done / month.Planned, $"{month.Done} of {month.Planned}"));
+            }
+
+            foreach (var (label, detail) in progress)
+            {
+                body.Append(EmailLayout.Item(label, detail));
+            }
         }
 
         if (recap.NextWeek.Count > 0)
@@ -94,6 +118,20 @@ public static class WeeklyRecap
         }
 
         text.Append('\n');
+        if (progress.Count > 0 || month is not null)
+        {
+            text.Append("\nYour progress:\n");
+            if (month is not null)
+            {
+                text.Append(En, $"- Planned sessions run, last 4 weeks: {month.Done} of {month.Planned}\n");
+            }
+
+            foreach (var (label, detail) in progress)
+            {
+                text.Append(En, $"- {label}: {detail}\n");
+            }
+        }
+
         if (recap.NextWeek.Count > 0)
         {
             text.Append("\nThe week ahead:\n");
@@ -112,11 +150,54 @@ public static class WeeklyRecap
         return new EmailMessage(to, (test ? "[Test] " : "") + "Your Taperday week", html, text.ToString(), unsubscribe);
     }
 
+    /// <summary>
+    /// Progress in the same words as Home's training trends: the next step, then each trend that has enough running
+    /// behind it. A trend without enough data is left out rather than guessed.
+    /// </summary>
+    private static List<(string Label, string Detail)> Progress(TrainingTrendsResult? trends)
+    {
+        if (trends is null)
+        {
+            return [];
+        }
+
+        List<(string, string)> lines = [("Next step", trends.NextStep switch
+        {
+            NextStep.HoldVolume => "Hold your distance this week" + (trends.Reasons.Contains(NextStepReason.LoadSpike) ? ": last week jumped well above your usual." : ": a week you can manage beats building on gaps."),
+            NextStep.EaseOff => "Ease off: you reported pain that changed how you ran. Run easy until it settles, and see a professional if it doesn't.",
+            NextStep.LogMore => "Log your runs this week, so your trends can take shape.",
+            _ => "Carry on as planned.",
+        })];
+        if (trends.Load is { Signal: not LoadSignal.NotEnoughHistory, ChangePercent: { } change })
+        {
+            var direction = change == 0 ? "the same as" : $"{Math.Abs(change).ToString("0", En)}% {(change > 0 ? "above" : "below")}";
+            lines.Add(("Load", $"{Km(trends.Load.RecentKm)} km in the last 7 days, {direction} your average week before that ({Km(trends.Load.BaselineWeeklyKm)} km)."));
+        }
+
+        if (trends.EasyPace.ChangeSecondsPerKm is { } pace)
+        {
+            var seconds = Math.Abs(pace).ToString("0", En);
+            lines.Add(("Easy pace", pace switch
+            {
+                <= -3 => $"{seconds}s/km faster at the same easy effort than the four weeks before.",
+                >= 3 => $"{seconds}s/km slower at the same easy effort than the four weeks before.",
+                _ => "About the same at easy effort as the four weeks before.",
+            }));
+        }
+
+        return lines;
+    }
+
     /// <summary>A made-up week for a preview to the maker: never another runner's data.</summary>
     public static EmailMessage Preview(string to, DateOnly monday) => Compose(to, new WeeklyRecapContent(
         "Runner", monday.AddDays(-7), 4, 32.5, 0, 5, 4,
         [(monday, "Easy run", 6), (monday.AddDays(2), "Intervals", 8), (monday.AddDays(4), "Easy run", 6), (monday.AddDays(6), "Long run", 16)],
-        "Sample 10K", 41), unsubscribe: null, test: true);
+        "Sample 10K", 41,
+        new TrainingTrendsResult([],
+            new LoadTrend(32.5, 29, 4, 12, LoadSignal.Rising),
+            new SessionAdherence(18, 15, 1, 2, 0.83),
+            new EffortPace(5, 4, 338, 349, -11, null, null),
+            [], NextStep.BuildAsPlanned, [NextStepReason.OnTrack])), unsubscribe: null, test: true);
 
     private static string Km(double km) => Math.Round(km, 1).ToString("0.#", En);
 
@@ -171,7 +252,7 @@ internal sealed partial class WeeklyRecapSender(
 
             try
             {
-                var content = await ContentAsync(runner, week, cancellationToken);
+                var content = await ContentAsync(runner, week, now, cancellationToken);
                 var links = UnsubscribeLinks.For(tokens.Issue(runner.Id, EmailList.Weekly), settings.ApiBaseUrl, weekly: true);
                 await email.SendAsync(WeeklyRecap.Compose(runner.Email!, content, links), cancellationToken);
                 claim.Sent(now);
@@ -229,7 +310,7 @@ internal sealed partial class WeeklyRecapSender(
         }
     }
 
-    private async Task<WeeklyRecapContent> ContentAsync(Runner runner, DateOnly week, CancellationToken cancellationToken)
+    private async Task<WeeklyRecapContent> ContentAsync(Runner runner, DateOnly week, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var end = week.AddDays(6);
         // Strava runs count while Taperday holds them, as on Home; nothing about them is stored.
@@ -243,6 +324,7 @@ internal sealed partial class WeeklyRecapSender(
         List<(DateOnly, string, double)> next = [];
         string? race = null;
         int? daysToRace = null;
+        TrainingTrendsResult? trends = null;
         if (saved is not null)
         {
             try
@@ -267,6 +349,8 @@ internal sealed partial class WeeklyRecapSender(
                 }
 
                 next = [.. sessions.Where(s => s.Date >= monday && s.Date < monday.AddDays(7)).Select(s => (s.Date, s.Title, s.DistanceKm))];
+                // As Home would have shown it on Sunday night: the week just gone is the latest in the trends.
+                trends = await TrainingTrendsReader.ReadAsync(db, reader, runner, saved.Id, sessions, end, now, cancellationToken);
                 if (plan.RaceDate >= monday)
                 {
                     race = saved.Name;
@@ -279,7 +363,7 @@ internal sealed partial class WeeklyRecapSender(
             }
         }
 
-        return new(runner.DisplayName, week, logged.Count, logged.Sum(r => r.DistanceKm), logged.Count(r => r.DistanceUnreported), planned, done, next, race, daysToRace);
+        return new(runner.DisplayName, week, logged.Count, logged.Sum(r => r.DistanceKm), logged.Count(r => r.DistanceUnreported), planned, done, next, race, daysToRace, trends);
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Weekly recap failed for runner {RunnerId} (attempt {Attempt}).")]

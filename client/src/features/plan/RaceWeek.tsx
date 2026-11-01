@@ -25,9 +25,9 @@ function RaceChecklist({ plan, today }: { plan: TrainingPlan; today: string }) {
   }
   return <details className="disclosure" open={days <= 2}>
     <summary>Race week · {days === 0 ? 'race day' : days + ' days to go'} · {checked.length}/{RACE_TASKS.length} ready</summary>
-    <p className="field-help">A short, optional checklist. Your training plan is unchanged. Progress stays on this device.</p>
+    <p className="field-help">A short, optional checklist. All tasks stay visible on race day, including anything still outstanding. Your training plan is unchanged. Progress stays on this device.</p>
     <ul className="race-week-checklist">
-      {RACE_TASKS.filter(task => days === 0 ? task.group === 'day' : true).map(task =>
+      {RACE_TASKS.map(task =>
         <li key={task.id}>
           <label className="field"><input type="checkbox" checked={checked.includes(task.id)} onChange={event => change(task.id, event.target.checked)} /> {task.label}</label>
         </li>)}

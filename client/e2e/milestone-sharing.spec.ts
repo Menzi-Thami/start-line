@@ -17,6 +17,13 @@ test('milestone card updates preview when name visibility changes @phone', async
 
   await page.getByLabel('Choose a milestone').selectOption('weekly-distance')
   await expect(download).toHaveAttribute('download', 'taperday-weekly-distance.png')
+  if (info.project.name === 'desktop') {
+    const controls = await page.locator('.milestone-share-controls').boundingBox()
+    const previewBox = await page.locator('.milestone-share-preview').boundingBox()
+    expect(controls).not.toBeNull()
+    expect(previewBox).not.toBeNull()
+    expect(previewBox!.x).toBeGreaterThan(controls!.x + controls!.width - 1)
+  }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
   expect(overflow).toBeLessThanOrEqual(1)
 

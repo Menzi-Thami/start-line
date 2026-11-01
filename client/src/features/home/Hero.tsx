@@ -38,7 +38,7 @@ export function Hero({ races, today, units }: Props) {
 
       <div className="landing-visual">
         {next && days !== null && (
-          <div className="countdown" role="group" aria-label={`${days === 0 ? 'Race day' : days === 1 ? '1 day to go' : `${days} days to go`}: ${next.name}, ${formatDate(next.date, 'long')}, ${formatDistance(next.distanceKm, units)}`}>
+          <div className="countdown" role="group" aria-label={`${days === 0 ? 'Race day' : `${days} days to go`}: ${next.name}`} aria-description={`Race date ${formatDate(next.date, 'long')}. Distance ${formatDistance(next.distanceKm, units)}.`}>
             <div className="countdown-ring">
               <svg viewBox="0 0 220 220" aria-hidden="true">
                 <circle cx="110" cy="110" r="88" className="countdown-track" />

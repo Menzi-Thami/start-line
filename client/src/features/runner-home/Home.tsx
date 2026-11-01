@@ -487,7 +487,6 @@ export function Home({
       <div className="home-panel home-focus" id="home-panel-today">
         {current && planFailed && <div className="home-data-state" role="alert"><p>{plan ? 'Your plan couldn’t refresh. Showing the last plan loaded on this device.' : 'Your plan couldn’t load. You can try again.'}</p><button type="button" className="button" onClick={retryPlan}>Retry plan</button></div>}
         {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
-        <TickCard plan={plan} today={today} coach={coach} runs={runs} />
         <div className="home-top">
           {current ? (
             <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} />
@@ -538,6 +537,7 @@ export function Home({
           <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
         </button>}
         </div>
+        <TickCard plan={plan} today={today} coach={coach} runs={runs} />
         {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
 

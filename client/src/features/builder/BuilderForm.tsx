@@ -51,11 +51,11 @@ const nextMonday = (today: string) => addDays(today, (8 - new Date(`${today}T00:
 // One question per screen. Each field lives on exactly one step, so an error (ours or the server's) can send the
 // runner straight back to the screen that needs fixing.
 const STEPS = [
-  { title: 'Which race?', hint: 'Pick it from the list, or tell us about any other race.', fields: ['race', 'distance', 'date'] },
-  { title: 'What’s your goal time?', hint: 'Every session’s pace is worked out from this.', fields: ['goal'] },
-  { title: 'When can you run?', hint: 'Hard runs never land back to back.', fields: ['runDays', 'longRunDay', 'startOn'] },
-  { title: 'About you', hint: 'So your plan starts where you are.', fields: ['currentKm'] },
-  { title: 'Check and build', hint: 'Change anything you like, then build your plan.', fields: ['strength'] },
+  { title: 'Which race?', hint: 'Choose a race or add your own.', fields: ['race', 'distance', 'date'] },
+  { title: 'What’s your goal time?', hint: 'Your goal sets your training paces.', fields: ['goal'] },
+  { title: 'When can you run?', hint: 'Choose the days that work for you.', fields: ['runDays', 'longRunDay', 'startOn'] },
+  { title: 'About you', hint: 'Start at your current fitness level.', fields: ['currentKm'] },
+  { title: 'Check and build', hint: 'Review your choices before building.', fields: ['strength'] },
 ] as const satisfies readonly { title: string; hint: string; fields: readonly Field[] }[]
 
 const LAST_STEP = STEPS.length - 1

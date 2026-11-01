@@ -1,32 +1,111 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { beginnerSessionSummary, couchTo5k } from './couch-to-5k'
+import { BEGINNER_DAYS, countCompleted, defaultBeginnerProgress, parseBeginnerProgress, sessionDate, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
 
-/** The free beginner programme can be explored before creating an account.
- * This preview does not claim to be a saved plan or persist completed workouts.
+const STORAGE_KEY = 'taperday:beginner-progress:v1'
+const programme = couchTo5k()
+const todayLocal = () => {
+  const now = new Date()
+  const adjusted = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
+  return adjusted.toISOString().slice(0, 10)
+}
+const read = (): BeginnerProgress => {
+  const today = todayLocal()
+  try { return parseBeginnerProgress(window.localStorage.getItem(STORAGE_KEY), today) }
+  catch { return defaultBeginnerProgress(today) }
+}
+
+/** A standalone beginner journey. Training history is saved on this device
+ * only until the authenticated account-backed plan API is integrated.
  */
 export function CouchTo5K() {
-  const [week, setWeek] = useState(1)
-  const sessions = couchTo5k().filter(s => s.week === week)
+  const [progress, setProgress] = useState<BeginnerProgress>(read)
+  const [message, setMessage] = useState('')
+  const sessions = programme.filter(s => s.week === progress.week)
+  const done = countCompleted(progress, programme)
+  const update = (next: BeginnerProgress) => { setProgress(next); setMessage('') }
+  useEffect(() => {
+    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)) }
+    catch { /* Private browsing / restricted storage: continue in memory */ }
+  }, [progress])
+
+  const chooseDay = (day: BeginnerDay) => {
+    const next = progress.days.includes(day)
+      ? progress.days.filter(d => d !== day)
+      : [...progress.days, day]
+    if (next.length === 3 && validRunDays(next)) {
+      update({ ...progress, days: next as unknown as [BeginnerDay, BeginnerDay, BeginnerDay] })
+    } else {
+      setMessage('Choose three training days with at least one rest day between each, including across weekends.')
+    }
+  }
+  const toggle = (id: string) => {
+    const set = new Set(progress.completed)
+    if (set.has(id)) set.delete(id)
+    else set.add(id)
+    update({ ...progress, completed: [...set] })
+  }
+  const resetWeek = () => {
+    const revision = progress.revision + 1
+    update({ ...progress, revision, completed: progress.completed, paused: false })
+  }
   return (
     <section className="panel" aria-labelledby="beginner-title">
-      <p className="field-help">BEGINNER · NINE WEEKS · THREE SESSIONS EACH WEEK</p>
+      <p className="field-help">BEGINNER · NINE WEEKS · THREE SESSIONS PER WEEK</p>
       <h2 id="beginner-title">Couch to 5K</h2>
-      <p>Start with short, comfortable run/walk intervals. Three sessions a week with a rest day between sessions. Repeat a week whenever you need to. There is no required pace.</p>
-      <div className="wizard-nav">
-        <button className="button button-quiet" type="button" disabled={week === 1} onClick={() => setWeek(w => Math.max(1, w - 1))}>Previous week</button>
-        <strong aria-live="polite">Week {week} of 9</strong>
-        <button className="button button-quiet" type="button" disabled={week === 9} onClick={() => setWeek(w => Math.min(9, w + 1))}>Next week</button>
+      <p>Start with gentle run/walk intervals. There are no pace targets. Rest between sessions, and repeat a week if you need to.</p>
+      <p aria-live="polite"><strong>{done} of 27 sessions completed</strong> · {Math.round(done / 27 * 100)}%</p>
+      <progress value={done} max={27} style={{ width: '100%' }} aria-label="Couch to 5K completed sessions" />
+      <div className="field">
+        <label className="field-label" htmlFor="couch-start">Programme start date</label>
+        <input className="input" type="date" id="couch-start" value={progress.startedOn}
+          onChange={e => { if (e.target.value) update({ ...progress, startedOn: e.target.value }) }} />
       </div>
+      <fieldset className="field">
+        <legend className="field-label">Your three run days</legend>
+        <p className="field-help">Keep a rest day between sessions. Choose your schedule before recording progress.</p>
+        <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+          {BEGINNER_DAYS.map(day => (
+            <button key={day} type="button" className={progress.days.includes(day) ? 'button button-primary' : 'button button-quiet'}
+              aria-pressed={progress.days.includes(day)} onClick={() => chooseDay(day)}>{day.slice(0, 3)}</button>
+          ))}
+        </div>
+        {message && <p role="status" className="field-help">{message}</p>}
+      </fieldset>
+      <div className="wizard-nav">
+        <button className="button button-quiet" type="button" disabled={progress.week === 1} onClick={() => update({ ...progress, week: Math.max(1, progress.week - 1) })}>Previous week</button>
+        <strong aria-live="polite">Week {progress.week} of 9</strong>
+        <button className="button button-quiet" type="button" disabled={progress.week === 9} onClick={() => update({ ...progress, week: Math.min(9, progress.week + 1) })}>Next week</button>
+      </div>
+      <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <button className="button button-quiet" type="button" aria-pressed={progress.paused} onClick={() => update({ ...progress, paused: !progress.paused })}>
+          {progress.paused ? 'Resume programme' : 'Pause programme'}
+        </button>
+        <button className="button button-quiet" type="button" onClick={resetWeek}>Repeat this week</button>
+      </div>
+      {progress.paused && <p role="status">Paused. Your progress is kept here until you resume.</p>}
       <ol className="days">
-        {sessions.map(session => (
-          <li className="day" key={session.day}>
-            <div><strong>Session {session.day}</strong><p className="field-help">5 min brisk walking warm-up</p>
-              <p>{beginnerSessionSummary(session)}</p><p className="field-help">5 min walking cool-down · About {Math.round(session.totalSeconds / 60)} minutes total</p>
-            </div>
-          </li>
-        ))}
+        {sessions.map(session => {
+          const id = sessionId(session, progress.revision)
+          const checked = progress.completed.includes(id)
+          return (
+            <li className="day" key={id}>
+              <div>
+                <strong>Session {session.day} · {sessionDate(progress.startedOn, progress.days, session.week, session.day)}</strong>
+                <p className="field-help">5 min brisk walking warm-up</p>
+                <p>{beginnerSessionSummary(session)}</p>
+                <p className="field-help">5 min walking cool-down · About {Math.round(session.totalSeconds / 60)} minutes total</p>
+                <label className="session-done">
+                  <input type="checkbox" disabled={progress.paused} checked={checked} onChange={() => toggle(id)} />
+                  {checked ? 'Completed' : 'Mark this session complete'}
+                </label>
+              </div>
+            </li>
+          )
+        })}
       </ol>
-      <p className="field-help">After week nine, aim to jog comfortably for 30 minutes. That may not yet be 5 km — build distance gradually. If you're new to exercise or managing an injury, adapt with professional guidance.</p>
+      <p className="field-help">Progress is saved to this browser, not yet to your Taperday account. Switching devices or clearing website data may remove it.</p>
+      <p className="field-help">After week nine, aim for 30 minutes of comfortable running. That may not yet be 5 km. Build distance gradually; rest or repeat whenever needed.</p>
     </section>
   )
 }

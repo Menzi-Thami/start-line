@@ -18,6 +18,10 @@ describe('record-limited sharing milestones', () => {
     expect(found[0]?.title).toContain('in your records')
     expect(found.every(x => x.evidenceCount === 3)).toBe(true)
   })
+  it('ignores impossible calendar dates instead of crashing', () => {
+    const found = milestonesFromRuns([run('bad', '2026-13-42', 100), run('valid', '2026-11-01', 7)])
+    expect(found.find(item => item.id === 'longest')?.value).toBe(7)
+  })
   it('does not invent streaks or milestones when records are missing', () => {
     expect(milestonesFromRuns([])).toEqual([])
     expect(milestonesFromRuns([run('x','2026-10-26',8)]).some(x=>x.id==='consistency')).toBe(false)

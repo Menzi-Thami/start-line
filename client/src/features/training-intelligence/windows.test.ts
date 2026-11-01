@@ -24,6 +24,9 @@ describe('28-day training intelligence', () => {
     const { current, previous } = trainingWindows([run('a', '2026-11-01', 5)], '2026-11-01')
     expect(trainingTrend(current, previous)).toContain('Not enough')
   })
+  it('rejects an impossible anchor date', () => {
+    expect(() => trainingWindows([], '2026-02-30')).toThrow('Invalid date')
+  })
   it('does not count future records or invalid distances', () => {
     const { current } = trainingWindows([run('a', '2026-11-02', 6), run('b','2026-10-31',0)], '2026-11-01')
     expect(current.runs).toBe(1)

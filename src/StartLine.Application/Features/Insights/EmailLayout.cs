@@ -37,7 +37,7 @@ public static class EmailLayout
             <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{Paper};">{Encode(preheader)}</div>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{Paper};"><tr><td align="center" style="padding:28px 12px 40px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-            <tr><td style="padding:0 4px 18px;font-family:{Font};font-size:22px;font-weight:700;letter-spacing:-0.5px;line-height:1;">{Wordmark()}</td></tr>
+            <tr><td style="padding:0 4px 18px;font-family:{Font};font-size:22px;font-weight:700;letter-spacing:-0.5px;line-height:1;">{Wordmark(26)}</td></tr>
             <tr><td align="center" style="line-height:0;"><img src="{Site}/email/peek.png" width="240" height="66" alt="The Taperday runner peeking over the page" style="display:block;border:0;width:240px;height:66px;"></td></tr>
             <tr><td style="background:{Surface};border-radius:28px;padding:12px 28px 30px;font-family:{Font};color:{Ink};">
             <p style="margin:12px 0 6px;font-size:14px;font-weight:600;color:{Muted};">{Encode(kicker)}</p>
@@ -46,7 +46,7 @@ public static class EmailLayout
             <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:26px;"><tr><td style="background:{Ink};border-radius:999px;"><a href="{buttonUrl}" style="display:inline-block;padding:14px 26px;font-family:{Font};font-size:16px;font-weight:600;color:{Surface};text-decoration:none;">{Encode(buttonText)}</a></td></tr></table>
             </td></tr>
             <tr><td align="center" style="padding:26px 8px 0;font-family:{Font};">
-            <div style="font-size:16px;font-weight:700;letter-spacing:-0.3px;line-height:1;">{Wordmark()}</div>
+            <div style="line-height:1;"><table role="presentation" align="center" cellpadding="0" cellspacing="0"><tr><td>{Wordmark(20)}</td></tr></table></div>
             <div style="margin-top:4px;font-size:12px;color:{Muted};">Plans that keep up with how you run.</div>
             <div style="margin-top:12px;font-size:12px;line-height:1.6;color:{Muted};">{footer}</div>
             <div style="margin-top:10px;font-size:12px;"><a href="{Site}" style="color:{Ink};text-decoration:none;">taperday.run</a><span style="color:{Line};">&nbsp;&nbsp;·&nbsp;&nbsp;</span><a href="mailto:hello@taperday.run" style="color:{Ink};text-decoration:none;">hello@taperday.run</a></div>
@@ -58,13 +58,12 @@ public static class EmailLayout
     }
 
     /// <summary>
-    /// The logo, as on the site's masthead (docs/brand.md): "taper" a step smaller and lighter per letter, then "day" back at
-    /// full size. Shades are mixed with the grey ground rather than made with opacity, which some email apps ignore.
+    /// The logo, as on the site's masthead (docs/brand.md): the tapered wordmark with the green runner peeking from behind
+    /// "day". An image (a 2× PNG on taperday.run, like the mascot), because email apps can't draw the runner; mail apps
+    /// that block images show its alt text, "Taperday".
     /// </summary>
-    public static string Wordmark() =>
-        "<span style=\"font-size:1.12em;color:#111111;\">t</span><span style=\"font-size:1em;color:#313131;\">a</span>"
-        + "<span style=\"font-size:0.88em;color:#505050;\">p</span><span style=\"font-size:0.79em;color:#6a6a6a;\">e</span>"
-        + "<span style=\"font-size:0.7em;color:#7f7f7f;\">r</span><span style=\"font-size:1em;color:#111111;margin-left:0.06em;\">day</span>";
+    public static string Wordmark(int height) => string.Create(CultureInfo.InvariantCulture,
+        $"<img src=\"{Site}/email/wordmark.png\" width=\"{height * 245 / 36}\" height=\"{height}\" alt=\"Taperday\" style=\"display:block;border:0;width:{height * 245 / 36}px;height:{height}px;font-family:{Font};font-size:{height - 4}px;font-weight:700;color:{Ink};\">");
 
     // Every email ends with an Unsubscribe button. A runner's copy goes to their own key for this email's list; a preview to
     // the maker has no key, so it goes to Account, where every email can be turned off.

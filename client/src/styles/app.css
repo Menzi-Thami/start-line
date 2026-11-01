@@ -5746,3 +5746,69 @@ button.plan-calendar-day {
   .milestone-share-layout { grid-template-columns: minmax(0, 1fr) minmax(240px, 0.85fr); gap: clamp(24px, 5vw, 64px); }
   .milestone-share-preview { justify-content: flex-end; }
 }
+
+/* The green runner peeking from behind "day" (Wordmark.tsx, docs/brand.md). It sits behind the letters, cut off at the
+   baseline as if hidden by the word, leaning right; it rises once as the page loads and then rests. */
+.wordmark-letters {
+  position: relative;
+  isolation: isolate;
+  margin-right: 0.95em;
+}
+
+.wordmark-peek {
+  position: absolute;
+  left: calc(100% - 0.5em);
+  bottom: 0.16em;
+  width: 1.6em;
+  height: 1.5em;
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.wordmark-peek svg {
+  position: absolute;
+  left: 0.04em;
+  bottom: -0.16em;
+  width: 1.3em;
+  height: auto;
+  transform: rotate(22deg);
+  transform-origin: 50% 70%;
+  animation: wordmark-peek 560ms cubic-bezier(0.2, 0.8, 0.2, 1) 350ms both;
+}
+
+.wordmark-peek-head {
+  fill: var(--sage);
+}
+
+.wordmark-peek-lines {
+  stroke: var(--sage);
+}
+
+.wordmark-peek-face {
+  fill: var(--on-sage);
+}
+
+.wordmark-peek-face path {
+  stroke: var(--on-sage);
+}
+
+@keyframes wordmark-peek {
+  from {
+    transform: translate(-0.14em, 0.95em) rotate(22deg);
+  }
+
+  72% {
+    transform: translate(0.01em, -0.05em) rotate(22deg);
+  }
+
+  to {
+    transform: rotate(22deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wordmark-peek svg {
+    animation: none;
+  }
+}

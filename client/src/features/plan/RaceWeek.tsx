@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { TrainingPlan } from '../../lib/types'
 import { daysBetween } from '../../lib/countdown'
 import { completedTasks, raceChecklistKey, RACE_TASKS } from '../race-week/checklist'
 
 export function RaceWeek({ plan, today }: { plan: TrainingPlan; today: string }) {
+  return <RaceChecklist key={raceChecklistKey(plan.race.date, plan.race.name)} plan={plan} today={today} />
+}
+
+function RaceChecklist({ plan, today }: { plan: TrainingPlan; today: string }) {
   const days = daysBetween(today, plan.race.date)
   const key = raceChecklistKey(plan.race.date, plan.race.name)
   const [checked, setChecked] = useState<string[]>(() => {
     try { return completedTasks(localStorage.getItem(key)) } catch { return [] }
   })
   const [notice, setNotice] = useState('')
-  useEffect(() => {
-    try { setChecked(completedTasks(localStorage.getItem(key))) } catch { setChecked([]) }
-    setNotice('')
-  }, [key])
   if (days < 0 || days > 7) return null
   const change = (id: string, done: boolean) => {
     const next = done ? [...new Set([...checked, id])] : checked.filter(item => item !== id)

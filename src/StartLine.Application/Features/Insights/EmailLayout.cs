@@ -25,10 +25,10 @@ public static class EmailLayout
 
     /// <summary>
     /// The whole email around a body: preheader, mascot, kicker and title, the body, one button and the footer. With an
-    /// <paramref name="unsubscribeUrl"/>, the footer ends with an Unsubscribe link: every email to runners that isn't
-    /// about their own account needs one.
+    /// <paramref name="unsubscribeUrl"/> (a runner's key for this email's list, <paramref name="unsubscribeFrom"/>), the footer's
+    /// Unsubscribe button stops that list; without one it goes to Account. Every email has the button.
     /// </summary>
-    public static string Wrap(string preheader, string kicker, string title, string body, string buttonText, string buttonUrl, string footer, string? unsubscribeUrl = null)
+    public static string Wrap(string preheader, string kicker, string title, string body, string buttonText, string buttonUrl, string footer, string? unsubscribeUrl = null, string unsubscribeFrom = "Taperday news and updates")
     {
         var html = new StringBuilder();
         html.Append(CultureInfo.InvariantCulture, $"""
@@ -37,7 +37,7 @@ public static class EmailLayout
             <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:{Paper};">{Encode(preheader)}</div>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{Paper};"><tr><td align="center" style="padding:28px 12px 40px;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">
-            <tr><td style="padding:0 4px 18px;font-family:{Font};font-size:22px;font-weight:700;letter-spacing:-0.5px;"><span style="color:{Ink};">taper</span><span style="color:{Ink};">day</span></td></tr>
+            <tr><td style="padding:0 4px 18px;font-family:{Font};font-size:22px;font-weight:700;letter-spacing:-0.5px;line-height:1;">{Wordmark()}</td></tr>
             <tr><td align="center" style="line-height:0;"><img src="{Site}/email/peek.png" width="240" height="66" alt="The Taperday runner peeking over the page" style="display:block;border:0;width:240px;height:66px;"></td></tr>
             <tr><td style="background:{Surface};border-radius:28px;padding:12px 28px 30px;font-family:{Font};color:{Ink};">
             <p style="margin:12px 0 6px;font-size:14px;font-weight:600;color:{Muted};">{Encode(kicker)}</p>
@@ -46,21 +46,33 @@ public static class EmailLayout
             <table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:26px;"><tr><td style="background:{Ink};border-radius:999px;"><a href="{buttonUrl}" style="display:inline-block;padding:14px 26px;font-family:{Font};font-size:16px;font-weight:600;color:{Surface};text-decoration:none;">{Encode(buttonText)}</a></td></tr></table>
             </td></tr>
             <tr><td align="center" style="padding:26px 8px 0;font-family:{Font};">
-            <div style="font-size:15px;font-weight:800;letter-spacing:-0.3px;"><span style="color:{Ink};">taper</span><span style="color:{Ink};">day</span></div>
+            <div style="font-size:16px;font-weight:700;letter-spacing:-0.3px;line-height:1;">{Wordmark()}</div>
             <div style="margin-top:4px;font-size:12px;color:{Muted};">Plans that keep up with how you run.</div>
             <div style="margin-top:12px;font-size:12px;line-height:1.6;color:{Muted};">{footer}</div>
             <div style="margin-top:10px;font-size:12px;"><a href="{Site}" style="color:{Ink};text-decoration:none;">taperday.run</a><span style="color:{Line};">&nbsp;&nbsp;·&nbsp;&nbsp;</span><a href="mailto:hello@taperday.run" style="color:{Ink};text-decoration:none;">hello@taperday.run</a></div>
-            {Unsubscribe(unsubscribeUrl)}
+            {Unsubscribe(unsubscribeUrl, unsubscribeFrom)}
             </td></tr>
             </table></td></tr></table></body></html>
             """);
         return html.ToString();
     }
 
-    // Small and volt like the other footer links, but on its own line and underlined, so it's easy to find and plainly a link.
-    private static string Unsubscribe(string? url) => url is null
-        ? ""
-        : string.Create(CultureInfo.InvariantCulture, $"<div style=\"margin-top:10px;font-size:12px;\"><a href=\"{Encode(url)}\" style=\"color:{Ink};text-decoration:underline;\">Unsubscribe</a><span style=\"color:{Muted};\"> from Taperday news and updates</span></div>");
+    /// <summary>
+    /// The logo, as on the site's masthead (docs/brand.md): "taper" a step smaller and lighter per letter, then "day" back at
+    /// full size. Shades are mixed with the grey ground rather than made with opacity, which some email apps ignore.
+    /// </summary>
+    public static string Wordmark() =>
+        "<span style=\"font-size:1.12em;color:#111111;\">t</span><span style=\"font-size:1em;color:#313131;\">a</span>"
+        + "<span style=\"font-size:0.88em;color:#505050;\">p</span><span style=\"font-size:0.79em;color:#6a6a6a;\">e</span>"
+        + "<span style=\"font-size:0.7em;color:#7f7f7f;\">r</span><span style=\"font-size:1em;color:#111111;margin-left:0.06em;\">day</span>";
+
+    // Every email ends with an Unsubscribe button. A runner's copy goes to their own key for this email's list; a preview to
+    // the maker has no key, so it goes to Account, where every email can be turned off.
+    private static string Unsubscribe(string? url, string from) => string.Create(CultureInfo.InvariantCulture, $"""
+        <table role="presentation" align="center" cellpadding="0" cellspacing="0" style="margin:16px auto 0;"><tr><td style="border:1px solid {Ink};border-radius:999px;"><a href="{Encode(url ?? Site + "/?view=account")}" style="display:inline-block;padding:8px 18px;font-family:{Font};font-size:13px;font-weight:600;color:{Ink};text-decoration:none;">Unsubscribe</a></td></tr></table>
+        <div style="margin-top:6px;font-size:11px;color:{Muted};">{(url is null ? "Turn emails off in Account." : "From " + Encode(from) + ". Other emails stay as they are.")}</div>
+        """);
+
 
     /// <summary>One item in a "what's new" list: a volt dot, a bold title and a line of detail.</summary>
     public static string Item(string title, string detail) =>

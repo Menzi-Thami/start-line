@@ -122,12 +122,13 @@ public sealed class UnsubscribeTests(StartLineApiFactory factory) : IClassFixtur
     }
 
     [Fact]
-    public void An_email_without_unsubscribe_links_has_no_headers_or_footer_link()
+    public void An_email_without_unsubscribe_links_has_no_headers_and_its_button_goes_to_Account()
     {
         var preview = UpdateEmails.RacePlanV3("maker@example.com", test: true);
 
         BrevoEmailSender.Headers(preview.Unsubscribe).ShouldBeNull();
-        preview.Html.ShouldNotContain("Unsubscribe");
+        preview.Html.ShouldContain(">Unsubscribe</a>");
+        preview.Html.ShouldContain("https://taperday.run/?view=account");
     }
 }
 

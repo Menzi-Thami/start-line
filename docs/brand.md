@@ -10,22 +10,23 @@
 
 A taper is the last few weeks before a race, when training volume steps down so you arrive fresh.
 The logo does exactly that: the letters of "taper" each get a step smaller and lighter, then "day"
-comes back at full size in volt. Race day, fresh.
+comes back at full size. Race day, fresh.
 
-The site's look is "Night run": near-black, one electric volt accent, frosted glass. Its full description,
-motion rules included, is in `docs/design/night-run/README.md`.
+The site's look is **Frame**: a grey page, a white rounded frame, Instrument Serif over Instrument Sans, sage as the one colour,
+with a dark mode. Its full description is in `docs/design/race-signal/style_guide.md`.
 
 ## Logo (the wordmark)
 
-| Part | On the dark site | On paper (print) |
+| Part | Light | Dark |
 |---|---|---|
-| "taper" | `#f2f2f2`, fading by step | Ink `#111111`, fading by step |
-| "day" | Volt `#d7ff3e` | Ink `#111111` |
+| "taper" | Ink `#111111`, fading by step | `#f2f2f2`, fading by step |
+| "day" | Ink `#111111` | `#f2f2f2` |
 
 In the app the colours come from the `--ink` and `--accent` tokens (`client/src/styles/tokens.css`),
 so dark mode follows automatically. Don't hard-code them in components.
 
-- **Type:** Bricolage Grotesque, bold, letter-spacing −0.03em, letters sitting on one baseline.
+- **Type:** Instrument Sans, bold, letter-spacing −0.03em, letters sitting on one baseline.
+- **Everywhere the logo appears, it's this taper:** the masthead, the sign-in intro, the loading screen (`client/index.html`, `client/public/boot.css`) and every email's header and footer (`EmailLayout.Wordmark`, where the fades are solid greys mixed with the page, as some email apps ignore opacity). In sentences it stays **Taperday**.
 - **The taper**, relative to the size of "day":
 
   | Letter | t | a | p | e | r | day |

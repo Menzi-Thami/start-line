@@ -11,6 +11,7 @@ describe('focused sign-in entry', () => {
     const back = vi.fn()
     render(<SignInLanding onSignIn={signIn} onSignUp={signUp} onBack={back} />)
     expect(screen.getByRole('heading', { name: 'Your next run starts here.' })).toBeInTheDocument()
+    expect(screen.queryByText(/Sign-in is handled securely/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Continue to sign in' }))
     await user.click(screen.getByRole('button', { name: 'Create an account' }))
     await user.click(screen.getByRole('button', { name: 'Back to Taperday' }))

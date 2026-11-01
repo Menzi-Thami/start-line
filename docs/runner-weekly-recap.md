@@ -1,13 +1,13 @@
 # Runner weekly recap (#162)
 
-A weekly email for runners who turn it on in their profile ("Send me a weekly recap of my recorded runs and upcoming training", `Runner.WeeklyEmails`). It **replaces the maker's Monday report**: `WeeklyReportWorker` is gone.
+A weekly email every runner gets unless they turn it off: the profile box ("Send me a weekly recap of my recorded runs and upcoming training", `Runner.WeeklyEmails`) starts ticked, the `WeeklyRecapForEveryone` migration (1 Nov 2026) turned it on for existing runners, and every recap has an Unsubscribe button. It **replaces the maker's Monday report**: `WeeklyReportWorker` is gone.
 
 ## What it says
 
 | Part | From |
 |---|---|
 | Last week's runs and kilometres, and runs counted without a distance | `RunningLogReader` with synced runs: the same totals as Home. Strava runs count while Taperday holds them, and nothing about them is stored |
-| Planned sessions run ("4 of 5") | The active plan's checkable sessions last week, run if checked in (not skipped) or uploaded |
+| Planned sessions run ("4 of 5") | The active plan's checkable sessions that week, run if checked in (not skipped) or uploaded |
 | The week ahead | The active plan's sessions for this week: day, title, distance |
 | Race countdown | The active plan's race date |
 
@@ -15,11 +15,12 @@ Figures only, with no claims the numbers don't support. Built with `EmailLayout`
 
 ## When and how often
 
-- **07:00 on each runner's own Monday** (`Runner.TimeZone`; an unknown zone counts as UTC), about the Monday–Sunday just gone.
+- **Between 19:00 and 20:00 on each runner's own Sunday** (`Runner.TimeZone`; an unknown zone counts as UTC), about the Monday–Sunday ending that day, with the week ahead. Sundays start on 8 November 2026 (`WeeklyRecapSender.SundaysFrom`); before that the old slot, 07:00 on the runner's Monday about the week before, sent the 2 November recap. They're different weeks, so nobody got two. A run logged after 19:00 on Sunday shows in the trends the next week, not in that email.
+- **The API must be awake to send.** On the free F1 plan the app sleeps after about 20 idle minutes and its timers stop, so `.github/workflows/recap-wake.yml` pings `/health/live` every 15 minutes from Sunday 14:00 to Monday 08:00 UTC (19:00 Sunday from UTC+5 to UTC−11). Free on a public repo.
 - `RunnerWeeklyRecapWorker` checks every 15 minutes, and `WeeklyRecapSender` sends what's due.
 - **Once per runner and week:** a `WeeklyRecapDeliveries` row (unique on runner and week) is claimed before sending. Restarts, retries and a second app instance can't send twice.
 - **A failed send** (Brevo down, say) is tried again on the next check, up to 3 attempts in all. A claim left mid-send by a crash is never resent, because the email may have gone.
-- **A missed Monday is skipped,** never sent late on Tuesday.
+- **A missed hour is skipped,** never sent late: the wake-up ping is what keeps the hour from being missed.
 
 ## Unsubscribing
 
@@ -35,8 +36,8 @@ Each recap carries the runner's own **weekly** key (`w1`), in the footer link (`
 ## Rolling it out
 
 1. **Preview.** Set `RunnerWeeklyRecap__TestTo`, which restarts the app and sends one preview. Check it in Gmail, Outlook and on a phone, in light and dark. Then clear the setting.
-2. **Switch it on.** Set `RunnerWeeklyRecap__Enabled=true`. The next Monday 07:00 sends to every runner who has the box ticked.
-3. **Brevo limits.** The free plan sends 300 emails a day. Past that, the plan needs upgrading before Monday.
+2. **Switch it on.** Set `RunnerWeeklyRecap__Enabled=true`. The next Sunday 19:00 sends to every runner who has the box ticked.
+3. **Brevo limits.** The free plan sends 300 emails a day. Past that, the plan needs upgrading before Sunday.
 4. **Brevo key.** A key unused for 90 days expires. The retired Monday report used to keep it in use, so switch the recap on within 90 days of the last send.
 
 ## Tests

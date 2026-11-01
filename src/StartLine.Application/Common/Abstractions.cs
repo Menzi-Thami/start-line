@@ -39,6 +39,8 @@ public interface IApplicationDbContext
 
     DbSet<WeeklyRecapDelivery> WeeklyRecapDeliveries { get; }
 
+    DbSet<OnboardingDelivery> OnboardingDeliveries { get; }
+
     DbSet<CoachingDecisionLog> CoachingDecisions { get; }
 
     DbSet<DailyReadiness> Readiness { get; }

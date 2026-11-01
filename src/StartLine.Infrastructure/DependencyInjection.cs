@@ -121,6 +121,8 @@ public static class DependencyInjection
         services.AddHttpClient<IEmailSender, BrevoEmailSender>(http => http.Timeout = TimeSpan.FromSeconds(30)).RemoveAllLoggers();
         services.AddOptions<RunnerWeeklyRecapOptions>().BindConfiguration(RunnerWeeklyRecapOptions.Section);
         services.AddHostedService<RunnerWeeklyRecapWorker>();
+        services.AddOptions<OnboardingReminderOptions>().BindConfiguration(OnboardingReminderOptions.Section);
+        services.AddHostedService<OnboardingReminderWorker>();
         services.AddOptions<PushTestOptions>().BindConfiguration("PushTest").ValidateOnStart();
         services.AddSingleton<IValidateOptions<PushTestOptions>, PushTestOptionsValidator>();
         services.AddScoped<PushTestRunner>();

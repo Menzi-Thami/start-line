@@ -429,6 +429,25 @@ internal sealed class WeeklyRecapDeliveryConfiguration : IEntityTypeConfiguratio
     }
 }
 
+internal sealed class OnboardingDeliveryConfiguration : IEntityTypeConfiguration<OnboardingDelivery>
+{
+    public void Configure(EntityTypeBuilder<OnboardingDelivery> builder)
+    {
+        builder.ToTable("OnboardingDeliveries");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Campaign).HasConversion<string>().HasMaxLength(24);
+        builder.Property(d => d.Episode).HasMaxLength(OnboardingDelivery.MaxEpisodeLength);
+        builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Ignore(d => d.CanRetry);
+        builder.Ignore(d => d.MayHaveGone);
+
+        // The claim: one email per runner, campaign and episode, whichever instance gets there first. The runner going takes theirs.
+        builder.HasIndex(d => new { d.RunnerId, d.Campaign, d.Episode }).IsUnique();
+        builder.HasOne<Runner>().WithMany().HasForeignKey(d => d.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class DailyReadinessConfiguration : IEntityTypeConfiguration<DailyReadiness>
 {
     public void Configure(EntityTypeBuilder<DailyReadiness> builder)

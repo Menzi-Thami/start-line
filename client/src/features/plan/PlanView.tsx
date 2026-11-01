@@ -1,3 +1,4 @@
+import { LifeHappens } from './LifeHappens'
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { CalendarLinks } from '../../lib/calendar-links'
 import { buildIcs } from '../../lib/ics'
@@ -352,6 +353,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </div>
       )}
 
+      <LifeHappens />
       <details className="disclosure plan-options"><summary>Plan options</summary>
         <div className="plan-actions">
           {toolbarExtra}

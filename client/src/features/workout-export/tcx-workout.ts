@@ -49,13 +49,13 @@ export function exportTcxWorkout(session: Session): string {
   // need destination-specific validation before we can safely emit them.
   const pace = (value: number): string => {
     const whole = Math.round(value)
-    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}/km`
+    return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`
   }
   const notes = steps.map((step, i) => {
     const target = step.fastestSecondsPerKm !== null && step.slowestSecondsPerKm !== null
       && Number.isFinite(step.fastestSecondsPerKm) && step.fastestSecondsPerKm > 0
       && Number.isFinite(step.slowestSecondsPerKm) && step.slowestSecondsPerKm > 0
-      ? ` · pace ${pace(step.fastestSecondsPerKm)}–${pace(step.slowestSecondsPerKm)}` : ''
+      ? ` · pace ${pace(step.fastestSecondsPerKm)}–${pace(step.slowestSecondsPerKm)}/km` : ''
     return `${i + 1}. ${step.kind}${target}${step.effort ? ': ' + step.effort : ''}`
   }).join('; ')
   const body = steps.map((step, index) => {

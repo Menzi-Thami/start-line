@@ -1,3 +1,4 @@
+import { RunDataQuality } from './RunDataQuality'
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
@@ -162,6 +163,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         {run.elapsedSeconds - run.movingSeconds >= 60 && <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />}
       </dl>
 
+      <RunDataQuality run={run} />
       <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
 
       {run.heartRate && <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} />}

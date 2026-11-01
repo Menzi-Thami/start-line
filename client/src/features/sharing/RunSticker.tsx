@@ -7,6 +7,7 @@ import type { StickerRun } from './run-sticker'
 export function RunSticker({ run, units }: { run: StickerRun; units: Units }) {
   const titleId = useId()
   const closeRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const [layout, setLayout] = useState<StickerLayout>('portrait')
   const [open, setOpen] = useState(false)
@@ -75,12 +76,23 @@ export function RunSticker({ run, units }: { run: StickerRun; units: Units }) {
       </button>
       {open && (
         <section
-          className="sticker-panel"
+          ref={panelRef}
+          className="sticker-panel sticker-sheet"
+          role="dialog"
+          aria-modal="true"
           aria-labelledby={titleId}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               e.preventDefault()
               close()
+            }
+            if (e.key === 'Tab') {
+              const focusable = panelRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled])')
+              if (!focusable?.length) return
+              const first = focusable[0]!
+              const last = focusable[focusable.length - 1]!
+              if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+              else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
             }
           }}
         >

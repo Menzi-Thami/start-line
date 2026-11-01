@@ -41,6 +41,15 @@ export function WorkoutExport({ plan, units }: { plan: TrainingPlan; units: Unit
     <summary>Workout export</summary>
     <p>Export the steps of a running session as TCX workout XML, or download a readable list of your plan.</p>
     <p className="field-help">TCX output is experimental. Import support varies by service and device; this does not transfer workouts to your watch automatically.</p>
+    <div className="field-help">
+      <strong>Compatibility status</strong>
+      <ul>
+        <li>TCX workout XML: generated locally with warm-up, work and recovery steps; covered by automated structure tests.</li>
+        <li>Garmin Connect / Garmin watches: import and watch transfer not verified. Do not assume this file can be uploaded as a scheduled workout.</li>
+        <li>Apple Watch, COROS, Polar, Suunto and third-party training services: import not verified or officially supported by Taperday.</li>
+        <li>Target pace is included in workout notes, not as a device-enforced pace alert.</li>
+      </ul>
+    </div>
     {chosen && <div className="field">
       <label htmlFor="tcx-workout-choice">Workout to export</label>
       <select id="tcx-workout-choice" value={selected} onChange={event => { setSelected(Number(event.target.value)); setError('') }}>

@@ -15,6 +15,7 @@ import type {
   PersonalBest,
   Prediction,
   Race,
+  RunData,
   ReminderDevice,
   Reminders,
   Runner,
@@ -249,7 +250,20 @@ export const api = {
     deleteActivity: (token: string, id: string) =>
       request<void>(`/api/v1/me/activities/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
     bests: (token: string) => request<PersonalBest[]>('/api/v1/me/activities/bests', {}, token),
-    /** The runs behind the long-term totals: sessions ticked off (at the plan's distance) and uploads. Never Strava runs. */
+    /** Where the runner's runs came from, what makes up this week's and month's totals, duplicates, gaps and sync problems. */
+    runData: (token: string) => request<RunData>('/api/v1/me/run-data', { cache: 'no-store' }, token),
+    retryStrava: (token: string) => request<{ retried: number }>('/api/v1/me/run-data/retry-strava', { method: 'POST' }, token),
+    keepBothRuns: (token: string, firstActivityId: string, secondActivityId: string) =>
+      request<void>('/api/v1/me/run-data/keep-both', { method: 'POST', body: JSON.stringify({ firstActivityId, secondActivityId }) }, token),
+    deleteActivities: (token: string, activityIds: readonly string[]) =>
+      request<{ deleted: number }>('/api/v1/me/run-data/delete', { method: 'POST', body: JSON.stringify({ activityIds }) }, token),
+    /** Every run as a CSV file (not JSON, so it skips the JSON request helper). */
+    exportRuns: async (token: string): Promise<Blob> => {
+      const response = await fetch(`${BASE_URL}/api/v1/me/run-data/export.csv`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      if (!response.ok) throw new ApiError(response.status === 401 ? 'Your sign-in has expired. Sign in again to carry on.' : 'The download didn’t work. Try again in a moment.', response.status)
+      return response.blob()
+    },
+    /** The runs behind the long-term totals: sessions ticked off (at the plan's distance) and uploads, plus Strava's current copies when asked. */
     running: (token: string, includeSynced = false) => request<LoggedRun[]>(`/api/v1/me/running${includeSynced ? '?includeSynced=true' : ''}`, { cache: 'no-store' }, token),
     /** Every kept run since the runner started (uploads and ticks), for the all-time totals. */
     allTimeRunning: (token: string) => request<LoggedRun[]>('/api/v1/me/running?allTime=true', { cache: 'no-store' }, token),

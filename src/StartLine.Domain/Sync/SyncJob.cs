@@ -77,6 +77,12 @@ public sealed class SyncJob
     /// <summary>Out of retries. Kept (not retried) so the runner can be told a run couldn't be fetched.</summary>
     public bool Failed { get; private set; }
 
+    /// <summary>
+    /// Fetched but deliberately not kept (too short, not a run, already uploaded, or the run limit reached). Not an
+    /// error and not retried; kept briefly with the reason so the runner can see why a run didn't appear.
+    /// </summary>
+    public bool Skipped { get; private set; }
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public static SyncJob Create(Guid runnerId, SyncProvider provider, SyncJobKind kind, long? objectId, SyncPriority priority, DateTimeOffset now, DateTimeOffset? notBefore = null)
@@ -105,6 +111,29 @@ public sealed class SyncJob
     }
 
     public bool IsDue(DateTimeOffset now) => !Failed && NotBefore <= now;
+
+    /// <summary>Done with, on purpose: the run won't be kept, for <paramref name="reason"/>.</summary>
+    public void Skip(string reason)
+    {
+        ArgumentNullException.ThrowIfNull(reason);
+        LastError = reason.Length > MaxErrorLength ? reason[..MaxErrorLength] : reason;
+        Failed = true;
+        Skipped = true;
+    }
+
+    /// <summary>The runner asked to try a failed fetch again: a fresh set of attempts, starting now.</summary>
+    public void Retry(DateTimeOffset now)
+    {
+        if (!Failed || Skipped)
+        {
+            throw new DomainException("Only a fetch that failed can be tried again.");
+        }
+
+        Failed = false;
+        Attempts = 0;
+        LastError = null;
+        NotBefore = now;
+    }
 
     /// <summary>Not this job's fault (the rate limit is spent): try again later without using up an attempt.</summary>
     public void Defer(DateTimeOffset until)

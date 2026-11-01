@@ -1783,6 +1783,230 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/run-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RunDataDto"];
+                        "application/json": components["schemas"]["RunDataDto"];
+                        "text/json": components["schemas"]["RunDataDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/run-data/retry-strava": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RetriedDto"];
+                        "application/json": components["schemas"]["RetriedDto"];
+                        "text/json": components["schemas"]["RetriedDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/run-data/keep-both": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["KeepBothRunsCommand"];
+                    "text/json": components["schemas"]["KeepBothRunsCommand"];
+                    "application/*+json": components["schemas"]["KeepBothRunsCommand"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/run-data/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["DeleteMyActivitiesCommand"];
+                    "text/json": components["schemas"]["DeleteMyActivitiesCommand"];
+                    "application/*+json": components["schemas"]["DeleteMyActivitiesCommand"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["DeletedDto"];
+                        "application/json": components["schemas"]["DeletedDto"];
+                        "text/json": components["schemas"]["DeletedDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/run-data/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/csv": unknown;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/sync/strava": {
         parameters: {
             query?: never;
@@ -2306,6 +2530,7 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": components["schemas"]["UnsubscribeRequest"];
+                    "application/*+json": components["schemas"]["UnsubscribeRequest"];
                 };
             };
             responses: {
@@ -2549,6 +2774,13 @@ export interface components {
         DateStatus: "Confirmed" | "Provisional";
         /** @enum {unknown} */
         DayOfWeek: "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday";
+        DeletedDto: {
+            /** Format: int32 */
+            deleted: number;
+        };
+        DeleteMyActivitiesCommand: {
+            activityIds: string[];
+        };
         /** @enum {unknown} */
         DistanceCategory: "FiveK" | "TenK" | "HalfMarathon" | "Marathon" | "Ultra" | "LongUltra";
         /** @enum {unknown} */
@@ -2640,6 +2872,12 @@ export interface components {
         ImportStatus: "Imported" | "AlreadyUploaded" | "Skipped" | "Unreadable" | "LimitReached";
         /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
+        KeepBothRunsCommand: {
+            /** Format: uuid */
+            firstActivityId: string;
+            /** Format: uuid */
+            secondActivityId: string;
+        };
         LoggedRunDto: {
             /** Format: date */
             date: string;
@@ -2653,6 +2891,17 @@ export interface components {
         };
         /** @enum {unknown} */
         LoggedRunSource: "Ticked" | "Uploaded" | "Strava";
+        MissingDataDto: {
+            /** Format: int32 */
+            runs: number;
+            /** Format: int32 */
+            withoutHeartRate: number;
+            /** Format: int32 */
+            withoutElevation: number;
+            /** Format: int32 */
+            withoutSplits: number;
+            heartRateConsent: boolean;
+        };
         NotificationHistoryDto: {
             /** Format: uuid */
             deviceId: string;
@@ -2768,6 +3017,11 @@ export interface components {
             isReplanned: boolean;
             guidance?: null | string;
         };
+        PossibleDuplicateDto: {
+            first: components["schemas"]["ActivitySummaryDto"];
+            second: components["schemas"]["ActivitySummaryDto"];
+            relation: components["schemas"]["RunRelation"];
+        };
         PredictionDto: {
             /** Format: double */
             distanceKm: number;
@@ -2805,6 +3059,8 @@ export interface components {
             /** Format: double */
             distanceKm: number;
         };
+        /** @enum {unknown} */
+        RecordingFormat: "Fit" | "Gpx" | "Tcx";
         /** @enum {unknown} */
         RecoveryReadiness: "NotReported" | "Ready" | "Tired" | "Unwell";
         RemainingWeekProposalDto: {
@@ -2847,6 +3103,10 @@ export interface components {
         };
         /** @enum {unknown} */
         RepUnit: "Reps" | "RepsEachLeg" | "Seconds" | "SecondsEachSide";
+        RetriedDto: {
+            /** Format: int32 */
+            retried: number;
+        };
         ReviewDto: {
             /** Format: double */
             startedFastBySecondsPerKm: null | number;
@@ -2858,6 +3118,13 @@ export interface components {
             /** Format: double */
             heartRateDriftPercent: null | number;
             heartRateDriftIsNotable: boolean;
+        };
+        RunDataDto: {
+            sources: components["schemas"]["RunSourcesDto"];
+            totals: components["schemas"]["TotalsBreakdownDto"][];
+            possibleDuplicates: components["schemas"]["PossibleDuplicateDto"][];
+            missing: components["schemas"]["MissingDataDto"];
+            syncIssues: components["schemas"]["SyncIssueDto"][];
         };
         RunnerDto: {
             /** Format: uuid */
@@ -2880,6 +3147,28 @@ export interface components {
         };
         RunnerPhotoDto: {
             dataUrl: string;
+        };
+        /** @enum {unknown} */
+        RunRelation: "Unrelated" | "SameRun" | "Overlapping";
+        RunSourcesDto: {
+            /** Format: int32 */
+            uploads: number;
+            /** Format: int32 */
+            fit: number;
+            /** Format: int32 */
+            gpx: number;
+            /** Format: int32 */
+            tcx: number;
+            /** Format: int32 */
+            unknownFormat: number;
+            /** Format: int32 */
+            strava: number;
+            stravaConnected: boolean;
+            stravaStatus: null | components["schemas"]["ConnectionStatus"];
+            /** Format: date-time */
+            lastSyncedAt: null | string;
+            /** Format: int32 */
+            stravaPending: number;
         };
         RunWalkDto: {
             /** Format: int32 */
@@ -3008,6 +3297,12 @@ export interface components {
             recordedOnGarmin: boolean;
             /** Format: date-time */
             cachedUntil: null | string;
+            format?: null | components["schemas"]["RecordingFormat"];
+            fileName?: null | string;
+            /** Format: date-time */
+            fetchedAt?: null | string;
+            /** Format: date-time */
+            addedAt?: null | string;
         };
         SplitDto: {
             /** Format: int32 */
@@ -3067,6 +3362,14 @@ export interface components {
             unit: components["schemas"]["RepUnit"];
             summary: string;
         };
+        SyncIssueDto: {
+            /** Format: int64 */
+            stravaActivityId: number;
+            reason: string;
+            skipped: boolean;
+            /** Format: date-time */
+            at: string;
+        };
         /** @enum {unknown} */
         SyncProvider: "Strava";
         TickPromptExportDto: {
@@ -3078,6 +3381,31 @@ export interface components {
         };
         TickRequest: {
             token: string;
+        };
+        TotalsBreakdownDto: {
+            period: string;
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: double */
+            totalKm: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: double */
+            tickedKm: number;
+            /** Format: int32 */
+            tickedRuns: number;
+            /** Format: double */
+            uploadedKm: number;
+            /** Format: int32 */
+            uploadedRuns: number;
+            /** Format: double */
+            stravaKm: number;
+            /** Format: int32 */
+            stravaRuns: number;
+            /** Format: int32 */
+            withoutDistance: number;
         };
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";

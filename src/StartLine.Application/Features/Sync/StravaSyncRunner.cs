@@ -61,9 +61,13 @@ internal sealed partial class StravaSyncRunner(
         return await NextDueAsync(cancellationToken);
     }
 
+    // Set by a fetch that ran fine but didn't keep the run, so the job is recorded as skipped rather than removed.
+    private string? skipReason;
+
     private async Task RunOneAsync(SyncJob job, CancellationToken cancellationToken)
     {
         synced.Clear();
+        skipReason = null;
         var now = time.GetUtcNow();
         // Deleting needs no call to Strava, so it never waits for the rate limit.
         if (gate.BlockedUntil() is { } blocked && job.Kind is not (SyncJobKind.DeleteActivity or SyncJobKind.Deauthorize))
@@ -85,7 +89,12 @@ internal sealed partial class StravaSyncRunner(
                 SyncJobKind.Refresh => RefreshAsync(job, cancellationToken),
                 _ => throw new InvalidOperationException($"No handler for {job.Kind}."),
             });
-            if (db.SyncJobs.Entry(job).State != EntityState.Detached)
+            if (skipReason is not null)
+            {
+                // Kept for a week with the reason, so the runner can see why a run from Strava didn't appear.
+                job.Skip(skipReason);
+            }
+            else if (db.SyncJobs.Entry(job).State != EntityState.Detached)
             {
                 db.SyncJobs.Remove(job);
             }
@@ -109,7 +118,7 @@ internal sealed partial class StravaSyncRunner(
         {
             // Strava has it, but it isn't something Taperday can show (a watch started by accident). Not worth retrying.
             LogSkipped(logger, job.ObjectId, e.Message);
-            db.SyncJobs.Remove(job);
+            job.Skip(e.Message);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -159,13 +168,15 @@ internal sealed partial class StravaSyncRunner(
             existing.RefreshFrom(fresh);
             synced.Add(existing);
         }
-        else if (await db.Activities.AnyAsync(a => a.RunnerId == job.RunnerId && a.StartedAt == fresh.StartedAt, cancellationToken))
+        else if (await UploadedAlreadyAsync(job.RunnerId, fresh, cancellationToken))
         {
             // The runner uploaded this run's file already. The upload stays; the two are never merged (Policy 5.4).
+            skipReason = SkipReasons.AlreadyUploaded;
             return;
         }
         else if (await db.Activities.Visible(now).CountAsync(a => a.RunnerId == job.RunnerId, cancellationToken) >= Activity.MaxPerRunner)
         {
+            skipReason = SkipReasons.LimitReached;
             return;
         }
         else
@@ -175,6 +186,18 @@ internal sealed partial class StravaSyncRunner(
         }
 
         connection.MarkSynced(now);
+    }
+
+    /// <summary>An upload of the same run: the same start, or near it with the same distance (see <see cref="RunMatch"/>).</summary>
+    private async Task<bool> UploadedAlreadyAsync(Guid runnerId, Activity fresh, CancellationToken cancellationToken)
+    {
+        var from = fresh.StartedAt - RunMatch.SameStartWithin;
+        var to = fresh.StartedAt + RunMatch.SameStartWithin;
+        var uploads = await db.Activities.AsNoTracking()
+            .Where(a => a.RunnerId == runnerId && a.Source == ActivitySource.Upload && a.StartedAt >= from && a.StartedAt <= to)
+            .Select(a => new { a.StartedAt, a.DistanceMetres })
+            .ToListAsync(cancellationToken);
+        return uploads.Any(u => u.StartedAt == fresh.StartedAt || RunMatch.IsSameRun(u.StartedAt, u.DistanceMetres, fresh.StartedAt, fresh.DistanceMetres));
     }
 
     private Task DeleteAsync(SyncJob job, CancellationToken cancellationToken) => DeleteLocalAsync(job.RunnerId, job.ObjectId!.Value, cancellationToken);
@@ -229,6 +252,7 @@ internal sealed partial class StravaSyncRunner(
             {
                 var id = ActivityOrigin.Strava(run.Id, now, false).ExternalId;
                 var have = cached.FirstOrDefault(c => c.Source == ActivitySource.Strava && c.ExternalId == id);
+                // Only an exact start skips the fetch here: a near one is checked against the distance once fetched.
                 var uploaded = cached.Any(c => c.Source == ActivitySource.Upload && c.StartedAt == run.StartDate.ToUniversalTime());
                 if (uploaded || (have is not null && !StravaCache.IsDueForRefresh(have.CachedUntil, now)))
                 {

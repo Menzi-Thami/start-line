@@ -88,3 +88,8 @@ export function addDays(isoDate: string, days: number): string {
   date.setUTCDate(date.getUTCDate() + days)
   return date.toISOString().slice(0, 10)
 }
+
+/** A timestamp as the day and month in the runner's own time zone, e.g. "9 Oct". */
+export function formatShortDay(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' }).format(new Date(iso))
+}

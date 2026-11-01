@@ -108,13 +108,15 @@ public sealed record ActivityDto(
 /// Where a run came from. A synced run links back to the original ("View on Strava", as Strava's brand rules ask) and
 /// says when the copy lapses unless it's fetched again.
 /// </summary>
-public sealed record SourceDto(ActivitySource Kind, Uri? ViewUrl, bool RecordedOnGarmin, DateTimeOffset? CachedUntil)
+public sealed record SourceDto(
+    ActivitySource Kind, Uri? ViewUrl, bool RecordedOnGarmin, DateTimeOffset? CachedUntil,
+    RecordingFormat? Format = null, string? FileName = null, DateTimeOffset? FetchedAt = null, DateTimeOffset? AddedAt = null)
 {
     public static SourceDto From(Activity a)
     {
         ArgumentNullException.ThrowIfNull(a);
         var url = a is { Source: ActivitySource.Strava, ExternalId: { } id } ? new Uri($"https://www.strava.com/activities/{id}") : null;
-        return new(a.Source, url, a.RecordedOnGarmin, a.CachedUntil);
+        return new(a.Source, url, a.RecordedOnGarmin, a.CachedUntil, a.Format, a.FileName, a.FetchedAt, a.CreatedAt);
     }
 }
 

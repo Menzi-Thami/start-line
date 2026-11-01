@@ -129,7 +129,7 @@ internal sealed class XmlActivityFileReader
             reader.Read();
         }
 
-        return track.ToRecording(GpxKind(type), DeviceTotals.None);
+        return track.ToRecording(GpxKind(type), DeviceTotals.None) with { Format = RecordingFormat.Gpx };
     }
 
     private static ActivityRecording ReadTcx(XmlReader reader)
@@ -215,7 +215,7 @@ internal sealed class XmlActivityFileReader
             "Biking" => ActivityKind.Other,
             _ => ActivityKind.Run,
         };
-        return track.ToRecording(kind, new DeviceTotals(Calories: calories > 0 ? calories : null));
+        return track.ToRecording(kind, new DeviceTotals(Calories: calories > 0 ? calories : null)) with { Format = RecordingFormat.Tcx };
     }
 
     /// <summary>Strava writes the activity type into GPX as a word or its numeric code (9 is a run). No type: assume a run.</summary>

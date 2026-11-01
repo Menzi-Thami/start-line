@@ -76,6 +76,14 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
 
+                    b.Property<string>("FileName")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Format")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
                     b.Property<double?>("HeartRateDriftPercent")
                         .HasColumnType("float");
 
@@ -247,6 +255,31 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasIndex("RunnerId", "Source", "ExternalId");
 
                     b.ToTable("Activities", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Activities.DuplicateDismissal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("FirstActivityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SecondActivityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId", "FirstActivityId", "SecondActivityId")
+                        .IsUnique();
+
+                    b.ToTable("DuplicateDismissals", (string)null);
                 });
 
             modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
@@ -906,6 +939,11 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("RunnerId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("Skipped")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.HasKey("Id");
 
                     b.HasIndex("Failed", "NotBefore", "Priority");
@@ -975,6 +1013,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Navigation("BestEfforts");
 
                     b.Navigation("Splits");
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Activities.DuplicateDismissal", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>

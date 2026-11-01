@@ -41,7 +41,7 @@ public sealed class MyActivitiesController(IDispatcher dispatcher) : ControllerB
             await file.CopyToAsync(content, cancellationToken);
         }
 
-        var activity = await dispatcher.Send(new ImportActivityCommand(content), cancellationToken);
+        var activity = await dispatcher.Send(new ImportActivityCommand(content, file?.FileName), cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = activity.Id, version = "1" }, activity);
     }
 

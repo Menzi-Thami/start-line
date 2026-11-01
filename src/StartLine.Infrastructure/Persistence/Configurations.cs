@@ -111,6 +111,9 @@ internal sealed class ActivityConfiguration : IEntityTypeConfiguration<Activity>
         builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(16);
         builder.Property(a => a.Source).HasConversion<string>().HasMaxLength(16).HasDefaultValue(ActivitySource.Upload).HasSentinel(ActivitySource.Upload);
         builder.Property(a => a.ExternalId).HasMaxLength(ActivityOrigin.MaxExternalIdLength);
+        builder.Property(a => a.Format).HasConversion<string>().HasMaxLength(8);
+        builder.Property(a => a.FileName).HasMaxLength(ActivityOrigin.MaxFileNameLength);
+        builder.Ignore(a => a.FetchedAt);
         builder.HasIndex(a => new { a.RunnerId, a.Source, a.ExternalId });
         // The sync worker looks for lapsed copies on every pass.
         builder.HasIndex(a => a.CachedUntil).HasFilter("[CachedUntil] IS NOT NULL");
@@ -229,8 +232,21 @@ internal sealed class SyncJobConfiguration : IEntityTypeConfiguration<SyncJob>
         builder.Property(j => j.Provider).HasConversion<string>().HasMaxLength(16);
         builder.Property(j => j.Kind).HasConversion<string>().HasMaxLength(16);
         builder.Property(j => j.LastError).HasMaxLength(SyncJob.MaxErrorLength);
+        builder.Property(j => j.Skipped).HasDefaultValue(false);
         builder.HasIndex(j => new { j.Failed, j.NotBefore, j.Priority });
         builder.HasIndex(j => new { j.RunnerId, j.Kind, j.ObjectId });
+    }
+}
+
+internal sealed class DuplicateDismissalConfiguration : IEntityTypeConfiguration<DuplicateDismissal>
+{
+    public void Configure(EntityTypeBuilder<DuplicateDismissal> builder)
+    {
+        builder.ToTable("DuplicateDismissals");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.HasIndex(d => new { d.RunnerId, d.FirstActivityId, d.SecondActivityId }).IsUnique();
+        builder.HasOne<StartLine.Domain.Runners.Runner>().WithMany().HasForeignKey(d => d.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

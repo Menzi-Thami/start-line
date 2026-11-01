@@ -238,17 +238,6 @@ internal sealed class SyncJobConfiguration : IEntityTypeConfiguration<SyncJob>
     }
 }
 
-internal sealed class DuplicateDismissalConfiguration : IEntityTypeConfiguration<DuplicateDismissal>
-{
-    public void Configure(EntityTypeBuilder<DuplicateDismissal> builder)
-    {
-        builder.ToTable("DuplicateDismissals");
-        builder.HasKey(d => d.Id);
-        builder.Property(d => d.Id).ValueGeneratedNever();
-        builder.HasIndex(d => new { d.RunnerId, d.FirstActivityId, d.SecondActivityId }).IsUnique();
-        builder.HasOne<StartLine.Domain.Runners.Runner>().WithMany().HasForeignKey(d => d.RunnerId).OnDelete(DeleteBehavior.Cascade);
-    }
-}
 
 internal sealed class SessionCheckInConfiguration : IEntityTypeConfiguration<SessionCheckIn>
 {

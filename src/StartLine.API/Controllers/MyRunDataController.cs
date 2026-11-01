@@ -8,8 +8,8 @@ using StartLine.Application.Features.Activities;
 namespace StartLine.API.Controllers;
 
 /// <summary>
-/// The runner's run data as a whole: where each run came from, what makes up their totals, possible duplicates, gaps,
-/// runs that didn't sync, and exporting or deleting runs.
+/// The runner's run data as a whole: where each run came from, what makes up their totals, gaps, runs that didn't sync,
+/// and exporting or deleting runs.
 /// </summary>
 [ApiController]
 [Authorize(Policy = PresentationDependencyInjection.RunnerPolicy)]
@@ -32,16 +32,6 @@ public sealed class MyRunDataController(IDispatcher dispatcher) : ControllerBase
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> RetryStrava(CancellationToken cancellationToken) =>
         Ok(new RetriedDto(await dispatcher.Send(new RetryStravaFetchesCommand(), cancellationToken)));
-
-    /// <summary>Both runs in an overlapping pair are real: stop flagging them.</summary>
-    [HttpPost("keep-both")]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> KeepBoth(KeepBothRunsCommand command, CancellationToken cancellationToken)
-    {
-        await dispatcher.Send(command, cancellationToken);
-        return NoContent();
-    }
 
     /// <summary>Deletes up to 100 of the runner's runs at once.</summary>
     [HttpPost("delete")]

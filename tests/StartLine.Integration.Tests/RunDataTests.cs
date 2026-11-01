@@ -112,37 +112,31 @@ public sealed class RunDataTests(StravaApiFactory factory) : IClassFixture<Strav
     }
 
     [Fact]
-    public async Task A_different_run_starting_close_by_is_not_a_duplicate()
+    public async Task The_same_run_from_a_watch_and_a_phone_is_kept_once_even_when_gps_disagrees()
+    {
+        var client = await SignedUp();
+        var start = Now.AddHours(-3).UtcDateTime;
+        await Uploaded(client, FitFiles.Run(start, 10_000, 330), "watch.fit");
+
+        // The phone started 40 s later, ran the same 55 minutes, and its GPS measured 9% further.
+        var phone = await Upload(client, FitFiles.Run(start.AddSeconds(40), 10_900, 300), "phone.fit");
+
+        phone.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await Runs(client)).GetArrayLength().ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task A_different_run_starting_close_by_is_kept_without_asking()
     {
         var client = await SignedUp();
         var start = Now.AddHours(-3).UtcDateTime;
         await Uploaded(client, FitFiles.Run(start, 10_000, 300));
 
-        // A minute later but a third of the distance: a friend's watch, a separate warm-up. Kept, and flagged for the runner.
+        // A minute later but a quarter of the time: a separate warm-up, not the same run. Both kept, nothing to sort out.
         await Uploaded(client, FitFiles.Run(start.AddMinutes(1), 3_000, 300), "warm-up.fit");
 
         (await Runs(client)).GetArrayLength().ShouldBe(2);
-        var pairs = (await RunData(client)).GetProperty("possibleDuplicates");
-        pairs.GetArrayLength().ShouldBe(1);
-        pairs[0].GetProperty("relation").GetString().ShouldBe("Overlapping");
-    }
-
-    [Fact]
-    public async Task Overlapping_runs_are_flagged_until_the_runner_keeps_both()
-    {
-        var client = await SignedUp();
-        var start = Now.AddHours(-4).UtcDateTime;
-        var first = (await Uploaded(client, FitFiles.Run(start, 10_000, 360))).GetProperty("id").GetGuid();
-        var second = (await Uploaded(client, FitFiles.Run(start.AddMinutes(20), 4_000, 300), "second watch.fit")).GetProperty("id").GetGuid();
-        (await RunData(client)).GetProperty("possibleDuplicates").GetArrayLength().ShouldBe(1);
-
-        (await client.PostAsJsonAsync(Url("/api/v1/me/run-data/keep-both"), new { firstActivityId = second, secondActivityId = first }))
-            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
-
-        (await RunData(client)).GetProperty("possibleDuplicates").GetArrayLength().ShouldBe(0);
-        var stranger = await SignedUp();
-        (await stranger.PostAsJsonAsync(Url("/api/v1/me/run-data/keep-both"), new { firstActivityId = first, secondActivityId = second }))
-            .StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await RunData(client)).TryGetProperty("possibleDuplicates", out _).ShouldBeFalse();
     }
 
     [Fact]

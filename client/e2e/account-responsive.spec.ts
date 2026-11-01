@@ -12,9 +12,9 @@ test('responsive account surface has no horizontal overflow and keeps controls a
     await summary.click()
     await expect(summary.locator('..')).toHaveAttribute('open', '')
     if (width === 390 || width === 1440 || width === 2560) {
-      await page.screenshot({ path: test.info().outputPath(`${width}-${key}-light.png`), fullPage: true })
+      await page.screenshot({ path: test.info().outputPath(`${width}-account-light.png`), fullPage: true })
       await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
-      await page.screenshot({ path: test.info().outputPath(`${width}-${key}-dark.png`), fullPage: true })
+      await page.screenshot({ path: test.info().outputPath(`${width}-account-dark.png`), fullPage: true })
     }
   }
 })

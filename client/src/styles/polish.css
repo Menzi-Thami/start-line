@@ -563,3 +563,22 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .insights-history h3 { margin: 0; font-size: var(--text-md); }
 .insights-outcome { font-weight: 600; color: var(--ink); }
 .insights-outcome.is-Declined { color: var(--ink-2); }
+
+/* Progress story (#143): Home › Running insights. Tokens only, so dark mode follows. */
+.home-progress { display: grid; gap: var(--space-3); }
+.progress { display: grid; gap: var(--space-4); }
+.progress-spans { display: inline-flex; gap: var(--space-1); padding: var(--space-1); border-radius: 999px; background: var(--surface); justify-self: start; }
+.progress-span { min-height: var(--tap); padding-inline: var(--space-3); border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); font: inherit; cursor: pointer; }
+.progress-span[aria-pressed='true'] { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+.progress-span:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.progress-compare { inline-size: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.progress-compare th, .progress-compare td { padding: var(--space-2) var(--space-1); text-align: end; border-block-end: 1px solid var(--line); }
+.progress-compare th[scope='row'], .progress-compare thead th:first-child { text-align: start; font-weight: 600; }
+.progress-compare thead th { color: var(--ink-2); font-weight: 500; }
+.progress-weeks { margin: 0; display: grid; gap: var(--space-2); }
+.progress-bars { display: grid; gap: var(--space-1); block-size: 88px; align-items: end; }
+.progress-longest { position: absolute; inset-inline: 10%; block-size: 2px; background: var(--ink); border-radius: 1px; }
+.progress-bests h3, .progress-goal h3 { margin: 0 0 var(--space-2); font-size: var(--text-md); }
+.progress-bests ul { margin: 0; padding-inline-start: var(--space-4); display: grid; gap: var(--space-1); }
+.progress-new { color: var(--ink); font-weight: 600; }
+.progress-goal p { margin: 0; color: var(--ink-2); max-width: 65ch; }

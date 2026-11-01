@@ -17,6 +17,7 @@ import { CheckInLoadState } from '../coaching/CheckInLoadState'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { offersTick } from '../coaching/ran-this'
 import { RanThis } from '../coaching/RanThis'
+import { ProgressStory } from '../coaching/ProgressStory'
 import { TrainingInsights } from '../coaching/TrainingInsights'
 import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
@@ -615,6 +616,14 @@ export function Home({
               refreshKey={`${logVersion}|${activitiesVersion}`}
               onReview={plan && week && progress?.kind !== 'race' ? () => { setReviewOpen(true); requestAnimationFrame(() => reviewRef.current?.scrollIntoView?.({ block: 'start' })) } : undefined}
             />
+          </section>
+        )}
+        {current && (
+          <section className="section home-section home-progress" aria-labelledby="home-progress">
+            <h2 id="home-progress" className="home-heading">
+              Your progress
+            </h2>
+            <ProgressStory planId={current.id} units={units} refreshKey={`${logVersion}|${activitiesVersion}`} />
           </section>
         )}
         <section className="section home-section home-history" aria-labelledby="home-weeks">

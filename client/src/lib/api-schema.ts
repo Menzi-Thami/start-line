@@ -1456,6 +1456,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    weeks?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProgressStoryDto"];
+                        "application/json": components["schemas"]["ProgressStoryDto"];
+                        "text/json": components["schemas"]["ProgressStoryDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans/{id}/insights": {
         parameters: {
             query?: never;
@@ -3480,6 +3543,64 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        ProgressBest: {
+            name: string;
+            /** Format: double */
+            distanceMetres: number;
+            time: string;
+            /** Format: date */
+            date: string;
+            before: null | string;
+            isNew: boolean;
+        };
+        /** @enum {unknown} */
+        ProgressGap: "FewWeeks" | "NoBaseline" | "MissingDistances" | "StravaWindow" | "NoRaceEstimate" | "NoPlan";
+        ProgressPeriod: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: double */
+            km: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: double */
+            averageWeeklyKm: number;
+            /** Format: double */
+            longestKm: number;
+            /** Format: int32 */
+            weeksRun: number;
+        };
+        ProgressStoryDto: {
+            /** Format: date */
+            today: string;
+            story: components["schemas"]["ProgressStoryResult"];
+        };
+        ProgressStoryResult: {
+            /** Format: int32 */
+            weeks: number;
+            weekRows: components["schemas"]["ProgressWeek"][];
+            current: components["schemas"]["ProgressPeriod"];
+            previous: components["schemas"]["ProgressPeriod"];
+            adherence: components["schemas"]["SessionAdherence"];
+            easyPace: components["schemas"]["EffortPace"];
+            bests: components["schemas"]["ProgressBest"][];
+            raceGoal: null | components["schemas"]["RaceGoalProgress"];
+            gaps: components["schemas"]["ProgressGap"][];
+        };
+        ProgressWeek: {
+            /** Format: date */
+            weekStart: string;
+            /** Format: double */
+            ranKm: number;
+            /** Format: double */
+            plannedKm: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: double */
+            longestKm: number;
+            isCurrent: boolean;
+        };
         RaceDto: {
             slug: string;
             name: string;
@@ -3493,6 +3614,21 @@ export interface components {
             website: null | string;
             dateStatus: components["schemas"]["DateStatus"];
             distanceConfirmed: boolean;
+        };
+        RaceEstimate: {
+            /** Format: date */
+            weekStart: string;
+            time: string;
+        };
+        RaceGoalProgress: {
+            /** Format: double */
+            raceKm: number;
+            goal: string;
+            /** Format: date */
+            raceDate: string;
+            estimates: components["schemas"]["RaceEstimate"][];
+            latest: null | string;
+            first: null | string;
         };
         RaceSummaryDto: {
             slug: null | string;

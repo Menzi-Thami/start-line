@@ -8,6 +8,7 @@ import type {
   CoachingProposal,
   RemainingWeekProposal,
   RecoveryReadiness,
+  ProgressStory,
   TrainingInsights,
   CheckIn,
   CheckInRequest,
@@ -214,6 +215,8 @@ export const api = {
     declineCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/decline`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
     /** Load, consistency and easy-pace trends on a saved plan, worked out on each read, and the coaching history. */
     trainingInsights: (token: string, id: string) => request<TrainingInsights>(`/api/v1/me/plans/${encodeURIComponent(id)}/insights`, { cache: 'no-store' }, token),
+    /** How the runner has progressed over the last 4, 8 or 12 weeks against the same span before. */
+    progressStory: (token: string, id: string, weeks: 4 | 8 | 12) => request<ProgressStory>(`/api/v1/me/plans/${encodeURIComponent(id)}/progress?weeks=${weeks}`, { cache: 'no-store' }, token),
     reviewRemainingWeek: (token: string, id: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal`, {}, token),
     applyRemainingWeek: (token: string, id: string, proposalToken: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
     /** The runner's check-ins on one saved plan: how each run went. */

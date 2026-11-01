@@ -47,16 +47,8 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
   Home's Today card) until it's checked in on. A tap saves a plain "Done" check-in with no effort, through the usual
   check-in API; the usual check-in follows to add how it felt. **Taperday never ticks a session itself**: a tick is
   always a tap by the runner, in the app or on the notification below.
-- **The "ran it?" push.** For runners with reminders on, a synced run that matches a planned session with no check-in
-  sends one push (`TickPrompter`, from the sync pass): "Ran Tuesday's Tempo?", which opens Home on that session ready
-  to tick (`/?view=home&tick=2026-10-20.Tempo`). Where the browser shows notification buttons (Android, desktop
-  Chrome and Edge), "Tick it" posts the push's key to `POST /api/v1/ticks` (anonymous, as a service worker can't sign
-  in; the key is Data Protection-encrypted, names one session of one runner's plan, and expires after 3 days). iPhone
-  web push has no buttons, so a tap opens the app. Never about a run more than 2 days old (a backfill asks nothing) and
-  at most once per session. What's kept is a `TickPrompt`: the plan, the session's date and type, and nothing else (no
-  distance, time, Strava id or run), forgotten 7 days after the session's day, and listed in the account export. The
-  push says the run's distance and time of day ("Strava says you ran 10.2 km this morning") only with
-  `Push:IncludeRunData` on; by default it names the session alone and says a run from Strava matches it.
+- **Current Strava notification.** `RunCelebrator` offers a run-completion push when a recent Strava run is imported, only when push is enabled and the runner has a device subscription with `RunCongratulations` enabled. The activity is marked celebrated to avoid repeating it, and delivery is limited to two days after the run. The push links to `/?view=runs&run=<activity-id>` so the runner can review and log the run against their plan. By default it says a Strava run arrived; distance is included only when `Push:IncludeRunData` is enabled.
+- **Legacy tick prompt types are not the current sync notification trigger.** `TickPrompts`, `TickPrompt` and `Ticks` domain/API code remain, but `StravaSyncRunner` invokes `RunCelebrator`, not the removed `TickPrompter`. The current notification is not an actionable “Ran Tuesday’s Tempo?” / “Tick it” push.
 - **5.7: location.** Streams are requested as `time,distance,altitude,heartrate`; `latlng` is never asked for.
   Heart rate from Strava is kept only for runners who gave Taperday's separate heart-rate consent; for everyone else
   it's dropped before the run is recorded, like any upload.
@@ -68,7 +60,7 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
   Web Push encrypts it end to end) and shows on a lock screen, so with `Push:IncludeRunData` off (the default) a
   reminder never reads runs: it's built from the plan as the runner wrote it, without the coach's calls (which come
   partly from uploaded runs), and from check-ins. Turning it on adds the coach's call, coached distances and paces,
-  last week's distance run, and the distance in the "ran it?" prompt. **Ask Strava first** whether pushing a runner
+  last week's distance run, and distance in an enabled run-completion notification. **Ask Strava first** whether pushing a runner
   their own data to their own device is allowed (with the 7-day cache question).
 - **5.3: AI.** Taperday sends nothing to any AI service.
 - **Brand.** Official, unmodified "Connect with Strava" button and "Powered by Strava" logo (`client/public/strava/`,
@@ -127,7 +119,8 @@ on Strava's page is refused with an explanation.
 | The work itself | `Application/Features/Sync/StravaSyncRunner.cs` |
 | HTTP client, options, Data Protection, worker | `Infrastructure/Sync` |
 | Coach and totals: what may be kept | `Domain/Coaching/CoachEvidence.cs`, `Domain/Coaching/RunningLog.cs` |
-| "Ran it?" prompt, its note and the tick key | `Domain/Notifications/TickPrompt.cs`, `Application/Features/Notifications/TickPrompter.cs`, `Application/Features/CheckIns/Ticks.cs`, `Infrastructure/Push/TickTokens.cs` |
+| Current Strava run-completion notification | `Application/Features/Notifications/RunCelebrator.cs`, `Application/Features/Notifications/NotificationDeliverer.cs`, `Application/Features/Sync/StravaSyncRunner.cs` |
+| Legacy tick-prompt domain and token code (not the current sync notification trigger) | `Domain/Notifications/TickPrompt.cs`, `Application/Features/CheckIns/Ticks.cs`, `Infrastructure/Push/TickTokens.cs` |
 | Client: account section, brand marks, callback, polling | `client/src/features/sync` |
 | Client: "Ran this? Tick it", the notification's button | `client/src/features/coaching/RanThis.tsx`, `client/public/sw.js` |
 | Client: Overview tab | `client/src/features/dashboard` |
@@ -170,8 +163,7 @@ Open actions are in `security-posture.md` → To do.
    ```
    It answers `{"id": 123456}`: set `Strava__SubscriptionId` to that id. Until it's set, events are ignored (catch-up
    still works).
-   The "ran it?" push needs reminders on (VAPID keys in App Service, `docs/deploy.md`) and the runner to have turned
-   them on in Account; it carries the run's distance only with `Push__IncludeRunData` = `true`.
+   Run-completion notifications require push configuration (VAPID keys in App Service, `docs/deploy.md`) and a subscribed device with run-congratulation notifications enabled; they include distance only with `Push__IncludeRunData` = `true`. They do not offer a remote “Tick it” action.
 6. Upgrade the app's capacity to 10 athletes from the same settings page when ready. Before asking Strava to review
    it for more, email developers@strava.com about Policy 5.3, 5.4, 5.5 and 6.2 (the 7-day cache, plan matching, and the
    design that keeps only what the runner ticks).

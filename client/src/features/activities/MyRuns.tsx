@@ -143,7 +143,7 @@ export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
         </p>
       </details>
 
-      <RunDataPanel units={units} onOpen={onOpen} onChanged={fetchRuns} refreshKey={list.kind === 'ready' ? list.runs.length : 0} />
+      <RunDataPanel units={units} refreshKey={list.kind === 'ready' ? list.runs.length : 0} />
 
       {list.kind === 'loading' && (
         <div className="choice-list" aria-busy="true" style={{ marginTop: 'var(--space-5)' }}>
@@ -205,6 +205,7 @@ export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
                 <span className="week-meta mono">
                   {formatDate(run.localDate, 'short')} · {formatDistance(run.distanceKm, units)} · {formatDuration(run.movingSeconds)} ·{' '}
                   {formatPace(run.paceSecondsPerKm, units)}
+                  {run.shoe ? ` · ${run.shoe.name}` : ''}
                 </span>
               </span>
               <span aria-hidden="true" className="run-feed-arrow">›</span></button>

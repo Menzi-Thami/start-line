@@ -184,6 +184,9 @@ public sealed class Runner
     /// <summary>Starts news and update emails again, from Account.</summary>
     public void TurnOnUpdateEmails() => UpdateEmailsOffAt = null;
 
+    /// <summary>Stops the weekly recap, from the link in one. Asking twice changes nothing; it never turns anything on.</summary>
+    public void TurnOffWeeklyEmails() => WeeklyEmails = false;
+
     /// <summary>The runner's calendar link secret: the one they have, or this new one when they have none yet.</summary>
     public string IssueCalendarToken(string token)
     {

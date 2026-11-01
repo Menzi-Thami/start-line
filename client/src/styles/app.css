@@ -5626,34 +5626,12 @@ button.plan-calendar-day {
 }
 
 /* ---------- Run data: provenance on a run, and the runner's run data on the Runs page ---------- */
-.run-provenance,
 .run-data {
   margin-top: var(--space-4);
 }
-.run-provenance-facts {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: var(--space-2) var(--space-4);
-  margin: var(--space-3) 0;
-}
-.run-provenance-facts dt {
-  color: var(--muted);
-}
-.run-provenance-facts dd {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.run-provenance-gaps,
-.run-data-list,
-.run-data-pairs {
+.run-data-list {
   margin: var(--space-2) 0;
   padding-left: var(--space-5);
-}
-.run-data-pairs {
-  padding-left: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-3);
 }
 .run-data-section {
   margin-top: var(--space-5);
@@ -5686,27 +5664,85 @@ button.plan-calendar-day {
   white-space: nowrap;
   padding-left: var(--space-3);
 }
-.run-data-pair {
-  max-width: 44rem;
+/* ---------- Shoes: pairs, their distance towards the limit, and the picker on a run ---------- */
+.shoe-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-3) 0;
+  display: grid;
+  gap: var(--space-3);
+}
+.shoe {
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--surface);
 }
-.run-data-pair-kind {
-  margin: 0 0 var(--space-2);
-  font-weight: 600;
+.shoe[data-retired] {
+  opacity: 0.75;
 }
-.run-data-pair-run {
+.shoe-name {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2);
-  padding-block: var(--space-2);
-  border-top: 1px solid var(--line);
+  margin: 0;
 }
-.run-data-run {
-  min-height: var(--tap);
-  text-align: left;
-  overflow-wrap: anywhere;
+.shoe-distance {
+  margin: var(--space-1) 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+.shoe-meter {
+  height: 6px;
+}
+.shoe-wear {
+  margin: var(--space-2) 0 0;
+  font-weight: 600;
+}
+.shoe[data-wear='PastLimit'] .shoe-meter .meter-fill {
+  background: var(--ink);
+}
+.shoe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.shoe-form {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 32rem;
+  margin-top: var(--space-3);
+}
+.shoe-form-numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-3);
+}
+.shoe-runs {
+  display: grid;
+  gap: var(--space-2);
+  border: 0;
+  padding: 0;
+  margin: var(--space-3) 0;
+  max-height: 20rem;
+  overflow: auto;
+}
+.shoe-target {
+  min-width: 12rem;
+}
+.shoe-picker {
+  max-width: 22rem;
+  margin-top: var(--space-4);
+}
+
+/* Milestone preview: balanced on wide screens, single column on phones. */
+.milestone-share-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5, 20px); align-items: start; margin-top: var(--space-4, 16px); }
+.milestone-share-controls, .milestone-share-preview { min-width: 0; }
+.milestone-share-preview { display: flex; justify-content: center; }
+.milestone-share-preview > div { width: 100%; max-width: 340px; }
+.milestone-share-preview img { display: block; margin-inline: auto; }
+.milestone-share-preview .submit-row { justify-content: center; flex-wrap: wrap; }
+@media (min-width: 740px) {
+  .milestone-share-layout { grid-template-columns: minmax(0, 1fr) minmax(240px, 0.85fr); gap: clamp(24px, 5vw, 64px); }
+  .milestone-share-preview { justify-content: flex-end; }
 }

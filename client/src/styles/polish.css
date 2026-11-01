@@ -535,3 +535,50 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 @media (max-width: 27.5rem) {
   .notification-quiet-times { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Training trends (#140): Home › Running insights. Tokens only, so dark mode follows. */
+.home-trends { display: grid; gap: var(--space-3); }
+.insights { display: grid; gap: var(--space-4); }
+.insights-next { display: grid; gap: var(--space-2); padding: var(--space-4); border-radius: var(--radius-md); background: var(--surface); border-inline-start: 4px solid var(--sage); }
+.insights-next.is-HoldVolume, .insights-next.is-EaseOff { border-inline-start-color: var(--warn-line); }
+.insights-next-label { margin: 0; font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.insights-next-title { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: var(--text-xl); }
+.insights-why { margin: 0; padding-inline-start: var(--space-4); display: grid; gap: var(--space-1); }
+.insights-next .link-button { justify-self: start; min-height: var(--tap); }
+.insights-next .field-help { margin: 0; }
+.insights-facts { display: grid; gap: var(--space-3); margin: 0; }
+.insights-facts > div { display: grid; gap: var(--space-1); }
+.insights-facts dt { font-weight: 600; }
+.insights-facts dd { margin: 0; color: var(--ink-2); max-width: 65ch; }
+.insights-weeks { margin: 0; display: grid; gap: var(--space-2); }
+.insights-bars { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-2); block-size: 72px; align-items: end; }
+.insights-bar { position: relative; block-size: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.insights-bar-planned, .insights-bar-ran { position: absolute; inset-inline: 15%; inset-block-end: 0; border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.insights-bar-planned { border: 1.5px solid var(--line-strong); border-block-end: 0; }
+.insights-bar-ran { background: var(--accent); inset-inline: 30%; }
+.insights-bar.is-current .insights-bar-ran { opacity: 0.6; }
+.insights-gaps summary { min-height: var(--tap); display: flex; align-items: center; cursor: pointer; }
+.insights-gaps ul, .insights-history ul { margin: 0; padding-inline-start: var(--space-4); display: grid; gap: var(--space-1); color: var(--ink-2); }
+.insights-history { display: grid; gap: var(--space-2); }
+.insights-history h3 { margin: 0; font-size: var(--text-md); }
+.insights-outcome { font-weight: 600; color: var(--ink); }
+.insights-outcome.is-Declined { color: var(--ink-2); }
+
+/* Progress story (#143): Home › Running insights. Tokens only, so dark mode follows. */
+.home-progress { display: grid; gap: var(--space-3); }
+.progress { display: grid; gap: var(--space-4); }
+.progress-spans { display: inline-flex; gap: var(--space-1); padding: var(--space-1); border-radius: 999px; background: var(--surface); justify-self: start; }
+.progress-span { min-height: var(--tap); padding-inline: var(--space-3); border: 0; border-radius: 999px; background: transparent; color: var(--ink-2); font: inherit; cursor: pointer; }
+.progress-span[aria-pressed='true'] { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+.progress-span:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.progress-compare { inline-size: 100%; border-collapse: collapse; font-size: var(--text-sm); }
+.progress-compare th, .progress-compare td { padding: var(--space-2) var(--space-1); text-align: end; border-block-end: 1px solid var(--line); }
+.progress-compare th[scope='row'], .progress-compare thead th:first-child { text-align: start; font-weight: 600; }
+.progress-compare thead th { color: var(--ink-2); font-weight: 500; }
+.progress-weeks { margin: 0; display: grid; gap: var(--space-2); }
+.progress-bars { display: grid; gap: var(--space-1); block-size: 88px; align-items: end; }
+.progress-longest { position: absolute; inset-inline: 10%; block-size: 2px; background: var(--ink); border-radius: 1px; }
+.progress-bests h3, .progress-goal h3 { margin: 0 0 var(--space-2); font-size: var(--text-md); }
+.progress-bests ul { margin: 0; padding-inline-start: var(--space-4); display: grid; gap: var(--space-1); }
+.progress-new { color: var(--ink); font-weight: 600; }
+.progress-goal p { margin: 0; color: var(--ink-2); max-width: 65ch; }

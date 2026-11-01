@@ -730,7 +730,7 @@ export function App() {
         {view === 'sign-in' && state.kind === 'signed-out' && <SignInLanding onSignIn={auth.signIn} onSignUp={auth.signUp} onBack={() => go('build')} />}
         {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty"><p>You’re already signed in or your account is loading.</p><button type="button" className="button" onClick={() => go('home')}>Continue to Taperday</button></div>}
         {view === 'privacy' && <PrivacyPolicy />}
-        {view === 'unsubscribe' && <Unsubscribe token={new URLSearchParams(window.location.search).get('t')} onOpenAccount={() => go('account')} />}
+        {view === 'unsubscribe' && <Unsubscribe token={new URLSearchParams(window.location.search).get('t')} weekly={new URLSearchParams(window.location.search).get('list') === 'weekly'} onOpenAccount={() => go('account')} />}
 
         {!gated && (
           <>
@@ -953,6 +953,7 @@ export function App() {
                     setPlan({ kind: 'ready', plan: result.proposed.plan, inputs: plan.inputs })
                     setCoachNotes({ planId: savedOnScreen, notes: result.proposed.coaching ?? [] })
                   },
+                  decline: async (proposalToken, recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to answer the review.'); await api.me.declineCoaching(token, savedOnScreen, proposalToken, recovery) },
                 }, saveAdditional: checkIns.saveAdditional, removeAdditional: checkIns.removeAdditional } : undefined}
                 coachNotes={notes}
                 onInjuryReplan={() => replanWith({ from: today, setback: 'Injury' })}

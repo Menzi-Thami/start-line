@@ -22,11 +22,17 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<SyncJob> SyncJobs => Set<SyncJob>();
 
-    public DbSet<DuplicateDismissal> DuplicateDismissals => Set<DuplicateDismissal>();
+    public DbSet<StartLine.Domain.Shoes.Shoe> Shoes => Set<StartLine.Domain.Shoes.Shoe>();
+
+    public DbSet<StartLine.Domain.Shoes.ShoeAssignment> ShoeAssignments => Set<StartLine.Domain.Shoes.ShoeAssignment>();
 
     public DbSet<SessionCheckIn> SessionCheckIns => Set<SessionCheckIn>();
 
     public DbSet<CoachWeek> CoachWeeks => Set<CoachWeek>();
+
+    public DbSet<WeeklyRecapDelivery> WeeklyRecapDeliveries => Set<WeeklyRecapDelivery>();
+
+    public DbSet<CoachingDecisionLog> CoachingDecisions => Set<CoachingDecisionLog>();
 
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();
 

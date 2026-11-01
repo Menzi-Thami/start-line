@@ -8,6 +8,8 @@ import type {
   CoachingProposal,
   RemainingWeekProposal,
   RecoveryReadiness,
+  ProgressStory,
+  TrainingInsights,
   CheckIn,
   CheckInRequest,
   GeneratePlanRequest,
@@ -16,6 +18,9 @@ import type {
   Prediction,
   Race,
   RunData,
+  SaveShoe,
+  Shoe,
+  UnwornRun,
   ReminderDevice,
   Reminders,
   Runner,
@@ -206,6 +211,12 @@ export const api = {
       request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach`, { method: 'POST' }, token),
     reviewCoaching: (token: string, id: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/proposal?recovery=${encodeURIComponent(recovery)}`, {}, token),
     applyCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
+    /** Declines the reviewed suggestion: nothing changes, and the answer goes into the coaching history. */
+    declineCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/decline`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
+    /** Load, consistency and easy-pace trends on a saved plan, worked out on each read, and the coaching history. */
+    trainingInsights: (token: string, id: string) => request<TrainingInsights>(`/api/v1/me/plans/${encodeURIComponent(id)}/insights`, { cache: 'no-store' }, token),
+    /** How the runner has progressed over the last 4, 8 or 12 weeks against the same span before. */
+    progressStory: (token: string, id: string, weeks: 4 | 8 | 12) => request<ProgressStory>(`/api/v1/me/plans/${encodeURIComponent(id)}/progress?weeks=${weeks}`, { cache: 'no-store' }, token),
     reviewRemainingWeek: (token: string, id: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal`, {}, token),
     applyRemainingWeek: (token: string, id: string, proposalToken: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
     /** The runner's check-ins on one saved plan: how each run went. */
@@ -252,9 +263,18 @@ export const api = {
     bests: (token: string) => request<PersonalBest[]>('/api/v1/me/activities/bests', {}, token),
     /** Where the runner's runs came from, what makes up this week's and month's totals, duplicates, gaps and sync problems. */
     runData: (token: string) => request<RunData>('/api/v1/me/run-data', { cache: 'no-store' }, token),
+    shoes: (token: string) => request<Shoe[]>('/api/v1/me/shoes', { cache: 'no-store' }, token),
+    createShoe: (token: string, shoe: SaveShoe) => request<Shoe>('/api/v1/me/shoes', { method: 'POST', body: JSON.stringify(shoe) }, token),
+    updateShoe: (token: string, id: string, shoe: SaveShoe) =>
+      request<Shoe>(`/api/v1/me/shoes/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(shoe) }, token),
+    deleteShoe: (token: string, id: string) => request<void>(`/api/v1/me/shoes/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
+    /** Puts one run (or a check-in with a distance) on a pair; no pair takes it off. */
+    wearShoe: (token: string, shoeId: string | null, run: { activityId?: string; checkInId?: string }) =>
+      request<void>('/api/v1/me/shoes/worn', { method: 'PUT', body: JSON.stringify({ shoeId, ...run }) }, token),
+    addRunsToShoe: (token: string, id: string, activityIds: readonly string[], checkInIds: readonly string[]) =>
+      request<{ added: number }>(`/api/v1/me/shoes/${encodeURIComponent(id)}/runs`, { method: 'POST', body: JSON.stringify({ activityIds, checkInIds }) }, token),
+    unwornRuns: (token: string) => request<UnwornRun[]>('/api/v1/me/shoes/unworn-runs', { cache: 'no-store' }, token),
     retryStrava: (token: string) => request<{ retried: number }>('/api/v1/me/run-data/retry-strava', { method: 'POST' }, token),
-    keepBothRuns: (token: string, firstActivityId: string, secondActivityId: string) =>
-      request<void>('/api/v1/me/run-data/keep-both', { method: 'POST', body: JSON.stringify({ firstActivityId, secondActivityId }) }, token),
     deleteActivities: (token: string, activityIds: readonly string[]) =>
       request<{ deleted: number }>('/api/v1/me/run-data/delete', { method: 'POST', body: JSON.stringify({ activityIds }) }, token),
     /** Every run as a CSV file (not JSON, so it skips the JSON request helper). */

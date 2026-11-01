@@ -19,7 +19,7 @@ namespace StartLine.Application.Features.Activities;
 /// dispatch another handler. Scoped: each saved plan is built at most once per request (or sync pass), so a batch of
 /// runs from the same weeks doesn't regenerate the same plan for every file.
 /// </summary>
-internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileReader reader, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time)
+internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileReader reader, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time, Shoes.ShoeKeeper shoes)
 {
     private readonly Dictionary<Guid, TrainingPlan> builtPlans = [];
 
@@ -42,30 +42,32 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
         var startedAt = recording.StartedAt.ToUniversalTime();
         var activity = await RecordAsync(runner, recording, ActivityOrigin.Uploaded(fileName), cancellationToken);
 
-        // The same run already here: exactly the same start, or a start within a couple of minutes and the same
-        // distance (a FIT file and a GPX export of one run disagree by seconds on when it started).
+        // The same run already here (see RunMatch): exactly the same start, or a start within a couple of minutes that
+        // agrees on the distance or overlaps almost entirely (a watch and a phone, a FIT file and its GPX export).
         var nearby = await db.Activities
             .Where(a => a.RunnerId == runner.Id && a.StartedAt >= startedAt - RunMatch.SameStartWithin && a.StartedAt <= startedAt + RunMatch.SameStartWithin)
             .ToListAsync(cancellationToken);
         var existing = nearby.FirstOrDefault(a => a.StartedAt == startedAt)
-            ?? nearby.Where(a => RunMatch.Compare(a, activity) == RunRelation.SameRun).OrderBy(a => (a.StartedAt - startedAt).Duration()).FirstOrDefault();
-        if (existing is { Source: ActivitySource.Upload })
+            ?? nearby.Where(a => RunMatch.IsSameRun(a, activity)).OrderBy(a => (a.StartedAt - startedAt).Duration()).FirstOrDefault();
+
+        // One recording per run, chosen without asking: an upload replaces a synced copy (uploads are the runner's own and
+        // are kept; a synced copy lapses), and between two uploads the one that measured more is kept. The two are never
+        // merged into one record (Strava API Policy 5.4); check-ins that pointed at the replaced one follow the kept one.
+        if (existing is not null && !RunMatch.IsBetterRecording(activity, existing))
         {
             throw Duplicate();
         }
 
-        // The file of a run that was synced replaces the synced copy: uploads are the runner's own and are kept,
-        // where a synced copy lapses. The two are never merged into one record (Strava API Policy 5.4): the upload's
-        // own numbers are kept, and check-ins that pointed at the synced copy now point at the upload.
+        var followed = false;
         if (existing is not null)
         {
-            var linked = await db.SessionCheckIns.Where(c => c.ActivityId == existing.Id).ToListAsync(cancellationToken);
-            foreach (var checkIn in linked)
-            {
-                checkIn.RelinkActivity(existing.Id, activity.Id);
-            }
-
+            followed = await RelinkAsync(existing.Id, activity.Id, cancellationToken);
             db.Activities.Remove(existing);
+        }
+
+        if (!followed)
+        {
+            await shoes.WearDefaultAsync(runner.Id, activity, cancellationToken);
         }
 
         db.Activities.Add(activity);
@@ -115,6 +117,20 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
         }
 
         return Activity.Record(runner.Id, recording, localDate, await PlannedOnAsync(runner.Id, localDate, cancellationToken), origin);
+    }
+
+    /// <summary>
+    /// Points everything linked to a replaced recording of a run (check-ins, the pair of shoes it was worn in) at the
+    /// recording that's kept. Doesn't save. True when the run was on a pair, which the kept recording now is too.
+    /// </summary>
+    public async Task<bool> RelinkAsync(Guid replaced, Guid kept, CancellationToken cancellationToken)
+    {
+        foreach (var checkIn in await db.SessionCheckIns.Where(c => c.ActivityId == replaced).ToListAsync(cancellationToken))
+        {
+            checkIn.RelinkActivity(replaced, kept);
+        }
+
+        return await shoes.FollowAsync(replaced, kept, cancellationToken);
     }
 
     public const string DuplicateCode = "activity_exists";

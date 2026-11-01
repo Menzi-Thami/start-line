@@ -28,6 +28,7 @@ internal sealed partial class StravaSyncRunner(
     StravaTokens tokens,
     ActivityImporter importer,
     RunCelebrator prompter,
+    Shoes.ShoeKeeper shoes,
     TimeProvider time,
     ILogger<StravaSyncRunner> logger) : IStravaSync
 {
@@ -126,6 +127,11 @@ internal sealed partial class StravaSyncRunner(
         {
             await prompter.OfferAsync(run, cancellationToken);
         }
+
+        if (synced.Count > 0)
+        {
+            await shoes.RemindAsync(job.RunnerId, cancellationToken);
+        }
     }
 
     private async Task<ProviderConnection?> ConnectionAsync(Guid runnerId, CancellationToken cancellationToken) =>
@@ -163,16 +169,23 @@ internal sealed partial class StravaSyncRunner(
         var externalId = fresh.ExternalId;
         var existing = await db.Activities.SingleOrDefaultAsync(
             a => a.RunnerId == job.RunnerId && a.Source == ActivitySource.Strava && a.ExternalId == externalId, cancellationToken);
-        if (existing is not null)
+        if (await UploadOfAsync(job.RunnerId, fresh, cancellationToken) is { } upload)
+        {
+            // The runner uploaded this run's file. The upload is the run Taperday keeps; a synced copy of it (one from
+            // before duplicates were matched this way) is dropped, and whatever pointed at it follows the upload.
+            if (existing is not null)
+            {
+                await importer.RelinkAsync(existing.Id, upload, cancellationToken);
+                db.Activities.Remove(existing);
+            }
+
+            skipReason = SkipReasons.AlreadyUploaded;
+            return;
+        }
+        else if (existing is not null)
         {
             existing.RefreshFrom(fresh);
             synced.Add(existing);
-        }
-        else if (await UploadedAlreadyAsync(job.RunnerId, fresh, cancellationToken))
-        {
-            // The runner uploaded this run's file already. The upload stays; the two are never merged (Policy 5.4).
-            skipReason = SkipReasons.AlreadyUploaded;
-            return;
         }
         else if (await db.Activities.Visible(now).CountAsync(a => a.RunnerId == job.RunnerId, cancellationToken) >= Activity.MaxPerRunner)
         {
@@ -182,22 +195,22 @@ internal sealed partial class StravaSyncRunner(
         else
         {
             db.Activities.Add(fresh);
+            await shoes.WearDefaultAsync(job.RunnerId, fresh, cancellationToken);
             synced.Add(fresh);
         }
 
         connection.MarkSynced(now);
     }
 
-    /// <summary>An upload of the same run: the same start, or near it with the same distance (see <see cref="RunMatch"/>).</summary>
-    private async Task<bool> UploadedAlreadyAsync(Guid runnerId, Activity fresh, CancellationToken cancellationToken)
+    /// <summary>The id of an upload of the same run, if the runner uploaded one (see <see cref="RunMatch"/>).</summary>
+    private async Task<Guid?> UploadOfAsync(Guid runnerId, Activity fresh, CancellationToken cancellationToken)
     {
         var from = fresh.StartedAt - RunMatch.SameStartWithin;
         var to = fresh.StartedAt + RunMatch.SameStartWithin;
         var uploads = await db.Activities.AsNoTracking()
             .Where(a => a.RunnerId == runnerId && a.Source == ActivitySource.Upload && a.StartedAt >= from && a.StartedAt <= to)
-            .Select(a => new { a.StartedAt, a.DistanceMetres })
             .ToListAsync(cancellationToken);
-        return uploads.Any(u => u.StartedAt == fresh.StartedAt || RunMatch.IsSameRun(u.StartedAt, u.DistanceMetres, fresh.StartedAt, fresh.DistanceMetres));
+        return uploads.FirstOrDefault(u => u.StartedAt == fresh.StartedAt || RunMatch.IsSameRun(u, fresh))?.Id;
     }
 
     private Task DeleteAsync(SyncJob job, CancellationToken cancellationToken) => DeleteLocalAsync(job.RunnerId, job.ObjectId!.Value, cancellationToken);

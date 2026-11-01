@@ -29,11 +29,17 @@ public interface IApplicationDbContext
 
     DbSet<SyncJob> SyncJobs { get; }
 
-    DbSet<DuplicateDismissal> DuplicateDismissals { get; }
+    DbSet<StartLine.Domain.Shoes.Shoe> Shoes { get; }
+
+    DbSet<StartLine.Domain.Shoes.ShoeAssignment> ShoeAssignments { get; }
 
     DbSet<SessionCheckIn> SessionCheckIns { get; }
 
     DbSet<CoachWeek> CoachWeeks { get; }
+
+    DbSet<WeeklyRecapDelivery> WeeklyRecapDeliveries { get; }
+
+    DbSet<CoachingDecisionLog> CoachingDecisions { get; }
 
     DbSet<PushSubscription> PushSubscriptions { get; }
 

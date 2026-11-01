@@ -257,31 +257,6 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("Activities", (string)null);
                 });
 
-            modelBuilder.Entity("StartLine.Domain.Activities.DuplicateDismissal", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("FirstActivityId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RunnerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("SecondActivityId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RunnerId", "FirstActivityId", "SecondActivityId")
-                        .IsUnique();
-
-                    b.ToTable("DuplicateDismissals", (string)null);
-                });
-
             modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
                 {
                     b.Property<Guid>("Id")
@@ -329,6 +304,50 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("CoachWeeks", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Coaching.CoachingDecisionLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("ChangedPlan")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("DecidedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Reasons")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("Recovery")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("SavedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Verdict")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly>("WeekStart")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SavedPlanId", "DecidedAt");
+
+                    b.ToTable("CoachingDecisions", (string)null);
                 });
 
             modelBuilder.Entity("StartLine.Domain.Coaching.SessionCheckIn", b =>
@@ -834,6 +853,123 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("RunnerPhotos", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Runners.WeeklyRecapDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ClaimedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly>("WeekStart")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId", "WeekStart")
+                        .IsUnique();
+
+                    b.ToTable("WeeklyRecapDeliveries", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Shoes.Shoe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<double>("LimitKm")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
+                    b.Property<bool>("RemindAtLimit")
+                        .HasColumnType("bit");
+
+                    b.Property<double?>("RemindedAtLimitKm")
+                        .HasColumnType("float");
+
+                    b.Property<DateTimeOffset?>("RetiredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("StartingKm")
+                        .HasColumnType("float");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Shoes_RunnerId_Default")
+                        .HasFilter("[IsDefault] = 1");
+
+                    b.ToTable("Shoes", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Shoes.ShoeAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActivityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("CheckInId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ShoeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityId")
+                        .IsUnique()
+                        .HasFilter("[ActivityId] IS NOT NULL");
+
+                    b.HasIndex("CheckInId")
+                        .IsUnique()
+                        .HasFilter("[CheckInId] IS NOT NULL");
+
+                    b.HasIndex("ShoeId");
+
+                    b.HasIndex("RunnerId", "ShoeId");
+
+                    b.ToTable("ShoeAssignments", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Sync.ProviderConnection", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1015,16 +1151,16 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Navigation("Splits");
                 });
 
-            modelBuilder.Entity("StartLine.Domain.Activities.DuplicateDismissal", b =>
+            modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
                 {
-                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                    b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
                         .WithMany()
-                        .HasForeignKey("RunnerId")
+                        .HasForeignKey("SavedPlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
+            modelBuilder.Entity("StartLine.Domain.Coaching.CoachingDecisionLog", b =>
                 {
                     b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
                         .WithMany()
@@ -1092,6 +1228,33 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
                         .WithOne()
                         .HasForeignKey("StartLine.Domain.Runners.RunnerPhoto", "RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Runners.WeeklyRecapDelivery", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Shoes.Shoe", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Shoes.ShoeAssignment", b =>
+                {
+                    b.HasOne("StartLine.Domain.Shoes.Shoe", null)
+                        .WithMany()
+                        .HasForeignKey("ShoeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

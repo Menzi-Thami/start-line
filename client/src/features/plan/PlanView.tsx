@@ -1,4 +1,5 @@
 import { LifeHappens } from './LifeHappens'
+import { WorkoutExport } from './WorkoutExport'
 import { RaceWeek } from './RaceWeek'
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
 import type { CalendarLinks } from '../../lib/calendar-links'
@@ -355,6 +356,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
       )}
 
       <LifeHappens />
+      <WorkoutExport plan={plan} units={units} />
       <RaceWeek plan={plan} today={today} />
       <details className="disclosure plan-options"><summary>Plan options</summary>
         <div className="plan-actions">

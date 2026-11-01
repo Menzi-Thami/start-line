@@ -238,17 +238,38 @@ internal sealed class SyncJobConfiguration : IEntityTypeConfiguration<SyncJob>
     }
 }
 
-internal sealed class DuplicateDismissalConfiguration : IEntityTypeConfiguration<DuplicateDismissal>
+internal sealed class ShoeConfiguration : IEntityTypeConfiguration<StartLine.Domain.Shoes.Shoe>
 {
-    public void Configure(EntityTypeBuilder<DuplicateDismissal> builder)
+    public void Configure(EntityTypeBuilder<StartLine.Domain.Shoes.Shoe> builder)
     {
-        builder.ToTable("DuplicateDismissals");
-        builder.HasKey(d => d.Id);
-        builder.Property(d => d.Id).ValueGeneratedNever();
-        builder.HasIndex(d => new { d.RunnerId, d.FirstActivityId, d.SecondActivityId }).IsUnique();
-        builder.HasOne<StartLine.Domain.Runners.Runner>().WithMany().HasForeignKey(d => d.RunnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.ToTable("Shoes");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.Name).HasMaxLength(StartLine.Domain.Shoes.Shoe.MaxNameLength).IsRequired();
+        builder.Ignore(s => s.IsRetired);
+        builder.HasIndex(s => s.RunnerId);
+        // One default pair per runner: the one new runs are put on.
+        builder.HasIndex(s => s.RunnerId).IsUnique().HasFilter("[IsDefault] = 1").HasDatabaseName("IX_Shoes_RunnerId_Default");
+        builder.HasOne<StartLine.Domain.Runners.Runner>().WithMany().HasForeignKey(s => s.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class ShoeAssignmentConfiguration : IEntityTypeConfiguration<StartLine.Domain.Shoes.ShoeAssignment>
+{
+    public void Configure(EntityTypeBuilder<StartLine.Domain.Shoes.ShoeAssignment> builder)
+    {
+        builder.ToTable("ShoeAssignments");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        // A run is worn in one pair. No foreign keys to runs or check-ins: they're deleted on many paths (a lapsed
+        // Strava copy, a bulk delete), and an assignment whose run is gone simply stops counting.
+        builder.HasIndex(a => a.ActivityId).IsUnique().HasFilter("[ActivityId] IS NOT NULL");
+        builder.HasIndex(a => a.CheckInId).IsUnique().HasFilter("[CheckInId] IS NOT NULL");
+        builder.HasIndex(a => new { a.RunnerId, a.ShoeId });
+        builder.HasOne<StartLine.Domain.Shoes.Shoe>().WithMany().HasForeignKey(a => a.ShoeId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 
 internal sealed class SessionCheckInConfiguration : IEntityTypeConfiguration<SessionCheckIn>
 {
@@ -288,6 +309,25 @@ internal sealed class CoachWeekConfiguration : IEntityTypeConfiguration<CoachWee
         // One call per week of a plan; the plan going takes its calls with it.
         builder.HasIndex(w => new { w.SavedPlanId, w.WeekStart }).IsUnique();
         builder.HasOne<SavedPlan>().WithMany().HasForeignKey(w => w.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class CoachingDecisionLogConfiguration : IEntityTypeConfiguration<CoachingDecisionLog>
+{
+    public void Configure(EntityTypeBuilder<CoachingDecisionLog> builder)
+    {
+        builder.ToTable("CoachingDecisions");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Outcome).HasConversion<string>().HasMaxLength(16);
+        builder.Property(d => d.Verdict).HasConversion<string>().HasMaxLength(16);
+        builder.Property(d => d.Recovery).HasConversion<string>().HasMaxLength(16);
+        builder.Property(d => d.Reasons).HasMaxLength(400).IsRequired();
+        builder.Ignore(d => d.ReasonList);
+
+        // Every answer is kept, newest read first; the plan going takes its history with it.
+        builder.HasIndex(d => new { d.SavedPlanId, d.DecidedAt });
+        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(d => d.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -370,5 +410,21 @@ internal sealed class TickPromptConfiguration : IEntityTypeConfiguration<TickPro
         builder.HasIndex(p => new { p.SavedPlanId, p.Date, p.SessionType }).IsUnique();
         builder.HasIndex(p => p.Date);
         builder.HasOne<SavedPlan>().WithMany().HasForeignKey(p => p.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class WeeklyRecapDeliveryConfiguration : IEntityTypeConfiguration<WeeklyRecapDelivery>
+{
+    public void Configure(EntityTypeBuilder<WeeklyRecapDelivery> builder)
+    {
+        builder.ToTable("WeeklyRecapDeliveries");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Ignore(d => d.CanRetry);
+
+        // The claim: one recap per runner per week, whichever instance gets there first. The runner going takes theirs.
+        builder.HasIndex(d => new { d.RunnerId, d.WeekStart }).IsUnique();
+        builder.HasOne<Runner>().WithMany().HasForeignKey(d => d.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }

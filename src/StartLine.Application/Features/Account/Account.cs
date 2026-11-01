@@ -205,7 +205,15 @@ public sealed record AccountExportDto(
     IReadOnlyList<TickPromptExportDto> TickPrompts,
     RunnerPhotoDto? Photo,
     IReadOnlyList<NotificationHistoryDto>? NotificationHistory = null,
-    IReadOnlyList<Insights.FeedbackNoteDto>? Feedback = null);
+    IReadOnlyList<Insights.FeedbackNoteDto>? Feedback = null,
+    IReadOnlyList<ShoeExportDto>? Shoes = null,
+    IReadOnlyList<CoachingDecisionExportDto>? CoachingDecisions = null);
+
+/// <summary>An answer to a weekly coaching suggestion, with the plan it belongs to.</summary>
+public sealed record CoachingDecisionExportDto(Guid PlanId, CoachingDecisionDto Decision);
+
+/// <summary>A pair of shoes as exported: the pair, and which runs (by id) and check-ins were worn in it.</summary>
+public sealed record ShoeExportDto(Shoes.ShoeDto Shoe, IReadOnlyList<Guid> ActivityIds, IReadOnlyList<Guid> CheckInIds);
 
 public sealed record NotificationHistoryDto(Guid DeviceId, Guid SubjectId, Domain.Notifications.NotificationKind Kind,
     string Event, DateTimeOffset NotBefore, DateTimeOffset ExpiresAt, DateTimeOffset? ClaimedAt);
@@ -232,7 +240,7 @@ public sealed record ConnectionExportDto(SyncProvider Provider, long ExternalAth
 /// <summary>Everything stored about the runner, as one document (POPIA right of access).</summary>
 public sealed record ExportAccountQuery : IRequest<AccountExportDto>;
 
-internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests, TimeProvider time)
+internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunner current, PersonalBests personalBests, TimeProvider time, Shoes.ShoeMileage mileage)
     : IRequestHandler<ExportAccountQuery, AccountExportDto>
 {
     public async Task<AccountExportDto> Handle(ExportAccountQuery request, CancellationToken cancellationToken)
@@ -282,7 +290,21 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             [.. asked.Select(p => new TickPromptExportDto(p.SavedPlanId, p.Date, p.SessionType))],
             photo is null ? null : RunnerPhotoDto.From(photo), notificationHistory,
             await db.Feedback.AsNoTracking().Where(f => f.RunnerId == runner.Id).OrderBy(f => f.CreatedAt)
-                .Select(f => new Insights.FeedbackNoteDto(f.Message, f.Page, f.CreatedAt)).ToListAsync(cancellationToken));
+                .Select(f => new Insights.FeedbackNoteDto(f.Message, f.Page, f.CreatedAt)).ToListAsync(cancellationToken),
+            await ShoesAsync(runner.Id, cancellationToken),
+            [.. (await db.CoachingDecisions.AsNoTracking().Where(d => planIds.Contains(d.SavedPlanId)).OrderBy(d => d.DecidedAt).ToListAsync(cancellationToken))
+                .Select(d => new CoachingDecisionExportDto(d.SavedPlanId, CoachingDecisionDto.From(d)))]);
+    }
+
+    private async Task<IReadOnlyList<ShoeExportDto>> ShoesAsync(Guid runnerId, CancellationToken cancellationToken)
+    {
+        var shoes = await db.Shoes.AsNoTracking().Where(s => s.RunnerId == runnerId).OrderBy(s => s.CreatedAt).ToListAsync(cancellationToken);
+        var worn = await db.ShoeAssignments.AsNoTracking().Where(a => a.RunnerId == runnerId).ToListAsync(cancellationToken);
+        var totals = await mileage.ForRunnerAsync(runnerId, cancellationToken);
+        return [.. shoes.Select(s => new ShoeExportDto(
+            Shoes.ShoeViews.From(s, totals.GetValueOrDefault(s.Id)),
+            [.. worn.Where(a => a.ShoeId == s.Id && a.ActivityId != null).Select(a => a.ActivityId!.Value)],
+            [.. worn.Where(a => a.ShoeId == s.Id && a.CheckInId != null).Select(a => a.CheckInId!.Value)]))];
     }
 }
 

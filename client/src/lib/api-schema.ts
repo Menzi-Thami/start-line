@@ -1400,6 +1400,175 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/coach/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ApplyCoachingRequest"];
+                    "text/json": components["schemas"]["ApplyCoachingRequest"];
+                    "application/*+json": components["schemas"]["ApplyCoachingRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CoachingProposalDto"];
+                        "application/json": components["schemas"]["CoachingProposalDto"];
+                        "text/json": components["schemas"]["CoachingProposalDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    weeks?: number;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProgressStoryDto"];
+                        "application/json": components["schemas"]["ProgressStoryDto"];
+                        "text/json": components["schemas"]["ProgressStoryDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TrainingInsightsDto"];
+                        "application/json": components["schemas"]["TrainingInsightsDto"];
+                        "text/json": components["schemas"]["TrainingInsightsDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans/{id}/remaining-week/proposal": {
         parameters: {
             query?: never;
@@ -1868,56 +2037,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/run-data/keep-both": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["KeepBothRunsCommand"];
-                    "text/json": components["schemas"]["KeepBothRunsCommand"];
-                    "application/*+json": components["schemas"]["KeepBothRunsCommand"];
-                };
-            };
-            responses: {
-                /** @description No Content */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/me/run-data/delete": {
         parameters: {
             query?: never;
@@ -1995,6 +2114,343 @@ export interface paths {
                     };
                     content: {
                         "text/csv": unknown;
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoeDto"][];
+                        "application/json": components["schemas"]["ShoeDto"][];
+                        "text/json": components["schemas"]["ShoeDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaveShoeRequest"];
+                    "text/json": components["schemas"]["SaveShoeRequest"];
+                    "application/*+json": components["schemas"]["SaveShoeRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoeDto"];
+                        "application/json": components["schemas"]["ShoeDto"];
+                        "text/json": components["schemas"]["ShoeDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaveShoeRequest"];
+                    "text/json": components["schemas"]["SaveShoeRequest"];
+                    "application/*+json": components["schemas"]["SaveShoeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoeDto"];
+                        "application/json": components["schemas"]["ShoeDto"];
+                        "text/json": components["schemas"]["ShoeDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes/worn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WearShoeCommand"];
+                    "text/json": components["schemas"]["WearShoeCommand"];
+                    "application/*+json": components["schemas"]["WearShoeCommand"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RunsRequest"];
+                    "text/json": components["schemas"]["RunsRequest"];
+                    "application/*+json": components["schemas"]["RunsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AddedDto"];
+                        "application/json": components["schemas"]["AddedDto"];
+                        "text/json": components["schemas"]["AddedDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes/unworn-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UnassignedRunDto"][];
+                        "application/json": components["schemas"]["UnassignedRunDto"][];
+                        "text/json": components["schemas"]["UnassignedRunDto"][];
                     };
                 };
             };
@@ -2579,6 +3035,8 @@ export interface components {
             photo: null | components["schemas"]["RunnerPhotoDto"];
             notificationHistory?: null | components["schemas"]["NotificationHistoryDto"][];
             feedback?: null | components["schemas"]["FeedbackNoteDto"][];
+            shoes?: null | components["schemas"]["ShoeExportDto"][];
+            coachingDecisions?: null | components["schemas"]["CoachingDecisionExportDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -2611,6 +3069,7 @@ export interface components {
             bestEfforts: components["schemas"]["BestEffortDto"][];
             heartRate: null | components["schemas"]["HeartRateDto"];
             source: components["schemas"]["SourceDto"];
+            shoe?: null | components["schemas"]["ShoeRefDto"];
         };
         /** @enum {unknown} */
         ActivityKind: "Run" | "TrailRun" | "TreadmillRun" | "Other";
@@ -2636,6 +3095,11 @@ export interface components {
             /** Format: int32 */
             averageHeartRate: null | number;
             source: components["schemas"]["SourceDto"];
+            shoe?: null | components["schemas"]["ShoeRefDto"];
+        };
+        AddedDto: {
+            /** Format: int32 */
+            added: number;
         };
         ApplyCoachingRequest: {
             token: string;
@@ -2725,6 +3189,24 @@ export interface components {
             planId: string;
             call: components["schemas"]["CoachNoteDto"];
         };
+        CoachingDecisionDto: {
+            /** Format: date */
+            weekStart: string;
+            outcome: components["schemas"]["CoachingOutcome"];
+            verdict: components["schemas"]["CoachVerdict"];
+            reasons: components["schemas"]["CoachReason"][];
+            changedPlan: boolean;
+            recovery: components["schemas"]["RecoveryReadiness"];
+            /** Format: date-time */
+            decidedAt: string;
+        };
+        CoachingDecisionExportDto: {
+            /** Format: uuid */
+            planId: string;
+            decision: components["schemas"]["CoachingDecisionDto"];
+        };
+        /** @enum {unknown} */
+        CoachingOutcome: "Accepted" | "Declined";
         CoachingProposalDto: {
             token: string;
             hasChanges: boolean;
@@ -2785,6 +3267,22 @@ export interface components {
         DistanceCategory: "FiveK" | "TenK" | "HalfMarathon" | "Marathon" | "Ultra" | "LongUltra";
         /** @enum {unknown} */
         DistanceFit: "ShorterThanPlanned" | "AsPlanned" | "LongerThanPlanned";
+        EffortPace: {
+            /** Format: int32 */
+            recentRuns: number;
+            /** Format: int32 */
+            earlierRuns: number;
+            /** Format: double */
+            recentSecondsPerKm: null | number;
+            /** Format: double */
+            earlierSecondsPerKm: null | number;
+            /** Format: double */
+            changeSecondsPerKm: null | number;
+            /** Format: int32 */
+            recentHeartRate: null | number;
+            /** Format: int32 */
+            earlierHeartRate: null | number;
+        };
         /** @enum {unknown} */
         EffortStanding: "FirstTime" | "PersonalBest" | "NearBest" | "Slower";
         /** @enum {unknown} */
@@ -2871,12 +3369,21 @@ export interface components {
         /** @enum {unknown} */
         ImportStatus: "Imported" | "AlreadyUploaded" | "Skipped" | "Unreadable" | "LimitReached";
         /** @enum {unknown} */
+        InsightGap: "FewWeeks" | "MissingDistances" | "StravaWindow" | "FewEasyRuns" | "UnloggedSessions";
+        /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
-        KeepBothRunsCommand: {
-            /** Format: uuid */
-            firstActivityId: string;
-            /** Format: uuid */
-            secondActivityId: string;
+        /** @enum {unknown} */
+        LoadSignal: "NotEnoughHistory" | "Lower" | "Steady" | "Rising" | "RisingFast";
+        LoadTrend: {
+            /** Format: double */
+            recentKm: number;
+            /** Format: double */
+            baselineWeeklyKm: number;
+            /** Format: int32 */
+            baselineWeeksRun: number;
+            /** Format: double */
+            changePercent: null | number;
+            signal: components["schemas"]["LoadSignal"];
         };
         LoggedRunDto: {
             /** Format: date */
@@ -2902,6 +3409,10 @@ export interface components {
             withoutSplits: number;
             heartRateConsent: boolean;
         };
+        /** @enum {unknown} */
+        NextStep: "BuildAsPlanned" | "HoldVolume" | "EaseOff" | "LogMore";
+        /** @enum {unknown} */
+        NextStepReason: "OnTrack" | "Pain" | "LoadSpike" | "MissedSessions" | "SparseLogs";
         NotificationHistoryDto: {
             /** Format: uuid */
             deviceId: string;
@@ -2917,7 +3428,7 @@ export interface components {
             claimedAt: null | string;
         };
         /** @enum {unknown} */
-        NotificationKind: "RunCongratulations" | "TrainingReview" | "LongRunPreparation" | "RacePreparation" | "ConnectionAlert";
+        NotificationKind: "RunCongratulations" | "TrainingReview" | "LongRunPreparation" | "RacePreparation" | "ConnectionAlert" | "ShoeMileage";
         NotificationPreferencesDto: {
             runCongratulations: boolean;
             trainingReviews: boolean;
@@ -3017,11 +3528,6 @@ export interface components {
             isReplanned: boolean;
             guidance?: null | string;
         };
-        PossibleDuplicateDto: {
-            first: components["schemas"]["ActivitySummaryDto"];
-            second: components["schemas"]["ActivitySummaryDto"];
-            relation: components["schemas"]["RunRelation"];
-        };
         PredictionDto: {
             /** Format: double */
             distanceKm: number;
@@ -3037,6 +3543,64 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        ProgressBest: {
+            name: string;
+            /** Format: double */
+            distanceMetres: number;
+            time: string;
+            /** Format: date */
+            date: string;
+            before: null | string;
+            isNew: boolean;
+        };
+        /** @enum {unknown} */
+        ProgressGap: "FewWeeks" | "NoBaseline" | "MissingDistances" | "StravaWindow" | "NoRaceEstimate" | "NoPlan";
+        ProgressPeriod: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: string;
+            /** Format: double */
+            km: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: double */
+            averageWeeklyKm: number;
+            /** Format: double */
+            longestKm: number;
+            /** Format: int32 */
+            weeksRun: number;
+        };
+        ProgressStoryDto: {
+            /** Format: date */
+            today: string;
+            story: components["schemas"]["ProgressStoryResult"];
+        };
+        ProgressStoryResult: {
+            /** Format: int32 */
+            weeks: number;
+            weekRows: components["schemas"]["ProgressWeek"][];
+            current: components["schemas"]["ProgressPeriod"];
+            previous: components["schemas"]["ProgressPeriod"];
+            adherence: components["schemas"]["SessionAdherence"];
+            easyPace: components["schemas"]["EffortPace"];
+            bests: components["schemas"]["ProgressBest"][];
+            raceGoal: null | components["schemas"]["RaceGoalProgress"];
+            gaps: components["schemas"]["ProgressGap"][];
+        };
+        ProgressWeek: {
+            /** Format: date */
+            weekStart: string;
+            /** Format: double */
+            ranKm: number;
+            /** Format: double */
+            plannedKm: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: double */
+            longestKm: number;
+            isCurrent: boolean;
+        };
         RaceDto: {
             slug: string;
             name: string;
@@ -3050,6 +3614,21 @@ export interface components {
             website: null | string;
             dateStatus: components["schemas"]["DateStatus"];
             distanceConfirmed: boolean;
+        };
+        RaceEstimate: {
+            /** Format: date */
+            weekStart: string;
+            time: string;
+        };
+        RaceGoalProgress: {
+            /** Format: double */
+            raceKm: number;
+            goal: string;
+            /** Format: date */
+            raceDate: string;
+            estimates: components["schemas"]["RaceEstimate"][];
+            latest: null | string;
+            first: null | string;
         };
         RaceSummaryDto: {
             slug: null | string;
@@ -3122,7 +3701,6 @@ export interface components {
         RunDataDto: {
             sources: components["schemas"]["RunSourcesDto"];
             totals: components["schemas"]["TotalsBreakdownDto"][];
-            possibleDuplicates: components["schemas"]["PossibleDuplicateDto"][];
             missing: components["schemas"]["MissingDataDto"];
             syncIssues: components["schemas"]["SyncIssueDto"][];
         };
@@ -3148,8 +3726,6 @@ export interface components {
         RunnerPhotoDto: {
             dataUrl: string;
         };
-        /** @enum {unknown} */
-        RunRelation: "Unrelated" | "SameRun" | "Overlapping";
         RunSourcesDto: {
             /** Format: int32 */
             uploads: number;
@@ -3169,6 +3745,10 @@ export interface components {
             lastSyncedAt: null | string;
             /** Format: int32 */
             stravaPending: number;
+        };
+        RunsRequest: {
+            activityIds: null | string[];
+            checkInIds: null | string[];
         };
         RunWalkDto: {
             /** Format: int32 */
@@ -3233,9 +3813,37 @@ export interface components {
             heartRateConsent?: null | boolean;
             updateEmails?: null | boolean;
         };
+        SaveShoeRequest: {
+            name: string;
+            /** Format: double */
+            startingKm: number;
+            /**
+             * Format: double
+             * @default 700
+             */
+            limitKm: number;
+            /** @default false */
+            isDefault: boolean;
+            /** @default true */
+            remindAtLimit: boolean;
+            /** @default false */
+            retired: boolean;
+        };
         SendFeedbackCommand: {
             message: string;
             page: null | string;
+        };
+        SessionAdherence: {
+            /** Format: int32 */
+            planned: number;
+            /** Format: int32 */
+            done: number;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: int32 */
+            unlogged: number;
+            /** Format: double */
+            share: null | number;
         };
         SessionDto: {
             /** Format: date */
@@ -3290,6 +3898,39 @@ export interface components {
         SetMyPhotoCommand: {
             dataUrl: string;
         };
+        ShoeDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: double */
+            startingKm: number;
+            /** Format: double */
+            limitKm: number;
+            /** Format: double */
+            totalKm: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: double */
+            stravaKm: number;
+            /** Format: date */
+            lastRunOn: null | string;
+            isDefault: boolean;
+            remindAtLimit: boolean;
+            retired: boolean;
+            wear: components["schemas"]["ShoeWear"];
+        };
+        ShoeExportDto: {
+            shoe: components["schemas"]["ShoeDto"];
+            activityIds: string[];
+            checkInIds: string[];
+        };
+        ShoeRefDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @enum {unknown} */
+        ShoeWear: "Fine" | "NearingLimit" | "PastLimit";
         SourceDto: {
             kind: components["schemas"]["ActivitySource"];
             /** Format: uri */
@@ -3407,6 +4048,12 @@ export interface components {
             /** Format: int32 */
             withoutDistance: number;
         };
+        TrainingInsightsDto: {
+            /** Format: date */
+            today: string;
+            trends: components["schemas"]["TrainingTrendsResult"];
+            decisions: components["schemas"]["CoachingDecisionDto"][];
+        };
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";
         TrainingPlanDto: {
@@ -3425,6 +4072,30 @@ export interface components {
             outlook?: null | components["schemas"]["GoalOutlookDto"];
             adjustments?: null | components["schemas"]["SessionRevision"][];
         };
+        TrainingTrendsResult: {
+            weeks: components["schemas"]["TrendWeek"][];
+            load: components["schemas"]["LoadTrend"];
+            adherence: components["schemas"]["SessionAdherence"];
+            easyPace: components["schemas"]["EffortPace"];
+            gaps: components["schemas"]["InsightGap"][];
+            nextStep: components["schemas"]["NextStep"];
+            reasons: components["schemas"]["NextStepReason"][];
+        };
+        TrendWeek: {
+            /** Format: date */
+            weekStart: string;
+            /** Format: double */
+            plannedKm: number;
+            /** Format: double */
+            ranKm: number;
+            /** Format: double */
+            stravaKm: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: int32 */
+            unknownDistances: number;
+            isCurrent: boolean;
+        };
         TurnOnRemindersCommand: {
             endpoint: string;
             p256dh: string;
@@ -3435,6 +4106,18 @@ export interface components {
             /** @default false */
             daily: boolean;
             preferences?: null | components["schemas"]["NotificationPreferencesDto"];
+        };
+        UnassignedRunDto: {
+            /** Format: uuid */
+            activityId: null | string;
+            /** Format: uuid */
+            checkInId: null | string;
+            /** Format: date */
+            date: string;
+            /** Format: double */
+            distanceKm: number;
+            title: string;
+            source: string;
         };
         /** @enum {unknown} */
         Units: "Kilometres" | "Miles";
@@ -3451,6 +4134,14 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        WearShoeCommand: {
+            /** Format: uuid */
+            shoeId: null | string;
+            /** Format: uuid */
+            activityId: null | string;
+            /** Format: uuid */
+            checkInId: null | string;
         };
         WeeklyReviewDto: {
             /** Format: date */

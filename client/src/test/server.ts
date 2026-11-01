@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import type { Race, Reminders, StravaStatus, TrainingPlan } from '../lib/types'
+import type { Race, Reminders, RunData, StravaStatus, TrainingPlan } from '../lib/types'
 import plan from './fixtures/plan-5k.json'
 import races from './fixtures/races.json'
 
@@ -28,6 +28,15 @@ export const remindersOff: Reminders = { available: false, publicKey: null, devi
 export const calendarToken = 'personal-calendar-token-0123456789abcdefghij'
 export const newCalendarToken = 'new-calendar-token-0123456789abcdefghijklmn'
 
+/** A runner's run data with nothing to check: no runs, no Strava. */
+export const runDataEmpty: RunData = {
+  sources: { uploads: 0, fit: 0, gpx: 0, tcx: 0, unknownFormat: 0, strava: 0, stravaConnected: false, stravaStatus: null, lastSyncedAt: null, stravaPending: 0 },
+  totals: [],
+  possibleDuplicates: [],
+  missing: { runs: 0, withoutHeartRate: 0, withoutElevation: 0, withoutSplits: 0, heartRateConsent: true },
+  syncIssues: [],
+}
+
 export const lastPlanRequest: { body: unknown } = { body: undefined }
 
 export const handlers = [
@@ -35,6 +44,7 @@ export const handlers = [
   http.get('*/health/live', () => new HttpResponse('Healthy')),
   http.get('*/health/ready', () => new HttpResponse('Healthy')),
   http.get('*/api/v1/races', () => HttpResponse.json(racesFixture)),
+  http.get('*/api/v1/me/run-data', () => HttpResponse.json(runDataEmpty)),
   http.post('*/api/v1/plans', async ({ request }) => {
     lastPlanRequest.body = await request.json()
     return HttpResponse.json(planFixture)

@@ -22,6 +22,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<SyncJob> SyncJobs => Set<SyncJob>();
 
+    public DbSet<DuplicateDismissal> DuplicateDismissals => Set<DuplicateDismissal>();
+
     public DbSet<SessionCheckIn> SessionCheckIns => Set<SessionCheckIn>();
 
     public DbSet<CoachWeek> CoachWeeks => Set<CoachWeek>();

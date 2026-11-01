@@ -7,6 +7,7 @@ import type { Activity, ActivitySummary } from '../../lib/types'
 import { KIND_LABEL } from './activity-copy'
 import { BulkSummary } from './BulkSummary'
 import { ExportGuide } from './ExportGuide'
+import { RunDataPanel } from './RunDataPanel'
 
 type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] } | { kind: 'error'; message: string }
 
@@ -141,6 +142,8 @@ export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
           Runs already added are skipped. Your route is never kept.
         </p>
       </details>
+
+      <RunDataPanel units={units} onOpen={onOpen} onChanged={fetchRuns} refreshKey={list.kind === 'ready' ? list.runs.length : 0} />
 
       {list.kind === 'loading' && (
         <div className="choice-list" aria-busy="true" style={{ marginTop: 'var(--space-5)' }}>

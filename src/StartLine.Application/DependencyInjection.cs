@@ -36,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<HeartRateData>();
         services.AddScoped<PersonalBests>();
         services.AddScoped<ActivityImporter>();
+        services.AddScoped<RunningLogReader>();
         services.AddSingleton<StravaRateGate>();
         services.AddScoped<StravaTokens>();
         services.AddScoped<IStravaSync, StravaSyncRunner>();

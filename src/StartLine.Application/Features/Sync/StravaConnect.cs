@@ -39,7 +39,7 @@ internal static class StravaStatus
         }
 
         var jobs = await db.SyncJobs.AsNoTracking()
-            .Where(j => j.RunnerId == connection.RunnerId && j.Provider == SyncProvider.Strava && j.Kind != SyncJobKind.Refresh)
+            .Where(j => j.RunnerId == connection.RunnerId && j.Provider == SyncProvider.Strava && j.Kind != SyncJobKind.Refresh && !j.Skipped)
             .GroupBy(j => j.Failed)
             .Select(g => new { Failed = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken);

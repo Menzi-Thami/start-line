@@ -30,7 +30,7 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
     /// Throws <see cref="ValidationException"/> for a file that can't be read, <see cref="Domain.Common.DomainException"/>
     /// for one that isn't a run, and <see cref="ConflictException"/> for a duplicate or when the runner is at the limit.
     /// </summary>
-    public async Task<Activity> ImportAsync(Runner runner, Stream file, CancellationToken cancellationToken)
+    public async Task<Activity> ImportAsync(Runner runner, Stream file, CancellationToken cancellationToken, string? fileName = null)
     {
         if (await db.Activities.Visible(time.GetUtcNow()).CountAsync(a => a.RunnerId == runner.Id, cancellationToken) >= Activity.MaxPerRunner)
         {
@@ -40,18 +40,31 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
 
         var recording = reader.Read(file);
         var startedAt = recording.StartedAt.ToUniversalTime();
-        var existing = await db.Activities.SingleOrDefaultAsync(a => a.RunnerId == runner.Id && a.StartedAt == startedAt, cancellationToken);
+        var activity = await RecordAsync(runner, recording, ActivityOrigin.Uploaded(fileName), cancellationToken);
+
+        // The same run already here: exactly the same start, or a start within a couple of minutes and the same
+        // distance (a FIT file and a GPX export of one run disagree by seconds on when it started).
+        var nearby = await db.Activities
+            .Where(a => a.RunnerId == runner.Id && a.StartedAt >= startedAt - RunMatch.SameStartWithin && a.StartedAt <= startedAt + RunMatch.SameStartWithin)
+            .ToListAsync(cancellationToken);
+        var existing = nearby.FirstOrDefault(a => a.StartedAt == startedAt)
+            ?? nearby.Where(a => RunMatch.Compare(a, activity) == RunRelation.SameRun).OrderBy(a => (a.StartedAt - startedAt).Duration()).FirstOrDefault();
         if (existing is { Source: ActivitySource.Upload })
         {
             throw Duplicate();
         }
 
-        var activity = await RecordAsync(runner, recording, ActivityOrigin.Upload, cancellationToken);
-
         // The file of a run that was synced replaces the synced copy: uploads are the runner's own and are kept,
-        // where a synced copy lapses. The two are never merged into one record (Strava API Policy 5.4).
+        // where a synced copy lapses. The two are never merged into one record (Strava API Policy 5.4): the upload's
+        // own numbers are kept, and check-ins that pointed at the synced copy now point at the upload.
         if (existing is not null)
         {
+            var linked = await db.SessionCheckIns.Where(c => c.ActivityId == existing.Id).ToListAsync(cancellationToken);
+            foreach (var checkIn in linked)
+            {
+                checkIn.RelinkActivity(existing.Id, activity.Id);
+            }
+
             db.Activities.Remove(existing);
         }
 

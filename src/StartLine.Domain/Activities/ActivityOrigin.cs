@@ -19,7 +19,20 @@ public sealed record ActivityOrigin(ActivitySource Source, string? ExternalId, D
 {
     public const int MaxExternalIdLength = 32;
 
+    /// <summary>Long file names are cut to this; only the name is kept, never the path.</summary>
+    public const int MaxFileNameLength = 120;
+
     public static readonly ActivityOrigin Upload = new(ActivitySource.Upload, null, null, false);
+
+    /// <summary>The name of the file an upload came from, shown to the runner so they can tell their runs apart.</summary>
+    public string? FileName { get; init; }
+
+    /// <summary>An upload from a file of this name (the name only: any folder is dropped).</summary>
+    public static ActivityOrigin Uploaded(string? fileName)
+    {
+        var name = string.IsNullOrWhiteSpace(fileName) ? null : Path.GetFileName(fileName.Trim());
+        return Upload with { FileName = string.IsNullOrEmpty(name) ? null : name.Length > MaxFileNameLength ? name[..MaxFileNameLength] : name };
+    }
 
     /// <param name="fetchedAt">When the run was read from Strava: the cache runs for <see cref="StravaCache.Lifetime"/> from then.</param>
     /// <param name="recordedOnGarmin">Strava's policy wants Garmin credited for runs a Garmin device recorded.</param>

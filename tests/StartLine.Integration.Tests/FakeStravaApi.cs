@@ -191,3 +191,12 @@ public sealed class StravaApiFactory : StartLineApiFactory
         throw new InvalidOperationException("The sync kept finding work: a job is looping.");
     }
 }
+
+/// <summary>
+/// Test classes whose sync passes run against the shared database: a pass runs every due job, so two classes syncing at
+/// once take each other's jobs. They run one after another.
+/// </summary>
+public sealed class StravaInSeries
+{
+    public const string Name = "Strava";
+}

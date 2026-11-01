@@ -24,6 +24,7 @@ import { useCheckIns } from '../features/coaching/useCheckIns'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { Hero, RaceTicker } from '../features/home/Hero'
+import { SignInLanding } from '../features/home/SignInLanding'
 import { RaceStartIntro } from '../features/home/RaceStartIntro'
 import { PlanView } from '../features/plan/PlanView'
 import { Replan } from '../features/plan/Replan'
@@ -49,7 +50,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'home' | 'build' | 'runs' | 'account' | 'privacy' | 'sign-up' | 'unsubscribe'
+type View = 'home' | 'build' | 'runs' | 'account' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -89,7 +90,7 @@ const viewFromUrl = (): View => {
   const view = new URLSearchParams(window.location.search).get('view')
   // A runner has one plan, so the old My plans page is now Home.
   if (view === 'plans') return 'home'
-  return view === 'home' || view === 'runs' || view === 'account' || view === 'privacy' || view === 'unsubscribe' ? view : 'build'
+  return view === 'home' || view === 'runs' || view === 'account' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
 }
 
 export function App() {
@@ -433,7 +434,7 @@ export function App() {
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'home' || next === 'runs' || next === 'account' || next === 'privacy'
+      next === 'home' || next === 'runs' || next === 'account' || next === 'privacy' || next === 'sign-in'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
@@ -635,6 +636,7 @@ export function App() {
 
   return (
     <div className="page">
+      <a className="skip-main" href="#main-content">Skip to main content</a>
       {playIntro && <RaceStartIntro onDone={finishIntro} />}
       {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">
@@ -668,7 +670,7 @@ export function App() {
                     </a>
                   </span>
                 )}
-                <button type="button" className="button button-quiet" onClick={auth.signIn}>
+                <button type="button" className="button button-quiet" onClick={() => go('sign-in')}>
                   Sign in
                 </button>
               </>
@@ -706,7 +708,7 @@ export function App() {
       {state.kind === 'ready' && !state.runner.needsPrivacyConsent && (
         <div hidden={view === 'account' || view === 'privacy' || view === 'unsubscribe'}><RemindersSection key={state.runner.id} offer /></div>
       )}
-      <main key={view} className={navigated ? 'view-enter' : undefined}>
+      <main id="main-content" tabIndex={-1} key={view} className={navigated ? 'view-enter' : undefined}>
         <ScreenRecovery>
         <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
         {auth.error && (
@@ -725,6 +727,8 @@ export function App() {
           <PrivacyUpdate runner={state.runner} onAccepted={runner.setRunner} onOpenAccount={() => go('account')} />
         )}
 
+        {view === 'sign-in' && state.kind === 'signed-out' && <SignInLanding onSignIn={auth.signIn} onSignUp={auth.signUp} onBack={() => go('build')} />}
+        {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty"><p>You’re already signed in or your account is loading.</p><button type="button" className="button" onClick={() => go('home')}>Continue to Taperday</button></div>}
         {view === 'privacy' && <PrivacyPolicy />}
         {view === 'unsubscribe' && <Unsubscribe token={new URLSearchParams(window.location.search).get('t')} onOpenAccount={() => go('account')} />}
 

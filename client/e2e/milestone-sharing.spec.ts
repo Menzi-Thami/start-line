@@ -20,5 +20,8 @@ test('milestone card updates preview when name visibility changes @phone', async
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
   expect(overflow).toBeLessThanOrEqual(1)
 
-  await page.screenshot({ path: info.outputPath('milestone-preview.png'), fullPage: true })
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'light' })
+  await page.screenshot({ path: info.outputPath('milestone-light.png'), fullPage: true })
+  await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+  await page.screenshot({ path: info.outputPath('milestone-dark.png'), fullPage: true })
 })

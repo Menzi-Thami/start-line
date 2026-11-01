@@ -8,10 +8,13 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
   const [choice, setChoice] = useState('longest')
   const [includeName, setIncludeName] = useState(false)
   const [name, setName] = useState('')
-  const [prepared, setPrepared] = useState<{ url: string; file: File } | null>(null)
+  const [prepared, setPrepared] = useState<{ key: string; url: string; file: File } | null>(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const selected = milestones.find(item => item.id === choice) ?? milestones[0]
+
+  const cardKey = JSON.stringify([selected?.id, selected?.value, selected?.detail, includeName ? name : ''])
+  const current = prepared?.key === cardKey ? prepared : null
 
   useEffect(() => {
     if (!selected) return
@@ -22,7 +25,7 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
     ).then(blob => {
       if (cancelled) return
       url = URL.createObjectURL(blob)
-      setPrepared({ url, file: new File([blob], `taperday-${selected.id}.png`, { type: 'image/png' }) })
+      setPrepared({ key: cardKey, url, file: new File([blob], `taperday-${selected.id}.png`, { type: 'image/png' }) })
       setError('')
     }).catch(() => { if (!cancelled) setError('Could not prepare your card. Please try another browser.') })
     return () => {
@@ -30,13 +33,13 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
       if (url) URL.revokeObjectURL(url)
       setPrepared(null)
     }
-  }, [selected, includeName, name])
+  }, [selected, includeName, name, cardKey])
 
   if (!selected) return <p className="field-help">Add a recorded run to create a milestone card.</p>
   const share = async () => {
-    if (!prepared) return
+    if (!current) return
     try {
-      if (navigator.canShare?.({ files: [prepared.file] }) && navigator.share) {
+      if (navigator.canShare?.({ files: [current.file] }) && navigator.share) {
         await navigator.share({ files: [prepared.file], title: 'My Taperday milestone' })
         setMessage('Shared.')
       } else setError('File sharing is not supported here. Save the PNG instead.')
@@ -56,8 +59,8 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
     <p><strong>{selected.value} {selected.unit}</strong> — {selected.detail}</p>
     <label className="field"><input type="checkbox" checked={includeName} onChange={event => setIncludeName(event.target.checked)} /> Add my name to the image (optional)</label>
     {includeName && <div className="field"><label htmlFor="milestone-display-name">Name on card</label><input id="milestone-display-name" value={name} maxLength={36} onChange={event => setName(event.target.value)} /></div>}
-    {prepared ? <div>
-      <img src={prepared.url} width={270} height={338} alt={`Preview of ${selected.title} milestone card`} style={{ width: 'min(100%,270px)', height: 'auto', borderRadius: 'var(--radius-md)' }} />
+    {current ? <div>
+      <img src={current.url} width={270} height={338} alt={`Preview of ${selected.title} milestone card`} style={{ width: 'min(100%,270px)', height: 'auto', borderRadius: 'var(--radius-md)' }} />
       <div className="submit-row">
         <a className="button button-quiet" href={prepared.url} download={prepared.file.name}>Save PNG</a>
         {typeof navigator.canShare === 'function' && navigator.canShare({ files: [prepared.file] }) && <button type="button" className="button" onClick={() => void share()}>Share image</button>}

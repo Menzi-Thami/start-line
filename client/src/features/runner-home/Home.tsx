@@ -6,6 +6,7 @@ import { ScreenRecovery } from '../../app/ScreenRecovery'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, parseTimeSpan, type Units } from '../../lib/format'
 import { planProgress } from '../../lib/plan-day'
+import { matchingStravaRun, runFeedbackMessage } from '../../lib/strava-auto-completion'
 import { ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CoachNote, LoggedRun, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import { Avatar } from '../account/Avatar'
@@ -305,7 +306,8 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   const ranToday = runs.some((r) => !coach?.entries?.some((c) => c.isAdditional && c.activityId === r.id) && r.localDate === today && r.kind !== 'Other' && r.source.kind !== 'Strava')
   const isDone = (s: Session) => {
     const checkIn = coach?.get(s)
-    return checkIn ? checkIn.status !== 'Skipped' : ranToday
+    if (checkIn?.status === 'Skipped') return false
+    return checkIn ? true : ranToday || !!matchingStravaRun(s, runs)
   }
 
   const body = (() => {
@@ -333,6 +335,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
           {s.title}
           {isDone(s) && <span className="chip chip-good home-done-chip">Done</span>}
         </p>
+        {matchingStravaRun(s, runs) && <p className="field-help" role="status"><strong>Completed via Strava.</strong> {runFeedbackMessage(s.distanceKm, matchingStravaRun(s, runs)!.distanceKm)}</p>}
         <dl className="home-workout-facts">
           {s.distanceKm > 0 && <div><dt>Distance</dt><dd className="mono">{formatDistance(s.distanceKm, units)}</dd></div>}
           {pace(s) && <div><dt>Target pace</dt><dd className="mono">{pace(s)}</dd></div>}

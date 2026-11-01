@@ -16,6 +16,7 @@ import type {
   SleepQuality,
   Soreness,
   TrainingInsights,
+  SyncedCompletion,
   CheckIn,
   CheckInRequest,
   GeneratePlanRequest,
@@ -221,6 +222,8 @@ export const api = {
     declineCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/decline`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
     /** Load, consistency and easy-pace trends on a saved plan, worked out on each read, and the coaching history. */
     trainingInsights: (token: string, id: string) => request<TrainingInsights>(`/api/v1/me/plans/${encodeURIComponent(id)}/insights`, { cache: 'no-store' }, token),
+    /** Planned sessions a held Strava run completes, worked out on each read and never stored. */
+    stravaCompletions: (token: string, id: string) => request<SyncedCompletion[]>(`/api/v1/me/plans/${encodeURIComponent(id)}/strava-completions`, { cache: 'no-store' }, token),
     /** How the runner has progressed over the last 4, 8 or 12 weeks against the same span before. */
     progressStory: (token: string, id: string, weeks: 4 | 8 | 12) => request<ProgressStory>(`/api/v1/me/plans/${encodeURIComponent(id)}/progress?weeks=${weeks}`, { cache: 'no-store' }, token),
     /** The runner's daily readiness check-ins, newest first (today and up to 13 days before). */

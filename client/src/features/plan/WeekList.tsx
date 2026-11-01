@@ -13,7 +13,6 @@ import { SessionSteps } from './SessionSteps'
 import { RunWalkChip } from './RunWalkChip'
 import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey, trainingKm } from './plan-math'
-import { matchingStravaRun, runFeedbackMessage } from '../../lib/strava-auto-completion'
 
 interface Props {
   weeks: PlanWeek[]
@@ -72,8 +71,7 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
 }) {
   // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
   const [bursts, setBursts] = useState(0)
-  const autoRun = dayRuns && matchingStravaRun(session, dayRuns)
-  const isDone = done.has(sessionKey(session)) || !!autoRun
+  const isDone = done.has(sessionKey(session))
   const strength = session.type === 'Strength'
   const zone = !strength && session.zone ? ZONES[session.zone] : undefined
   const numbers = strength ? [`${session.exercises.length} exercises`] : [
@@ -98,7 +96,6 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
         <SessionSteps steps={session.steps} units={units} />
         <p className="session-why">Why: {session.purpose}</p>
       </details>
-      {autoRun && <p className="field-help" role="status"><strong>Completed via Strava.</strong> {runFeedbackMessage(session.distanceKm, autoRun.distanceKm)}</p>}
       {session.exercises.length > 0 && (
         <details className="strength-moves strength-disclosure">
           <summary>View exercises · {sets.done}/{sets.total} sets done</summary>
@@ -228,7 +225,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
   return (
     <div className="weeks">
       {weeks.map((week) => {
-        const completed = week.sessions.filter((s) => { const c = coach?.get(s); if (c?.status === 'Skipped') return false; return (c != null && c.status !== 'Skipped') || done.has(sessionKey(s)) || !!matchingStravaRun(s, runs?.get(s.date) ?? []) }).length
+        const completed = week.sessions.filter((s) => { const c = coach?.get(s); return c ? c.status !== 'Skipped' : done.has(sessionKey(s)) }).length
         return (
           <details className="week" id={`plan-week-${week.number}`} key={week.number} open={week.number === openWeek}>
             <summary>

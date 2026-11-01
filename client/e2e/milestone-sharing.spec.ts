@@ -15,6 +15,9 @@ test('milestone card updates preview when name visibility changes @phone', async
   await expect(download).toHaveAttribute('href', /^blob:/)
   await expect.poll(() => download.getAttribute('href')).not.toBe(first)
 
+  const beforeBrandToggle = await download.getAttribute('href')
+  await page.getByRole('checkbox', { name: 'Include Taperday branding on the image' }).uncheck()
+  await expect.poll(() => download.getAttribute('href')).not.toBe(beforeBrandToggle)
   await page.getByLabel('Choose a milestone').selectOption('weekly-distance')
   await expect(download).toHaveAttribute('download', 'taperday-weekly-distance.png')
   if (info.project.name === 'desktop') {

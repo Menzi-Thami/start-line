@@ -6,6 +6,7 @@ import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
 import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
+import { CouchTo5K } from '../beginner/CouchTo5K'
 import { PlanTheatre } from './PlanTheatre'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 
@@ -239,6 +240,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
   const [creatingPlan] = useState(() => initial === null)
   const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
+  const [showBeginner, setShowBeginner] = useState(false)
   const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))
   const [clientErrors, setClientErrors] = useState<FieldErrors>({})
@@ -380,6 +382,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   return (
     <div className="builder wizard">
       {position === 0 && intro}
+      {creatingPlan && position === 0 && !gate && <div className="panel"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" aria-expanded={showBeginner} onClick={() => setShowBeginner(v => !v)}>{showBeginner ? 'Hide beginner programme' : 'Explore Couch to 5K'}</button>{showBeginner && <CouchTo5K />}</div>}
 
       <div className="wizard-progress">
         <p className="wizard-count">

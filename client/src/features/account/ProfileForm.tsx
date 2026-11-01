@@ -138,7 +138,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
 
       <label className="session-done" style={{ color: 'var(--ink)' }}>
         <input type="checkbox" checked={weeklyEmails} onChange={(e) => setWeeklyEmails(e.target.checked)} />
-        Send me a weekly email with how last week went and what’s next
+        Send me a weekly email with how last week went and what’s next (coming soon)
       </label>
 
       {!signingUp && (

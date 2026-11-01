@@ -77,6 +77,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         Account
       </h2>
       <p className="plan-focus">Signed in as {runner.email ?? runner.displayName}.</p>
+      <p className="account-intro-note">Your running profile, connected apps and preferences in one place.</p>
 
       <details className="settings-group"><summary>Profile & picture</summary>
       {onPhotoChange && (

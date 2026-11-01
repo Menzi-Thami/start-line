@@ -76,13 +76,3 @@ internal sealed class BrevoEmailSender(HttpClient http, IOptions<EmailOptions> o
         };
 }
 
-/// <summary>Who the Monday report goes to, and an address for a one-off test sent when the app starts.</summary>
-internal sealed class ReportOptions
-{
-    public const string Section = "Report";
-
-    public string To { get; set; } = "hello@taperday.run";
-
-    /// <summary>Set it, and the app sends one report there when it starts; clear it again after. For trying the email out.</summary>
-    public string SendTestTo { get; set; } = "";
-}

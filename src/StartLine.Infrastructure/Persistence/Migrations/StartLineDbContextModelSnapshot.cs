@@ -853,6 +853,39 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("RunnerPhotos", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Runners.WeeklyRecapDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("ClaimedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly>("WeekStart")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId", "WeekStart")
+                        .IsUnique();
+
+                    b.ToTable("WeeklyRecapDeliveries", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Shoes.Shoe", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1195,6 +1228,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
                         .WithOne()
                         .HasForeignKey("StartLine.Domain.Runners.RunnerPhoto", "RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Runners.WeeklyRecapDelivery", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

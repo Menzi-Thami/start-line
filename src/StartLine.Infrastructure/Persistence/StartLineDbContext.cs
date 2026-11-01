@@ -30,6 +30,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<CoachWeek> CoachWeeks => Set<CoachWeek>();
 
+    public DbSet<WeeklyRecapDelivery> WeeklyRecapDeliveries => Set<WeeklyRecapDelivery>();
+
     public DbSet<CoachingDecisionLog> CoachingDecisions => Set<CoachingDecisionLog>();
 
     public DbSet<PushSubscription> PushSubscriptions => Set<PushSubscription>();

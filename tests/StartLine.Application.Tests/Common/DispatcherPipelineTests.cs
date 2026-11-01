@@ -41,6 +41,7 @@ public sealed class DispatcherPipelineTests
             .AddSingleton(Substitute.For<ITickTokens>())
             .AddSingleton(Substitute.For<IUnsubscribeTokens>())
             .AddSingleton(Substitute.For<IEmailSettings>())
+            .AddSingleton(Substitute.For<IEmailSender>())
             .AddScoped(_ => Substitute.For<IApplicationDbContext>())
             .AddScoped(_ => Substitute.For<ICurrentUser>())
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>));

@@ -38,7 +38,8 @@ public sealed class TrainingInsightsTests
         await Json(await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{id}/coach/decline"), new { token, recovery = "Tired" }));
         (await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")))).GetProperty("plan").GetRawText().ShouldBe(before);
 
-        // Declining doesn't close the door: the runner can review again and accept.
+        // Declining doesn't close the door: the runner can review again and accept, a minute later.
+        factory.Time.Advance(TimeSpan.FromMinutes(1));
         var again = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}/coach/proposal?recovery=Tired")));
         await Json(await client.PostAsJsonAsync(Url($"/api/v1/me/plans/{id}/coach/apply"), new { token = again.GetProperty("token").GetString(), recovery = "Tired" }));
 

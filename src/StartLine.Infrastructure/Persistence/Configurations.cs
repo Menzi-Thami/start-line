@@ -428,3 +428,21 @@ internal sealed class WeeklyRecapDeliveryConfiguration : IEntityTypeConfiguratio
         builder.HasOne<Runner>().WithMany().HasForeignKey(d => d.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class DailyReadinessConfiguration : IEntityTypeConfiguration<DailyReadiness>
+{
+    public void Configure(EntityTypeBuilder<DailyReadiness> builder)
+    {
+        builder.ToTable("Readiness");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
+        builder.Property(r => r.Feeling).HasConversion<string>().HasMaxLength(16);
+        builder.Property(r => r.Sleep).HasConversion<string>().HasMaxLength(16);
+        builder.Property(r => r.Soreness).HasConversion<string>().HasMaxLength(16);
+        builder.Property(r => r.Note).HasMaxLength(DailyReadiness.MaxNoteLength);
+
+        // One check-in per runner per day; the runner going takes theirs with them.
+        builder.HasIndex(r => new { r.RunnerId, r.Date }).IsUnique();
+        builder.HasOne<Runner>().WithMany().HasForeignKey(r => r.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

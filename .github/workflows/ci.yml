@@ -122,6 +122,12 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
+          name: account-responsive-visual-qa
+          path: client/test-results/**/*-account-*.png
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
           name: race-week-visual-qa
           path: client/test-results/**/race-week-*.png
           if-no-files-found: ignore

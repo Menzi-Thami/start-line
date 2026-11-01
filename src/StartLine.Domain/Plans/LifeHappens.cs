@@ -52,54 +52,54 @@ public static class LifeHappens
         switch (change.Situation)
         {
             case LifeSituation.ShortOnTime:
-            {
-                var session = open.FirstOrDefault(s => s.Date == change.Date) ?? throw new DomainException("Choose a run from today on that isn't done yet.");
-                if (change.Minutes is not { } minutes || !ShortMinutes.Contains(minutes)) throw new DomainException("Choose 20, 30, 45 or 60 minutes.");
-                // Easy running for the time there is: hard work isn't squeezed into less time.
-                var km = Math.Floor(minutes * 60 / pace.Slowest.SecondsPerKilometre * 4) / 4;
-                return km >= session.DistanceKm && !IsHard(session.Type)
-                    ? new([], [])
-                    : new([Revise(session, km < RemainingWeek.MinimumRunKm ? null : km)], []);
-            }
+                {
+                    var session = open.FirstOrDefault(s => s.Date == change.Date) ?? throw new DomainException("Choose a run from today on that isn't done yet.");
+                    if (change.Minutes is not { } minutes || !ShortMinutes.Contains(minutes)) throw new DomainException("Choose 20, 30, 45 or 60 minutes.");
+                    // Easy running for the time there is: hard work isn't squeezed into less time.
+                    var km = Math.Floor(minutes * 60 / pace.Slowest.SecondsPerKilometre * 4) / 4;
+                    return km >= session.DistanceKm && !IsHard(session.Type)
+                        ? new([], [])
+                        : new([Revise(session, km < RemainingWeek.MinimumRunKm ? null : km)], []);
+                }
 
             case LifeSituation.Travelling:
-            {
-                if (change.Date is not { } from || change.Until is not { } until || until < from || from < today || until >= today.AddDays(HorizonDays))
-                    throw new DomainException($"Choose travel days from today to the next {HorizonDays} days.");
-                var away = open.Where(s => s.Date >= from && s.Date <= until).ToList();
-                return new([.. away
+                {
+                    if (change.Date is not { } from || change.Until is not { } until || until < from || from < today || until >= today.AddDays(HorizonDays))
+                        throw new DomainException($"Choose travel days from today to the next {HorizonDays} days.");
+                    var away = open.Where(s => s.Date >= from && s.Date <= until).ToList();
+                    return new([.. away
                     .Where(s => !change.CanRun || IsHard(s.Type) || s.DistanceKm > TravelEasyCapKm)
                     .Select(s => Revise(s, change.CanRun ? Math.Min(s.DistanceKm, TravelEasyCapKm) : null))], []);
-            }
+                }
 
             case LifeSituation.Unwell:
-            {
-                if (change.Days is not (>= 1 and <= 7) || change.Days is not { } days) throw new DomainException("Choose 1 to 7 days.");
-                // Rest while unwell, then come back easy and short for the next couple of runs.
-                var resting = open.Where(s => s.Date < today.AddDays(days)).Select(s => Revise(s, null));
-                var comeback = open.Where(s => s.Date >= today.AddDays(days)).Take(ComebackSessions)
-                    .Where(s => IsHard(s.Type) || s.DistanceKm > ComebackCapKm)
-                    .Select(s => Revise(s, Math.Min(s.DistanceKm, ComebackCapKm)));
-                return new([.. resting.Concat(comeback)], []);
-            }
+                {
+                    if (change.Days is not (>= 1 and <= 7) || change.Days is not { } days) throw new DomainException("Choose 1 to 7 days.");
+                    // Rest while unwell, then come back easy and short for the next couple of runs.
+                    var resting = open.Where(s => s.Date < today.AddDays(days)).Select(s => Revise(s, null));
+                    var comeback = open.Where(s => s.Date >= today.AddDays(days)).Take(ComebackSessions)
+                        .Where(s => IsHard(s.Type) || s.DistanceKm > ComebackCapKm)
+                        .Select(s => Revise(s, Math.Min(s.DistanceKm, ComebackCapKm)));
+                    return new([.. resting.Concat(comeback)], []);
+                }
 
             case LifeSituation.MissedRun:
-            {
-                var missed = runs.FirstOrDefault(s => s.Date == change.Date && s.Date < today && s.Date >= WeekStart(plan, today) && s.Type != SessionType.Race)
-                    ?? throw new DomainException("Choose a run from earlier this week.");
-                if (Done(missed)) throw new DomainException("That run is already logged.");
-                // Easy runs are let go: missed kilometres are never made up. A key session can move to a safe free day.
-                var targets = IsHard(missed.Type) ? SafeDays(plan, runs, today, missed, ignore: null) : [];
-                return Moved(missed, targets, change.MoveTo, today, restSource: false);
-            }
+                {
+                    var missed = runs.FirstOrDefault(s => s.Date == change.Date && s.Date < today && s.Date >= WeekStart(plan, today) && s.Type != SessionType.Race)
+                        ?? throw new DomainException("Choose a run from earlier this week.");
+                    if (Done(missed)) throw new DomainException("That run is already logged.");
+                    // Easy runs are let go: missed kilometres are never made up. A key session can move to a safe free day.
+                    var targets = IsHard(missed.Type) ? SafeDays(plan, runs, today, missed, ignore: null) : [];
+                    return Moved(missed, targets, change.MoveTo, today, restSource: false);
+                }
 
             case LifeSituation.MoveLongRun:
-            {
-                var longRun = open.Where(s => s.Date < WeekStart(plan, today).AddDays(7))
-                    .FirstOrDefault(s => s.Type is SessionType.LongRun or SessionType.LongRunFastFinish or SessionType.LongRunRacePace or SessionType.MediumLongRun)
-                    ?? throw new DomainException("There's no long run left to move this week.");
-                return Moved(longRun, SafeDays(plan, runs, today, longRun, ignore: longRun.Date), change.MoveTo, today, restSource: true);
-            }
+                {
+                    var longRun = open.Where(s => s.Date < WeekStart(plan, today).AddDays(7))
+                        .FirstOrDefault(s => s.Type is SessionType.LongRun or SessionType.LongRunFastFinish or SessionType.LongRunRacePace or SessionType.MediumLongRun)
+                        ?? throw new DomainException("There's no long run left to move this week.");
+                    return Moved(longRun, SafeDays(plan, runs, today, longRun, ignore: longRun.Date), change.MoveTo, today, restSource: true);
+                }
 
             default:
                 throw new DomainException("Choose what happened.");

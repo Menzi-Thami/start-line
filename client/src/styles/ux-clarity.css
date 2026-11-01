@@ -1,0 +1,65 @@
+/* UI clarity pass: progressive disclosure without dropping underlying run data. */
+.activity { position:relative; max-width: 100%; }
+.activity > .plan-kicker { margin-top: 1.5rem; }
+.activity > .plan-title { margin: .45rem 0 .75rem; font-size:clamp(2.2rem,5vw,4rem); }
+.activity-share-action { display:flex; justify-content:flex-start; margin: .3rem 0 1.6rem; }
+.activity-share-action .run-sticker > .link-button {
+  display:inline-flex; align-items:center; gap:.6rem; background:var(--surface);
+  border:1px solid var(--line-strong); border-radius:999px;
+  padding:.65rem 1rem; min-height:44px; text-decoration:none; color:var(--ink);
+}
+.activity-share-action .run-sticker > .link-button::before { content:'↗'; font-size:1.2rem; }
+.activity-stats-primary { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:clamp(.5rem,2vw,1.5rem); margin:1.5rem 0; }
+.activity-stats-primary .stat { min-width:0; padding:clamp(.7rem,2vw,1.5rem); background:var(--surface); border-radius:var(--radius-md); }
+.activity-stats-primary .stat dd { font-size:clamp(1.2rem,2.5vw,2.1rem); overflow-wrap:anywhere; }
+.activity-more-stats,.activity-section { border-top:1px solid var(--line); margin-top:.6rem; padding:1.1rem 0; }
+.activity-more-stats > summary,.activity-section > summary,.activity-verdict-detail > summary {
+  cursor:pointer; min-height:44px; display:list-item; padding:.5rem 1rem .5rem .25rem;
+  color:var(--ink); font-weight:650; font-size:1.03rem;
+}
+.activity-section > summary span { display:block; color:var(--muted); font-size:.83rem; font-weight:400; padding-top:.1rem; }
+.activity-section[open] > summary,.activity-more-stats[open] > summary { margin-bottom:1rem; }
+.activity-stats-secondary { margin-top:1rem; display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:1rem; }
+.activity .verdict { padding:clamp(1.2rem,3vw,2rem); margin:1.3rem 0 1.5rem; }
+.activity-verdict-detail { border-top:1px solid var(--line); margin-top:1rem; padding-top:.5rem; }
+.activity-analysis-grid { display:grid; gap:0 1.5rem; margin:2rem 0 3rem; }
+.activity-analysis-grid .section { margin-top:0; }
+.activity .danger-zone { margin-top:3rem; border-top:1px solid var(--line); padding-top:1.5rem; }
+.sticker-sheet {
+  position:fixed; z-index:110; inset:auto max(12px,calc((100vw - 720px)/2)) 12px;
+  max-height:min(88dvh,850px); overflow-y:auto; overscroll-behavior:contain;
+  background:var(--paper); color:var(--ink); border:1px solid var(--line-strong);
+  padding:clamp(1rem,3vw,2rem); border-radius:24px;
+  box-shadow:0 0 0 100vmax rgba(0,0,0,.52),0 18px 55px rgba(0,0,0,.25);
+}
+.sticker-sheet .sticker-panel-head { display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.runs .run-feed-row { border-bottom:1px solid var(--line); padding:.55rem 0; }
+.runs .run-feed-open { padding:1rem .75rem; min-height:76px; }
+.runs .week-name { font-size:1.1rem; font-weight:650; }
+.runs .week-meta { display:inline-block; margin-top:.5rem; line-height:1.6; color:var(--muted); }
+.account-settings > .plan-focus { margin: .5rem 0 1.5rem; color:var(--muted); }
+.account-settings .settings-group { padding: .5rem 0; border-bottom:1px solid var(--line); }
+.account-settings .settings-group > summary { padding-block:.9rem; font-size:1.08rem; min-height:48px; cursor:pointer; }
+.account-settings .account-sign-out { margin-top:2rem; }
+.wizard-hint { max-width:40ch; line-height:1.55; }
+.wizard-progress { margin-bottom:1.4rem; }
+.wizard-panel { max-width:100%; }
+.home-intro { gap:clamp(1rem,2.5vw,2rem); }
+.home-today { padding:clamp(1rem,2.8vw,2rem); }
+.home-insights,.home-tools,.training-guide { border-top:1px solid var(--line); padding-block:1rem; }
+.home-insights > summary,.home-tools > summary,.training-guide > summary { cursor:pointer; min-height:44px; }
+@media(min-width:64rem) {
+  .page:has(.activity) { max-width: min(100% - 4rem,76rem); }
+  .activity-analysis-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .activity-analysis-grid .activity-section:last-child { grid-column:1/-1; }
+}
+@media(max-width:35rem) {
+  .activity-stats-primary { gap:.4rem; }
+  .activity-stats-primary .stat { padding:.7rem .45rem; }
+  .activity-stats-primary .stat dd { font-size:clamp(1rem,4.3vw,1.55rem); }
+  .activity-stats-primary .stat dt { font-size:.7rem; }
+  .sticker-sheet { inset:auto 8px 8px; max-height:88dvh; border-radius:22px; }
+}
+@media(prefers-reduced-motion:reduce) {
+ .sticker-sheet,.activity-section,.activity-more-stats { animation:none!important; transition:none!important; }
+}

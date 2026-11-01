@@ -1,4 +1,5 @@
 import { ReadinessCheckIn } from './ReadinessCheckIn'
+import { ProgressStory } from './ProgressStory'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { ScreenRecovery } from '../../app/ScreenRecovery'
@@ -542,6 +543,7 @@ export function Home({
         {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
         <ReadinessCheckIn today={today} />
+        <ProgressStory runs={runs} today={today} />
 
         <section className="section home-section" aria-labelledby="home-training">
           <h2 id="home-training" className="home-heading">

@@ -1,0 +1,10 @@
+import React from 'react'
+import { createRoot } from 'react-dom/client'
+import '@fontsource/instrument-serif'
+import '@fontsource-variable/instrument-sans'
+import '../../src/styles/tokens.css'
+import '../../src/styles/app.css'
+import '../../src/styles/skin.css'
+import { RaceWeek } from '../../src/features/plan/RaceWeek'
+import plan from '../../src/test/fixtures/plan-5k.json'
+createRoot(document.getElementById('root')!).render(<main className="page" style={{paddingTop:24}}><RaceWeek plan={{...plan, race: {...plan.race, date: '2026-11-08'}} as Parameters<typeof RaceWeek>[0]['plan']} today="2026-11-08" /></main>)

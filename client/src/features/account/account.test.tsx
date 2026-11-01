@@ -194,7 +194,7 @@ describe('signing up comes first', () => {
     expect(screen.getByText('Step 1 of 6')).toBeInTheDocument()
     expect(screen.getByText('A pace and a reason for every run')).toBeInTheDocument()
     // Nothing unbuilt is promised as if it were there.
-    expect(screen.getByText('Coming soon').parentElement).toHaveTextContent(/weekly email/)
+    expect(screen.queryByText('Coming soon')).not.toBeInTheDocument()
     expect(screen.queryByRole('radio', { name: /Comrades/ })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Sign up free' }))

@@ -206,7 +206,11 @@ public sealed record AccountExportDto(
     RunnerPhotoDto? Photo,
     IReadOnlyList<NotificationHistoryDto>? NotificationHistory = null,
     IReadOnlyList<Insights.FeedbackNoteDto>? Feedback = null,
-    IReadOnlyList<ShoeExportDto>? Shoes = null);
+    IReadOnlyList<ShoeExportDto>? Shoes = null,
+    IReadOnlyList<CoachingDecisionExportDto>? CoachingDecisions = null);
+
+/// <summary>An answer to a weekly coaching suggestion, with the plan it belongs to.</summary>
+public sealed record CoachingDecisionExportDto(Guid PlanId, CoachingDecisionDto Decision);
 
 /// <summary>A pair of shoes as exported: the pair, and which runs (by id) and check-ins were worn in it.</summary>
 public sealed record ShoeExportDto(Shoes.ShoeDto Shoe, IReadOnlyList<Guid> ActivityIds, IReadOnlyList<Guid> CheckInIds);
@@ -287,7 +291,9 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             photo is null ? null : RunnerPhotoDto.From(photo), notificationHistory,
             await db.Feedback.AsNoTracking().Where(f => f.RunnerId == runner.Id).OrderBy(f => f.CreatedAt)
                 .Select(f => new Insights.FeedbackNoteDto(f.Message, f.Page, f.CreatedAt)).ToListAsync(cancellationToken),
-            await ShoesAsync(runner.Id, cancellationToken));
+            await ShoesAsync(runner.Id, cancellationToken),
+            [.. (await db.CoachingDecisions.AsNoTracking().Where(d => planIds.Contains(d.SavedPlanId)).OrderBy(d => d.DecidedAt).ToListAsync(cancellationToken))
+                .Select(d => new CoachingDecisionExportDto(d.SavedPlanId, CoachingDecisionDto.From(d)))]);
     }
 
     private async Task<IReadOnlyList<ShoeExportDto>> ShoesAsync(Guid runnerId, CancellationToken cancellationToken)

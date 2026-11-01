@@ -51,3 +51,13 @@ it('invalidates the weekly preview when the recovery answer changes', async () =
   expect(screen.queryByRole('button', { name: 'Apply this adjustment' })).toBeNull()
   expect(actions.apply).not.toHaveBeenCalled()
 })
+it('declines a reviewed change without applying it and says the plan stays as it is', async () => {
+  const actions = { review: vi.fn().mockResolvedValue(proposal), apply: vi.fn(), decline: vi.fn().mockResolvedValue(undefined) }
+  const user = userEvent.setup()
+  render(<PlanAdjustment current={planFixture} units="km" actions={actions} />)
+  await user.click(screen.getByRole('button', { name: 'Review training adjustments' }))
+  await user.click(await screen.findByRole('button', { name: 'Decline this change' }))
+  expect(actions.decline).toHaveBeenCalledExactlyOnceWith(proposal.token, 'NotReported')
+  expect(actions.apply).not.toHaveBeenCalled()
+  expect(await screen.findByRole('status')).toHaveTextContent('Your plan stays as it is')
+})

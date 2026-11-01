@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { formatDuration } from '../../lib/format'
-import type { CoachNote as Note, CoachReason, CoachVerdict } from '../../lib/types'
+import type { CoachNote as Note, CoachReason } from '../../lib/types'
+import { TITLES } from './verdict-titles'
 
 interface Props {
   preview?: boolean
@@ -10,14 +11,6 @@ interface Props {
   /** A faster goal the coach suggests after strong weeks, in seconds. */
   fasterGoal?: number
   onUseGoal?: (goalSeconds: number) => void
-}
-
-const TITLES: Record<CoachVerdict, string> = {
-  NotEnoughToGoOn: 'Tell me how your runs go',
-  OnTrack: 'On track',
-  Struggling: 'An easier week',
-  Hurting: 'Look after that first',
-  Thriving: 'Strong week',
 }
 
 /** Why, in Taperday's voice. The API sends the reasons as codes so the words live in one place. */

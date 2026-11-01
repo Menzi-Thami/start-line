@@ -953,6 +953,7 @@ export function App() {
                     setPlan({ kind: 'ready', plan: result.proposed.plan, inputs: plan.inputs })
                     setCoachNotes({ planId: savedOnScreen, notes: result.proposed.coaching ?? [] })
                   },
+                  decline: async (proposalToken, recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to answer the review.'); await api.me.declineCoaching(token, savedOnScreen, proposalToken, recovery) },
                 }, saveAdditional: checkIns.saveAdditional, removeAdditional: checkIns.removeAdditional } : undefined}
                 coachNotes={notes}
                 onInjuryReplan={() => replanWith({ from: today, setback: 'Injury' })}

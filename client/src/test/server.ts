@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import type { Race, Reminders, RunData, StravaStatus, TrainingPlan } from '../lib/types'
+import type { Race, Reminders, RunData, StravaStatus, TrainingInsights, TrainingPlan } from '../lib/types'
 import plan from './fixtures/plan-5k.json'
 import races from './fixtures/races.json'
 
@@ -36,6 +36,21 @@ export const runDataEmpty: RunData = {
   syncIssues: [],
 }
 
+
+/** A plan's training trends with too little running to judge: what a new runner sees. */
+export const insightsEmpty: TrainingInsights = {
+  today: '2026-11-01',
+  trends: {
+    weeks: Array.from({ length: 8 }, (_, i) => ({ weekStart: new Date(Date.UTC(2026, 8, 7 + i * 7)).toISOString().slice(0, 10), plannedKm: 0, ranKm: 0, stravaKm: 0, runs: 0, unknownDistances: 0, isCurrent: i === 7 })),
+    load: { recentKm: 0, baselineWeeklyKm: 0, baselineWeeksRun: 0, changePercent: null, signal: 'NotEnoughHistory' },
+    adherence: { planned: 0, done: 0, skipped: 0, unlogged: 0, share: null },
+    easyPace: { recentRuns: 0, earlierRuns: 0, recentSecondsPerKm: null, earlierSecondsPerKm: null, changeSecondsPerKm: null, recentHeartRate: null, earlierHeartRate: null },
+    gaps: ['FewWeeks', 'FewEasyRuns'],
+    nextStep: 'LogMore',
+    reasons: ['SparseLogs'],
+  },
+  decisions: [],
+}
 export const lastPlanRequest: { body: unknown } = { body: undefined }
 
 export const handlers = [
@@ -44,6 +59,7 @@ export const handlers = [
   http.get('*/health/ready', () => new HttpResponse('Healthy')),
   http.get('*/api/v1/races', () => HttpResponse.json(racesFixture)),
   http.get('*/api/v1/me/run-data', () => HttpResponse.json(runDataEmpty)),
+  http.get('*/api/v1/me/plans/:id/insights', () => HttpResponse.json(insightsEmpty)),
   http.get('*/api/v1/me/shoes', () => HttpResponse.json([])),
   http.get('*/api/v1/me/shoes/unworn-runs', () => HttpResponse.json([])),
   http.post('*/api/v1/plans', async ({ request }) => {

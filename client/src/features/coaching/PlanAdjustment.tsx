@@ -8,6 +8,8 @@ import { RemainingWeekAdjustment, type RemainingWeekActions } from './RemainingW
 export interface AdjustmentActions extends Partial<RemainingWeekActions> {
   review: (recovery?: RecoveryReadiness) => Promise<CoachingProposal>
   apply: (token: string, recovery?: RecoveryReadiness) => Promise<void>
+  /** Says no to the reviewed change: the plan stays as it is and the answer is kept in the coaching history. */
+  decline?: (token: string, recovery?: RecoveryReadiness) => Promise<void>
 }
 /** A preview never saves a call; the runner applies the exact proposal they reviewed. */
 export function PlanAdjustment({ current, units, actions }: { current: TrainingPlan; units: Units; actions: AdjustmentActions }) {
@@ -181,6 +183,22 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
                 }
               >
                 {busy ? 'Applying…' : proposal.hasChanges ? 'Apply this adjustment' : 'Keep this week as planned'}
+              </button>
+            )}
+            {proposal.canApply && proposal.hasChanges && actions.decline && (
+              <button
+                type="button"
+                className="button button-quiet"
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    await actions.decline!(proposal.token, recovery)
+                    setSuccess('Suggestion declined. Your plan stays as it is, and your answer is in your coaching history.')
+                    setProposal(null)
+                  })
+                }
+              >
+                Decline this change
               </button>
             )}
             <button type="button" className="button button-quiet" disabled={busy} onClick={() => setProposal(null)}>

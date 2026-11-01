@@ -1804,6 +1804,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/readiness": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    days?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReadinessDto"][];
+                        "application/json": components["schemas"]["ReadinessDto"][];
+                        "text/json": components["schemas"]["ReadinessDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/readiness/{date}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    date: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["LogReadinessRequest"];
+                    "text/json": components["schemas"]["LogReadinessRequest"];
+                    "application/*+json": components["schemas"]["LogReadinessRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ReadinessDto"];
+                        "application/json": components["schemas"]["ReadinessDto"];
+                        "text/json": components["schemas"]["ReadinessDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    date: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/reminders": {
         parameters: {
             query?: never;
@@ -3037,6 +3162,7 @@ export interface components {
             feedback?: null | components["schemas"]["FeedbackNoteDto"][];
             shoes?: null | components["schemas"]["ShoeExportDto"][];
             coachingDecisions?: null | components["schemas"]["CoachingDecisionExportDto"][];
+            readiness?: null | components["schemas"]["ReadinessDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -3298,6 +3424,8 @@ export interface components {
             /** Format: date-time */
             at: string;
         };
+        /** @enum {unknown} */
+        Feeling: "Fresh" | "Okay" | "Tired" | "Unwell";
         GeneratePlanQuery: {
             raceSlug: null | string;
             raceName: null | string;
@@ -3398,6 +3526,12 @@ export interface components {
         };
         /** @enum {unknown} */
         LoggedRunSource: "Ticked" | "Uploaded" | "Strava";
+        LogReadinessRequest: {
+            feeling: components["schemas"]["Feeling"];
+            sleep?: null | components["schemas"]["SleepQuality"];
+            soreness?: null | components["schemas"]["Soreness"];
+            note?: null | string;
+        };
         MissingDataDto: {
             /** Format: int32 */
             runs: number;
@@ -3637,6 +3771,16 @@ export interface components {
             date: string;
             /** Format: double */
             distanceKm: number;
+        };
+        ReadinessDto: {
+            /** Format: date */
+            date: string;
+            feeling: components["schemas"]["Feeling"];
+            sleep: null | components["schemas"]["SleepQuality"];
+            soreness: null | components["schemas"]["Soreness"];
+            note: null | string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         /** @enum {unknown} */
         RecordingFormat: "Fit" | "Gpx" | "Tcx";
@@ -3931,6 +4075,10 @@ export interface components {
         };
         /** @enum {unknown} */
         ShoeWear: "Fine" | "NearingLimit" | "PastLimit";
+        /** @enum {unknown} */
+        SleepQuality: "Good" | "Okay" | "Poor";
+        /** @enum {unknown} */
+        Soreness: "None" | "Some" | "Heavy";
         SourceDto: {
             kind: components["schemas"]["ActivitySource"];
             /** Format: uri */
@@ -4165,6 +4313,8 @@ export interface components {
             /** Format: int32 */
             unknownDistances: number;
             recovery: components["schemas"]["RecoveryReadiness"];
+            /** @default false */
+            recoveryFromCheckIn: boolean;
         };
         /** @enum {unknown} */
         WorkShape: "Steady" | "Continuous" | "Reps" | "ByEffort";

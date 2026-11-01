@@ -8,7 +8,11 @@ import type {
   CoachingProposal,
   RemainingWeekProposal,
   RecoveryReadiness,
+  Feeling,
   ProgressStory,
+  Readiness,
+  SleepQuality,
+  Soreness,
   TrainingInsights,
   CheckIn,
   CheckInRequest,
@@ -217,6 +221,12 @@ export const api = {
     trainingInsights: (token: string, id: string) => request<TrainingInsights>(`/api/v1/me/plans/${encodeURIComponent(id)}/insights`, { cache: 'no-store' }, token),
     /** How the runner has progressed over the last 4, 8 or 12 weeks against the same span before. */
     progressStory: (token: string, id: string, weeks: 4 | 8 | 12) => request<ProgressStory>(`/api/v1/me/plans/${encodeURIComponent(id)}/progress?weeks=${weeks}`, { cache: 'no-store' }, token),
+    /** The runner's daily readiness check-ins, newest first (today and up to 13 days before). */
+    readiness: (token: string) => request<Readiness[]>('/api/v1/me/readiness', { cache: 'no-store' }, token),
+    /** Logs or changes how the runner felt on a day. */
+    logReadiness: (token: string, date: string, body: { feeling: Feeling; sleep?: SleepQuality | null; soreness?: Soreness | null; note?: string | null }) => request<Readiness>(`/api/v1/me/readiness/${encodeURIComponent(date)}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+    /** Clears a day's check-in. */
+    clearReadiness: (token: string, date: string) => request<void>(`/api/v1/me/readiness/${encodeURIComponent(date)}`, { method: 'DELETE' }, token),
     reviewRemainingWeek: (token: string, id: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal`, {}, token),
     applyRemainingWeek: (token: string, id: string, proposalToken: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
     /** The runner's check-ins on one saved plan: how each run went. */

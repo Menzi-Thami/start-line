@@ -188,7 +188,8 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
 /// the suggestion, or declines it: a decline changes nothing but is kept in their coaching history.
 /// </summary>
 public sealed record WeeklyReviewDto(DateOnly ReviewedWeek, DateOnly TargetWeek, int RunsPlanned, int RunsCompleted, int Skipped,
-    int MissingCheckIns, int Substitutions, double PlannedKm, double ReportedKm, int UnknownDistances, RecoveryReadiness Recovery);
+    int MissingCheckIns, int Substitutions, double PlannedKm, double ReportedKm, int UnknownDistances, RecoveryReadiness Recovery,
+    bool RecoveryFromCheckIn = false);
 public sealed record CoachingProposalDto(string Token, bool HasChanges, bool CanApply, SavedPlanDto Proposed, WeeklyReviewDto? Review = null);
 
 public sealed record ReviewCoachingCommand(Guid Id, string? AcceptToken = null, RecoveryReadiness Recovery = RecoveryReadiness.NotReported, bool Decline = false) : IRequest<CoachingProposalDto>;
@@ -202,9 +203,12 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         var existing = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
         if (!Enum.IsDefined(request.Recovery)) throw new Domain.Common.DomainException("Choose how recovered you feel.");
-        var proposed = await coach.CallsAsync(saved, runner, cancellationToken, preview: true, recovery: request.Recovery);
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
         var today = CoachCalls.LocalToday(runner, time);
+        // Not answered here: today's or yesterday's check-in answers instead, and the review says so. The runner still applies it.
+        var fromCheckIn = request.Recovery == RecoveryReadiness.NotReported ? await ReadinessForReview.LatestAsync(db, runner.Id, today, cancellationToken) : null;
+        var recovery = fromCheckIn ?? request.Recovery;
+        var proposed = await coach.CallsAsync(saved, runner, cancellationToken, preview: true, recovery: recovery);
+        var query = SavedPlanMapping.ToQuery(saved.Inputs);
         var targetDay = today.DayOfWeek == DayOfWeek.Sunday ? today.AddDays(1) : today;
         var targetWeek = targetDay.AddDays(-((int)targetDay.DayOfWeek + 6) % 7);
         var plan = builder.Build(query, proposed, saved.Adjustments, targetWeek);
@@ -221,7 +225,7 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
             review = new(from, targetWeek, sessions.Count, logged.Count(c => c.Entry is { Status: not CheckInStatus.Skipped } || c.Entry is null && c.Uploaded),
                 logged.Count(c => c.Entry?.Status == CheckInStatus.Skipped), logged.Count(c => c.Entry is null && !c.Uploaded),
                 logged.Count(c => c.Entry is { } e && (e.Status == CheckInStatus.SwappedForEasy || e.ActualSessionType is { } actual && actual != e.SessionType)),
-                reviewed.PlannedKm, km, answers.Count(c => c.Status != CheckInStatus.Skipped && c.DistanceKm is null && !uploads.Any(a => a.Id == c.ActivityId || !c.IsAdditional && a.LocalDate == c.Date)), request.Recovery);
+                reviewed.PlannedKm, km, answers.Count(c => c.Status != CheckInStatus.Skipped && c.DistanceKm is null && !uploads.Any(a => a.Id == c.ActivityId || !c.IsAdditional && a.LocalDate == c.Date)), recovery, fromCheckIn is not null);
         }
         var completedToday = await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id && c.Date == today && !c.IsAdditional && c.Status != CheckInStatus.Skipped, cancellationToken);
         var originalPast = original.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date < today || completedToday && s.Date == today);
@@ -248,14 +252,14 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
 
             if (request.Decline)
             {
-                db.CoachingDecisions.Add(CoachingDecisionLog.Record(saved.Id, pending, CoachingOutcome.Declined, changed, request.Recovery, time.GetUtcNow()));
+                db.CoachingDecisions.Add(CoachingDecisionLog.Record(saved.Id, pending, CoachingOutcome.Declined, changed, recovery, time.GetUtcNow()));
                 await db.SaveChangesAsync(cancellationToken);
                 // Nothing changes: the plan stays as the runner had it, and the suggestion can be reviewed again.
                 dto = dto with { Plan = original, Coaching = [.. existing.Select(CoachNoteDto.From)] };
                 return new(token, false, canApply, dto, review);
             }
 
-            await coach.AcceptAsync(saved.Id, pending, changed, request.Recovery, cancellationToken);
+            await coach.AcceptAsync(saved.Id, pending, changed, recovery, cancellationToken);
             // The apply response is the current view, while the preview shows the target week’s zones.
             dto = dto with { Plan = builder.Build(query, proposed, saved.Adjustments, today) };
         }

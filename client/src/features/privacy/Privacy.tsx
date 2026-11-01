@@ -181,6 +181,11 @@ export function PrivacyPolicy() {
             your running totals count ticked sessions and uploads, never runs from Strava.
           </li>
           <li>
+            <strong>How you feel, only if you say:</strong> the feeling you pick for a day (fresh, okay, tired or unwell), and how you
+            slept, how sore you are and a short note if you add them. It’s what you tell us, never a diagnosis. Your weekly review reads
+            today’s or yesterday’s answer, and nothing changes until you apply it. You can change or clear any of the last two weeks.
+          </li>
+          <li>
             <strong>Reminders, only if you turn them on:</strong> for each device you turn them on for, the push address and keys your
             browser gives us (encrypted, because with them anyone could send that device a notification), the time you chose, whether you
             want the Monday note, and the last day we sent one. So we can remind you of the day’s run, once, at your time.

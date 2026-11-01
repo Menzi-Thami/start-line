@@ -1868,56 +1868,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/run-data/keep-both": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["KeepBothRunsCommand"];
-                    "text/json": components["schemas"]["KeepBothRunsCommand"];
-                    "application/*+json": components["schemas"]["KeepBothRunsCommand"];
-                };
-            };
-            responses: {
-                /** @description No Content */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Not Found */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/me/run-data/delete": {
         parameters: {
             query?: never;
@@ -2872,12 +2822,6 @@ export interface components {
         ImportStatus: "Imported" | "AlreadyUploaded" | "Skipped" | "Unreadable" | "LimitReached";
         /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
-        KeepBothRunsCommand: {
-            /** Format: uuid */
-            firstActivityId: string;
-            /** Format: uuid */
-            secondActivityId: string;
-        };
         LoggedRunDto: {
             /** Format: date */
             date: string;
@@ -3017,11 +2961,6 @@ export interface components {
             isReplanned: boolean;
             guidance?: null | string;
         };
-        PossibleDuplicateDto: {
-            first: components["schemas"]["ActivitySummaryDto"];
-            second: components["schemas"]["ActivitySummaryDto"];
-            relation: components["schemas"]["RunRelation"];
-        };
         PredictionDto: {
             /** Format: double */
             distanceKm: number;
@@ -3122,7 +3061,6 @@ export interface components {
         RunDataDto: {
             sources: components["schemas"]["RunSourcesDto"];
             totals: components["schemas"]["TotalsBreakdownDto"][];
-            possibleDuplicates: components["schemas"]["PossibleDuplicateDto"][];
             missing: components["schemas"]["MissingDataDto"];
             syncIssues: components["schemas"]["SyncIssueDto"][];
         };
@@ -3148,8 +3086,6 @@ export interface components {
         RunnerPhotoDto: {
             dataUrl: string;
         };
-        /** @enum {unknown} */
-        RunRelation: "Unrelated" | "SameRun" | "Overlapping";
         RunSourcesDto: {
             /** Format: int32 */
             uploads: number;

@@ -1,26 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
-import { formatDate, formatDistance, formatShortDay as shortDay, type Units } from '../../lib/format'
-import type { ActivitySummary, PossibleDuplicate, RunData, TotalsBreakdown } from '../../lib/types'
+import { formatDistance, formatShortDay as shortDay, type Units } from '../../lib/format'
+import type { RunData, TotalsBreakdown } from '../../lib/types'
 
 type State = { kind: 'loading' } | { kind: 'ready'; data: RunData } | { kind: 'error'; message: string }
 
 interface Props {
   units: Units
-  onOpen: (id: string) => void
-  /** Called after runs are deleted, so the list above refreshes. */
-  onChanged: () => void
   /** Changes when the runs list reloads, so this panel reloads with it. */
   refreshKey?: number
 }
 
-const SOURCE_LABEL = { Upload: 'Upload', Strava: 'Strava' } as const
-
 function isRunData(value: unknown): value is RunData {
   const data = value as Partial<RunData> | null
   return typeof data === 'object' && data !== null && !Array.isArray(data) && typeof data.sources === 'object' && data.sources !== null
-    && Array.isArray(data.totals) && Array.isArray(data.possibleDuplicates) && Array.isArray(data.syncIssues) && typeof data.missing === 'object' && data.missing !== null
+    && Array.isArray(data.totals) && Array.isArray(data.syncIssues) && typeof data.missing === 'object' && data.missing !== null
 }
 
 function plural(count: number, one: string, many = `${one}s`) {
@@ -61,21 +56,12 @@ function Breakdown({ totals, units }: { totals: TotalsBreakdown; units: Units })
   )
 }
 
-function RunLine({ run, units, onOpen }: { run: ActivitySummary; units: Units; onOpen: (id: string) => void }) {
-  return (
-    <button type="button" className="link-button run-data-run" onClick={() => onOpen(run.id)}>
-      {formatDate(run.localDate, 'short')} · <span className="mono">{formatDistance(run.distanceKm, units)}</span> · {SOURCE_LABEL[run.source.kind]}
-      {run.source.fileName ? ` · ${run.source.fileName}` : ''}
-    </button>
-  )
-}
-
 /**
- * The runner's run data, made inspectable: where each total comes from, which sources feed it, runs that may be
- * duplicates (resolved by the runner, never automatically), measurements that are missing and why, runs that didn't
- * sync (with a retry), and a CSV download. Collapsed by default: the runs list stays first.
+ * The runner's run data, made inspectable: where each total comes from, which sources feed it, measurements that are
+ * missing, runs from Strava that didn't arrive (with a retry), and a CSV download. Duplicates never appear here: one
+ * recording per run is kept automatically. Collapsed by default: the runs list stays first.
  */
-export function RunDataPanel({ units, onOpen, onChanged, refreshKey }: Props) {
+export function RunDataPanel({ units, refreshKey }: Props) {
   const auth = useAuth()
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [busy, setBusy] = useState<string | null>(null)
@@ -102,14 +88,13 @@ export function RunDataPanel({ units, onOpen, onChanged, refreshKey }: Props) {
   useEffect(() => load(), [load, refreshKey])
 
   // Each action shows its own outcome in words, then reloads what it changed.
-  const act = async (key: string, work: (token: string) => Promise<string>, after?: () => void) => {
+  const act = async (key: string, work: (token: string) => Promise<string>) => {
     setBusy(key)
     setMessage(null)
     try {
       const token = await auth.getToken()
       if (!token) throw new Error('Sign in again to carry on.')
       setMessage({ text: await work(token) })
-      after?.()
       load()
     } catch (error) {
       setMessage({ text: error instanceof Error ? error.message : 'That didn’t work. Try again.', error: true })
@@ -117,18 +102,6 @@ export function RunDataPanel({ units, onOpen, onChanged, refreshKey }: Props) {
       setBusy(null)
     }
   }
-
-  const deleteRun = (run: ActivitySummary) =>
-    act(`delete-${run.id}`, async (token) => {
-      await api.me.deleteActivities(token, [run.id])
-      return `Deleted the ${formatDate(run.localDate, 'short')} run.`
-    }, onChanged)
-
-  const keepBoth = (pair: PossibleDuplicate) =>
-    act(`keep-${pair.first.id}`, async (token) => {
-      await api.me.keepBothRuns(token, pair.first.id, pair.second.id)
-      return 'Kept both. Taperday won’t ask about these two again.'
-    })
 
   const retry = () =>
     act('retry', async (token) => {
@@ -150,13 +123,13 @@ export function RunDataPanel({ units, onOpen, onChanged, refreshKey }: Props) {
 
   const data = state.kind === 'ready' ? state.data : null
   const failed = data?.syncIssues.filter((issue) => !issue.skipped) ?? []
-  const attention = (data?.possibleDuplicates.length ?? 0) + failed.length
+  const attention = failed.length
 
   return (
     <details className="disclosure run-data" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>
         Your run data
-        {attention > 0 && <span className="field-error"> · {plural(attention, 'thing')} to check</span>}
+        {attention > 0 && <span className="field-error"> · {plural(attention, 'run')} from Strava didn’t arrive</span>}
       </summary>
 
       {state.kind === 'loading' && <p className="field-help" role="status">Checking your runs…</p>}
@@ -226,31 +199,6 @@ export function RunDataPanel({ units, onOpen, onChanged, refreshKey }: Props) {
                   {busy === 'retry' ? 'Retrying…' : `Try ${failed.length === 1 ? 'it' : 'them'} again`}
                 </button>
               )}
-            </section>
-          )}
-
-          {data.possibleDuplicates.length > 0 && (
-            <section className="run-data-section" aria-labelledby="run-data-duplicates">
-              <h3 id="run-data-duplicates">Possible duplicates</h3>
-              <p className="field-help">These runs overlap in time. Delete the copy you don’t want, or keep both if they’re different runs.</p>
-              <ul className="run-data-pairs">
-                {data.possibleDuplicates.map((pair) => (
-                  <li key={`${pair.first.id}-${pair.second.id}`} className="run-data-pair">
-                    <p className="run-data-pair-kind">{pair.relation === 'SameRun' ? 'Looks like the same run twice' : 'Overlapping runs'}</p>
-                    {[pair.first, pair.second].map((run) => (
-                      <div key={run.id} className="run-data-pair-run">
-                        <RunLine run={run} units={units} onOpen={onOpen} />
-                        <button type="button" className="button button-quiet" disabled={busy !== null} onClick={() => deleteRun(run)}>
-                          {busy === `delete-${run.id}` ? 'Deleting…' : 'Delete this one'}
-                        </button>
-                      </div>
-                    ))}
-                    <button type="button" className="link-button" disabled={busy !== null} onClick={() => keepBoth(pair)}>
-                      Keep both
-                    </button>
-                  </li>
-                ))}
-              </ul>
             </section>
           )}
 

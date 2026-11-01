@@ -257,31 +257,6 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("Activities", (string)null);
                 });
 
-            modelBuilder.Entity("StartLine.Domain.Activities.DuplicateDismissal", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<Guid>("FirstActivityId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RunnerId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("SecondActivityId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RunnerId", "FirstActivityId", "SecondActivityId")
-                        .IsUnique();
-
-                    b.ToTable("DuplicateDismissals", (string)null);
-                });
-
             modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1013,15 +988,6 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Navigation("BestEfforts");
 
                     b.Navigation("Splits");
-                });
-
-            modelBuilder.Entity("StartLine.Domain.Activities.DuplicateDismissal", b =>
-                {
-                    b.HasOne("StartLine.Domain.Runners.Runner", null)
-                        .WithMany()
-                        .HasForeignKey("RunnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>

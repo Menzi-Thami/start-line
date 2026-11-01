@@ -15,30 +15,23 @@ public class RunMatchTests
     [InlineData(-110, 10_000, 9_800)]
     [InlineData(30, 3_000, 3_140)]
     public void A_start_within_two_minutes_and_the_same_distance_is_the_same_run(int secondsApart, double first, double second) =>
-        RunMatch.Compare(Start, Hour, first, Start.AddSeconds(secondsApart), Hour, second).ShouldBe(RunRelation.SameRun);
+        RunMatch.IsSameRun(Start, Hour, first, Start.AddSeconds(secondsApart), Hour, second).ShouldBeTrue();
+
+    [Fact]
+    public void A_watch_and_a_phone_on_one_run_are_the_same_run_even_when_gps_disagrees_on_the_distance() =>
+        RunMatch.IsSameRun(Start, Hour, 10_000, Start.AddSeconds(40), Hour - TimeSpan.FromMinutes(2), 10_900).ShouldBeTrue();
 
     [Fact]
     public void Three_minutes_apart_is_not_the_same_run_even_at_the_same_distance() =>
-        RunMatch.IsSameRun(Start, 10_000, Start.AddMinutes(3), 10_000).ShouldBeFalse();
+        RunMatch.IsSameRun(Start, Hour, 10_000, Start.AddMinutes(3), Hour, 10_000).ShouldBeFalse();
 
     [Fact]
-    public void A_much_shorter_run_inside_a_longer_one_overlaps_but_is_not_the_same() =>
-        RunMatch.Compare(Start, Hour, 10_000, Start.AddMinutes(20), TimeSpan.FromMinutes(20), 4_000).ShouldBe(RunRelation.Overlapping);
+    public void A_few_minutes_started_by_accident_inside_a_long_run_is_a_different_recording() =>
+        RunMatch.IsSameRun(Start, Hour, 10_000, Start.AddSeconds(60), TimeSpan.FromMinutes(5), 1_000).ShouldBeFalse();
 
     [Fact]
-    public void Runs_that_dont_overlap_are_unrelated() =>
-        RunMatch.Compare(Start, Hour, 10_000, Start.AddHours(2), Hour, 10_000).ShouldBe(RunRelation.Unrelated);
-
-    [Fact]
-    public void A_dismissed_pair_is_stored_one_way_round()
-    {
-        var a = Guid.NewGuid();
-        var b = Guid.NewGuid();
-        var one = DuplicateDismissal.Of(Guid.NewGuid(), a, b, Start);
-        var other = DuplicateDismissal.Of(Guid.NewGuid(), b, a, Start);
-        (one.FirstActivityId, one.SecondActivityId).ShouldBe((other.FirstActivityId, other.SecondActivityId));
-        Should.Throw<DomainException>(() => DuplicateDismissal.Of(Guid.NewGuid(), a, a, Start));
-    }
+    public void Different_distances_that_barely_overlap_are_kept_apart() =>
+        RunMatch.IsSameRun(Start, TimeSpan.FromMinutes(10), 2_000, Start.AddSeconds(90), Hour, 10_000).ShouldBeFalse();
 
     [Fact]
     public void An_upload_origin_keeps_only_the_file_name_and_cuts_long_ones()

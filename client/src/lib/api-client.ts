@@ -253,8 +253,6 @@ export const api = {
     /** Where the runner's runs came from, what makes up this week's and month's totals, duplicates, gaps and sync problems. */
     runData: (token: string) => request<RunData>('/api/v1/me/run-data', { cache: 'no-store' }, token),
     retryStrava: (token: string) => request<{ retried: number }>('/api/v1/me/run-data/retry-strava', { method: 'POST' }, token),
-    keepBothRuns: (token: string, firstActivityId: string, secondActivityId: string) =>
-      request<void>('/api/v1/me/run-data/keep-both', { method: 'POST', body: JSON.stringify({ firstActivityId, secondActivityId }) }, token),
     deleteActivities: (token: string, activityIds: readonly string[]) =>
       request<{ deleted: number }>('/api/v1/me/run-data/delete', { method: 'POST', body: JSON.stringify({ activityIds }) }, token),
     /** Every run as a CSV file (not JSON, so it skips the JSON request helper). */

@@ -13,27 +13,23 @@ const summary = (id: string, km: number, kind: 'Upload' | 'Strava', fileName: st
 
 /** The real app with synthetic sign-in, and a run-data API that changes as the runner resolves things. */
 async function mockApi(page: Page) {
-  const state = { runs: [summary('upload', 10.02, 'Upload', 'morning.fit'), summary('strava', 10, 'Strava')], kept: false, deleted: [] as string[] }
+  const state = { runs: [summary('upload', 10.02, 'Upload', 'morning.fit')], retried: false }
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
     if (path === '/api/v1/me') return route.fulfill({ json: runner })
     if (path === '/api/v1/me/activities') return route.fulfill({ json: state.runs })
-    if (path === '/api/v1/me/run-data/delete') {
-      const ids = (request.postDataJSON() as { activityIds: string[] }).activityIds
-      state.deleted.push(...ids)
-      state.runs = state.runs.filter((r) => !ids.includes(r.id))
-      return route.fulfill({ json: { deleted: ids.length } })
+    if (path === '/api/v1/me/run-data/retry-strava') {
+      state.retried = true
+      return route.fulfill({ json: { retried: 1 } })
     }
     if (path === '/api/v1/me/run-data') {
-      const pair = state.runs.length === 2 && !state.kept ? [{ first: state.runs[0], second: state.runs[1], relation: 'SameRun' }] : []
       return route.fulfill({
         json: {
           sources: { uploads: 1, fit: 1, gpx: 0, tcx: 0, unknownFormat: 0, strava: 1, stravaConnected: true, stravaStatus: 'Active', lastSyncedAt: '2026-10-29T06:00:00Z', stravaPending: 0 },
           totals: [{ period: 'week', from: '2026-10-26', to: '2026-10-29', totalKm: 10.02, runs: 1, tickedKm: 0, tickedRuns: 0, uploadedKm: 10.02, uploadedRuns: 1, stravaKm: 0, stravaRuns: 0, withoutDistance: 0 }],
-          possibleDuplicates: pair,
           missing: { runs: state.runs.length, withoutHeartRate: 0, withoutElevation: 0, withoutSplits: 0, heartRateConsent: true },
-          syncIssues: [],
+          syncIssues: state.retried ? [] : [{ stravaActivityId: 77, reason: 'Strava answered 503', skipped: false, at: '2026-10-28T06:00:00Z' }],
         },
       })
     }
@@ -43,23 +39,20 @@ async function mockApi(page: Page) {
   return state
 }
 
-test('a runner sees what their total is made of and deletes a duplicate copy @phone', async ({ page }) => {
+test('a runner sees what their total is made of and retries a run that failed to arrive @phone', async ({ page }) => {
   const state = await mockApi(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/plan-edit.html?view=runs')
 
   const panel = page.locator('details.run-data')
-  await expect(panel.locator('summary')).toContainText('1 thing to check')
+  await expect(panel.locator('summary')).toContainText('1 run from Strava didn’t arrive')
   await panel.locator('summary').click()
   await expect(panel.getByRole('table', { name: 'This week: where the total comes from' })).toBeVisible()
-  await expect(panel.getByText('Looks like the same run twice')).toBeVisible()
 
-  const stravaCopy = panel.locator('.run-data-pair-run').filter({ hasText: 'Strava' })
-  await stravaCopy.getByRole('button', { name: 'Delete this one' }).click()
+  await panel.getByRole('button', { name: 'Try it again' }).click()
 
-  await expect(panel.getByRole('status')).toContainText('Deleted the')
-  await expect(panel.getByText('Looks like the same run twice')).toHaveCount(0)
-  expect(state.deleted).toEqual(['strava'])
-  await expect(page.locator('.run-feed-row')).toHaveCount(1)
+  await expect(panel.getByRole('status')).toContainText('Trying 1 run from Strava again.')
+  expect(state.retried).toBe(true)
+  await expect(panel.locator('summary')).not.toContainText('didn’t arrive')
 
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 })

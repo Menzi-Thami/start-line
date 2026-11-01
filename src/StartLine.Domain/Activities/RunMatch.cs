@@ -1,20 +1,11 @@
 namespace StartLine.Domain.Activities;
 
-/// <summary>How two recorded runs relate: the same run recorded twice, two runs that overlap in time, or unrelated.</summary>
-public enum RunRelation
-{
-    Unrelated,
-
-    /// <summary>Started within <see cref="RunMatch.SameStartWithin"/> and the distances agree: one run, recorded or imported twice.</summary>
-    SameRun,
-
-    /// <summary>The two runs' times overlap but they don't agree well enough to be called the same run. The runner decides.</summary>
-    Overlapping,
-}
-
 /// <summary>
-/// Tells duplicates apart. Watches, file formats and Strava disagree by a few seconds on when a run started (a FIT
-/// session's start, a GPX file's first point, Strava's start date), so an exact start time misses real duplicates.
+/// Tells when two recordings are one run, so Taperday keeps one and never asks the runner to sort duplicates out.
+/// Watches, phones, file formats and Strava disagree by a few seconds on when a run started and, with GPS, by more than a
+/// little on how far it went. So a run recorded twice (a watch and a phone, a FIT file and its GPX export, a file and its
+/// Strava copy) is one that started within <see cref="SameStartWithin"/> and either agrees on the distance or overlaps
+/// the other recording almost entirely.
 /// </summary>
 public static class RunMatch
 {
@@ -27,29 +18,59 @@ public static class RunMatch
     /// <summary>Short runs can differ by a GPS wobble more than 3%: always allow this much.</summary>
     public const double DistanceSlackMetres = 150;
 
-    public static RunRelation Compare(Activity first, Activity second)
+    /// <summary>
+    /// The share of the longer recording the two must overlap when two devices recorded the same run. Measured against the
+    /// longer one, so a few minutes started by accident inside a long run is never taken for the run itself.
+    /// </summary>
+    public const double OverlapShare = 0.8;
+
+    public static bool IsSameRun(Activity first, Activity second)
     {
         ArgumentNullException.ThrowIfNull(first);
         ArgumentNullException.ThrowIfNull(second);
-        return Compare(first.StartedAt, first.ElapsedTime, first.DistanceMetres, second.StartedAt, second.ElapsedTime, second.DistanceMetres);
+        return IsSameRun(first.StartedAt, first.ElapsedTime, first.DistanceMetres, second.StartedAt, second.ElapsedTime, second.DistanceMetres);
     }
 
-    public static RunRelation Compare(
+    public static bool IsSameRun(
         DateTimeOffset firstStart, TimeSpan firstElapsed, double firstMetres, DateTimeOffset secondStart, TimeSpan secondElapsed, double secondMetres)
     {
-        if (IsSameRun(firstStart, firstMetres, secondStart, secondMetres))
+        if ((firstStart - secondStart).Duration() > SameStartWithin)
         {
-            return RunRelation.SameRun;
+            return false;
         }
 
-        var overlap = firstStart < secondStart + secondElapsed && secondStart < firstStart + firstElapsed;
-        return overlap ? RunRelation.Overlapping : RunRelation.Unrelated;
+        var longer = Math.Max(firstMetres, secondMetres);
+        if (Math.Abs(firstMetres - secondMetres) <= Math.Max(longer * DistanceTolerance, DistanceSlackMetres))
+        {
+            return true;
+        }
+
+        var overlap = Min(firstStart + firstElapsed, secondStart + secondElapsed) - Max(firstStart, secondStart);
+        var longerTime = firstElapsed > secondElapsed ? firstElapsed : secondElapsed;
+        return longerTime > TimeSpan.Zero && overlap.TotalSeconds >= longerTime.TotalSeconds * OverlapShare;
     }
 
-    public static bool IsSameRun(DateTimeOffset firstStart, double firstMetres, DateTimeOffset secondStart, double secondMetres)
+    /// <summary>
+    /// True when <paramref name="candidate"/> is the better recording of the same run to keep than <paramref name="kept"/>:
+    /// the runner's own upload beats a synced copy; otherwise the one that measured more (heart rate, splits, elevation).
+    /// A tie keeps what's already there.
+    /// </summary>
+    public static bool IsBetterRecording(Activity candidate, Activity kept)
     {
-        var apart = (firstStart - secondStart).Duration();
-        var longer = Math.Max(firstMetres, secondMetres);
-        return apart <= SameStartWithin && Math.Abs(firstMetres - secondMetres) <= Math.Max(longer * DistanceTolerance, DistanceSlackMetres);
+        ArgumentNullException.ThrowIfNull(candidate);
+        ArgumentNullException.ThrowIfNull(kept);
+        if (candidate.Source != kept.Source)
+        {
+            return candidate.Source == ActivitySource.Upload;
+        }
+
+        return Richness(candidate) > Richness(kept);
     }
+
+    private static int Richness(Activity run) =>
+        (run.AverageHeartRate is null ? 0 : 2) + (run.Splits.Count > 0 ? 1 : 0) + (run.ElevationGainMetres is null ? 0 : 1);
+
+    private static DateTimeOffset Min(DateTimeOffset a, DateTimeOffset b) => a < b ? a : b;
+
+    private static DateTimeOffset Max(DateTimeOffset a, DateTimeOffset b) => a > b ? a : b;
 }

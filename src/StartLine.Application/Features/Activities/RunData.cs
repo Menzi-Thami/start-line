@@ -45,9 +45,6 @@ public sealed record TotalsBreakdownDto(
     int StravaRuns,
     int WithoutDistance);
 
-/// <summary>Two runs that may be the same one. <see cref="RunRelation.SameRun"/> pairs are almost certainly duplicates.</summary>
-public sealed record PossibleDuplicateDto(ActivitySummaryDto First, ActivitySummaryDto Second, RunRelation Relation);
-
 /// <summary>How many runs are missing each measurement, so gaps in charts and comparisons can be explained.</summary>
 public sealed record MissingDataDto(int Runs, int WithoutHeartRate, int WithoutElevation, int WithoutSplits, bool HeartRateConsent);
 
@@ -57,12 +54,12 @@ public sealed record SyncIssueDto(long StravaActivityId, string Reason, bool Ski
 public sealed record RunDataDto(
     RunSourcesDto Sources,
     IReadOnlyList<TotalsBreakdownDto> Totals,
-    IReadOnlyList<PossibleDuplicateDto> PossibleDuplicates,
     MissingDataDto Missing,
     IReadOnlyList<SyncIssueDto> SyncIssues);
 
 /// <summary>Everything the runner needs to trust their numbers: sources, the make-up of this week's and month's totals,
-/// possible duplicates, missing measurements and runs that didn't sync.</summary>
+/// missing measurements and runs that didn't sync. Duplicates never reach the runner: one recording per run is kept on
+/// arrival (see <see cref="RunMatch"/>).</summary>
 public sealed record GetRunDataQuery : IRequest<RunDataDto>;
 
 internal sealed class GetRunDataHandler(IApplicationDbContext db, CurrentRunner current, RunningLogReader reader, TimeProvider time)
@@ -112,13 +109,6 @@ internal sealed class GetRunDataHandler(IApplicationDbContext db, CurrentRunner 
                 inPeriod.Count(r => r.DistanceUnreported));
         }
 
-        var dismissed = (await db.DuplicateDismissals.AsNoTracking()
-                .Where(d => d.RunnerId == runner.Id)
-                .Select(d => new { d.FirstActivityId, d.SecondActivityId })
-                .ToListAsync(cancellationToken))
-            .Select(d => (d.FirstActivityId, d.SecondActivityId))
-            .ToHashSet();
-
         var missing = new MissingDataDto(
             runs.Count,
             runs.Count(a => a.AverageHeartRate is null),
@@ -135,32 +125,10 @@ internal sealed class GetRunDataHandler(IApplicationDbContext db, CurrentRunner 
         return new RunDataDto(
             sources,
             [Breakdown("week", weekStart), Breakdown("month", monthStart)],
-            [.. PossibleDuplicates(runs, dismissed)],
             missing,
             issues);
     }
 
-    /// <summary>
-    /// Pairs of runs that overlap in time, or are the same run recorded twice, that the runner hasn't said to keep.
-    /// The runs are in start order, so each is only compared with the ones that start before it has finished.
-    /// </summary>
-    private static IEnumerable<PossibleDuplicateDto> PossibleDuplicates(List<Activity> runs, HashSet<(Guid, Guid)> dismissed)
-    {
-        for (var i = 0; i < runs.Count; i++)
-        {
-            var first = runs[i];
-            var reach = first.StartedAt + first.ElapsedTime + RunMatch.SameStartWithin;
-            for (var j = i + 1; j < runs.Count && runs[j].StartedAt <= reach; j++)
-            {
-                var second = runs[j];
-                var relation = RunMatch.Compare(first, second);
-                if (relation != RunRelation.Unrelated && !dismissed.Contains(DuplicateDismissal.Order(first.Id, second.Id)))
-                {
-                    yield return new PossibleDuplicateDto(ActivitySummaryDto.From(first), ActivitySummaryDto.From(second), relation);
-                }
-            }
-        }
-    }
 }
 
 /// <summary>Tries again every run from Strava that failed after its retries. Returns how many were queued.</summary>
@@ -195,32 +163,6 @@ internal sealed class RetryStravaFetchesHandler(IApplicationDbContext db, Curren
         }
 
         return failed.Count;
-    }
-}
-
-/// <summary>The runner says two overlapping runs are both real: stop flagging that pair.</summary>
-public sealed record KeepBothRunsCommand(Guid FirstActivityId, Guid SecondActivityId) : IRequest<bool>;
-
-internal sealed class KeepBothRunsHandler(IApplicationDbContext db, CurrentRunner current, TimeProvider time) : IRequestHandler<KeepBothRunsCommand, bool>
-{
-    public async Task<bool> Handle(KeepBothRunsCommand request, CancellationToken cancellationToken)
-    {
-        var runner = await current.RequireConsentedAsync(cancellationToken);
-        var ids = new[] { request.FirstActivityId, request.SecondActivityId };
-        var owned = await db.Activities.CountAsync(a => a.RunnerId == runner.Id && ids.Contains(a.Id), cancellationToken);
-        if (owned != 2 || request.FirstActivityId == request.SecondActivityId)
-        {
-            throw new NotFoundException("Activity pair", $"{request.FirstActivityId},{request.SecondActivityId}");
-        }
-
-        var (first, second) = DuplicateDismissal.Order(request.FirstActivityId, request.SecondActivityId);
-        if (!await db.DuplicateDismissals.AnyAsync(d => d.RunnerId == runner.Id && d.FirstActivityId == first && d.SecondActivityId == second, cancellationToken))
-        {
-            db.DuplicateDismissals.Add(DuplicateDismissal.Of(runner.Id, first, second, time.GetUtcNow()));
-            await db.SaveChangesAsync(cancellationToken);
-        }
-
-        return true;
     }
 }
 

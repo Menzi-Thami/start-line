@@ -143,7 +143,7 @@ export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
         </p>
       </details>
 
-      <RunDataPanel units={units} onOpen={onOpen} onChanged={fetchRuns} refreshKey={list.kind === 'ready' ? list.runs.length : 0} />
+      <RunDataPanel units={units} refreshKey={list.kind === 'ready' ? list.runs.length : 0} />
 
       {list.kind === 'loading' && (
         <div className="choice-list" aria-busy="true" style={{ marginTop: 'var(--space-5)' }}>

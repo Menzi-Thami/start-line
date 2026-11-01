@@ -6,7 +6,7 @@
 |---|---|---|
 | Comparison | Distance, runs, average week, longest run and weeks with running, against the span before, with the change | `RunningLogReader` with synced runs: the same totals as Home |
 | Weekly bars | Run against planned per week, with the longest run marked; a screen-reader table says the same | Plan sessions and logged runs |
-| Consistency | Planned sessions run, skipped and not logged in the span | `TrainingTrends.AdherenceOf` over the span (ticked or uploaded counts; a Strava copy alone doesn't) |
+| Consistency | Planned sessions run, skipped and not logged in the span | `TrainingTrends.AdherenceOf` over the span (ticked or uploaded counts; a held Strava run counts while held, computed on read: see `docs/strava-sync.md`) |
 | Easy pace | Easy-effort pace in the span against the span before | `TrainingTrends.EasyPaceOf` over the span |
 | Bests | The fastest 1K, mile, 5K, 10K, half and marathon in the span, and whether each beats every run before it ("new best" or "first one recorded") | Best efforts of the runs Taperday holds |
 | Race goal | The plan's goal against what uploaded runs point to now and at the start of the span; a screen-reader table lists the weekly estimates | `Fitness.Estimate` on uploads only, as the coach does |

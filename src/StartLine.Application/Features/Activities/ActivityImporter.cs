@@ -19,7 +19,7 @@ namespace StartLine.Application.Features.Activities;
 /// dispatch another handler. Scoped: each saved plan is built at most once per request (or sync pass), so a batch of
 /// runs from the same weeks doesn't regenerate the same plan for every file.
 /// </summary>
-internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileReader reader, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time)
+internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileReader reader, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time, Shoes.ShoeKeeper shoes)
 {
     private readonly Dictionary<Guid, TrainingPlan> builtPlans = [];
 
@@ -57,6 +57,7 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
         // The file of a run that was synced replaces the synced copy: uploads are the runner's own and are kept,
         // where a synced copy lapses. The two are never merged into one record (Strava API Policy 5.4): the upload's
         // own numbers are kept, and check-ins that pointed at the synced copy now point at the upload.
+        var followed = false;
         if (existing is not null)
         {
             var linked = await db.SessionCheckIns.Where(c => c.ActivityId == existing.Id).ToListAsync(cancellationToken);
@@ -65,7 +66,14 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
                 checkIn.RelinkActivity(existing.Id, activity.Id);
             }
 
+            // The shoes the synced copy was worn in stay with the run.
+            followed = await shoes.FollowAsync(existing.Id, activity.Id, cancellationToken);
             db.Activities.Remove(existing);
+        }
+
+        if (!followed)
+        {
+            await shoes.WearDefaultAsync(runner.Id, activity, cancellationToken);
         }
 
         db.Activities.Add(activity);

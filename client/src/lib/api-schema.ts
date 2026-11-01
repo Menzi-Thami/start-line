@@ -2007,6 +2007,343 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/shoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoeDto"][];
+                        "application/json": components["schemas"]["ShoeDto"][];
+                        "text/json": components["schemas"]["ShoeDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaveShoeRequest"];
+                    "text/json": components["schemas"]["SaveShoeRequest"];
+                    "application/*+json": components["schemas"]["SaveShoeRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoeDto"];
+                        "application/json": components["schemas"]["ShoeDto"];
+                        "text/json": components["schemas"]["ShoeDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaveShoeRequest"];
+                    "text/json": components["schemas"]["SaveShoeRequest"];
+                    "application/*+json": components["schemas"]["SaveShoeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ShoeDto"];
+                        "application/json": components["schemas"]["ShoeDto"];
+                        "text/json": components["schemas"]["ShoeDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes/worn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["WearShoeCommand"];
+                    "text/json": components["schemas"]["WearShoeCommand"];
+                    "application/*+json": components["schemas"]["WearShoeCommand"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes/{id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RunsRequest"];
+                    "text/json": components["schemas"]["RunsRequest"];
+                    "application/*+json": components["schemas"]["RunsRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["AddedDto"];
+                        "application/json": components["schemas"]["AddedDto"];
+                        "text/json": components["schemas"]["AddedDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/shoes/unworn-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["UnassignedRunDto"][];
+                        "application/json": components["schemas"]["UnassignedRunDto"][];
+                        "text/json": components["schemas"]["UnassignedRunDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/sync/strava": {
         parameters: {
             query?: never;
@@ -2579,6 +2916,7 @@ export interface components {
             photo: null | components["schemas"]["RunnerPhotoDto"];
             notificationHistory?: null | components["schemas"]["NotificationHistoryDto"][];
             feedback?: null | components["schemas"]["FeedbackNoteDto"][];
+            shoes?: null | components["schemas"]["ShoeExportDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -2611,6 +2949,7 @@ export interface components {
             bestEfforts: components["schemas"]["BestEffortDto"][];
             heartRate: null | components["schemas"]["HeartRateDto"];
             source: components["schemas"]["SourceDto"];
+            shoe?: null | components["schemas"]["ShoeRefDto"];
         };
         /** @enum {unknown} */
         ActivityKind: "Run" | "TrailRun" | "TreadmillRun" | "Other";
@@ -2636,6 +2975,11 @@ export interface components {
             /** Format: int32 */
             averageHeartRate: null | number;
             source: components["schemas"]["SourceDto"];
+            shoe?: null | components["schemas"]["ShoeRefDto"];
+        };
+        AddedDto: {
+            /** Format: int32 */
+            added: number;
         };
         ApplyCoachingRequest: {
             token: string;
@@ -2917,7 +3261,7 @@ export interface components {
             claimedAt: null | string;
         };
         /** @enum {unknown} */
-        NotificationKind: "RunCongratulations" | "TrainingReview" | "LongRunPreparation" | "RacePreparation" | "ConnectionAlert";
+        NotificationKind: "RunCongratulations" | "TrainingReview" | "LongRunPreparation" | "RacePreparation" | "ConnectionAlert" | "ShoeMileage";
         NotificationPreferencesDto: {
             runCongratulations: boolean;
             trainingReviews: boolean;
@@ -3170,6 +3514,10 @@ export interface components {
             /** Format: int32 */
             stravaPending: number;
         };
+        RunsRequest: {
+            activityIds: null | string[];
+            checkInIds: null | string[];
+        };
         RunWalkDto: {
             /** Format: int32 */
             runSeconds: number;
@@ -3233,6 +3581,22 @@ export interface components {
             heartRateConsent?: null | boolean;
             updateEmails?: null | boolean;
         };
+        SaveShoeRequest: {
+            name: string;
+            /** Format: double */
+            startingKm: number;
+            /**
+             * Format: double
+             * @default 700
+             */
+            limitKm: number;
+            /** @default false */
+            isDefault: boolean;
+            /** @default true */
+            remindAtLimit: boolean;
+            /** @default false */
+            retired: boolean;
+        };
         SendFeedbackCommand: {
             message: string;
             page: null | string;
@@ -3290,6 +3654,39 @@ export interface components {
         SetMyPhotoCommand: {
             dataUrl: string;
         };
+        ShoeDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            /** Format: double */
+            startingKm: number;
+            /** Format: double */
+            limitKm: number;
+            /** Format: double */
+            totalKm: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: double */
+            stravaKm: number;
+            /** Format: date */
+            lastRunOn: null | string;
+            isDefault: boolean;
+            remindAtLimit: boolean;
+            retired: boolean;
+            wear: components["schemas"]["ShoeWear"];
+        };
+        ShoeExportDto: {
+            shoe: components["schemas"]["ShoeDto"];
+            activityIds: string[];
+            checkInIds: string[];
+        };
+        ShoeRefDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @enum {unknown} */
+        ShoeWear: "Fine" | "NearingLimit" | "PastLimit";
         SourceDto: {
             kind: components["schemas"]["ActivitySource"];
             /** Format: uri */
@@ -3436,6 +3833,18 @@ export interface components {
             daily: boolean;
             preferences?: null | components["schemas"]["NotificationPreferencesDto"];
         };
+        UnassignedRunDto: {
+            /** Format: uuid */
+            activityId: null | string;
+            /** Format: uuid */
+            checkInId: null | string;
+            /** Format: date */
+            date: string;
+            /** Format: double */
+            distanceKm: number;
+            title: string;
+            source: string;
+        };
         /** @enum {unknown} */
         Units: "Kilometres" | "Miles";
         UnsubscribeRequest: {
@@ -3451,6 +3860,14 @@ export interface components {
             errors?: {
                 [key: string]: string[];
             };
+        };
+        WearShoeCommand: {
+            /** Format: uuid */
+            shoeId: null | string;
+            /** Format: uuid */
+            activityId: null | string;
+            /** Format: uuid */
+            checkInId: null | string;
         };
         WeeklyReviewDto: {
             /** Format: date */

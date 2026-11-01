@@ -5,6 +5,7 @@ import { formatDate, formatDistance, formatDuration, formatPace, type Units } fr
 import type { Activity, BestEffort, HeartRate, Split } from '../../lib/types'
 import { RunSticker } from '../sharing/RunSticker'
 import { RunProvenance } from './RunProvenance'
+import { ShoePicker } from './ShoePicker'
 import { PoweredByStrava, ViewOnStrava } from '../sync/StravaBrand'
 import {
   actualLine,
@@ -127,6 +128,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
           <PoweredByStrava />
         </p>
       )}
+      <ShoePicker run={run} />
       <RunProvenance run={run} />
 
       <section className="panel verdict" aria-labelledby="verdict-title" data-pace={run.plan?.pace ?? 'Unplanned'}>

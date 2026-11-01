@@ -63,6 +63,10 @@ export type RunData = Schemas['RunDataDto']
 export type TotalsBreakdown = Schemas['TotalsBreakdownDto']
 export type PossibleDuplicate = Schemas['PossibleDuplicateDto']
 export type SyncIssue = Schemas['SyncIssueDto']
+export type Shoe = Schemas['ShoeDto']
+export type ShoeWear = Schemas['ShoeWear']
+export type SaveShoe = Schemas['SaveShoeRequest']
+export type UnwornRun = Schemas['UnassignedRunDto']
 export type PersonalBest = Schemas['PersonalBestDto']
 // Older responses omit this additive availability flag.
 export type LoggedRun = Omit<Schemas['LoggedRunDto'], 'distanceUnreported' | 'cachedUntil'> & { distanceUnreported?: boolean; cachedUntil?: string | null }

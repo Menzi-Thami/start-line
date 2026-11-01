@@ -31,6 +31,10 @@ public interface IApplicationDbContext
 
     DbSet<DuplicateDismissal> DuplicateDismissals { get; }
 
+    DbSet<StartLine.Domain.Shoes.Shoe> Shoes { get; }
+
+    DbSet<StartLine.Domain.Shoes.ShoeAssignment> ShoeAssignments { get; }
+
     DbSet<SessionCheckIn> SessionCheckIns { get; }
 
     DbSet<CoachWeek> CoachWeeks { get; }

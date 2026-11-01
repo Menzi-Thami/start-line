@@ -28,6 +28,7 @@ internal sealed partial class StravaSyncRunner(
     StravaTokens tokens,
     ActivityImporter importer,
     RunCelebrator prompter,
+    Shoes.ShoeKeeper shoes,
     TimeProvider time,
     ILogger<StravaSyncRunner> logger) : IStravaSync
 {
@@ -126,6 +127,11 @@ internal sealed partial class StravaSyncRunner(
         {
             await prompter.OfferAsync(run, cancellationToken);
         }
+
+        if (synced.Count > 0)
+        {
+            await shoes.RemindAsync(job.RunnerId, cancellationToken);
+        }
     }
 
     private async Task<ProviderConnection?> ConnectionAsync(Guid runnerId, CancellationToken cancellationToken) =>
@@ -182,6 +188,7 @@ internal sealed partial class StravaSyncRunner(
         else
         {
             db.Activities.Add(fresh);
+            await shoes.WearDefaultAsync(job.RunnerId, fresh, cancellationToken);
             synced.Add(fresh);
         }
 

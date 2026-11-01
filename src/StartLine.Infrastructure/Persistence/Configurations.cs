@@ -238,6 +238,38 @@ internal sealed class SyncJobConfiguration : IEntityTypeConfiguration<SyncJob>
     }
 }
 
+internal sealed class ShoeConfiguration : IEntityTypeConfiguration<StartLine.Domain.Shoes.Shoe>
+{
+    public void Configure(EntityTypeBuilder<StartLine.Domain.Shoes.Shoe> builder)
+    {
+        builder.ToTable("Shoes");
+        builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
+        builder.Property(s => s.Name).HasMaxLength(StartLine.Domain.Shoes.Shoe.MaxNameLength).IsRequired();
+        builder.Ignore(s => s.IsRetired);
+        builder.HasIndex(s => s.RunnerId);
+        // One default pair per runner: the one new runs are put on.
+        builder.HasIndex(s => s.RunnerId).IsUnique().HasFilter("[IsDefault] = 1").HasDatabaseName("IX_Shoes_RunnerId_Default");
+        builder.HasOne<StartLine.Domain.Runners.Runner>().WithMany().HasForeignKey(s => s.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class ShoeAssignmentConfiguration : IEntityTypeConfiguration<StartLine.Domain.Shoes.ShoeAssignment>
+{
+    public void Configure(EntityTypeBuilder<StartLine.Domain.Shoes.ShoeAssignment> builder)
+    {
+        builder.ToTable("ShoeAssignments");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        // A run is worn in one pair. No foreign keys to runs or check-ins: they're deleted on many paths (a lapsed
+        // Strava copy, a bulk delete), and an assignment whose run is gone simply stops counting.
+        builder.HasIndex(a => a.ActivityId).IsUnique().HasFilter("[ActivityId] IS NOT NULL");
+        builder.HasIndex(a => a.CheckInId).IsUnique().HasFilter("[CheckInId] IS NOT NULL");
+        builder.HasIndex(a => new { a.RunnerId, a.ShoeId });
+        builder.HasOne<StartLine.Domain.Shoes.Shoe>().WithMany().HasForeignKey(a => a.ShoeId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class DuplicateDismissalConfiguration : IEntityTypeConfiguration<DuplicateDismissal>
 {
     public void Configure(EntityTypeBuilder<DuplicateDismissal> builder)

@@ -65,6 +65,26 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
         return Ok(await dispatcher.Send(new ReviewCoachingCommand(id, request.Token, request.Recovery), cancellationToken));
     }
 
+    /// <summary>Declines the reviewed suggestion: the plan stays as it is, and the answer is kept in the coaching history.</summary>
+    [HttpPost("{id:guid}/coach/decline")]
+    [ProducesResponseType<CoachingProposalDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeclineCoaching(Guid id, [FromBody] ApplyCoachingRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Ok(await dispatcher.Send(new ReviewCoachingCommand(id, request.Token, request.Recovery, Decline: true), cancellationToken));
+    }
+
+    /// <summary>Load, consistency and easy-pace trends, worked out on each read, and the latest answers to the weekly coach.</summary>
+    [HttpGet("{id:guid}/insights")]
+    [ProducesResponseType<TrainingInsightsDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Insights(Guid id, CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "no-store";
+        return Ok(await dispatcher.Send(new GetTrainingInsightsQuery(id), cancellationToken));
+    }
+
     [HttpGet("{id:guid}/remaining-week/proposal")]
     [ProducesResponseType<RemainingWeekProposalDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReviewRemainingWeek(Guid id, CancellationToken cancellationToken) =>

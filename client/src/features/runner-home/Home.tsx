@@ -17,6 +17,7 @@ import { CheckInLoadState } from '../coaching/CheckInLoadState'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { offersTick } from '../coaching/ran-this'
 import { RanThis } from '../coaching/RanThis'
+import { TrainingInsights } from '../coaching/TrainingInsights'
 import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
@@ -438,7 +439,8 @@ export function Home({
           reviewRemaining: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your week.'); return api.me.reviewRemainingWeek(token, current.id) },
                   applyRemaining: async (proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your week.'); const result = await api.me.applyRemainingWeek(token, current.id, proposalToken); void result; retryPlan() },
                   review: async (recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, current.id, recovery) },
-          apply: async (proposalToken, recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your training.'); await api.me.applyCoaching(token, current.id, proposalToken, recovery); retryPlan() },
+          apply: async (proposalToken, recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your training.'); await api.me.applyCoaching(token, current.id, proposalToken, recovery); setLogVersion((v) => v + 1); retryPlan() },
+          decline: async (proposalToken, recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to answer the review.'); await api.me.declineCoaching(token, current.id, proposalToken, recovery); setLogVersion((v) => v + 1) },
         } : undefined,
         saveAdditional: async (id, session, answers) => { await checkIns.saveAdditional(id, session, answers); setLogVersion((v) => v + 1) },
         removeAdditional: async (id) => { await checkIns.removeAdditional(id); setLogVersion((v) => v + 1) },
@@ -601,7 +603,20 @@ export function Home({
           </details>
         </section>
 
-        <details className="disclosure home-insights"><summary>Running insights <span className="field-help">History & personal bests</span></summary>
+        <details className="disclosure home-insights"><summary>Running insights <span className="field-help">Trends, history & personal bests</span></summary>
+        {current && (
+          <section className="section home-section home-trends" aria-labelledby="home-trends">
+            <h2 id="home-trends" className="home-heading">
+              Your training trends
+            </h2>
+            <TrainingInsights
+              planId={current.id}
+              units={units}
+              refreshKey={`${logVersion}|${activitiesVersion}`}
+              onReview={plan && week && progress?.kind !== 'race' ? () => { setReviewOpen(true); requestAnimationFrame(() => reviewRef.current?.scrollIntoView?.({ block: 'start' })) } : undefined}
+            />
+          </section>
+        )}
         <section className="section home-section home-history" aria-labelledby="home-weeks">
           <h2 id="home-weeks" className="home-heading">
             The last 12 weeks

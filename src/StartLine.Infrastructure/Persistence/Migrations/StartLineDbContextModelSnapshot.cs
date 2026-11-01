@@ -306,6 +306,50 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("CoachWeeks", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Coaching.CoachingDecisionLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("ChangedPlan")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("DecidedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Reasons")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("Recovery")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("SavedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Verdict")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly>("WeekStart")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SavedPlanId", "DecidedAt");
+
+                    b.ToTable("CoachingDecisions", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Coaching.SessionCheckIn", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1075,6 +1119,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
+                {
+                    b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Coaching.CoachingDecisionLog", b =>
                 {
                     b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
                         .WithMany()

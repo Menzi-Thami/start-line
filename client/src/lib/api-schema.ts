@@ -1400,6 +1400,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/coach/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ApplyCoachingRequest"];
+                    "text/json": components["schemas"]["ApplyCoachingRequest"];
+                    "application/*+json": components["schemas"]["ApplyCoachingRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["CoachingProposalDto"];
+                        "application/json": components["schemas"]["CoachingProposalDto"];
+                        "text/json": components["schemas"]["CoachingProposalDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TrainingInsightsDto"];
+                        "application/json": components["schemas"]["TrainingInsightsDto"];
+                        "text/json": components["schemas"]["TrainingInsightsDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans/{id}/remaining-week/proposal": {
         parameters: {
             query?: never;
@@ -2867,6 +2973,7 @@ export interface components {
             notificationHistory?: null | components["schemas"]["NotificationHistoryDto"][];
             feedback?: null | components["schemas"]["FeedbackNoteDto"][];
             shoes?: null | components["schemas"]["ShoeExportDto"][];
+            coachingDecisions?: null | components["schemas"]["CoachingDecisionExportDto"][];
         };
         ActivityDto: {
             /** Format: uuid */
@@ -3019,6 +3126,24 @@ export interface components {
             planId: string;
             call: components["schemas"]["CoachNoteDto"];
         };
+        CoachingDecisionDto: {
+            /** Format: date */
+            weekStart: string;
+            outcome: components["schemas"]["CoachingOutcome"];
+            verdict: components["schemas"]["CoachVerdict"];
+            reasons: components["schemas"]["CoachReason"][];
+            changedPlan: boolean;
+            recovery: components["schemas"]["RecoveryReadiness"];
+            /** Format: date-time */
+            decidedAt: string;
+        };
+        CoachingDecisionExportDto: {
+            /** Format: uuid */
+            planId: string;
+            decision: components["schemas"]["CoachingDecisionDto"];
+        };
+        /** @enum {unknown} */
+        CoachingOutcome: "Accepted" | "Declined";
         CoachingProposalDto: {
             token: string;
             hasChanges: boolean;
@@ -3079,6 +3204,22 @@ export interface components {
         DistanceCategory: "FiveK" | "TenK" | "HalfMarathon" | "Marathon" | "Ultra" | "LongUltra";
         /** @enum {unknown} */
         DistanceFit: "ShorterThanPlanned" | "AsPlanned" | "LongerThanPlanned";
+        EffortPace: {
+            /** Format: int32 */
+            recentRuns: number;
+            /** Format: int32 */
+            earlierRuns: number;
+            /** Format: double */
+            recentSecondsPerKm: null | number;
+            /** Format: double */
+            earlierSecondsPerKm: null | number;
+            /** Format: double */
+            changeSecondsPerKm: null | number;
+            /** Format: int32 */
+            recentHeartRate: null | number;
+            /** Format: int32 */
+            earlierHeartRate: null | number;
+        };
         /** @enum {unknown} */
         EffortStanding: "FirstTime" | "PersonalBest" | "NearBest" | "Slower";
         /** @enum {unknown} */
@@ -3165,7 +3306,22 @@ export interface components {
         /** @enum {unknown} */
         ImportStatus: "Imported" | "AlreadyUploaded" | "Skipped" | "Unreadable" | "LimitReached";
         /** @enum {unknown} */
+        InsightGap: "FewWeeks" | "MissingDistances" | "StravaWindow" | "FewEasyRuns" | "UnloggedSessions";
+        /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
+        /** @enum {unknown} */
+        LoadSignal: "NotEnoughHistory" | "Lower" | "Steady" | "Rising" | "RisingFast";
+        LoadTrend: {
+            /** Format: double */
+            recentKm: number;
+            /** Format: double */
+            baselineWeeklyKm: number;
+            /** Format: int32 */
+            baselineWeeksRun: number;
+            /** Format: double */
+            changePercent: null | number;
+            signal: components["schemas"]["LoadSignal"];
+        };
         LoggedRunDto: {
             /** Format: date */
             date: string;
@@ -3190,6 +3346,10 @@ export interface components {
             withoutSplits: number;
             heartRateConsent: boolean;
         };
+        /** @enum {unknown} */
+        NextStep: "BuildAsPlanned" | "HoldVolume" | "EaseOff" | "LogMore";
+        /** @enum {unknown} */
+        NextStepReason: "OnTrack" | "Pain" | "LoadSpike" | "MissedSessions" | "SparseLogs";
         NotificationHistoryDto: {
             /** Format: uuid */
             deviceId: string;
@@ -3537,6 +3697,18 @@ export interface components {
             message: string;
             page: null | string;
         };
+        SessionAdherence: {
+            /** Format: int32 */
+            planned: number;
+            /** Format: int32 */
+            done: number;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: int32 */
+            unlogged: number;
+            /** Format: double */
+            share: null | number;
+        };
         SessionDto: {
             /** Format: date */
             date: string;
@@ -3740,6 +3912,12 @@ export interface components {
             /** Format: int32 */
             withoutDistance: number;
         };
+        TrainingInsightsDto: {
+            /** Format: date */
+            today: string;
+            trends: components["schemas"]["TrainingTrendsResult"];
+            decisions: components["schemas"]["CoachingDecisionDto"][];
+        };
         /** @enum {unknown} */
         TrainingPhase: "Base" | "Build" | "Peak" | "Taper" | "RaceWeek";
         TrainingPlanDto: {
@@ -3757,6 +3935,30 @@ export interface components {
             suggestedGoal?: null | string;
             outlook?: null | components["schemas"]["GoalOutlookDto"];
             adjustments?: null | components["schemas"]["SessionRevision"][];
+        };
+        TrainingTrendsResult: {
+            weeks: components["schemas"]["TrendWeek"][];
+            load: components["schemas"]["LoadTrend"];
+            adherence: components["schemas"]["SessionAdherence"];
+            easyPace: components["schemas"]["EffortPace"];
+            gaps: components["schemas"]["InsightGap"][];
+            nextStep: components["schemas"]["NextStep"];
+            reasons: components["schemas"]["NextStepReason"][];
+        };
+        TrendWeek: {
+            /** Format: date */
+            weekStart: string;
+            /** Format: double */
+            plannedKm: number;
+            /** Format: double */
+            ranKm: number;
+            /** Format: double */
+            stravaKm: number;
+            /** Format: int32 */
+            runs: number;
+            /** Format: int32 */
+            unknownDistances: number;
+            isCurrent: boolean;
         };
         TurnOnRemindersCommand: {
             endpoint: string;

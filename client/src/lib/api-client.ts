@@ -9,6 +9,8 @@ import type {
   RemainingWeekProposal,
   RecoveryReadiness,
   Feeling,
+  LifeChange,
+  LifeProposal,
   ProgressStory,
   Readiness,
   SleepQuality,
@@ -229,6 +231,12 @@ export const api = {
     clearReadiness: (token: string, date: string) => request<void>(`/api/v1/me/readiness/${encodeURIComponent(date)}`, { method: 'DELETE' }, token),
     reviewRemainingWeek: (token: string, id: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal`, {}, token),
     applyRemainingWeek: (token: string, id: string, proposalToken: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
+    /** Previews what a situation (missed run, short day, travel, illness, moving the long run) would change. */
+    previewLifeChange: (token: string, id: string, change: LifeChange) => request<LifeProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/life-happens/preview`, { method: 'POST', body: JSON.stringify(change) }, token),
+    /** Applies exactly the previewed change. */
+    applyLifeChange: (token: string, id: string, change: LifeChange, proposalToken: string) => request<LifeProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/life-happens/apply`, { method: 'POST', body: JSON.stringify({ change, token: proposalToken }) }, token),
+    /** Puts upcoming days back as the plan first wrote them. */
+    restoreSessions: (token: string, id: string, dates: string[]) => request<SavedPlan>(`/api/v1/me/plans/${encodeURIComponent(id)}/adjustments/restore`, { method: 'POST', body: JSON.stringify({ dates }) }, token),
     /** The runner's check-ins on one saved plan: how each run went. */
     checkIns: (token: string, planId: string) => request<CheckIn[]>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins`, {}, token),
     /** Saves (or replaces) the check-in for the run planned on that day. */

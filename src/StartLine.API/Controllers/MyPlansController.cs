@@ -96,6 +96,35 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
         return Ok(await dispatcher.Send(new GetTrainingInsightsQuery(id), cancellationToken));
     }
 
+    /// <summary>Previews what a situation (a missed run, a short day, travel, illness, moving the long run) would change.</summary>
+    [HttpPost("{id:guid}/life-happens/preview")]
+    [ProducesResponseType<LifeProposalDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> PreviewLifeChange(Guid id, [FromBody] LifeChange change, CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new LifeHappensCommand(id, change), cancellationToken));
+
+    /// <summary>Applies exactly the previewed change; 409 when the plan or running changed since.</summary>
+    [HttpPost("{id:guid}/life-happens/apply")]
+    [ProducesResponseType<LifeProposalDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ApplyLifeChange(Guid id, [FromBody] ApplyLifeChangeRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Ok(await dispatcher.Send(new LifeHappensCommand(id, request.Change, request.Token), cancellationToken));
+    }
+
+    /// <summary>Puts upcoming days back as the plan first wrote them; a moved session comes back whole.</summary>
+    [HttpPost("{id:guid}/adjustments/restore")]
+    [ProducesResponseType<SavedPlanDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> RestoreSessions(Guid id, [FromBody] RestoreSessionsRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Ok(await dispatcher.Send(new RestoreSessionsCommand(id, request.Dates), cancellationToken));
+    }
+
     [HttpGet("{id:guid}/remaining-week/proposal")]
     [ProducesResponseType<RemainingWeekProposalDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReviewRemainingWeek(Guid id, CancellationToken cancellationToken) =>
@@ -153,3 +182,7 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
 public sealed record ReplanRequest(DateOnly ReplanFrom, Setback Setback, double? RecentWeeklyKm);
 
 public sealed record ApplyCoachingRequest([Required, StringLength(64, MinimumLength = 64)] string Token, RecoveryReadiness Recovery = RecoveryReadiness.NotReported);
+
+public sealed record ApplyLifeChangeRequest([Required] LifeChange Change, [Required, StringLength(64, MinimumLength = 64)] string Token);
+
+public sealed record RestoreSessionsRequest([Required] IReadOnlyList<DateOnly> Dates);

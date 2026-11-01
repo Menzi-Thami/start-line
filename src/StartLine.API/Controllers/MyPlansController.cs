@@ -75,6 +75,17 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
         return Ok(await dispatcher.Send(new ReviewCoachingCommand(id, request.Token, request.Recovery, Decline: true), cancellationToken));
     }
 
+    /// <summary>How the runner has progressed over the last 4, 8 or 12 weeks against the same span before, worked out on each read.</summary>
+    [HttpGet("{id:guid}/progress")]
+    [ProducesResponseType<ProgressStoryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Progress(Guid id, CancellationToken cancellationToken, [FromQuery] int weeks = 12)
+    {
+        Response.Headers.CacheControl = "no-store";
+        return Ok(await dispatcher.Send(new GetProgressStoryQuery(id, weeks), cancellationToken));
+    }
+
     /// <summary>Load, consistency and easy-pace trends, worked out on each read, and the latest answers to the weekly coach.</summary>
     [HttpGet("{id:guid}/insights")]
     [ProducesResponseType<TrainingInsightsDto>(StatusCodes.Status200OK)]

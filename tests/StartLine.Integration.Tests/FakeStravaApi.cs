@@ -191,3 +191,14 @@ public sealed class StravaApiFactory : StartLineApiFactory
         throw new InvalidOperationException("The sync kept finding work: a job is looping.");
     }
 }
+
+/// <summary>
+/// Test classes whose sync passes run against the shared database: a pass runs every due job, so two classes syncing at
+/// once take each other's jobs. They run one after another.
+/// </summary>
+public sealed class StravaInSeries
+{
+    // The same collection as the reminder tests: TickPromptTests syncs Strava there too, and every class that runs a
+    // sync pass must run one at a time.
+    public const string Name = RemindersInSeries.Name;
+}

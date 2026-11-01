@@ -33,7 +33,7 @@ public static class ActivityUpload
 }
 
 /// <summary>Imports one run from a Garmin .FIT file (or the .zip Garmin Connect's "Export Original" gives you).</summary>
-public sealed record ImportActivityCommand(Stream File) : IRequest<ActivityDto>;
+public sealed record ImportActivityCommand(Stream File, string? FileName = null) : IRequest<ActivityDto>;
 
 internal sealed class ImportActivityValidator : AbstractValidator<ImportActivityCommand>
 {
@@ -54,7 +54,7 @@ internal sealed class ImportActivityHandler(CurrentRunner current, ActivityImpor
     public async Task<ActivityDto> Handle(ImportActivityCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.RequireConsentedAsync(cancellationToken);
-        var activity = await importer.ImportAsync(runner, request.File, cancellationToken);
+        var activity = await importer.ImportAsync(runner, request.File, cancellationToken, request.FileName);
         var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
         return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent);
     }

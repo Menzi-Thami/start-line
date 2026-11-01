@@ -58,6 +58,11 @@ export type BulkImportFile = Schemas['BulkImportFileDto']
 export type ImportStatus = Schemas['ImportStatus']
 export type ActivitySource = Schemas['ActivitySource']
 export type RunSource = Schemas['SourceDto']
+export type RecordingFormat = Schemas['RecordingFormat']
+export type RunData = Schemas['RunDataDto']
+export type TotalsBreakdown = Schemas['TotalsBreakdownDto']
+export type PossibleDuplicate = Schemas['PossibleDuplicateDto']
+export type SyncIssue = Schemas['SyncIssueDto']
 export type PersonalBest = Schemas['PersonalBestDto']
 // Older responses omit this additive availability flag.
 export type LoggedRun = Omit<Schemas['LoggedRunDto'], 'distanceUnreported' | 'cachedUntil'> & { distanceUnreported?: boolean; cachedUntil?: string | null }

@@ -159,7 +159,10 @@ internal sealed class FitActivityFileReader
                     session.GetTotalAscent(),
                     session.GetTotalCalories(),
                     session.GetAvgHeartRate(),
-                    session.GetMaxHeartRate()));
+                    session.GetMaxHeartRate()))
+            {
+                Format = RecordingFormat.Fit,
+            };
         }
 
         private static ActivityKind KindOf(SessionMesg session) => (session.GetSport(), session.GetSubSport()) switch

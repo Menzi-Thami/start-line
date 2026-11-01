@@ -40,6 +40,15 @@ public sealed class Activity
     /// <summary>When a synced copy lapses unless fetched again. Null for uploads, which are kept.</summary>
     public DateTimeOffset? CachedUntil { get; private set; }
 
+    /// <summary>The file format an upload was read from. Null for synced runs and for uploads saved before it was kept.</summary>
+    public RecordingFormat? Format { get; private set; }
+
+    /// <summary>The name of the uploaded file, so the runner can tell where a run came from. Null for synced runs.</summary>
+    public string? FileName { get; private set; }
+
+    /// <summary>When a synced copy was last read from the provider: its cache runs for <see cref="StravaCache.Lifetime"/> from then.</summary>
+    public DateTimeOffset? FetchedAt => CachedUntil is { } until ? until - StravaCache.Lifetime : null;
+
     /// <summary>Synced from Strava but recorded on a Garmin device: Strava's policy asks for Garmin to be credited.</summary>
     public bool RecordedOnGarmin { get; private set; }
 
@@ -135,6 +144,8 @@ public sealed class Activity
             ExternalId = origin.ExternalId,
             CachedUntil = origin.CachedUntil,
             RecordedOnGarmin = origin.RecordedOnGarmin,
+            Format = origin.Source == ActivitySource.Upload ? recording.Format : null,
+            FileName = origin.Source == ActivitySource.Upload ? origin.FileName : null,
             DistanceMetres = track.TotalMetres,
             MovingTime = TimeSpan.FromSeconds(track.MovingSeconds),
             ElapsedTime = TimeSpan.FromSeconds(track.ElapsedSeconds),

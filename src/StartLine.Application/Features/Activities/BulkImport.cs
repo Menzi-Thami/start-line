@@ -85,7 +85,7 @@ internal sealed class ImportActivitiesHandler(CurrentRunner current, ActivityImp
             // Only these expected outcomes are turned into results; anything else is a real failure and propagates.
             try
             {
-                var activity = await importer.ImportAsync(runner, file.Content, cancellationToken);
+                var activity = await importer.ImportAsync(runner, file.Content, cancellationToken, file.Name);
                 results.Add(new(file.Name, ImportStatus.Imported, null, ActivitySummaryDto.From(activity)));
             }
             catch (ValidationException e)

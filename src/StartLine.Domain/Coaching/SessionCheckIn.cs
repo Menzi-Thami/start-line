@@ -228,4 +228,16 @@ public sealed class SessionCheckIn
         DistanceUnreported = answers.DistanceUnreported;
         ActivityId = answers.ActivityId;
     }
+
+    /// <summary>
+    /// The run this check-in points at was replaced by the same run from another source (an upload replacing a synced
+    /// copy): point at the replacement so the link keeps working. The check-in's own answers don't change.
+    /// </summary>
+    public void RelinkActivity(Guid from, Guid to)
+    {
+        if (ActivityId == from && to != Guid.Empty)
+        {
+            ActivityId = to;
+        }
+    }
 }

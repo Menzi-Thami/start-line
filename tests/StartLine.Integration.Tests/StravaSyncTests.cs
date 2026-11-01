@@ -11,6 +11,7 @@ using StartLine.Infrastructure.Persistence;
 
 namespace StartLine.Integration.Tests;
 
+[Collection(StravaInSeries.Name)]
 public sealed class StravaSyncTests(StravaApiFactory factory) : IClassFixture<StravaApiFactory>
 {
     private static readonly object Profile = new

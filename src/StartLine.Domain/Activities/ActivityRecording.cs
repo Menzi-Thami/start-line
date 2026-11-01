@@ -1,5 +1,13 @@
 namespace StartLine.Domain.Activities;
 
+/// <summary>The kind of file an uploaded run was read from. Synced runs have none: they come from the provider's API.</summary>
+public enum RecordingFormat
+{
+    Fit,
+    Gpx,
+    Tcx,
+}
+
 public enum ActivityKind
 {
     Run,
@@ -29,6 +37,9 @@ public sealed record ActivityRecording(
     IReadOnlyList<ActivitySample> Samples,
     DeviceTotals Device)
 {
+    /// <summary>The file format it was read from, kept so the runner can see where each run came from.</summary>
+    public RecordingFormat? Format { get; init; }
+
     /// <summary>The same run with every heart-rate reading taken out, for a runner who hasn't agreed to Taperday keeping it.</summary>
     public ActivityRecording WithoutHeartRate() => this with
     {

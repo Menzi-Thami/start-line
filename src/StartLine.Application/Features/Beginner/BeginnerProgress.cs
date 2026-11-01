@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Features.Account;
@@ -16,7 +15,7 @@ public sealed record BeginnerProgressState(
 
 public sealed record ReadBeginnerProgressQuery : IRequest<BeginnerProgressState?>;
 
-internal sealed class ReadBeginnerProgressHandler(IApplicationDbContext db, CurrentRunner current)
+internal sealed class ReadBeginnerProgressHandler(CurrentRunner current)
     : IRequestHandler<ReadBeginnerProgressQuery, BeginnerProgressState?>
 {
     public async Task<BeginnerProgressState?> Handle(ReadBeginnerProgressQuery query, CancellationToken cancellationToken)
@@ -29,7 +28,7 @@ internal sealed class ReadBeginnerProgressHandler(IApplicationDbContext db, Curr
 
 public sealed record SaveBeginnerProgressCommand(BeginnerProgressState Progress) : IRequest<BeginnerProgressState>;
 
-internal sealed class SaveBeginnerProgressHandler(IApplicationDbContext db, CurrentRunner current)
+internal sealed class SaveBeginnerProgressHandler(IApplicationDbContext db, CurrentRunner current, TimeProvider clock)
     : IRequestHandler<SaveBeginnerProgressCommand, BeginnerProgressState>
 {
     public async Task<BeginnerProgressState> Handle(SaveBeginnerProgressCommand command, CancellationToken cancellationToken)
@@ -41,7 +40,7 @@ internal sealed class SaveBeginnerProgressHandler(IApplicationDbContext db, Curr
             progress.Week is < 1 or > 9 || progress.Revision is < 0 or > 999 ||
             progress.Completed is null || progress.Completed.Count > 27 ||
             progress.Completed.Any(id => id is null || id.Length > 32 || !System.Text.RegularExpressions.Regex.IsMatch(id, @"^\d+:[1-9]:[123]$")) ||
-            progress.StartedOn == default || progress.StartedOn > DateOnly.FromDateTime(DateTime.UtcNow).AddYears(1))
+            progress.StartedOn == default || progress.StartedOn > DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime).AddYears(1))
             throw new ArgumentException("Invalid beginner programme progress.");
 
         var offsets = progress.Days.Select(day => ((int)day + 6) % 7).Order().ToArray();

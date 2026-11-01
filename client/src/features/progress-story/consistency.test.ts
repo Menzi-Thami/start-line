@@ -13,6 +13,13 @@ describe('consistency story', () => {
     expect(previous).toMatchObject({ runs: 1, days: 1, km: 4 })
     expect(consistencyNarrative(current, previous)).toContain('1 day more')
   })
+  it('rejects impossible calendar dates', () => {
+    expect(() => consistencyWeeks([], '2026-02-30')).toThrow('Invalid calendar date')
+  })
+  it('does not claim an earlier week existed when the prior window is empty', () => {
+    const { current, previous } = consistencyWeeks([run('latest', '2026-11-01', 5)], '2026-11-01')
+    expect(consistencyNarrative(current, previous)).toContain('no runs in the previous seven-day window')
+  })
   it('does not invent progress when records are absent', () => {
     const result = consistencyWeeks([], '2026-11-01')
     expect(consistencyNarrative(result.current, result.previous)).toContain('No runs')

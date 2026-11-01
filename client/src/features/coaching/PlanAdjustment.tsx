@@ -11,6 +11,13 @@ export interface AdjustmentActions extends Partial<RemainingWeekActions> {
   /** Says no to the reviewed change: the plan stays as it is and the answer is kept in the coaching history. */
   decline?: (token: string, recovery?: RecoveryReadiness) => Promise<void>
 }
+const RECOVERY_WORDS: Record<RecoveryReadiness, string> = {
+  NotReported: 'not given',
+  Ready: 'fresh',
+  Tired: 'tired',
+  Unwell: 'unwell',
+}
+
 /** A preview never saves a call; the runner applies the exact proposal they reviewed. */
 export function PlanAdjustment({ current, units, actions }: { current: TrainingPlan; units: Units; actions: AdjustmentActions }) {
   const [proposal, setProposal] = useState<CoachingProposal | null>(null)
@@ -103,6 +110,11 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
                 <li>
                   {proposal.review.substitutions} substitutions · {proposal.review.unknownDistances} runs without a reported distance
                 </li>
+                {proposal.review.recoveryFromCheckIn && (
+                  <li>
+                    Using your daily check-in: {RECOVERY_WORDS[proposal.review.recovery]}. Choose an answer above to use that instead.
+                  </li>
+                )}
               </ul>
               {proposal.review.missingCheckIns > 0 && (
                 <p>

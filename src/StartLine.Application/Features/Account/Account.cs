@@ -207,7 +207,8 @@ public sealed record AccountExportDto(
     IReadOnlyList<NotificationHistoryDto>? NotificationHistory = null,
     IReadOnlyList<Insights.FeedbackNoteDto>? Feedback = null,
     IReadOnlyList<ShoeExportDto>? Shoes = null,
-    IReadOnlyList<CoachingDecisionExportDto>? CoachingDecisions = null);
+    IReadOnlyList<CoachingDecisionExportDto>? CoachingDecisions = null,
+    IReadOnlyList<ReadinessDto>? Readiness = null);
 
 /// <summary>An answer to a weekly coaching suggestion, with the plan it belongs to.</summary>
 public sealed record CoachingDecisionExportDto(Guid PlanId, CoachingDecisionDto Decision);
@@ -293,7 +294,8 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
                 .Select(f => new Insights.FeedbackNoteDto(f.Message, f.Page, f.CreatedAt)).ToListAsync(cancellationToken),
             await ShoesAsync(runner.Id, cancellationToken),
             [.. (await db.CoachingDecisions.AsNoTracking().Where(d => planIds.Contains(d.SavedPlanId)).OrderBy(d => d.DecidedAt).ToListAsync(cancellationToken))
-                .Select(d => new CoachingDecisionExportDto(d.SavedPlanId, CoachingDecisionDto.From(d)))]);
+                .Select(d => new CoachingDecisionExportDto(d.SavedPlanId, CoachingDecisionDto.From(d)))],
+            [.. (await db.Readiness.AsNoTracking().Where(r => r.RunnerId == runner.Id).OrderBy(r => r.Date).ToListAsync(cancellationToken)).Select(ReadinessDto.From)]);
     }
 
     private async Task<IReadOnlyList<ShoeExportDto>> ShoesAsync(Guid runnerId, CancellationToken cancellationToken)

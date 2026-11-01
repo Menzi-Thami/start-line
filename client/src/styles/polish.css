@@ -582,3 +582,19 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .progress-bests ul { margin: 0; padding-inline-start: var(--space-4); display: grid; gap: var(--space-1); }
 .progress-new { color: var(--ink); font-weight: 600; }
 .progress-goal p { margin: 0; color: var(--ink-2); max-width: 65ch; }
+
+/* Daily readiness (#141): Home. Tokens only, so dark mode follows. */
+.readiness .pills { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
+.readiness .pills .button[aria-pressed='true'] { background: var(--sage); color: var(--on-sage, var(--ink)); }
+.readiness-more summary, .readiness-history .link-button { min-height: var(--tap); }
+.readiness-more summary { display: flex; align-items: center; cursor: pointer; color: var(--ink-2); }
+.readiness-guidance { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
+.readiness-guidance p { margin: 0; }
+.readiness-guidance .link-button { justify-self: start; min-height: var(--tap); }
+.readiness-editing { margin: var(--space-2) 0 0; }
+.readiness-history h3 { margin: var(--space-3) 0 var(--space-2); font-size: var(--text-md); }
+.readiness-history ul { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); }
+.readiness-history li { display: flex; flex-wrap: wrap; align-items: center; column-gap: var(--space-2); border-block-end: 1px solid var(--line); padding-block: var(--space-1); }
+.readiness-day { font-weight: 600; min-inline-size: 6.5em; }
+.readiness-actions { margin-inline-start: auto; display: inline-flex; gap: var(--space-3); }
+.readiness-today { margin-inline-start: var(--space-2); }

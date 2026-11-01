@@ -92,25 +92,27 @@ function WeekBars({ trends, units }: { trends: TrainingTrends; units: Units }) {
         ))}
       </div>
       <figcaption className="field-help">Last 8 weeks: run (solid) against planned (outline). This week counts up to today.</figcaption>
-      <table className="visually-hidden">
-        <caption>Distance by week</caption>
-        <thead>
-          <tr>
-            <th scope="col">Week of</th>
-            <th scope="col">Run</th>
-            <th scope="col">Planned</th>
-          </tr>
-        </thead>
-        <tbody>
-          {trends.weeks.map((week) => (
-            <tr key={week.weekStart}>
-              <th scope="row">{shortDay(week.weekStart)}{week.isCurrent ? ' (so far)' : ''}</th>
-              <td>{formatDistance(week.ranKm, units)}</td>
-              <td>{formatDistance(week.plannedKm, units)}</td>
+      <div className="visually-hidden">
+        <table>
+          <caption>Distance by week</caption>
+          <thead>
+            <tr>
+              <th scope="col">Week of</th>
+              <th scope="col">Run</th>
+              <th scope="col">Planned</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {trends.weeks.map((week) => (
+              <tr key={week.weekStart}>
+                <th scope="row">{shortDay(week.weekStart)}{week.isCurrent ? ' (so far)' : ''}</th>
+                <td>{formatDistance(week.ranKm, units)}</td>
+                <td>{formatDistance(week.plannedKm, units)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   )
 }

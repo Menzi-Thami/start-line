@@ -11,6 +11,7 @@ import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { FeedbackBox } from '../features/account/FeedbackBox'
 import { FindingPlan } from '../features/account/FindingPlan'
 import { Unsubscribe } from '../features/account/Unsubscribe'
+import { Wordmark } from './Wordmark'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
@@ -641,16 +642,7 @@ export function App() {
       {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">
         <button type="button" className="wordmark wordmark-button" onClick={goHome}>
-          {/* "taper" steps down letter by letter, like a taper; "day" comes back full size: race day. */}
-          <span className="visually-hidden">Taperday</span>
-          <span className="wordmark-letters" aria-hidden="true">
-            <span className="wl wl-1">t</span>
-            <span className="wl wl-2">a</span>
-            <span className="wl wl-3">p</span>
-            <span className="wl wl-4">e</span>
-            <span className="wl wl-5">r</span>
-            <span className="wordmark-accent">day</span>
-          </span>
+          <Wordmark />
         </button>
 
         {state.kind !== 'off' && (state.kind !== 'ready' || !phone) && (

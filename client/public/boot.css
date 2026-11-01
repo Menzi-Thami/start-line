@@ -15,3 +15,7 @@ html { color-scheme: light dark; background: #e4e4e4; }
 .boot-brand .bw4 { font-size: 0.79em; opacity: 0.58; }
 .boot-brand .bw5 { font-size: 0.7em; opacity: 0.48; }
 .boot-brand .bwd { margin-left: 0.06em; }
+/* The green runner peeking from behind "day", still while the app loads (the site's own logo animates it once). */
+.boot-screen .boot-brand { position: relative; isolation: isolate; margin-right: 0.95em; }
+.boot-brand .bpk { position: absolute; left: calc(100% - 0.5em); bottom: 0.16em; width: 1.6em; height: 1.5em; overflow: hidden; z-index: -1; }
+.boot-brand .bpk svg { position: absolute; left: 0.04em; bottom: -0.16em; width: 1.3em; height: auto; transform: rotate(22deg); transform-origin: 50% 70%; }

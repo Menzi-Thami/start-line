@@ -48,15 +48,17 @@ internal sealed class ImportActivityValidator : AbstractValidator<ImportActivity
     }
 }
 
-internal sealed class ImportActivityHandler(CurrentRunner current, ActivityImporter importer, PersonalBests personalBests)
+internal sealed class ImportActivityHandler(IApplicationDbContext db, CurrentRunner current, ActivityImporter importer, PersonalBests personalBests, Shoes.ShoeKeeper shoes)
     : IRequestHandler<ImportActivityCommand, ActivityDto>
 {
     public async Task<ActivityDto> Handle(ImportActivityCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.RequireConsentedAsync(cancellationToken);
         var activity = await importer.ImportAsync(runner, request.File, cancellationToken, request.FileName);
+        await shoes.RemindAsync(runner.Id, cancellationToken);
         var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
-        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent);
+        var worn = await Shoes.ShoeViews.WornInAsync(db, runner.Id, [activity.Id], cancellationToken);
+        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent, worn.GetValueOrDefault(activity.Id));
     }
 }
 
@@ -103,7 +105,8 @@ internal sealed class ListMyActivitiesHandler(IApplicationDbContext db, CurrentR
             .OrderByDescending(a => a.StartedAt)
             .Take(Activity.MaxPerRunner)
             .ToListAsync(cancellationToken);
-        return [.. activities.Select(ActivitySummaryDto.From)];
+        var worn = await Shoes.ShoeViews.WornInAsync(db, runner.Id, [.. activities.Select(a => a.Id)], cancellationToken);
+        return [.. activities.Select(a => ActivitySummaryDto.From(a, worn.GetValueOrDefault(a.Id)))];
     }
 }
 
@@ -127,7 +130,8 @@ internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunn
         }
 
         var bests = await personalBests.ForRunnerAsync(runner!.Id, cancellationToken);
-        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent);
+        var worn = await Shoes.ShoeViews.WornInAsync(db, runner.Id, [activity.Id], cancellationToken);
+        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent, worn.GetValueOrDefault(activity.Id));
     }
 }
 

@@ -312,6 +312,25 @@ internal sealed class CoachWeekConfiguration : IEntityTypeConfiguration<CoachWee
     }
 }
 
+internal sealed class CoachingDecisionLogConfiguration : IEntityTypeConfiguration<CoachingDecisionLog>
+{
+    public void Configure(EntityTypeBuilder<CoachingDecisionLog> builder)
+    {
+        builder.ToTable("CoachingDecisions");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Outcome).HasConversion<string>().HasMaxLength(16);
+        builder.Property(d => d.Verdict).HasConversion<string>().HasMaxLength(16);
+        builder.Property(d => d.Recovery).HasConversion<string>().HasMaxLength(16);
+        builder.Property(d => d.Reasons).HasMaxLength(400).IsRequired();
+        builder.Ignore(d => d.ReasonList);
+
+        // Every answer is kept, newest read first; the plan going takes its history with it.
+        builder.HasIndex(d => new { d.SavedPlanId, d.DecidedAt });
+        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(d => d.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class PushSubscriptionConfiguration : IEntityTypeConfiguration<PushSubscription>
 {
     public void Configure(EntityTypeBuilder<PushSubscription> builder)

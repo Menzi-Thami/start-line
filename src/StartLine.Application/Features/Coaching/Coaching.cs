@@ -102,9 +102,10 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
         return call is null ? calls : [.. calls, call];
     }
 
-    public async Task AcceptAsync(Guid planId, CoachDecision call, CancellationToken cancellationToken)
+    public async Task AcceptAsync(Guid planId, CoachDecision call, bool changedPlan, RecoveryReadiness recovery, CancellationToken cancellationToken)
     {
         db.CoachWeeks.Add(CoachWeek.From(planId, call));
+        db.CoachingDecisions.Add(CoachingDecisionLog.Record(planId, call, CoachingOutcome.Accepted, changedPlan, recovery, time.GetUtcNow()));
         try
         {
             await db.SaveChangesAsync(cancellationToken);
@@ -182,12 +183,15 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
     }
 }
 
-/// <summary>A read-only preview and a fingerprint of exactly the plan the runner reviewed.</summary>
+/// <summary>
+/// A read-only preview and a fingerprint of exactly the plan the runner reviewed. With that fingerprint the runner accepts
+/// the suggestion, or declines it: a decline changes nothing but is kept in their coaching history.
+/// </summary>
 public sealed record WeeklyReviewDto(DateOnly ReviewedWeek, DateOnly TargetWeek, int RunsPlanned, int RunsCompleted, int Skipped,
     int MissingCheckIns, int Substitutions, double PlannedKm, double ReportedKm, int UnknownDistances, RecoveryReadiness Recovery);
 public sealed record CoachingProposalDto(string Token, bool HasChanges, bool CanApply, SavedPlanDto Proposed, WeeklyReviewDto? Review = null);
 
-public sealed record ReviewCoachingCommand(Guid Id, string? AcceptToken = null, RecoveryReadiness Recovery = RecoveryReadiness.NotReported) : IRequest<CoachingProposalDto>;
+public sealed record ReviewCoachingCommand(Guid Id, string? AcceptToken = null, RecoveryReadiness Recovery = RecoveryReadiness.NotReported, bool Decline = false) : IRequest<CoachingProposalDto>;
 
 internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, PlanCoach coach, TimeProvider time)
     : IRequestHandler<ReviewCoachingCommand, CoachingProposalDto>
@@ -242,7 +246,16 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
                 throw new ConflictException("coaching_changed", "Your running or plan has changed. Review the latest suggestion before applying it.");
             }
 
-            await coach.AcceptAsync(saved.Id, pending, cancellationToken);
+            if (request.Decline)
+            {
+                db.CoachingDecisions.Add(CoachingDecisionLog.Record(saved.Id, pending, CoachingOutcome.Declined, changed, request.Recovery, time.GetUtcNow()));
+                await db.SaveChangesAsync(cancellationToken);
+                // Nothing changes: the plan stays as the runner had it, and the suggestion can be reviewed again.
+                dto = dto with { Plan = original, Coaching = [.. existing.Select(CoachNoteDto.From)] };
+                return new(token, false, canApply, dto, review);
+            }
+
+            await coach.AcceptAsync(saved.Id, pending, changed, request.Recovery, cancellationToken);
             // The apply response is the current view, while the preview shows the target week’s zones.
             dto = dto with { Plan = builder.Build(query, proposed, saved.Adjustments, today) };
         }

@@ -636,6 +636,7 @@ export function App() {
 
   return (
     <div className="page">
+      <a className="skip-main" href="#main-content">Skip to main content</a>
       {playIntro && <RaceStartIntro onDone={finishIntro} />}
       {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">
@@ -707,7 +708,7 @@ export function App() {
       {state.kind === 'ready' && !state.runner.needsPrivacyConsent && (
         <div hidden={view === 'account' || view === 'privacy' || view === 'unsubscribe'}><RemindersSection key={state.runner.id} offer /></div>
       )}
-      <main key={view} className={navigated ? 'view-enter' : undefined}>
+      <main id="main-content" tabIndex={-1} key={view} className={navigated ? 'view-enter' : undefined}>
         <ScreenRecovery>
         <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
         {auth.error && (

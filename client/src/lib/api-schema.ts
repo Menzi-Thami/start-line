@@ -1569,6 +1569,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/strava-completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SyncedCompletionDto"][];
+                        "application/json": components["schemas"]["SyncedCompletionDto"][];
+                        "text/json": components["schemas"]["SyncedCompletionDto"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans/{id}/life-happens/preview": {
         parameters: {
             query?: never;
@@ -3886,6 +3936,8 @@ export interface components {
             /** Format: double */
             paceSecondsPerKm: number;
         };
+        /** @enum {unknown} */
+        PrescriptionMeasure: "Distance" | "Duration";
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -4373,6 +4425,30 @@ export interface components {
             unit: components["schemas"]["RepUnit"];
             summary: string;
         };
+        SyncedCompletionDto: {
+            /** Format: date */
+            date: string;
+            sessionType: components["schemas"]["SessionType"];
+            /** Format: uuid */
+            activityId: string;
+            state: components["schemas"]["SyncedCompletionState"];
+            measure: components["schemas"]["PrescriptionMeasure"];
+            /** Format: double */
+            plannedKm: number;
+            /** Format: double */
+            actualKm: number;
+            /** Format: double */
+            plannedSeconds: number;
+            /** Format: double */
+            actualSeconds: number;
+            feedback: components["schemas"]["SyncedFeedback"];
+            /** Format: date-time */
+            cachedUntil: null | string;
+        };
+        /** @enum {unknown} */
+        SyncedCompletionState: "Completed" | "Conflict";
+        /** @enum {unknown} */
+        SyncedFeedback: "Near" | "Shorter" | "Longer" | "Unmeasured";
         SyncIssueDto: {
             /** Format: int64 */
             stravaActivityId: number;

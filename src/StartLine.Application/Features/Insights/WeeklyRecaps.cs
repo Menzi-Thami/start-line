@@ -350,15 +350,23 @@ internal sealed partial class WeeklyRecapSender(
                 if (lastWeek.Count > 0)
                 {
                     var checkIns = await db.SessionCheckIns.AsNoTracking()
-                        .Where(c => c.SavedPlanId == saved.Id && c.Date >= week && c.Date <= end && !c.IsAdditional)
+                        .Where(c => c.SavedPlanId == saved.Id && c.Date >= week && c.Date <= end)
                         .ToListAsync(cancellationToken);
-                    var uploads = await db.Activities.AsNoTracking()
-                        .Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.LocalDate >= week && a.LocalDate <= end)
+                    // Uploads, and the Strava runs held now: a held run completes its session for this read only, as on Home.
+                    var runs = await db.Activities.AsNoTracking().Visible(now)
+                        .Where(a => a.RunnerId == runner.Id && a.Kind != ActivityKind.Other && a.LocalDate >= week && a.LocalDate <= end)
                         .ToListAsync(cancellationToken);
+                    var synced = SyncedCompletions.Of(
+                            sessions,
+                            [.. checkIns.Select(c => new TrendCheckIn(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.ActivityId, c.IsAdditional))],
+                            [.. runs.Select(TrendRun.Of)])
+                        .Where(c => c.State == SyncedCompletionState.Completed)
+                        .ToList();
                     planned = lastWeek.Count;
-                    done = lastWeek.Count(s => checkIns.FirstOrDefault(c => c.Date == s.Date && c.SessionType == s.Type) is { } c
+                    done = lastWeek.Count(s => checkIns.FirstOrDefault(c => !c.IsAdditional && c.Date == s.Date && c.SessionType == s.Type) is { } c
                         ? c.Status != CheckInStatus.Skipped
-                        : uploads.Any(a => a.LocalDate == s.Date && a.PlannedSession?.SessionType == s.Type));
+                        : runs.Any(a => a.Source == ActivitySource.Upload && a.LocalDate == s.Date && a.PlannedSession?.SessionType == s.Type)
+                            || synced.Any(c => c.Date == s.Date && c.SessionType == s.Type));
                 }
 
                 next = [.. sessions.Where(s => s.Date >= monday && s.Date < monday.AddDays(7)).Select(s => (s.Date, s.Title, s.DistanceKm))];

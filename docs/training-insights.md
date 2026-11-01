@@ -8,7 +8,7 @@
 |---|---|---|
 | Next step | One of: *Carry on as planned*, *Hold your distance this week*, *Ease off and look after it*, *Log a few more runs first*, with the reason and the figures behind it | The three trends below, plus pain reported in check-ins |
 | Load | Last 7 days against the average week of the 4 weeks before. Rising fast above +30%, rising above +10%, lower below −20%. With fewer than 3 of those 4 weeks run, no verdict is given | `RunningLogReader` with synced runs, the same totals as Home |
-| Consistency | Planned sessions in the last 4 weeks: run, skipped, not logged. A run counts if it was ticked or uploaded; a Strava copy alone doesn't | Plan sessions, check-ins, uploads |
+| Consistency | Planned sessions in the last 4 weeks: run, skipped, not logged. A run counts if it was ticked or uploaded, or while Taperday holds a Strava run that matches it (computed on each read, never stored; see `docs/strava-sync.md`) | Plan sessions, check-ins, uploads |
 | Easy pace | Easy runs in the last 4 weeks against the 4 before: pace, and heart rate where recorded. Easy means rated 1–4, or planned as easy/recovery/strides/shakeout without a rating. At least 2 runs of 2 km or more in each window | Visible runs and check-in effort |
 | What these trends can't see | Few weeks of running, runs without a distance, the 7-day Strava window, too few easy runs, unlogged sessions | |
 | Coaching history | The last 12 answers to the weekly review: accepted or declined, which week, the coach's verdict, and whether it changed the plan | `CoachingDecisions` table |

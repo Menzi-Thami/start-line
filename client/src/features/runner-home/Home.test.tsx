@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthContext, accountsOff } from '../../app/auth-context'
-import type { ActivitySummary, LoggedRun, PersonalBest, Runner, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, CheckIn, LoggedRun, PersonalBest, Runner, SyncedCompletion, TrainingPlan } from '../../lib/types'
 import { server, stravaOff } from '../../test/server'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import plan5k from '../../test/fixtures/plan-5k.json'
@@ -27,6 +27,9 @@ const run = (localDate: string, distanceKm: number, source: 'Upload' | 'Strava' 
     averageHeartRate: null,
     source: { kind: source, viewUrl: null },
   }) as unknown as ActivitySummary
+
+const completion = (date: string, sessionType: string, overrides: Partial<SyncedCompletion> = {}): SyncedCompletion =>
+  ({ date, sessionType, activityId: date, state: 'Completed', measure: 'Distance', plannedKm: 6.5, actualKm: 4.1, plannedSeconds: 0, actualSeconds: 1476, feedback: 'Shorter', cachedUntil: '2027-01-01T00:00:00Z', ...overrides }) as SyncedCompletion
 
 const tenK: PersonalBest = { name: '10K', distanceMetres: 10000, seconds: 3258, paceSecondsPerKm: 325.8, localDate: '2026-10-18', activityId: 'nelson' } as PersonalBest
 
@@ -273,24 +276,30 @@ describe('Home', () => {
     expect(puts).toEqual([{ url: '/api/v1/me/plans/plan-1/check-ins/2026-10-20/Fartlek', body: expect.objectContaining({ status: 'Done', effort: null, activityId: '2026-10-20', distanceUnreported: true }) }])
     expect(await within(todayCard).findByRole('button', { name: 'Change how Fartlek went' })).toBeInTheDocument()
     expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
-    expect(within(todayCard).queryByRole('button', { name: 'Ran this? Tick it' })).not.toBeInTheDocument()
+    expect(within(todayCard).queryByRole('button', { name: 'Keep this tick' })).not.toBeInTheDocument()
   })
 
-  it('never offers the tick for an uploaded run, or before the check-ins have loaded', async () => {
+  it('never shows a Strava completion for an uploaded run, or before the check-ins have loaded', async () => {
     server.use(http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json({ id: 'plan-1', name: 'Spring 5K', plan: plan5k, coaching: [] })))
     renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 6.8, 'Upload', 'Fartlek')] })
 
     expect(await within(screen.getByRole('region', { name: 'Today' })).findByText('Fartlek')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Ran this? Tick it' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Completed via Strava')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Keep this tick' })).not.toBeInTheDocument()
   })
 
-  it('opens from a "ran it?" notification on that session, ready to tick', async () => {
+  it('opens from a "ran it?" notification on that session, completed via Strava and ready to keep', async () => {
     window.history.replaceState(null, '', '/?view=home&tick=2026-10-18.LongRun')
-    server.use(http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json({ id: 'plan-1', name: 'Spring 5K', plan: plan5k, coaching: [] })))
+    server.use(
+      http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json({ id: 'plan-1', name: 'Spring 5K', plan: plan5k, coaching: [] })),
+      http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([completion('2026-10-18', 'LongRun', { plannedKm: 6, actualKm: 6.2, feedback: 'Near' })])),
+    )
     renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-18', 6.2, 'Strava', 'LongRun')] }, { signIn: true })
 
     const card = await screen.findByRole('region', { name: 'Sunday’s Long run' })
-    expect(within(card).getByRole('button', { name: 'Ran this? Tick it' })).toBeInTheDocument()
+    expect(within(card).getByText('Completed via Strava')).toBeInTheDocument()
+    expect(within(card).getByText('Run recorded. Nice work showing up today.')).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Keep this tick' })).toBeInTheDocument()
   })
 
   it('shows personal bests, each opening the run it came from', async () => {
@@ -460,4 +469,115 @@ it('refreshes at imported expiry and does not claim a missing distance is level 
     // The two totals reads, and the one all-time read.
     expect(reads).toBe(3)
   } finally { vi.useRealTimers() }
+})
+
+describe('Completed via Strava', () => {
+  const coached = () => http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json({ id: 'plan-1', name: 'Spring 5K', plan: plan5k, coaching: [] }))
+  const checkIn = (date: string, sessionType: string, status: string): CheckIn =>
+    ({ date, sessionType, status, effort: null, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: '2026-10-20T08:00:00Z', activityId: null, distanceUnreported: false, isAdditional: false }) as unknown as CheckIn
+  const saving = (puts: unknown[]) => http.put('*/api/v1/me/plans/:id/check-ins/:date/:type', async ({ request }) => {
+    const body = (await request.json()) as { status: string }
+    puts.push(body)
+    return HttpResponse.json(checkIn('2026-10-20', 'Fartlek', body.status))
+  })
+  const stravaRun = [run('2026-10-20', 4.1, 'Strava', 'Fartlek')]
+
+  it('shows today’s session done via Strava, planned against actual and the shorter-run words, without ticking it', async () => {
+    const puts: unknown[] = []
+    server.use(coached(), saving(puts), http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([completion('2026-10-20', 'Fartlek')])))
+    const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
+
+    const todayCard = screen.getByRole('region', { name: 'Today' })
+    expect(await within(todayCard).findByText('Completed via Strava')).toBeInTheDocument()
+    expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
+    expect(todayCard.querySelector('.strava-completion-figures')).toHaveTextContent('Planned 6.5 km · Ran 4.1 km')
+    expect(within(todayCard).getByText(/You got out there — that counts\. You ran 4\.1 km of your planned 6\.5 km today\./)).toBeInTheDocument()
+    // Computed, not the runner's tick: nothing is saved until they keep it.
+    expect(within(todayCard).getByRole('button', { name: 'Log this workout' })).toBeInTheDocument()
+    expect(puts).toEqual([])
+
+    await user.click(within(todayCard).getByRole('button', { name: 'Keep this tick' }))
+    expect(puts).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
+    expect(await within(todayCard).findByRole('button', { name: 'Change how Fartlek went' })).toBeInTheDocument()
+    expect(within(todayCard).queryByText('Completed via Strava')).not.toBeInTheDocument()
+    expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
+  })
+
+  it('counts a session done via Strava in this week’s runs', async () => {
+    server.use(coached(), http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([completion('2026-10-20', 'Fartlek')])))
+    renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
+
+    const week = screen.getByRole('region', { name: 'This week' })
+    expect(await within(week).findByText(/1 of 4 runs/)).toBeInTheDocument()
+  })
+
+  it('keeps the runner’s skip and shows the matching run as a conflict, with one tap to change their answer', async () => {
+    const puts: unknown[] = []
+    server.use(
+      coached(),
+      saving(puts),
+      http.get('*/api/v1/me/plans/:id/check-ins', () => HttpResponse.json([checkIn('2026-10-20', 'Fartlek', 'Skipped')])),
+      http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([completion('2026-10-20', 'Fartlek', { state: 'Conflict' })])),
+    )
+    const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
+
+    const todayCard = screen.getByRole('region', { name: 'Today' })
+    expect(await within(todayCard).findByText('You marked this skipped.')).toBeInTheDocument()
+    expect(within(todayCard).getByText(/Strava has a 4\.1 km run on this day/)).toBeInTheDocument()
+    expect(todayCard.querySelector('.home-done-chip')).toBeNull()
+    expect(within(todayCard).queryByText('Completed via Strava')).not.toBeInTheDocument()
+
+    await user.click(within(todayCard).getByRole('button', { name: 'I ran it: mark as done' }))
+    expect(puts).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
+    await vi.waitFor(() => expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done'))
+    expect(within(todayCard).queryByText('You marked this skipped.')).not.toBeInTheDocument()
+  })
+
+  it('says why a tick didn’t save and leaves the Strava completion as it was', async () => {
+    server.use(
+      coached(),
+      http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([completion('2026-10-20', 'Fartlek')])),
+      http.put('*/api/v1/me/plans/:id/check-ins/:date/:type', () => HttpResponse.json({ title: 'Try again' }, { status: 500 })),
+    )
+    const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
+
+    const todayCard = screen.getByRole('region', { name: 'Today' })
+    await user.click(await within(todayCard).findByRole('button', { name: 'Keep this tick' }))
+    expect(await within(todayCard).findByRole('alert')).toBeInTheDocument()
+    expect(within(todayCard).getByText('Completed via Strava')).toBeInTheDocument()
+    expect(within(todayCard).getByRole('button', { name: 'Keep this tick' })).toBeEnabled()
+  })
+
+  it('stops showing the session done the moment the Strava copy lapses', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      vi.setSystemTime(new Date('2026-10-20T06:00:00Z'))
+      let reads = 0
+      server.use(
+        coached(),
+        http.get('*/api/v1/me/plans/:id/strava-completions', () =>
+          HttpResponse.json(++reads === 1 ? [completion('2026-10-20', 'Fartlek', { cachedUntil: '2026-10-20T06:01:00Z' })] : [])),
+      )
+      renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
+      const todayCard = screen.getByRole('region', { name: 'Today' })
+      await vi.waitFor(() => expect(within(todayCard).getByText('Completed via Strava')).toBeInTheDocument())
+      expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
+
+      await act(async () => { await vi.advanceTimersByTimeAsync(60_100) })
+
+      await vi.waitFor(() => expect(within(todayCard).queryByText('Completed via Strava')).not.toBeInTheDocument())
+      expect(todayCard.querySelector('.home-done-chip')).toBeNull()
+      expect(reads).toBeGreaterThanOrEqual(2)
+    } finally { vi.useRealTimers() }
+  })
+
+  it('shows nothing via Strava when the completions can’t be read', async () => {
+    server.use(coached(), http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json({ title: 'Down' }, { status: 503 })))
+    renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
+
+    const todayCard = screen.getByRole('region', { name: 'Today' })
+    expect(await within(todayCard).findByRole('button', { name: 'Log this workout' })).toBeInTheDocument()
+    expect(within(todayCard).queryByText('Completed via Strava')).not.toBeInTheDocument()
+    expect(todayCard.querySelector('.home-done-chip')).toBeNull()
+  })
 })

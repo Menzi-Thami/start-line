@@ -93,6 +93,8 @@ export const handlers = [
   http.get('*/api/v1/me/sync/strava', () => HttpResponse.json(stravaOff)),
   // A saved plan's check-ins; none by default.
   http.get('*/api/v1/me/plans/:id/check-ins', () => HttpResponse.json([])),
+  // Sessions a held Strava run completes; none by default.
+  http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([])),
   http.get('*/api/v1/me/reminders', () => HttpResponse.json(remindersOff)),
   // The runner's personal calendar link, and a new one when it's reset.
   http.get('*/api/v1/me/calendar', () => HttpResponse.json({ token: calendarToken })),

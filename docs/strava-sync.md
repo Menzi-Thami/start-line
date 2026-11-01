@@ -42,11 +42,41 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
     measured distance. A day with an upload counts the upload and none of that day's ticks. Home's read-only current
     totals use `RunningLog.WithSynced` instead, resolving valid activity associations once, preferring independently
     entered distances and excluding expired imports. These calculated figures are not persisted or cached for reuse.
-- **The tick: the runner's own data.** A synced run doesn't count for good; the runner's word that they ran the session
-  does. When a run that matches a planned session arrives, the plan shows "Ran this? Tick it" on that session (and on
-  Home's Today card) until it's checked in on. A tap saves a plain "Done" check-in with no effort, through the usual
-  check-in API; the usual check-in follows to add how it felt. **Taperday never ticks a session itself**: a tick is
-  always a tap by the runner, in the app or on the notification below.
+- **Completed via Strava: computed on read, never stored (#177).** While Taperday holds a Strava run that matches a
+  planned running session, that session shows as completed "via Strava" on Home's Today card, the week, the calendar,
+  the day summary, the week's "x of y done", Home's "This week" ring and the weekly review, and it counts in adherence
+  (training insights, the progress story) and the weekly recap's "planned sessions run". It is worked out on each read
+  by `SyncedCompletions.Of` (`Domain/Coaching/SyncedCompletions.cs`) and served by
+  `GET /api/v1/me/plans/{id}/strava-completions` (`no-store`). **Nothing is written**: no check-in, no flag, no copy of
+  the distance. When the cached copy lapses (`ActivityQueries.Visible`), the athlete disconnects or revokes access, or
+  the run is deleted on Strava, the run is gone and the session falls back to whatever the runner ticked. The client
+  asks again when check-ins or runs change, when the app returns to the front and at the earliest `cachedUntil`.
+  - **Matching** (all must hold, or nothing is completed): the run's local date (the runner's time zone, as at import)
+    is the session's date; exactly one checkable running session that day (never strength or rest days, and not race
+    day, which isn't checked in on); exactly one meaningful run that day; that run is from Strava with no upload the
+    same day (an upload is already the runner's own evidence); and the run isn't linked to a check-in or logged as an
+    extra run. Two running sessions or two runs in a day are ambiguous: no completion.
+  - **Meaningful run**: at least 1 km *or* at least 10 minutes of moving time (`SyncedCompletions.MinKm`, `MinTime`), so
+    a GPS blip or a jog to the shop doesn't count but a treadmill run with no distance does. Non-runs (rides, walks)
+    are never imported.
+  - **Shorter and longer runs complete the session too**: completion means the runner showed up and ran. The feedback
+    says how it compared, within ±10% being near (`NearShare`): shorter "You got out there — that counts. You ran
+    {actual} of your planned {planned} today. …", longer "Nice work getting your run in! You covered {actual} against
+    {planned} planned. …", near (or nothing to compare, such as a treadmill run with no distance) "Run recorded. Nice
+    work showing up today." It never claims the prescribed workout was met. A session whose steps are all timed (run/walk
+    intervals such as Couch to 5K) is judged by moving time against the steps' total time, not distance
+    (`SessionPrescription`); every other session by distance.
+  - **The runner's word always wins.** A Done, cut-short or swapped check-in hides the computed completion. A skipped
+    session stays skipped and the matching run is shown beside it as a conflict ("You marked this skipped. Strava has a
+    6.4 km run on this day."), with one tap to change the answer. Nothing is silently overwritten.
+  - **No double counting.** An upload of the same run replaces the synced copy (below), so it counts once, as an upload.
+    Running totals already count a held run once through `RunningLog.WithSynced`; a computed completion adds no tick, so
+    it adds no distance.
+- **Keep this tick: the runner's own data.** A synced run doesn't count for good; the runner's word that they ran the
+  session does. "Completed via Strava" offers **Keep this tick**: one tap saves a plain "Done" check-in with no effort
+  and no activity link, through the usual check-in API, and that lasts after the Strava copy goes. **Taperday never
+  ticks a session itself**: a stored tick is always a tap by the runner. The coach's weekly call (`CoachEvidence`) still
+  reads only check-ins and uploads, so a computed completion never changes a plan.
 - **Current Strava notification.** `RunCelebrator` offers a run-completion push when a recent Strava run is imported, only when push is enabled and the runner has a device subscription with `RunCongratulations` enabled. The activity is marked celebrated to avoid repeating it, and delivery is limited to two days after the run. The push links to `/?view=runs&run=<activity-id>` so the runner can review and log the run against their plan. By default it says a Strava run arrived; distance is included only when `Push:IncludeRunData` is enabled.
 - **Legacy tick prompt types are not the current sync notification trigger.** `TickPrompts`, `TickPrompt` and `Ticks` domain/API code remain, but `StravaSyncRunner` invokes `RunCelebrator`, not the removed `TickPrompter`. The current notification is not an actionable “Ran Tuesday’s Tempo?” / “Tick it” push.
 - **5.7: location.** Streams are requested as `time,distance,altitude,heartrate`; `latlng` is never asked for.
@@ -122,7 +152,9 @@ on Strava's page is refused with an explanation.
 | Current Strava run-completion notification | `Application/Features/Notifications/RunCelebrator.cs`, `Application/Features/Notifications/NotificationDeliverer.cs`, `Application/Features/Sync/StravaSyncRunner.cs` |
 | Legacy tick-prompt domain and token code (not the current sync notification trigger) | `Domain/Notifications/TickPrompt.cs`, `Application/Features/CheckIns/Ticks.cs`, `Infrastructure/Push/TickTokens.cs` |
 | Client: account section, brand marks, callback, polling | `client/src/features/sync` |
-| Client: "Ran this? Tick it", the notification's button | `client/src/features/coaching/RanThis.tsx`, `client/public/sw.js` |
+| Completed via Strava: matching, thresholds, feedback, the endpoint | `Domain/Coaching/SyncedCompletions.cs`, `Application/Features/Coaching/SyncedCompletions.cs` |
+| Client: "Completed via Strava", "Keep this tick", conflicts | `client/src/features/coaching/StravaCompletion.tsx`, `strava-completion.ts`, `useSyncedCompletions.ts`, `client/src/lib/strava-auto-completion.ts` |
+| Legacy notification "Tick it" button | `client/public/sw.js` |
 | Client: Overview tab | `client/src/features/dashboard` |
 
 Tests never call Strava: `tests/StartLine.Integration.Tests/FakeStravaApi.cs` stands in for it, and
@@ -165,8 +197,8 @@ Open actions are in `security-posture.md` → To do.
    still works).
    Run-completion notifications require push configuration (VAPID keys in App Service, `docs/deploy.md`) and a subscribed device with run-congratulation notifications enabled; they include distance only with `Push__IncludeRunData` = `true`. They do not offer a remote “Tick it” action.
 6. Upgrade the app's capacity to 10 athletes from the same settings page when ready. Before asking Strava to review
-   it for more, email developers@strava.com about Policy 5.3, 5.4, 5.5 and 6.2 (the 7-day cache, plan matching, and the
-   design that keeps only what the runner ticks).
+   it for more, email developers@strava.com about Policy 5.3, 5.4, 5.5 and 6.2 (the 7-day cache, plan matching, the
+   completion computed on read and never stored, and the design that keeps only what the runner ticks).
 
 ## Strava changes already announced
 

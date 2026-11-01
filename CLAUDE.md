@@ -47,7 +47,11 @@ requests (the free Actions minutes are kept for deploys; see `docs/deploy.md`), 
   for good is worked out from a synced run: the coach's calls use check-ins and uploads only (`CoachEvidence`), Home's totals
   retain ticked sessions and uploads (`RunningLog.Of`). Home's current view (`RunningLog.WithSynced`, `includeSynced=true`)
   counts valid Strava measurements automatically without writing them into saved history; source contributions and expiry
-  remain explicit. See `docs/automatic-running-totals.md`. Synced distance alone never completes a prescribed workout.
+  remain explicit. See `docs/automatic-running-totals.md`. A held Strava run that matches a planned running session shows
+  it completed "via Strava" (`SyncedCompletions`, `GET /me/plans/{id}/strava-completions`): computed on every read, never
+  stored, gone when the cached copy lapses or Strava is disconnected; the runner's own tick or skip always wins, a skip
+  with a matching run shows as a conflict, and "Keep this tick" saves the runner's own Done. Never on strength, rest or
+  race days, ambiguous days or trivial runs; time-based sessions are judged by duration. Coaching calls ignore it.
 - `Domain/Sync` — `ProviderConnection` (encrypted tokens), `SyncJob` (retries), `RateLimit`. Worked by
   `Application/Features/Sync/StravaSyncRunner` behind `IStravaApi`; tests use `FakeStravaApi`, never Strava.
 - `Domain/Plans/SavedPlan` — a runner has **one current plan** (a filtered unique index enforces it). A new plan for the

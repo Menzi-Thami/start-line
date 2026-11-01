@@ -4,12 +4,15 @@ import type { CoachingProposal, RecoveryReadiness, TrainingPlan } from '../../li
 import { ZONES } from '../plan/copy'
 import { CoachNote } from './CoachNote'
 import { RemainingWeekAdjustment, type RemainingWeekActions } from './RemainingWeekAdjustment'
+import type { LifeHappensActions } from '../plan/LifeHappens'
 
 export interface AdjustmentActions extends Partial<RemainingWeekActions> {
   review: (recovery?: RecoveryReadiness) => Promise<CoachingProposal>
   apply: (token: string, recovery?: RecoveryReadiness) => Promise<void>
   /** Says no to the reviewed change: the plan stays as it is and the answer is kept in the coaching history. */
   decline?: (token: string, recovery?: RecoveryReadiness) => Promise<void>
+  /** Life Happens on the plan: preview, apply and restore changes for a missed run, short day, travel, illness or a moved long run. */
+  life?: LifeHappensActions
 }
 const RECOVERY_WORDS: Record<RecoveryReadiness, string> = {
   NotReported: 'not given',

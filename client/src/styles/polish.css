@@ -598,3 +598,16 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .readiness-day { font-weight: 600; min-inline-size: 6.5em; }
 .readiness-actions { margin-inline-start: auto; display: inline-flex; gap: var(--space-3); }
 .readiness-today { margin-inline-start: var(--space-2); }
+
+/* Life happens (#142): Plan. Tokens only, so dark mode follows. */
+.life-happens .pills { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
+.life-happens .pills .button[aria-pressed='true'] { background: var(--sage); color: var(--on-sage, var(--ink)); }
+.life-happens-form { display: grid; gap: var(--space-3); margin-block: var(--space-3); max-inline-size: 32rem; }
+.life-happens-form > .button { justify-self: start; }
+.life-happens-dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--space-3); }
+.life-happens-preview { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
+.life-happens-preview h4, .life-happens-changed h4 { margin: 0; font-size: var(--text-md); }
+.life-happens-preview ul, .life-happens-changed ul { margin: 0; padding-inline-start: var(--space-4); display: grid; gap: var(--space-1); }
+.life-happens-changed { margin-block-start: var(--space-4); display: grid; gap: var(--space-2); }
+.life-happens-changed li { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
+.life-happens-changed .link-button { min-height: var(--tap); }

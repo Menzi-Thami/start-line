@@ -4,9 +4,13 @@ using StartLine.Domain.Running;
 
 namespace StartLine.Domain.Plans;
 
-/// <summary>An accepted change, including the original prescription. Null EasyKm means rest.</summary>
+/// <summary>
+/// An accepted change, including the original prescription. Null EasyKm means rest. With <paramref name="MovedFrom"/>, the
+/// session planned on that day is run on <paramref name="Date"/> instead, as written. A move from a day still to come also
+/// rests that day (its own revision); a missed day in the past keeps its history and is made up here.
+/// </summary>
 public sealed record SessionRevision(DateOnly AppliedOn, DateOnly Date, SessionType OriginalType, string OriginalTitle,
-    double OriginalKm, double? EasyKm, double? EasyFastestSecondsPerKm = null, double? EasySlowestSecondsPerKm = null);
+    double OriginalKm, double? EasyKm, double? EasyFastestSecondsPerKm = null, double? EasySlowestSecondsPerKm = null, DateOnly? MovedFrom = null);
 
 public static class RemainingWeek
 {
@@ -63,18 +67,22 @@ public static class RemainingWeek
     {
         ArgumentNullException.ThrowIfNull(plan);
         if (changes is not { Count: > 0 }) return plan;
+        // A moved session is the plan's own, as written, on its new day.
+        var moved = changes.Where(c => c.MovedFrom is not null)
+            .Select(c => plan.Weeks.SelectMany(w => w.Sessions).FirstOrDefault(s => s.Date == c.MovedFrom && s.Type == c.OriginalType) is { } source ? source with { Date = c.Date } : null)
+            .OfType<PlannedSession>().ToList();
         return plan with
         {
             Weeks = [.. plan.Weeks.Select(week => week with { Sessions = [.. week.Sessions.SelectMany(session =>
         {
-            var revision = changes.LastOrDefault(c => c.Date == session.Date);
+            var revision = changes.LastOrDefault(c => c.Date == session.Date && c.MovedFrom is null);
             if (revision is null || !SessionCheckIn.IsCheckable(session.Type)) return new[] { session };
             if (revision.EasyKm is not { } km) return Array.Empty<PlannedSession>();
             var paces = new Dictionary<PaceZone, PaceRange>(plan.Paces);
             if (revision is { EasyFastestSecondsPerKm: { } fast, EasySlowestSecondsPerKm: { } slow })
                 paces[PaceZone.Easy] = new(Pace.FromSecondsPerKilometre(fast), Pace.FromSecondsPerKilometre(slow));
             return new[] { new WorkoutBuilder(plan.Category, paces, plan.RaceDistance).Easy(session.Date, SessionType.Easy, Math.Min(km, session.DistanceKm)) };
-        })] })]
+        }).Concat(moved.Where(m => m.Date >= week.StartDate && m.Date < week.StartDate.AddDays(7))).OrderBy(s => s.Date)] })]
         };
     }
 }

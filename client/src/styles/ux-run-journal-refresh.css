@@ -10,3 +10,24 @@
 @media(min-width:64rem) { .activity-analysis-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .activity-analysis-grid .activity-section:last-child { grid-column:1/-1; } }
 @media(max-width:35rem) { .activity-stats-primary { gap:.35rem; } .activity-stats-primary .stat { padding:.7rem .4rem; } .activity-stats-primary .stat dd { font-size:clamp(1rem,4.1vw,1.5rem); } .activity-stats-primary .stat dt { font-size:.7rem; } }
 @media(prefers-reduced-motion:reduce) { .activity-section,.activity-more-stats { animation:none!important; transition:none!important; } }
+
+/* Container-aware layout: an embedded run view must not assume desktop width. */
+.activity { min-width:0; max-width:100%; container-type:inline-size; }
+.activity :is(.activity-more-stats,.activity-section,.activity-analysis-grid) { min-width:0; }
+.activity :is(.activity-section,.activity-more-stats) > summary { overflow-wrap:anywhere; }
+.activity .activity-stats-primary .stat { min-width:0; }
+.activity .activity-stats-primary dd { overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.activity .activity-section .section { max-width:100%; min-width:0; }
+.activity .activity-section table { max-width:100%; }
+.activity .activity-section:has(table) { overflow-x:auto; }
+@container (max-width: 390px) {
+  .activity-stats-primary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .activity-stats-primary .stat:first-child { grid-column:1/-1; }
+}
+@container (max-width: 680px) {
+  .activity-analysis-grid { grid-template-columns:minmax(0,1fr); }
+}
+@container (min-width: 850px) {
+  .activity-analysis-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .activity-analysis-grid .activity-section:last-child { grid-column:1/-1; }
+}

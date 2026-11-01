@@ -49,7 +49,7 @@ public sealed class TrainingTrendsTests
     }
 
     [Fact]
-    public void A_session_counts_as_done_when_ticked_or_uploaded_but_not_from_a_Strava_copy_alone()
+    public void A_session_counts_as_done_when_ticked_uploaded_or_matched_by_a_held_Strava_run()
     {
         List<PlannedSession> sessions = [Session(3), Session(5), Session(8), Session(10), Session(12)];
         List<TrendCheckIn> checkIns =
@@ -59,7 +59,8 @@ public sealed class TrainingTrendsTests
         ];
         List<TrendRun> runs = [Run(8, 8, 6), Run(10, 8, 6, source: ActivitySource.Strava)];
         var adherence = TrainingTrends.Of(Today, Steady(6, 5), sessions, checkIns, runs).Adherence;
-        adherence.ShouldBe(new SessionAdherence(5, 2, 1, 2, 0.4));
+        // The Strava run 10 days ago completes its session while it is held (computed on read, never stored).
+        adherence.ShouldBe(new SessionAdherence(5, 3, 1, 1, 0.6));
     }
 
     [Fact]

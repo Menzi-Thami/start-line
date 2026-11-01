@@ -96,6 +96,19 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
         return Ok(await dispatcher.Send(new GetTrainingInsightsQuery(id), cancellationToken));
     }
 
+    /// <summary>
+    /// Planned sessions a Strava run Taperday holds now completes, worked out on each read and never stored: each lapses with
+    /// the cached run. The runner's own check-in always wins; a skipped session with a matching run comes back as a conflict.
+    /// </summary>
+    [HttpGet("{id:guid}/strava-completions")]
+    [ProducesResponseType<IReadOnlyList<SyncedCompletionDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> StravaCompletions(Guid id, CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "no-store";
+        return Ok(await dispatcher.Send(new GetSyncedCompletionsQuery(id), cancellationToken));
+    }
+
     /// <summary>Previews what a situation (a missed run, a short day, travel, illness, moving the long run) would change.</summary>
     [HttpPost("{id:guid}/life-happens/preview")]
     [ProducesResponseType<LifeProposalDto>(StatusCodes.Status200OK)]

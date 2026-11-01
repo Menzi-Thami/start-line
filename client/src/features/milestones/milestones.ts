@@ -10,11 +10,17 @@ export type Milestone = {
   evidenceCount: number
 }
 
+function validCalendarDay(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsed = new Date(`${value}T12:00:00Z`)
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value
+}
+
 /** Milestones are derived from visible records, never claimed as all-time personal bests. */
 export function milestonesFromRuns(runs: readonly ActivitySummary[]): Milestone[] {
   const valid = runs.filter(run =>
     Number.isFinite(run.distanceKm) && run.distanceKm > 0 &&
-    /^\d{4}-\d{2}-\d{2}$/.test(run.localDate))
+    validCalendarDay(run.localDate))
   if (valid.length === 0) return []
   const sorted = [...valid].sort((a, b) => b.localDate.localeCompare(a.localDate) || a.id.localeCompare(b.id))
   const longest = sorted.reduce((best, next) => next.distanceKm > best.distanceKm ? next : best)

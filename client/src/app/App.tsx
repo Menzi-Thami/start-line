@@ -22,6 +22,7 @@ import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
 import { RemindersSection } from '../features/reminders/Reminders'
 import { useCheckIns } from '../features/coaching/useCheckIns'
+import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { Hero, RaceTicker } from '../features/home/Hero'
@@ -286,6 +287,8 @@ export function App() {
   const savedOnScreen =
     plan.kind === 'ready' && currentPlan.current && samePlan(toRequest(plan.inputs), currentPlan.current.inputs) ? currentPlan.current.id : null
   const checkIns = useCheckIns(savedOnScreen)
+  // Sessions a held Strava run completes on that plan: computed by the API on each read, never stored.
+  const stravaCompletions = useSyncedCompletions(savedOnScreen, completionsKey(checkIns.entries, runs ?? []))
   // On the runner's own plan, the calendar menu subscribes to their personal feed, which follows every change to it.
   const calendarLink = useCalendarLink(owner, savedOnScreen !== null)
 
@@ -935,7 +938,7 @@ export function App() {
                 onOpenAccount={state.kind === 'ready' ? () => go('account') : undefined}
                 onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
-                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
+                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, synced: stravaCompletions.get, save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
                   reviewRemaining: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your week.'); return api.me.reviewRemainingWeek(token, savedOnScreen) },
                   applyRemaining: async (proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your week.'); const result = await api.me.applyRemainingWeek(token, savedOnScreen, proposalToken); setPlan({ kind: 'ready', plan: result.proposed, inputs: plan.inputs }) },
                   review: async (recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, savedOnScreen, recovery) },

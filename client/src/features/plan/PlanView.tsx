@@ -17,6 +17,7 @@ import { RunLog } from '../coaching/RunLog'
 import { SavedRun } from '../coaching/SavedRun'
 import { weekEnd } from '../../lib/plan-runs'
 import { CoachNote } from '../coaching/CoachNote'
+import { completedViaStrava } from '../coaching/strava-completion'
 import { latestPaced } from '../coaching/fitness'
 import { PacesIntro, PredictedTimes } from '../coaching/FitnessNotes'
 import type { SessionCoach } from '../coaching/useCheckIns'
@@ -145,6 +146,9 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     if (entry.status === 'Skipped') effectiveDone.delete(key)
     else effectiveDone.add(key)
   }
+  // A held Strava run completes its session on the calendar, the week and the progress bars while the runner hasn't
+  // answered. Worked out by the API on each read, never stored, so it goes when the copy lapses.
+  for (const session of plan.weeks.flatMap((w) => w.sessions)) if (completedViaStrava(session, coach)) effectiveDone.add(sessionKey(session))
   const additionalDates = entries.filter((c) => c.isAdditional && c.status !== 'Skipped').map((c) => c.date)
   const activityDates = [...runs?.filter(run => run.kind !== 'Other').map(run => run.localDate) ?? [], ...entries.filter(entry => entry.status !== 'Skipped').map(entry => entry.date)]
   const byDate = runs ? runsByDate(runs) : undefined

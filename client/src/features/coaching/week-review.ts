@@ -73,13 +73,15 @@ function feelOf(sessions: readonly Session[], checkInFor?: CheckInFor): Feel | n
  * was missed. A run recorded on a planned run's day counts as that run, as everywhere else in Taperday; a check-in that
  * says it was run counts too, for runners who don't record. Runs on race day are left out, like the plan's weekly total.
  */
-export function reviewWeek(week: PlanWeek, runs: readonly ActivitySummary[], today: string, checkInFor?: CheckInFor, entries?: readonly CheckIn[]): WeekReview {
+export function reviewWeek(week: PlanWeek, runs: readonly ActivitySummary[], today: string, checkInFor?: CheckInFor, entries?: readonly CheckIn[], syncedFor?: (session: Session) => boolean): WeekReview {
   const end = weekEnd(week)
   const byDate = runsByDate(runs.filter((r) => r.localDate >= week.startDate && r.localDate <= end && r.localDate <= today && !entries?.some(c => c.isAdditional && c.activityId === r.id)))
   const sessions = plannedRuns(week.sessions).filter((s) => s.type !== 'Race')
 
   const recordedKm = (date: string) => (byDate.get(date) ?? []).reduce((sum, r) => sum + r.distanceKm, 0)
-  const isDone = (s: Session) => { const c = checkInFor?.(s); return c ? RAN.has(c.status) : (byDate.get(s.date) ?? []).some((r) => r.source.kind !== 'Strava') }
+  // Without the runner's word, an uploaded run that day counts, and so does a Strava run Taperday holds now (computed by
+  // the API, never stored), as on the rest of the plan.
+  const isDone = (s: Session) => { const c = checkInFor?.(s); return c ? RAN.has(c.status) : (byDate.get(s.date) ?? []).some((r) => r.source.kind !== 'Strava') || !!syncedFor?.(s) }
   const due = sessions.filter((s) => s.date < today || (s.date === today && isDone(s)))
 
   const answers = entries ?? sessions.flatMap((s) => { const c = checkInFor?.(s); return c ? [c] : [] })

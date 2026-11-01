@@ -1,5 +1,5 @@
 import { formatDate, formatDistance, type Units } from '../../lib/format'
-import type { ActivitySummary, CoachNote as Note, PlanWeek, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, CoachNote as Note, PlanWeek, Session, TrainingPlan } from '../../lib/types'
 import { CoachNote } from '../coaching/CoachNote'
 import { FEEL_WORDS, reviewWeek, sessionDay, weekAhead, type CheckInFor } from '../coaching/week-review'
 
@@ -13,15 +13,17 @@ interface Props {
   units: Units
   runs: readonly ActivitySummary[]
   checkInFor?: CheckInFor
+  /** Whether a held Strava run completes a session, while the runner hasn't answered. */
+  syncedFor?: (session: Session) => boolean
 }
 
 const day = (date: string) => formatDate(date, 'weekday')
 
-function LastWeek({ week, today, units, runs, checkInFor }: { week: PlanWeek | undefined } & Pick<Props, 'today' | 'units' | 'runs' | 'checkInFor'>) {
+function LastWeek({ week, today, units, runs, checkInFor, syncedFor }: { week: PlanWeek | undefined } & Pick<Props, 'today' | 'units' | 'runs' | 'checkInFor' | 'syncedFor'>) {
   if (!week) {
     return <p className="field-help">Nothing to look back on yet: this is your first week. After it, the coach fits the next one to how it went.</p>
   }
-  const review = reviewWeek(week, runs, today, checkInFor)
+  const review = reviewWeek(week, runs, today, checkInFor, undefined, syncedFor)
   const missed = review.missed.filter((s) => s !== review.longRun?.session)
   return (
     <ul className="your-week-list">
@@ -84,7 +86,7 @@ function ThisWeek({ plan, week, units }: Pick<Props, 'plan' | 'week' | 'units'>)
  * The week on one card: the coach's call for it, how last week went and what this one asks for. Built from the
  * coached plan, the runner's own runs (uploads and, while they're kept, synced ones) and their check-ins.
  */
-export function YourWeek({ plan, week, coachNotes, today, units, runs, checkInFor }: Props) {
+export function YourWeek({ plan, week, coachNotes, today, units, runs, checkInFor, syncedFor }: Props) {
   const note = coachNotes.find((n) => n.weekStart === week.startDate)
   const lastWeek = plan.weeks.find((w) => w.number === week.number - 1)
   return (
@@ -97,7 +99,7 @@ export function YourWeek({ plan, week, coachNotes, today, units, runs, checkInFo
       <div className="your-week-grid">
         <section aria-labelledby="your-week-last">
           <h3 id="your-week-last">Last week</h3>
-          <LastWeek week={lastWeek} today={today} units={units} runs={runs} checkInFor={checkInFor} />
+          <LastWeek week={lastWeek} today={today} units={units} runs={runs} checkInFor={checkInFor} syncedFor={syncedFor} />
         </section>
         <section aria-labelledby="your-week-this">
           <h3 id="your-week-this">

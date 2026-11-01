@@ -1,30 +1,31 @@
 import { useState } from 'react'
 import { ApiError } from '../../lib/api-client'
-import { formatDistance } from '../../lib/format'
-import type { ActivitySummary, Session } from '../../lib/types'
-import { offersTick, stravaRunFor } from './ran-this'
+import { completionFeedback, plannedVsActual } from '../../lib/strava-auto-completion'
+import { formatDistance, formatDuration } from '../../lib/format'
+import type { Session } from '../../lib/types'
+import { syncedFor } from './strava-completion'
 import type { SessionCoach } from './useCheckIns'
 
 interface Props {
   session: Session
   coach: SessionCoach
-  runs?: readonly ActivitySummary[]
-  /** After the tick is saved: the session counts as done. */
+  /** After the runner's own tick is saved. */
   onTicked?: () => void
 }
 
 /**
- * "Ran this? Tick it": one tap that says the runner ran a session Strava has a run for. It's a plain "Done" check-in, the
- * runner's own, so it's kept and counts towards their totals; the synced run goes after 7 days. Only ever the runner's
- * tap: Taperday never ticks a session for them. How it felt can be added after, in the usual check-in.
+ * "Completed via Strava": a held Strava run completes the session while Taperday has it (7 days), worked out on each read
+ * and never stored. It shows planned against actual and a gentle word on how it compared. "Keep this tick" is the runner's
+ * own tap, a plain Done check-in, which lasts after the Strava copy goes. When the runner said they skipped it, their
+ * word stands and the run is shown beside it, with one tap to change their answer.
  */
-export function RanThis({ session, coach, runs, onTicked }: Props) {
+export function StravaCompletion({ session, coach, onTicked }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const run = stravaRunFor(session, runs)
-  if (!run || !offersTick(session, coach, runs)) return null
+  const completion = syncedFor(session, coach)
+  if (!completion) return null
 
-  const tick = async () => {
+  const keep = async () => {
     setBusy(true)
     setError(null)
     try {
@@ -37,19 +38,40 @@ export function RanThis({ session, coach, runs, onTicked }: Props) {
     }
   }
 
+  const figures = plannedVsActual(completion, coach.units)
+  const ran = completion.actualKm > 0 ? formatDistance(completion.actualKm, coach.units) : formatDuration(completion.actualSeconds)
+  const failed = error && <p className="field-error" role="alert">{error}</p>
+
+  if (completion.state === 'Conflict') {
+    return (
+      <div className="strava-completion is-conflict">
+        <p className="strava-completion-line">
+          <strong>You marked this skipped.</strong> Strava has a {ran} run on this day. Your answer stands unless you change it.
+        </p>
+        <button type="button" className="button button-quiet strava-completion-button" onClick={() => void keep()} disabled={busy}>
+          {busy ? 'Saving…' : 'I ran it: mark as done'}
+        </button>
+        {failed}
+      </div>
+    )
+  }
+
   return (
-    <div className="ran-this">
-      <p className="ran-this-line">
-        Strava has a {formatDistance(run.distanceKm, coach.units)} run for this. Tick it and it counts towards your running for good.
+    <div className="strava-completion">
+      <p className="strava-completion-label">
+        <span className="chip chip-good">Completed via Strava</span>
       </p>
-      <button type="button" className="button ran-this-button" onClick={() => void tick()} disabled={busy}>
-        {busy ? 'Ticking…' : 'Ran this? Tick it'}
-      </button>
-      {error && (
-        <p className="field-error" role="alert">
-          {error}
+      {figures && (
+        <p className="strava-completion-figures">
+          Planned <span className="mono">{figures.planned}</span> · Ran <span className="mono">{figures.actual}</span>
         </p>
       )}
+      <p className="strava-completion-line">{completionFeedback(completion, coach.units)}</p>
+      <p className="field-help">Strava runs stay in Taperday for 7 days. Keep the tick and it stays on your plan for good.</p>
+      <button type="button" className="button strava-completion-button" onClick={() => void keep()} disabled={busy}>
+        {busy ? 'Saving…' : 'Keep this tick'}
+      </button>
+      {failed}
     </div>
   )
 }

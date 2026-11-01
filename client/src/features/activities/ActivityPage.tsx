@@ -118,7 +118,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       <h2 className="plan-title" id="activity-title">
         {title}
       </h2>
-      <RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} />
+      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
       {run.source.kind === 'Strava' && (
         <p className="activity-source">
           <span>From Strava{run.source.recordedOnGarmin ? ' · recorded on Garmin' : ''}</span>
@@ -131,6 +131,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         <h3 id="verdict-title" className="verdict-headline">
           {verdict.headline}
         </h3>
+        <details className="activity-verdict-detail"><summary>Training analysis</summary>
         {verdict.details.map((line) => (
           <p key={line} className="verdict-detail">
             {line}
@@ -149,12 +150,15 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
           </div>
         )}
         {verdict.next && <p className="verdict-next">{verdict.next}</p>}
+        </details>
       </section>
 
-      <dl className="activity-stats">
+      <dl className="activity-stats activity-stats-primary">
         <Stat label="Distance" value={formatDistance(run.distanceKm, units)} lead />
         <Stat label="Moving time" value={formatDuration(run.movingSeconds)} lead />
         <Stat label="Pace" value={formatPace(run.paceSecondsPerKm, units)} lead />
+      </dl>
+      <details className="activity-more-stats"><summary>More run statistics</summary><dl className="activity-stats activity-stats-secondary">
         {run.elevationGainMetres != null && <Stat label="Elevation gain" value={`${run.elevationGainMetres} m`} />}
         {run.averageHeartRate != null && <Stat label="Avg heart rate" value={`${run.averageHeartRate} bpm`} />}
         {run.maxHeartRate != null && <Stat label="Max heart rate" value={`${run.maxHeartRate} bpm`} />}
@@ -162,11 +166,14 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         {run.elapsedSeconds - run.movingSeconds >= 60 && <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />}
       </dl>
 
-      <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
+      </details>
+      <div className="activity-analysis-grid">
+        {run.splits.length > 0 && <details className="activity-section"><summary>Splits & pacing <span>Kilometre-by-kilometre</span></summary><Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /></details>}
 
-      {run.heartRate && <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} />}
+      {run.heartRate && <details className="activity-section"><summary>Heart rate & effort <span>Zones and drift</span></summary><HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /></details>}
 
-      <BestEfforts efforts={run.bestEfforts} units={units} />
+      {run.bestEfforts.length > 0 && <details className="activity-section"><summary>Best efforts <span>Records and milestones</span></summary><BestEfforts efforts={run.bestEfforts} units={units} /></details>}
+      </div>
 
       {run.source.kind === 'Strava' ? (
         <section className="section">

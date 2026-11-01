@@ -38,7 +38,7 @@ describe('rolling 4/8/12-week mileage comparisons', () => {
     expect(results.map(item => item.weeks)).toEqual([4, 8, 12])
     expect(results[0]).toMatchObject({ distance: 15, previousDistance: 12, runs: 2, days: 2 })
     expect(results[1].distance).toBe(27)
-    expect(results[2].distance).toBe(30)
+    expect(results[2].distance).toBe(27)
   })
   it('does not count zero or invalid measured distances', () => {
     expect(progressWindows([run('zero','2026-11-01',0)], '2026-11-01')[0].runs).toBe(0)

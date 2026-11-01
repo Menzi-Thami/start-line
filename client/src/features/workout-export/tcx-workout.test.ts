@@ -26,6 +26,14 @@ describe('structured TCX workout export', () => {
     expect(tcx).toContain('Intervals &amp; &lt;strides&gt;')
   })
 
+  it('preserves pace guidance as escaped notes without claiming device pace targeting', () => {
+    const run = { ...segment('Run', 1, null), fastestSecondsPerKm: 275, slowestSecondsPerKm: 310, effort: 'controlled <tempo> & smooth' }
+    const tcx = exportTcxWorkout(session([run]))
+    expect(tcx).toContain('pace 4:35–5:10/km')
+    expect(tcx).toContain('controlled &lt;tempo&gt; &amp; smooth')
+    expect(tcx).toContain('<Target xsi:type="None_t"/>')
+  })
+
   it('rejects empty and unbounded prescriptions rather than exporting garbage', () => {
     expect(() => exportTcxWorkout(session([]))).toThrow()
     expect(() => flattenWorkout([segment('Run', null, null)])).toThrow()

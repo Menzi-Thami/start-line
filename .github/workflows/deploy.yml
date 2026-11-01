@@ -1,9 +1,11 @@
 name: deploy
 
-# Ships main in two steps. Every merge deploys to staging first (its own API, database and website environment), so a
-# change can be tried on real infrastructure without touching runners. Production waits for approval on the
-# production environment (Settings → Environments → production → required reviewers), then deploys the same commit.
-# Also runnable by hand (Actions → deploy → Run workflow).
+# Ships main in three steps, with no clicks. Every merge deploys to staging first (its own API, database and website
+# environment), then scripts/smoke.sh checks staging the way a runner first meets it: the website loads and may call its
+# API, and the API answers from its database and builds a plan. Only when that passes does production deploy the same
+# commit, and the same check runs against production afterwards (a failure there turns the run red to say so).
+# To pause production for a change that needs eyes first, add required reviewers to the production environment
+# (Settings → Environments → production). Also runnable by hand (Actions → deploy → Run workflow).
 on:
   push:
     branches: [main]
@@ -26,9 +28,27 @@ jobs:
       website-environment: staging
     secrets: inherit
 
-  production:
+  staging-check:
     needs: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Smoke check staging
+        run: scripts/smoke.sh https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net https://app-taperday-api-staging-3ghg5t.azurewebsites.net
+
+  production:
+    needs: staging-check
     uses: ./.github/workflows/deploy-environment.yml
     with:
       environment: production
     secrets: inherit
+
+  production-check:
+    needs: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Smoke check production
+        run: scripts/smoke.sh https://taperday.run https://app-taperday-api-3ghg5t.azurewebsites.net

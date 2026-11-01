@@ -40,7 +40,7 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
     if (!current) return
     try {
       if (navigator.canShare?.({ files: [current.file] }) && navigator.share) {
-        await navigator.share({ files: [prepared.file], title: 'My Taperday milestone' })
+        await navigator.share({ files: [current.file], title: 'My Taperday milestone' })
         setMessage('Shared.')
       } else setError('File sharing is not supported here. Save the PNG instead.')
     } catch (reason) {
@@ -62,8 +62,8 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
     {current ? <div>
       <img src={current.url} width={270} height={338} alt={`Preview of ${selected.title} milestone card`} style={{ width: 'min(100%,270px)', height: 'auto', borderRadius: 'var(--radius-md)' }} />
       <div className="submit-row">
-        <a className="button button-quiet" href={prepared.url} download={prepared.file.name}>Save PNG</a>
-        {typeof navigator.canShare === 'function' && navigator.canShare({ files: [prepared.file] }) && <button type="button" className="button" onClick={() => void share()}>Share image</button>}
+        <a className="button button-quiet" href={current.url} download={current.file.name}>Save PNG</a>
+        {typeof navigator.canShare === 'function' && navigator.canShare({ files: [current.file] }) && <button type="button" className="button" onClick={() => void share()}>Share image</button>}
       </div>
     </div> : <p role="status">Preparing image…</p>}
     {message && <p role="status">{message}</p>}

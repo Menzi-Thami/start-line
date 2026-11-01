@@ -795,6 +795,46 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("Feedback", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Runners.OnboardingDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Campaign")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<DateTimeOffset>("ClaimedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Episode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId", "Campaign", "Episode")
+                        .IsUnique();
+
+                    b.ToTable("OnboardingDeliveries", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Runners.Runner", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1263,6 +1303,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("StartLine.Domain.Runners.Feedback", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Runners.OnboardingDelivery", b =>
                 {
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
                         .WithMany()

@@ -800,6 +800,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("BeginnerProgressJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("CalendarToken")
                         .IsConcurrencyToken()
                         .HasMaxLength(64)

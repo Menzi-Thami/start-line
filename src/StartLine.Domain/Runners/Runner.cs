@@ -79,6 +79,11 @@ public sealed class Runner
     /// </summary>
     public string? CalendarToken { get; private set; }
 
+    /// <summary>Runner's own Couch to 5K state, stored as validated JSON; never imported Strava measurements.</summary>
+    public string? BeginnerProgressJson { get; private set; }
+
+    public void SaveBeginnerProgress(string json) => BeginnerProgressJson = json;
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }

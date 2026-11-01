@@ -24,6 +24,10 @@ export function flattenWorkout(steps: Step[], limit = 500): Flat[] {
         for (let i = 0; i < step.times; i++) visit(step.steps, depth + 1)
       } else {
         if (!positive(step.durationSeconds) && !positive(step.distanceKm)) throw new Error('Workout step requires a distance or duration.')
+        // TCX stores whole seconds/metres: never emit a zero-length step after rounding.
+        const timeWins = positive(step.durationSeconds)
+        const exportable = timeWins ? seconds(step.durationSeconds!) >= 1 : meters(step.distanceKm!) >= 1
+        if (!exportable) throw new Error('Workout step is too short to export as whole seconds or metres.')
         if ((step.durationSeconds !== null && (!Number.isFinite(step.durationSeconds) || step.durationSeconds < 0)) ||
             (step.distanceKm !== null && (!Number.isFinite(step.distanceKm) || step.distanceKm < 0)))
           throw new Error('Workout has an invalid step measurement.')

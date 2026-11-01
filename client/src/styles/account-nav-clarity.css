@@ -1,0 +1,24 @@
+/* Scoped account and navigation touch-target refinements. */
+.account-intro-note { margin:.4rem 0 1.5rem; font-size:.94rem; color:var(--muted); line-height:1.5; }
+.account-settings { max-width:min(100%,60rem); margin-inline:auto; }
+.account-settings .settings-group > summary { min-height:56px; padding-block:.9rem; cursor:pointer; }
+.masthead-nav .nav-link { display:inline-flex; align-items:center; justify-content:center; min-height:44px; }
+.tab-bar-item { min-height:56px; touch-action:manipulation; }
+.tab-bar-item:focus-visible { outline-offset:-3px; }
+@media(max-width:47.99rem) { .tab-bar { padding-bottom:max(.35rem,env(safe-area-inset-bottom)); } }
+@media(prefers-reduced-motion:reduce) { .tab-bar-indicator,.tab-bar-item { transition:none!important; } }
+
+/* Fluid Account presentation across narrow phones, tablets and wide desktops. */
+.account-settings { width:100%; min-width:0; container-type:inline-size; }
+.account-settings .settings-group { min-width:0; max-width:100%; }
+.account-settings .settings-group > summary { overflow-wrap:anywhere; }
+.account-settings .settings-group > :not(summary) { min-width:0; max-width:100%; }
+.account-settings :is(input,select,textarea) { max-width:100%; }
+.account-settings :is(.submit-row,.section) { min-width:0; }
+.account-settings .submit-row { flex-wrap:wrap; }
+@container (max-width: 450px) {
+  .account-settings .settings-group > summary { padding-inline:clamp(.65rem,3vw,1rem); }
+}
+@media (min-width:80rem) {
+  .account-settings { max-width:min(100%,68rem); }
+}

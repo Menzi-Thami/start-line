@@ -16,11 +16,12 @@ import { SavedRun } from '../coaching/SavedRun'
 import { RunResult } from '../coaching/RunResult'
 import { CheckInLoadState } from '../coaching/CheckInLoadState'
 import { CheckInCard } from '../coaching/CheckInCard'
-import { offersTick } from '../coaching/ran-this'
-import { RanThis } from '../coaching/RanThis'
+import { completedViaStrava } from '../coaching/strava-completion'
+import { StravaCompletion } from '../coaching/StravaCompletion'
 import { ProgressStory } from '../coaching/ProgressStory'
 import { TrainingInsights } from '../coaching/TrainingInsights'
 import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
+import { completionsKey, useSyncedCompletions } from '../coaching/useSyncedCompletions'
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
@@ -178,14 +179,14 @@ function tickFromUrl(): { date: string; type: string } | null {
 }
 
 /**
- * The session a "ran it?" notification was about, when it isn't today's (today's is on the Today card): "Ran this? Tick
- * it", then the usual check-in once it's ticked.
+ * The session a "ran it?" notification was about, when it isn't today's (today's is on the Today card): completed via
+ * Strava with "Keep this tick", then the usual check-in once it's ticked.
  */
-function TickCard({ plan, today, coach, runs }: { plan: TrainingPlan | null; today: string; coach?: SessionCoach; runs: ActivitySummary[] }) {
+function TickCard({ plan, today, coach }: { plan: TrainingPlan | null; today: string; coach?: SessionCoach }) {
   const [wanted] = useState(tickFromUrl)
   const [ticked, setTicked] = useState(false)
   const session = wanted && plan?.weeks.flatMap((w) => w.sessions).find((s) => s.date === wanted.date && s.type === wanted.type)
-  if (!session || !coach || session.date === today || !(ticked || offersTick(session, coach, runs))) return null
+  if (!session || !coach || session.date === today || !(ticked || completedViaStrava(session, coach))) return null
   return (
     <section className="panel home-card" aria-labelledby="home-tick">
       <h2 id="home-tick" className="home-card-heading">
@@ -197,7 +198,7 @@ function TickCard({ plan, today, coach, runs }: { plan: TrainingPlan | null; tod
           <CheckInCard session={session} coach={coach} />
         </>
       ) : (
-        <RanThis session={session} coach={coach} runs={runs} onTicked={() => setTicked(true)} />
+        <StravaCompletion session={session} coach={coach} onTicked={() => setTicked(true)} />
       )}
     </section>
   )
@@ -300,13 +301,14 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
     const zone = s.zone ? byZone.get(s.zone) : undefined
     return zone ? formatPaceRange(zone.fastestSecondsPerKm, zone.slowestSecondsPerKm, units) : null
   }
-  // Done is the runner's own word once their check-ins are in: a tick or check-in, or a run they uploaded. A run Strava sent
-  // alone doesn't make it done; the card asks them to tick it instead.
+  // The runner's own word comes first: a tick or check-in, or a run they uploaded. Without it, a Strava run Taperday holds
+  // now completes the session "via Strava" until the copy lapses; it is never their tick.
   const ranToday = runs.some((r) => !coach?.entries?.some((c) => c.isAdditional && c.activityId === r.id) && r.localDate === today && r.kind !== 'Other' && r.source.kind !== 'Strava')
-  const isDone = (s: Session) => {
+  const ownDone = (s: Session) => {
     const checkIn = coach?.get(s)
     return checkIn ? checkIn.status !== 'Skipped' : ranToday
   }
+  const isDone = (s: Session) => ownDone(s) || completedViaStrava(s, coach)
 
   const body = (() => {
     if (progress.kind === 'before') return <p>Your plan starts {formatDate(plan.startDate, 'long')}. Easy running until then.</p>
@@ -333,6 +335,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
           {s.title}
           {isDone(s) && <span className="chip chip-good home-done-chip">Done</span>}
         </p>
+        {coach && !ownDone(s) && <StravaCompletion session={s} coach={coach} />}
         <dl className="home-workout-facts">
           {s.distanceKm > 0 && <div><dt>Distance</dt><dd className="mono">{formatDistance(s.distanceKm, units)}</dd></div>}
           {pace(s) && <div><dt>Target pace</dt><dd className="mono">{pace(s)}</dd></div>}
@@ -346,7 +349,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
           </details>
         )}
         {/* Once it's ticked or checked in on, the usual check-in: how it felt, or a change of mind. */}
-        {coach && <CheckInCard session={s} coach={coach} runs={runs} done={isDone(s)} compactActions />}
+        {coach && <CheckInCard session={s} coach={coach} runs={runs} done={ownDone(s)} compactActions />}
       </div>
     ))
   })()
@@ -423,6 +426,8 @@ export function Home({
   const [toolsOpened, setToolsOpened] = useState(toolsOpen)
   const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
+  // Sessions a held Strava run completes, computed by the API on each read; asked for again as check-ins or runs change.
+  const synced = useSyncedCompletions(current?.id ?? null, completionsKey(checkIns.entries, runs))
   useEffect(() => {
     if (plan && new URLSearchParams(window.location.search).get('review') === '1') reviewRef.current?.scrollIntoView?.({ block: 'start' })
   }, [plan])
@@ -436,6 +441,7 @@ export function Home({
         today,
         units,
         get: checkIns.get,
+        synced: synced.get,
         entries: checkIns.entries,
         adjustments: current ? {
           reviewRemaining: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your week.'); return api.me.reviewRemainingWeek(token, current.id) },
@@ -466,7 +472,7 @@ export function Home({
   const soFar = week ? weekSoFar(week, plannedActivityRuns, runsByDate(plannedActivityRuns)) : null
   if (soFar && week) {
     soFar.ranKm = ranKmByWeek([week], runs, today, checkIns.entries).get(week.number) ?? 0
-    soFar.doneRuns = week.sessions.filter((s) => s.type !== 'Race' && s.type !== 'Strength' && (checkIns.get(s) ? checkIns.get(s)!.status !== 'Skipped' : completedActivityRuns.some((r) => r.localDate === s.date))).length
+    soFar.doneRuns = week.sessions.filter((s) => s.type !== 'Race' && s.type !== 'Strength' && (checkIns.get(s) ? checkIns.get(s)!.status !== 'Skipped' : completedActivityRuns.some((r) => r.localDate === s.date) || completedViaStrava(s, coach))).length
   }
   const progress = plan ? planProgress(plan, today) : null
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
@@ -542,8 +548,8 @@ export function Home({
           <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
         </button>}
         </div>
-        <TickCard plan={plan} today={today} coach={coach} runs={runs} />
-        {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
+        <TickCard plan={plan} today={today} coach={coach} />
+        {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} syncedFor={coach ? (s) => completedViaStrava(s, coach) : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
         {runs.length > 0 && <details className="disclosure"><summary>Share a milestone</summary><MilestoneCards runs={runs} /></details>}
         <ReadinessCheckIn today={today} onReview={plan && week && progress?.kind !== 'race' ? () => { setReviewOpen(true); requestAnimationFrame(() => reviewRef.current?.scrollIntoView?.({ block: 'start' })) } : undefined} />

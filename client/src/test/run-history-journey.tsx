@@ -5,6 +5,7 @@ import plan from './fixtures/plan-5k.json'
 import { PlanView } from '../features/plan/PlanView'
 import { Home } from '../features/runner-home/Home'
 import { useCheckIns } from '../features/coaching/useCheckIns'
+import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { current, today } from './run-history-data'
 
@@ -14,9 +15,10 @@ const noop = () => {}
 
 function SavedPlan({ runs }: { runs: ActivitySummary[] }) {
   const checkIns = useCheckIns(current.id)
+  const synced = useSyncedCompletions(current.id, completionsKey(checkIns.entries, runs))
   return <><CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} /><PlanView plan={planFixture} today={today} units="km" onUnitsChange={noop} shareUrl="https://example.test/plan" runs={runs}
     canCompleteRuns={checkIns.ready}
-    coach={checkIns.ready ? { ...checkIns, today, units: 'km' } : undefined} /></>
+    coach={checkIns.ready ? { ...checkIns, synced: synced.get, today, units: 'km' } : undefined} /></>
 }
 
 // Remount both actual screens so navigation must reload the persisted API entries.

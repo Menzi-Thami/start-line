@@ -94,6 +94,6 @@ internal static class TrainingTrendsReader
             logged,
             sessions,
             [.. checkIns.Select(c => new TrendCheckIn(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.ActivityId, c.IsAdditional))],
-            [.. runs.Select(a => new TrendRun(a.Id, a.LocalDate, a.DistanceKm, a.MovingTime, a.AverageHeartRate, a.Source, a.PlannedSession?.SessionType))]);
+            [.. runs.Select(TrendRun.Of)]);
     }
 }

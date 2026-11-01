@@ -44,6 +44,10 @@ public class RunMatchTests
     public void An_upload_origin_keeps_only_the_file_name_and_cuts_long_ones()
     {
         ActivityOrigin.Uploaded(@"C:\Users\me\runs\easy.fit").FileName.ShouldBe("easy.fit");
+        ActivityOrigin.Uploaded("/home/me/runs/tempo.gpx").FileName.ShouldBe("tempo.gpx");
+        ActivityOrigin.Uploaded(@"runs\nested/mixed\long.tcx").FileName.ShouldBe("long.tcx");
+        ActivityOrigin.Uploaded("plain.fit").FileName.ShouldBe("plain.fit");
+        ActivityOrigin.Uploaded("folder/").FileName.ShouldBeNull();
         ActivityOrigin.Uploaded("   ").FileName.ShouldBeNull();
         ActivityOrigin.Uploaded(new string('x', 300) + ".fit").FileName!.Length.ShouldBe(ActivityOrigin.MaxFileNameLength);
     }

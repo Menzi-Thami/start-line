@@ -17,6 +17,12 @@ interface Props {
 
 const SOURCE_LABEL = { Upload: 'Upload', Strava: 'Strava' } as const
 
+function isRunData(value: unknown): value is RunData {
+  const data = value as Partial<RunData> | null
+  return typeof data === 'object' && data !== null && !Array.isArray(data) && typeof data.sources === 'object' && data.sources !== null
+    && Array.isArray(data.totals) && Array.isArray(data.possibleDuplicates) && Array.isArray(data.syncIssues) && typeof data.missing === 'object' && data.missing !== null
+}
+
 function plural(count: number, one: string, many = `${one}s`) {
   return `${count} ${count === 1 ? one : many}`
 }
@@ -82,7 +88,11 @@ export function RunDataPanel({ units, onOpen, onChanged, refreshKey }: Props) {
     auth
       .getToken()
       .then((token) => (token ? api.me.runData(token) : Promise.reject(new Error('Sign in to see your run data.'))))
-      .then((data) => !cancelled && setState({ kind: 'ready', data }))
+      .then((data) => {
+        // A missing or unexpected answer (an older API, a proxy page) is "not available", never a crash of the Runs page.
+        if (!isRunData(data)) throw new Error('Run data isn’t available right now.')
+        if (!cancelled) setState({ kind: 'ready', data })
+      })
       .catch((error: unknown) => !cancelled && setState({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
     return () => {
       cancelled = true

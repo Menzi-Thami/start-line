@@ -27,10 +27,14 @@ public sealed record ActivityOrigin(ActivitySource Source, string? ExternalId, D
     /// <summary>The name of the file an upload came from, shown to the runner so they can tell their runs apart.</summary>
     public string? FileName { get; init; }
 
-    /// <summary>An upload from a file of this name (the name only: any folder is dropped).</summary>
+    /// <summary>
+    /// An upload from a file of this name (the name only: any folder is dropped). Browsers and the API run on any
+    /// operating system, so both slash conventions count as separators, whatever this server is.
+    /// </summary>
     public static ActivityOrigin Uploaded(string? fileName)
     {
-        var name = string.IsNullOrWhiteSpace(fileName) ? null : Path.GetFileName(fileName.Trim());
+        var trimmed = fileName?.Trim();
+        var name = string.IsNullOrEmpty(trimmed) ? null : trimmed[(trimmed.LastIndexOfAny(['/', '\\']) + 1)..];
         return Upload with { FileName = string.IsNullOrEmpty(name) ? null : name.Length > MaxFileNameLength ? name[..MaxFileNameLength] : name };
     }
 

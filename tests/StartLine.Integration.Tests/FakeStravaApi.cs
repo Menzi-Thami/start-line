@@ -198,5 +198,7 @@ public sealed class StravaApiFactory : StartLineApiFactory
 /// </summary>
 public sealed class StravaInSeries
 {
-    public const string Name = "Strava";
+    // The same collection as the reminder tests: TickPromptTests syncs Strava there too, and every class that runs a
+    // sync pass must run one at a time.
+    public const string Name = RemindersInSeries.Name;
 }

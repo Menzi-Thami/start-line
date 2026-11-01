@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useAuth } from '../../app/auth-context'
+import { apiOrigin } from '../../lib/api-client'
 import { beginnerSessionSummary, couchTo5k } from './couch-to-5k'
 import { countCompleted, defaultBeginnerProgress, parseBeginnerProgress, sessionDate, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
 
@@ -19,7 +21,11 @@ const read = (): BeginnerProgress => {
  * only until the authenticated account-backed plan API is integrated.
  */
 export function CouchTo5K() {
+  const auth = useAuth()
   const [progress, setProgress] = useState<BeginnerProgress>(read)
+  const [serverReady, setServerReady] = useState(false)
+  const [syncError, setSyncError] = useState('')
+  const saveVersion = useRef(0)
   const sessions = programme.filter(s => s.week === progress.week)
   const done = countCompleted(progress, programme)
   const update = (next: BeginnerProgress) => setProgress(next)
@@ -27,6 +33,41 @@ export function CouchTo5K() {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)) }
     catch { /* Private browsing / restricted storage: continue in memory */ }
   }, [progress])
+
+  // A signed-in runner's server state is canonical. Device state remains a
+  // fallback when not signed in; never overwrite the account before hydration.
+  useEffect(() => {
+    if (!auth.account) { setServerReady(false); return }
+    let cancelled = false
+    setServerReady(false)
+    auth.getToken().then(async token => {
+      if (!token) return
+      const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
+      if (!response.ok && response.status !== 204) throw new Error('Unable to load your saved programme.')
+      if (!cancelled) {
+        if (response.status !== 204) setProgress(parseBeginnerProgress(JSON.stringify(await response.json()), todayLocal()))
+        setServerReady(true)
+      }
+    }).catch(() => { if (!cancelled) setSyncError('Your account progress could not be loaded. Check your connection before marking sessions complete.') })
+    return () => { cancelled = true }
+  }, [auth.account, auth.getToken])
+
+  useEffect(() => {
+    if (!auth.account || !serverReady) return
+    const version = ++saveVersion.current
+    let cancelled = false
+    auth.getToken().then(async token => {
+      if (!token) return
+      const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(progress),
+      })
+      if (!response.ok) throw new Error('Could not sync your programme to your account.')
+      if (!cancelled && version === saveVersion.current) setSyncError('')
+    }).catch(() => { if (!cancelled && version === saveVersion.current) setSyncError('Changes were saved on this device, but account sync failed. Please check your connection.') })
+    return () => { cancelled = true }
+  }, [progress, serverReady, auth.account, auth.getToken])
 
   const schedules: readonly (readonly [BeginnerDay, BeginnerDay, BeginnerDay])[] = [
     ['Monday', 'Wednesday', 'Friday'],
@@ -54,6 +95,7 @@ export function CouchTo5K() {
       <p className="field-help">BEGINNER · NINE WEEKS · THREE SESSIONS PER WEEK</p>
       <h2 id="beginner-title">Couch to 5K</h2>
       <p>Start with gentle run/walk intervals. There are no pace targets. Rest between sessions, and repeat a week if you need to.</p>
+      {syncError && <p role="alert" className="field-help">{syncError}</p>}
       <p aria-live="polite"><strong>{done} of 27 sessions completed</strong> · {Math.round(done / 27 * 100)}%</p>
       <progress value={done} max={27} style={{ width: '100%' }} aria-label="Couch to 5K completed sessions" />
       <div className="field">
@@ -100,7 +142,7 @@ export function CouchTo5K() {
           )
         })}
       </ol>
-      <p className="field-help">Progress is saved to this browser, not yet to your Taperday account. Switching devices or clearing website data may remove it.</p>
+      <p className="field-help">Progress is saved on this device and synchronised to your Taperday account when you're signed in and connected.</p>
       <p className="field-help">After week nine, aim for 30 minutes of comfortable running. That may not yet be 5 km. Build distance gradually; rest or repeat whenever needed.</p>
     </section>
   )

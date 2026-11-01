@@ -109,7 +109,8 @@ public static class WeeklyRecap
             buttonText: "Open this week",
             buttonUrl: EmailLayout.Site,
             footer: "You're getting this because you turned on the weekly recap in Taperday.",
-            unsubscribeUrl: unsubscribe?.Page.AbsoluteUri);
+            unsubscribeUrl: unsubscribe?.Page.AbsoluteUri,
+            unsubscribeFrom: "the weekly recap");
 
         var text = new StringBuilder($"Hi {name}.\n\nYour running week, {span}: {Plural(recap.Runs, "run")}, {km} km.");
         if (recap is { SessionsPlanned: > 0, SessionsDone: { } ran })

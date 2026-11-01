@@ -393,3 +393,19 @@ internal sealed class TickPromptConfiguration : IEntityTypeConfiguration<TickPro
         builder.HasOne<SavedPlan>().WithMany().HasForeignKey(p => p.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class WeeklyRecapDeliveryConfiguration : IEntityTypeConfiguration<WeeklyRecapDelivery>
+{
+    public void Configure(EntityTypeBuilder<WeeklyRecapDelivery> builder)
+    {
+        builder.ToTable("WeeklyRecapDeliveries");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Ignore(d => d.CanRetry);
+
+        // The claim: one recap per runner per week, whichever instance gets there first. The runner going takes theirs.
+        builder.HasIndex(d => new { d.RunnerId, d.WeekStart }).IsUnique();
+        builder.HasOne<Runner>().WithMany().HasForeignKey(d => d.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

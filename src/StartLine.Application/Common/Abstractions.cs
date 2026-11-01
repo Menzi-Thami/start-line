@@ -37,6 +37,8 @@ public interface IApplicationDbContext
 
     DbSet<CoachWeek> CoachWeeks { get; }
 
+    DbSet<WeeklyRecapDelivery> WeeklyRecapDeliveries { get; }
+
     DbSet<PushSubscription> PushSubscriptions { get; }
 
     DbSet<NotificationDelivery> NotificationDeliveries { get; }

@@ -117,7 +117,6 @@ public static class DependencyInjection
         services.AddSingleton<IEmailSettings, EmailSettings>();
         // Same key ring again, under its own purpose; an unsubscribe key never expires (docs/email.md).
         services.AddSingleton<IUnsubscribeTokens, DataProtectionUnsubscribeTokens>();
-        services.AddOptions<ReportOptions>().BindConfiguration(ReportOptions.Section);
         // No request logging: the Brevo key travels in a header.
         services.AddHttpClient<IEmailSender, BrevoEmailSender>(http => http.Timeout = TimeSpan.FromSeconds(30)).RemoveAllLoggers();
         services.AddOptions<RunnerWeeklyRecapOptions>().BindConfiguration(RunnerWeeklyRecapOptions.Section);

@@ -1,98 +1,104 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using StartLine.Application.Common;
 using StartLine.Application.Features.Insights;
 
 namespace StartLine.Infrastructure.Email;
 
+/// <summary>The weekly recap's switches. Both default off: nothing is sent until they're set in App Service.</summary>
 internal sealed class RunnerWeeklyRecapOptions
 {
     public const string Section = "RunnerWeeklyRecap";
-    // Opt-in production rollout only after the test has been verified.
+
+    /// <summary>Sends the recap to runners who turned it on. Off until a preview has been checked.</summary>
     public bool Enabled { get; set; }
+
+    /// <summary>Set it, and the app sends one made-up preview there when it starts; clear it again after.</summary>
     public string TestTo { get; set; } = "";
 }
 
-/// <summary>Replaces the maker's Monday operational report. Starts in test-only mode by default.</summary>
-internal sealed class RunnerWeeklyRecapWorker(
-    IServiceScopeFactory scopes, IEmailSender email, IOptions<RunnerWeeklyRecapOptions> options,
-    TimeProvider clock, ILogger<RunnerWeeklyRecapWorker> logger) : BackgroundService
+/// <summary>
+/// Every 15 minutes, sends the weekly recaps that are due (<see cref="IWeeklyRecaps"/>): 07:00 on each runner's own
+/// Monday. It replaces the maker's Monday report. Without a Brevo key, or while <see cref="RunnerWeeklyRecapOptions.Enabled"/>
+/// is off, nothing goes to runners.
+/// </summary>
+internal sealed partial class RunnerWeeklyRecapWorker(
+    IServiceScopeFactory scopes,
+    IEmailSender email,
+    IOptions<RunnerWeeklyRecapOptions> options,
+    TimeProvider time,
+    ILogger<RunnerWeeklyRecapWorker> logger)
+    : BackgroundService
 {
-    private static readonly TimeZoneInfo Zone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Johannesburg");
-
-    internal static DateTimeOffset NextSend(DateTimeOffset now)
-    {
-        var local = TimeZoneInfo.ConvertTime(now, Zone);
-        var days = ((int)DayOfWeek.Monday - (int)local.DayOfWeek + 7) % 7;
-        var next = new DateTimeOffset(local.Date.AddDays(days).AddHours(7), local.Offset);
-        return next > now ? next : next.AddDays(7);
-    }
+    public static readonly TimeSpan Every = TimeSpan.FromMinutes(15);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!email.Configured)
         {
-            logger.LogWarning("Runner weekly recap not scheduled: transactional email is not configured.");
+            LogNotConfigured(logger);
             return;
         }
 
-        // Explicit test address only. Never infer a recipient from owner/admin config.
-        if (!string.IsNullOrWhiteSpace(options.Value.TestTo))
-            await SendTestAsync(options.Value.TestTo, stoppingToken);
+        if (options.Value.TestTo is { Length: > 0 } test)
+        {
+            await PreviewAsync(test, stoppingToken);
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
-            var delay = NextSend(clock.GetUtcNow()) - clock.GetUtcNow();
-            await Task.Delay(delay > TimeSpan.Zero ? delay : TimeSpan.Zero, clock, stoppingToken);
-            if (options.Value.Enabled) await SendWeeklyAsync(stoppingToken);
+            if (options.Value.Enabled)
+            {
+                await SendDueAsync(stoppingToken);
+            }
+
+            await Task.Delay(Every, time, stoppingToken);
         }
     }
 
-    private async Task SendTestAsync(string recipient, CancellationToken cancellationToken)
+    private async Task SendDueAsync(CancellationToken cancellationToken)
     {
-        // No real user's sensitive training data is exposed to a test recipient.
-        var monday = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Zone).Date);
         try
         {
-            await email.SendAsync(RunnerWeeklyRecap.Compose(recipient, "Runner", monday.AddDays(-7), 3, 24.5, test: true), cancellationToken);
-            logger.LogInformation("Runner recap preview delivered to configured test recipient.");
+            await using var scope = scopes.CreateAsyncScope();
+            var sent = await scope.ServiceProvider.GetRequiredService<IWeeklyRecaps>().SendDueAsync(time.GetUtcNow(), cancellationToken);
+            if (sent > 0)
+            {
+                LogSent(logger, sent);
+            }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception e) when (e is not OperationCanceledException)
         {
-            logger.LogError(ex, "Runner recap preview delivery failed.");
+            LogFailed(logger, e);
         }
     }
 
-    private async Task SendWeeklyAsync(CancellationToken cancellationToken)
+    // A made-up week, never a runner's: the preview goes to whoever is set, so it carries no one's data.
+    private async Task PreviewAsync(string to, CancellationToken cancellationToken)
     {
-        var localDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Zone).Date);
-        var from = localDate.AddDays(-7);
-        await using var scope = scopes.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
-        var recipients = await db.Runners.AsNoTracking()
-            .Where(r => r.WeeklyEmails && r.Email != null && r.Email != "")
-            .Select(r => new { r.Id, r.Email, r.DisplayName }).ToListAsync(cancellationToken);
-        foreach (var recipient in recipients)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                // Strava's ephemeral cache may be incomplete: count records currently visible only.
-                var records = await db.Activities.AsNoTracking()
-                    .Where(a => a.RunnerId == recipient.Id && a.LocalDate >= from && a.LocalDate < localDate
-                        && (a.CachedUntil == null || a.CachedUntil > clock.GetUtcNow()))
-                    .Select(a => a.DistanceMetres).ToListAsync(cancellationToken);
-                var message = RunnerWeeklyRecap.Compose(recipient.Email!, recipient.DisplayName, from,
-                    records.Count, records.Sum() / 1000.0, test: false);
-                await email.SendAsync(message, cancellationToken);
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                logger.LogError(ex, "Runner weekly recap failed for runner {RunnerId}", recipient.Id);
-            }
+            var monday = DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
+            monday = monday.AddDays(-(((int)monday.DayOfWeek + 6) % 7));
+            await email.SendAsync(WeeklyRecap.Preview(to, monday), cancellationToken);
+            LogPreviewSent(logger);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            LogFailed(logger, e);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Weekly recap not scheduled: no Brevo key (Email:BrevoApiKey).")]
+    private static partial void LogNotConfigured(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Weekly recap sent to {Count} runners.")]
+    private static partial void LogSent(ILogger logger, int count);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Weekly recap preview sent.")]
+    private static partial void LogPreviewSent(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Weekly recap run failed.")]
+    private static partial void LogFailed(ILogger logger, Exception exception);
 }

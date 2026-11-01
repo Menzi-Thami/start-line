@@ -116,8 +116,8 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: milestone-visual-qa
-          path: client/test-results/**/milestone-*.png
+          name: race-week-visual-qa
+          path: client/test-results/**/race-week-*.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v7
         if: failure()

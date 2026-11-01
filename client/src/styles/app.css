@@ -5710,3 +5710,15 @@ button.plan-calendar-day {
   text-align: left;
   overflow-wrap: anywhere;
 }
+
+/* Milestone preview: balanced on wide screens, single column on phones. */
+.milestone-share-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5, 20px); align-items: start; margin-top: var(--space-4, 16px); }
+.milestone-share-controls, .milestone-share-preview { min-width: 0; }
+.milestone-share-preview { display: flex; justify-content: center; }
+.milestone-share-preview > div { width: 100%; max-width: 340px; }
+.milestone-share-preview img { display: block; margin-inline: auto; }
+.milestone-share-preview .submit-row { justify-content: center; flex-wrap: wrap; }
+@media (min-width: 740px) {
+  .milestone-share-layout { grid-template-columns: minmax(0, 1fr) minmax(240px, 0.85fr); gap: clamp(24px, 5vw, 64px); }
+  .milestone-share-preview { justify-content: flex-end; }
+}

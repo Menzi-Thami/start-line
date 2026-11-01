@@ -1,0 +1,2 @@
+.skip-main { position:fixed; z-index:9999; left:var(--space-4); top:var(--space-4); transform:translateY(-180%); background:var(--ink); color:var(--paper); padding:var(--space-3) var(--space-4); border-radius:var(--radius-sm); text-decoration:none; font-weight:700; }
+.skip-main:focus-visible { transform:none; outline:3px solid var(--accent); outline-offset:3px; }

@@ -1,3 +1,4 @@
+import { ShoeTracker } from './ShoeTracker'
 import { useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
@@ -118,6 +119,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       </div>
 
       </details>
+      <ShoeTracker />
       <details className="settings-group"><summary>Notifications</summary><RemindersSection /></details>
       <details className="settings-group"><summary>Data & privacy</summary>
       <div className="section">

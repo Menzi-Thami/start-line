@@ -133,11 +133,6 @@ export function SignUpPitch({ onSignUp, onSignIn }: Props) {
         ))}
       </ul>
 
-      <p className="pitch-soon">
-        <span className="tag">Coming soon</span> A weekly email with how last week went and what’s next, and plans that adjust
-        when you’re ill or miss a week.
-      </p>
-
       <div className="pitch-actions">
         <button type="button" className={dashing ? 'button button-primary is-dashing' : 'button button-primary'} onClick={signUp} disabled={dashing}>
           Sign up free

@@ -90,7 +90,7 @@ export function parseBeginnerProgress(raw: string | null, today: string): Beginn
         !Number.isInteger(candidate.revision) || candidate.revision! < 0 ||
         typeof candidate.paused !== 'boolean' ||
         (candidate.weekDelays !== undefined && (!Array.isArray(candidate.weekDelays) || candidate.weekDelays.length !== 9 || !candidate.weekDelays.every(d => Number.isInteger(d) && d >= 0 && d <= 3650))) ||
-        (candidate.pausedOn != null && (typeof candidate.pausedOn !== 'string' || !/^\\d{4}-\\d\\d-\\d\\d$/.test(candidate.pausedOn)))) return defaultBeginnerProgress(today)
+        (candidate.pausedOn != null && (typeof candidate.pausedOn !== 'string' || !/^\d{4}-\d\d-\d\d$/.test(candidate.pausedOn)))) return defaultBeginnerProgress(today)
     return candidate as BeginnerProgress
   } catch { return defaultBeginnerProgress(today) }
 }

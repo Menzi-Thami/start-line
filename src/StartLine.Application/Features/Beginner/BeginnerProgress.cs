@@ -11,7 +11,9 @@ public sealed record BeginnerProgressState(
     IReadOnlyList<string> Completed,
     int Week,
     bool Paused,
-    int Revision);
+    int Revision,
+    IReadOnlyList<int>? WeekDelays = null,
+    DateOnly? PausedOn = null);
 
 public sealed record ReadBeginnerProgressQuery : IRequest<BeginnerProgressState?>;
 
@@ -40,6 +42,8 @@ internal sealed class SaveBeginnerProgressHandler(IApplicationDbContext db, Curr
             progress.Week is < 1 or > 9 || progress.Revision is < 0 or > 999 ||
             progress.Completed is null || progress.Completed.Count > 27 || progress.Completed.Distinct().Count() != progress.Completed.Count ||
             progress.Completed.Any(id => id is null || id.Length > 32 || !System.Text.RegularExpressions.Regex.IsMatch(id, @"^\d+:[1-9]:[123]$")) ||
+            (progress.WeekDelays is not null && (progress.WeekDelays.Count != 9 || progress.WeekDelays.Any(delay => delay is < 0 or > 3650))) ||
+            (progress.PausedOn is not null && progress.PausedOn > DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime).AddDays(1)) ||
             progress.StartedOn == default || progress.StartedOn > DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime).AddYears(1))
             throw new ArgumentException("Invalid beginner programme progress.");
 

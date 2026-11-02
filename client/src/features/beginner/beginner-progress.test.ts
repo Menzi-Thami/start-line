@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { couchTo5k } from './couch-to-5k'
-import { countCompleted, defaultBeginnerProgress, parseBeginnerProgress, sessionDate, sessionId, validRunDays } from './beginner-progress'
+import { beginnerDate, countCompleted, defaultBeginnerProgress, parseBeginnerProgress, repeatBeginnerWeek, resumeBeginnerProgress, sessionDate, sessionId, validRunDays } from './beginner-progress'
 
 describe('beginner programme progress', () => {
   it('requires three run days and rest between each', () => {
@@ -13,6 +13,23 @@ describe('beginner programme progress', () => {
     expect(sessionDate('2026-11-02', days, 1, 1)).toBe('2026-11-02')
     expect(sessionDate('2026-11-02', days, 2, 1)).toBe('2026-11-09')
     expect(sessionDate('2026-11-03', days, 1, 1)).toBe('2026-11-04')
+  })
+  it('repeating a week postpones this and subsequent weeks without shifting earlier weeks', () => {
+    const start = defaultBeginnerProgress('2026-11-02')
+    const p = { ...start, week: 2, completed: ['0:1:1', '0:2:1'] }
+    const next = repeatBeginnerWeek(p)
+    expect(next.completed).toEqual(['0:1:1'])
+    expect(beginnerDate(next, 1, 1)).toBe('2026-11-02')
+    expect(beginnerDate(next, 2, 1)).toBe('2026-11-16')
+    expect(beginnerDate(next, 3, 1)).toBe('2026-11-23')
+  })
+  it('resume postpones the active and future weeks by calendar days across DST', () => {
+    const p = { ...defaultBeginnerProgress('2027-03-01'), week: 2, paused: true, pausedOn: '2027-03-12' }
+    const resumed = resumeBeginnerProgress(p, '2027-03-16')
+    expect(resumed.paused).toBe(false)
+    expect(beginnerDate(resumed, 1, 1)).toBe('2027-03-01')
+    expect(beginnerDate(resumed, 2, 1)).toBe('2027-03-12')
+    expect(beginnerDate(resumed, 3, 1)).toBe('2027-03-19')
   })
   it('persists completed sessions and rejects damaged storage', () => {
     const today = '2026-11-02'

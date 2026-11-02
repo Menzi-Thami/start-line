@@ -28,6 +28,7 @@ export function CouchTo5K() {
   const saveVersion = useRef(0)
   const lastSaved = useRef('')
   const saveQueue = useRef(Promise.resolve())
+  const accountEpoch = useRef(0)
   const sessions = programme.filter(s => s.week === progress.week)
   const done = countCompleted(progress, programme)
   const update = (next: BeginnerProgress) => { if (!account || serverReady) setProgress(next) }
@@ -41,6 +42,7 @@ export function CouchTo5K() {
   // fallback when not signed in; never overwrite the account before hydration.
   useEffect(() => {
     let cancelled = false
+    const epoch = ++accountEpoch.current
     if (!account) {
       void Promise.resolve().then(() => {
         if (!cancelled) { setServerReady(false); setProgress(read()); setSyncError('') }
@@ -55,7 +57,7 @@ export function CouchTo5K() {
       if (!token) throw new Error('Sign in to load your programme.')
       const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
       if (!response.ok && response.status !== 204) throw new Error('Unable to load your saved programme.')
-      if (!cancelled) {
+      if (!cancelled && epoch === accountEpoch.current) {
         const loaded = response.status === 204 ? defaultBeginnerProgress(todayLocal()) : parseBeginnerProgress(JSON.stringify(await response.json()), todayLocal())
         setProgress(loaded)
         lastSaved.current = JSON.stringify(loaded)
@@ -70,12 +72,14 @@ export function CouchTo5K() {
     const payload = JSON.stringify(progress)
     if (payload === lastSaved.current) return
     const version = ++saveVersion.current
+    const epoch = accountEpoch.current
     let cancelled = false
     // Serialize saves: two rapid check-offs must not finish out of order and
     // roll account progress back to an older snapshot.
     saveQueue.current = saveQueue.current.catch(() => {}).then(async () => {
-      if (cancelled) return
+      if (cancelled || epoch !== accountEpoch.current) return
       const token = await getToken()
+      if (cancelled || epoch !== accountEpoch.current) return
       if (!token) throw new Error('Sign-in expired.')
       const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, {
         method: 'PUT',
@@ -83,10 +87,10 @@ export function CouchTo5K() {
         body: payload,
       })
       if (!response.ok) throw new Error('Could not sync your programme to your account.')
-      lastSaved.current = payload
-      if (!cancelled && version === saveVersion.current) setSyncError('')
+      if (epoch === accountEpoch.current) lastSaved.current = payload
+      if (!cancelled && epoch === accountEpoch.current && version === saveVersion.current) setSyncError('')
     }).catch(() => {
-      if (!cancelled && version === saveVersion.current) setSyncError('Account sync failed. Your latest changes have not been saved online.')
+      if (!cancelled && epoch === accountEpoch.current && version === saveVersion.current) setSyncError('Account sync failed. Your latest changes have not been saved online.')
     })
     return () => { cancelled = true }
   }, [progress, serverReady, account, getToken])

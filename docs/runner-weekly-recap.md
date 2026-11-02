@@ -15,8 +15,8 @@ Figures only, with no claims the numbers don't support. Built with `EmailLayout`
 
 ## When and how often
 
-- **Between 19:00 and 20:00 on each runner's own Sunday** (`Runner.TimeZone`; an unknown zone counts as UTC), about the Monday–Sunday ending that day, with the week ahead. Sundays start on 8 November 2026 (`WeeklyRecapSender.SundaysFrom`); before that the old slot, 07:00 on the runner's Monday about the week before, sent the 2 November recap. They're different weeks, so nobody got two. A run logged after 19:00 on Sunday shows in the trends the next week, not in that email.
-- **The API must be awake to send.** On the free F1 plan the app sleeps after about 20 idle minutes and its timers stop, so `.github/workflows/recap-wake.yml` pings `/health/live` every 15 minutes from Sunday 14:00 to Monday 08:00 UTC (19:00 Sunday from UTC+5 to UTC−11). Free on a public repo.
+- **Between 07:00 and 08:00 on each runner's own Monday** (`Runner.TimeZone`; an unknown zone counts as UTC), recapping the previous Monday–Sunday and previewing the new week. Runs entered before the send but dated within the previous week are included if visible to Taperday.
+- **The API must be awake to send.** On the free F1 plan timers pause when the app sleeps; `.github/workflows/recap-wake.yml` pings `/health/live` every 15 minutes from Sunday 16:00 through Monday 20:59 UTC, covering Monday 07:00 in UTC+14 through UTC−12.
 - `RunnerWeeklyRecapWorker` checks every 15 minutes, and `WeeklyRecapSender` sends what's due.
 - **Once per runner and week:** a `WeeklyRecapDeliveries` row (unique on runner and week) is claimed before sending. Restarts, retries and a second app instance can't send twice.
 - **A failed send** (Brevo down, say) is tried again on the next check, up to 3 attempts in all. A claim left mid-send by a crash is never resent, because the email may have gone.
@@ -36,7 +36,7 @@ Each recap carries the runner's own **weekly** key (`w1`), in the footer link (`
 ## Rolling it out
 
 1. **Preview.** Set `RunnerWeeklyRecap__TestTo`, which restarts the app and sends one preview. Check it in Gmail, Outlook and on a phone, in light and dark. Then clear the setting.
-2. **Switch it on.** Set `RunnerWeeklyRecap__Enabled=true`. The next Sunday 19:00 sends to every runner who has the box ticked.
+2. **Switch it on.** Set `RunnerWeeklyRecap__Enabled=true`. The next Monday 07:00 (runner-local) sends to every runner who has the box ticked.
 3. **Brevo limits.** The free plan sends 300 emails a day. Past that, the plan needs upgrading before Sunday.
 4. **Brevo key.** A key unused for 90 days expires. The retired Monday report used to keep it in use, so switch the recap on within 90 days of the last send.
 

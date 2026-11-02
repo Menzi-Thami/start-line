@@ -26,26 +26,33 @@ export function CouchTo5K() {
   const [serverReady, setServerReady] = useState(false)
   const [syncError, setSyncError] = useState('')
   const saveVersion = useRef(0)
+  const lastSaved = useRef('')
+  const saveQueue = useRef(Promise.resolve())
   const sessions = programme.filter(s => s.week === progress.week)
   const done = countCompleted(progress, programme)
-  const update = (next: BeginnerProgress) => setProgress(next)
+  const update = (next: BeginnerProgress) => { if (!auth.account || serverReady) setProgress(next) }
   useEffect(() => {
+    if (auth.account) return // Never leak one signed-in runner's account state into another runner's anonymous device state.
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)) }
     catch { /* Private browsing / restricted storage: continue in memory */ }
-  }, [progress])
+  }, [progress, auth.account])
 
   // A signed-in runner's server state is canonical. Device state remains a
   // fallback when not signed in; never overwrite the account before hydration.
   useEffect(() => {
-    if (!auth.account) { setServerReady(false); return }
+    if (!auth.account) { setServerReady(false); setProgress(read()); setSyncError(''); return }
     let cancelled = false
     setServerReady(false)
+    setSyncError('')
+    lastSaved.current = ''
     auth.getToken().then(async token => {
-      if (!token) return
+      if (!token) throw new Error('Sign in to load your programme.')
       const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
       if (!response.ok && response.status !== 204) throw new Error('Unable to load your saved programme.')
       if (!cancelled) {
-        if (response.status !== 204) setProgress(parseBeginnerProgress(JSON.stringify(await response.json()), todayLocal()))
+        const loaded = response.status === 204 ? defaultBeginnerProgress(todayLocal()) : parseBeginnerProgress(JSON.stringify(await response.json()), todayLocal())
+        setProgress(loaded)
+        lastSaved.current = JSON.stringify(loaded)
         setServerReady(true)
       }
     }).catch(() => { if (!cancelled) setSyncError('Your account progress could not be loaded. Check your connection before marking sessions complete.') })
@@ -54,18 +61,27 @@ export function CouchTo5K() {
 
   useEffect(() => {
     if (!auth.account || !serverReady) return
+    const payload = JSON.stringify(progress)
+    if (payload === lastSaved.current) return
     const version = ++saveVersion.current
     let cancelled = false
-    auth.getToken().then(async token => {
-      if (!token) return
+    // Serialize saves: two rapid check-offs must not finish out of order and
+    // roll account progress back to an older snapshot.
+    saveQueue.current = saveQueue.current.catch(() => {}).then(async () => {
+      if (cancelled) return
+      const token = await auth.getToken()
+      if (!token) throw new Error('Sign-in expired.')
       const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(progress),
+        body: payload,
       })
       if (!response.ok) throw new Error('Could not sync your programme to your account.')
+      lastSaved.current = payload
       if (!cancelled && version === saveVersion.current) setSyncError('')
-    }).catch(() => { if (!cancelled && version === saveVersion.current) setSyncError('Changes were saved on this device, but account sync failed. Please check your connection.') })
+    }).catch(() => {
+      if (!cancelled && version === saveVersion.current) setSyncError('Account sync failed. Your latest changes have not been saved online.')
+    })
     return () => { cancelled = true }
   }, [progress, serverReady, auth.account, auth.getToken])
 
@@ -95,31 +111,32 @@ export function CouchTo5K() {
       <p className="field-help">BEGINNER · NINE WEEKS · THREE SESSIONS PER WEEK</p>
       <h2 id="beginner-title">Couch to 5K</h2>
       <p>Start with gentle run/walk intervals. There are no pace targets. Rest between sessions, and repeat a week if you need to.</p>
+      {auth.account && !serverReady && !syncError && <p role="status">Loading your saved programme…</p>}
       {syncError && <p role="alert" className="field-help">{syncError}</p>}
       <p aria-live="polite"><strong>{done} of 27 sessions completed</strong> · {Math.round(done / 27 * 100)}%</p>
       <progress value={done} max={27} style={{ width: '100%' }} aria-label="Couch to 5K completed sessions" />
       <div className="field">
         <label className="field-label" htmlFor="couch-start">Programme start date</label>
-        <input className="input" type="date" id="couch-start" value={progress.startedOn}
+        <input className="input" type="date" id="couch-start" disabled={!!auth.account && !serverReady} value={progress.startedOn}
           onChange={e => { if (e.target.value) update({ ...progress, startedOn: e.target.value }) }} />
       </div>
       <fieldset className="field">
         <legend className="field-label">Your three run days</legend>
         <p className="field-help">Keep a rest day between sessions. Choose your schedule before recording progress.</p>
-        <select className="input" aria-label="Choose a three-day running schedule" value={progress.days.join('|')} onChange={e => chooseSchedule(e.target.value)}>
+        <select className="input" aria-label="Choose a three-day running schedule" disabled={!!auth.account && !serverReady} value={progress.days.join('|')} onChange={e => chooseSchedule(e.target.value)}>
           {schedules.map(days => <option key={days.join('|')} value={days.join('|')}>{days.join(' · ')}</option>)}
         </select>
       </fieldset>
       <div className="wizard-nav">
-        <button className="button button-quiet" type="button" disabled={progress.week === 1} onClick={() => update({ ...progress, week: Math.max(1, progress.week - 1) })}>Previous week</button>
+        <button className="button button-quiet" type="button" disabled={progress.week === 1 || (!!auth.account && !serverReady)} onClick={() => update({ ...progress, week: Math.max(1, progress.week - 1) })}>Previous week</button>
         <strong aria-live="polite">Week {progress.week} of 9</strong>
-        <button className="button button-quiet" type="button" disabled={progress.week === 9} onClick={() => update({ ...progress, week: Math.min(9, progress.week + 1) })}>Next week</button>
+        <button className="button button-quiet" type="button" disabled={progress.week === 9 || (!!auth.account && !serverReady)} onClick={() => update({ ...progress, week: Math.min(9, progress.week + 1) })}>Next week</button>
       </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <button className="button button-quiet" type="button" aria-pressed={progress.paused} onClick={() => update({ ...progress, paused: !progress.paused })}>
+        <button className="button button-quiet" type="button" disabled={!!auth.account && !serverReady} aria-pressed={progress.paused} onClick={() => update({ ...progress, paused: !progress.paused })}>
           {progress.paused ? 'Resume programme' : 'Pause programme'}
         </button>
-        <button className="button button-quiet" type="button" onClick={resetWeek}>Repeat this week</button>
+        <button className="button button-quiet" type="button" disabled={!!auth.account && !serverReady} onClick={resetWeek}>Repeat this week</button>
       </div>
       {progress.paused && <p role="status">Paused. Your progress is kept here until you resume.</p>}
       <ol className="days">
@@ -134,7 +151,7 @@ export function CouchTo5K() {
                 <p>{beginnerSessionSummary(session)}</p>
                 <p className="field-help">5 min walking cool-down · About {Math.round(session.totalSeconds / 60)} minutes total</p>
                 <label className="session-done">
-                  <input type="checkbox" disabled={progress.paused} checked={checked} onChange={() => toggle(id)} />
+                  <input type="checkbox" disabled={progress.paused || (!!auth.account && !serverReady)} checked={checked} onChange={() => toggle(id)} />
                   {checked ? 'Completed' : 'Mark this session complete'}
                 </label>
               </div>

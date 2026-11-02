@@ -212,8 +212,8 @@ public interface IWeeklyRecaps
 }
 
 /// <summary>
-/// Sends the weekly recap to every runner who hasn't turned it off, between 19:00 and 20:00 on their own Sunday, about the
-/// week ending that day (before <see cref="SundaysFrom"/>, 07:00 on their Monday about the week before). Each
+/// Sends the weekly recap to every runner who hasn't turned it off, between 07:00 and 08:00 on their own Monday, about the
+/// previous Monday–Sunday week. Each
 /// runner and week is claimed in <see cref="WeeklyRecapDelivery"/> first, so it's sent once however often this runs or
 /// however many app instances run it. An hour the app missed entirely is skipped, never sent late.
 /// </summary>
@@ -226,27 +226,16 @@ internal sealed partial class WeeklyRecapSender(
     IEmailSettings settings,
     ILogger<WeeklyRecapSender> logger) : IWeeklyRecaps
 {
-    /// <summary>The Sunday send's hour: 19:00 to 19:59 in the runner's own time zone.</summary>
-    public const int SendHour = 19;
+    /// <summary>The runner-local Monday morning sending hour, 07:00–07:59.</summary>
+    public const int SendHour = 7;
 
-    /// <summary>
-    /// The first Sunday send. Before it the recap kept its old slot, 07:00 on the runner's Monday about the week before, so
-    /// Monday 2 November 2026 still went out; that week and the first Sunday's are different weeks, so nobody gets one twice.
-    /// </summary>
-    public static readonly DateOnly SundaysFrom = new(2026, 11, 8);
-
-    /// <summary>The Monday of the week to recap for this runner now, or null when it isn't their send time.</summary>
+    /// <summary>The Monday of the previous week to recap, or null outside Monday morning.</summary>
     public static DateOnly? WeekDue(Runner runner, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(runner);
         var local = TimeZoneInfo.ConvertTime(now, TimeProviderExtensions.ZoneOf(runner.TimeZone));
         var today = DateOnly.FromDateTime(local.Date);
-        if (today < SundaysFrom)
-        {
-            return local.DayOfWeek == DayOfWeek.Monday && local.Hour >= 7 ? today.AddDays(-7) : null;
-        }
-
-        return local.DayOfWeek == DayOfWeek.Sunday && local.Hour == SendHour ? today.AddDays(-6) : null;
+        return local.DayOfWeek == DayOfWeek.Monday && local.Hour == SendHour ? today.AddDays(-7) : null;
     }
 
     public async Task<int> SendDueAsync(DateTimeOffset now, CancellationToken cancellationToken)
@@ -370,7 +359,7 @@ internal sealed partial class WeeklyRecapSender(
                 }
 
                 next = [.. sessions.Where(s => s.Date >= monday && s.Date < monday.AddDays(7)).Select(s => (s.Date, s.Title, s.DistanceKm))];
-                // As Home would have shown it on Sunday night: the week just gone is the latest in the trends.
+                // Read through the previous Sunday, which is the recap's completed week.
                 trends = await TrainingTrendsReader.ReadAsync(db, reader, runner, saved.Id, sessions, end, now, cancellationToken);
                 if (plan.RaceDate >= monday)
                 {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api, apiOrigin } from '../../lib/api-client'
 import { beginnerSessionSummary, couchTo5k } from './couch-to-5k'
+import { matchBeginnerStrava, type BeginnerRecordedRun } from './strava-match'
 import { beginnerDate, defaultBeginnerProgress, parseBeginnerProgress, repeatBeginnerWeek, resumeBeginnerProgress, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
 
 const STORAGE_KEY = 'taperday:beginner-progress:v1'
@@ -25,15 +26,14 @@ export function CouchTo5K() {
   const [progress, setProgress] = useState<BeginnerProgress>(read)
   const [serverReady, setServerReady] = useState(false)
   const [syncError, setSyncError] = useState('')
-  const [stravaDates, setStravaDates] = useState<readonly string[]>([])
+  const [stravaRuns, setStravaRuns] = useState<readonly BeginnerRecordedRun[]>([])
   const [showCalendar, setShowCalendar] = useState(false)
   const saveVersion = useRef(0)
   const lastSaved = useRef('')
   const saveQueue = useRef(Promise.resolve())
   const accountEpoch = useRef(0)
   const sessions = programme.filter(s => s.week === progress.week)
-  const matchedDates = new Set(stravaDates)
-  const automatic = new Set(programme.filter(s => matchedDates.has(beginnerDate(progress, s.week, s.day))).map(s => sessionId(s, progress.revision)))
+  const automatic = matchBeginnerStrava(progress, programme, stravaRuns, Date.now())
   const done = programme.filter(s => progress.completed.includes(sessionId(s, progress.revision)) || automatic.has(sessionId(s, progress.revision))).length
   const update = (next: BeginnerProgress) => { if (!account || serverReady) setProgress(next) }
   useEffect(() => {
@@ -105,8 +105,8 @@ export function CouchTo5K() {
     if (!account) return
     let cancelled = false
     getToken().then(token => token ? api.me.running(token, true) : []).then(runs => {
-      if (!cancelled) setStravaDates(runs.filter(run => run.source === 'Strava' && (!run.cachedUntil || Date.parse(run.cachedUntil) > Date.now())).map(run => run.date))
-    }).catch(() => { if (!cancelled) setStravaDates([]) })
+      if (!cancelled) setStravaRuns(runs.filter(run => run.source === 'Strava'))
+    }).catch(() => { if (!cancelled) setStravaRuns([]) })
     return () => { cancelled = true }
   }, [account, getToken])
 

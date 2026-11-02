@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { apiOrigin } from '../../lib/api-client'
 import { beginnerSessionSummary, couchTo5k } from './couch-to-5k'
-import { countCompleted, defaultBeginnerProgress, parseBeginnerProgress, sessionDate, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
+import { beginnerDate, countCompleted, defaultBeginnerProgress, parseBeginnerProgress, repeatBeginnerWeek, resumeBeginnerProgress, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
 
 const STORAGE_KEY = 'taperday:beginner-progress:v1'
 const programme = couchTo5k()
@@ -108,10 +108,7 @@ export function CouchTo5K() {
     else set.add(id)
     update({ ...progress, completed: [...set] })
   }
-  const resetWeek = () => {
-    const ids = new Set(sessions.map(s => sessionId(s, progress.revision)))
-    update({ ...progress, completed: progress.completed.filter(id => !ids.has(id)), paused: false })
-  }
+  const resetWeek = () => update(repeatBeginnerWeek(progress))
   return (
     <section className="panel" aria-labelledby="beginner-title">
       <p className="field-help">BEGINNER · NINE WEEKS · THREE SESSIONS PER WEEK</p>
@@ -139,10 +136,10 @@ export function CouchTo5K() {
         <button className="button button-quiet" type="button" disabled={progress.week === 9 || (!!account && !serverReady)} onClick={() => update({ ...progress, week: Math.min(9, progress.week + 1) })}>Next week</button>
       </div>
       <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <button className="button button-quiet" type="button" disabled={!!account && !serverReady} aria-pressed={progress.paused} onClick={() => update({ ...progress, paused: !progress.paused })}>
+        <button className="button button-quiet" type="button" disabled={!!account && !serverReady} aria-pressed={progress.paused} onClick={() => update(progress.paused ? resumeBeginnerProgress(progress, todayLocal()) : { ...progress, paused: true, pausedOn: todayLocal() })}>
           {progress.paused ? 'Resume programme' : 'Pause programme'}
         </button>
-        <button className="button button-quiet" type="button" disabled={!!account && !serverReady} onClick={resetWeek}>Repeat this week</button>
+        <button className="button button-quiet" type="button" disabled={!!account && !serverReady} onClick={resetWeek}>Repeat this week (+7 days)</button>
       </div>
       {progress.paused && <p role="status">Paused. Your progress is kept here until you resume.</p>}
       <ol className="days">
@@ -152,7 +149,7 @@ export function CouchTo5K() {
           return (
             <li className="day" key={id}>
               <div>
-                <strong>Session {session.day} · {sessionDate(progress.startedOn, progress.days, session.week, session.day)}</strong>
+                <strong>Session {session.day} · {beginnerDate(progress, session.week, session.day)}</strong>
                 <p className="field-help">5 min brisk walking warm-up</p>
                 <p>{beginnerSessionSummary(session)}</p>
                 <p className="field-help">5 min walking cool-down · About {Math.round(session.totalSeconds / 60)} minutes total</p>

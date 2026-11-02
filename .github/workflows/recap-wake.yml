@@ -1,12 +1,12 @@
 name: Wake the API for the weekly recap
 
-# The free (F1) API sleeps after about 20 idle minutes, and its timers sleep with it. The weekly recap goes at 19:00 on
-# each runner's own Sunday, so this keeps the API awake across Sunday evening in every likely time zone
-# (docs/runner-weekly-recap.md). A ping is one tiny request; nothing else runs.
+# The free (F1) API may sleep after idle time. Keep it awake through the 07:00–08:00
+# Monday morning send window across runner time zones (UTC+14 through UTC-12).
+# The worker checks every 15 minutes, and the delivery claim prevents duplicates.
 on:
   schedule:
-    - cron: '*/15 14-23 * * 0'
-    - cron: '*/15 0-7 * * 1'
+    - cron: '*/15 16-23 * * 0'
+    - cron: '*/15 0-20 * * 1'
   workflow_dispatch:
 
 permissions: {}

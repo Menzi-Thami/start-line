@@ -10,6 +10,9 @@ export interface BeginnerProgress {
   week: number
   paused: boolean
   revision: number
+  /** Extra days applied from this week onward; repeating a week adds seven. */
+  weekDelays?: readonly number[]
+  pausedOn?: string | null
 }
 const iso = (value: Date) => value.toISOString().slice(0, 10)
 const dayOffset = (day: BeginnerDay) => BEGINNER_DAYS.indexOf(day)
@@ -34,13 +37,42 @@ export function sessionDate(startedOn: string, days: readonly BeginnerDay[], wee
   return iso(result)
 }
 
+/** Calendar-day arithmetic in UTC avoids local daylight-saving time jumps. */
+export function addCalendarDays(date: string, days: number): string {
+  const value = new Date(`${date}T12:00:00Z`)
+  if (Number.isNaN(value.getTime())) throw new Error('Invalid calendar date')
+  value.setUTCDate(value.getUTCDate() + days)
+  return iso(value)
+}
+
+export function beginnerDate(progress: BeginnerProgress, week: number, day: number): string {
+  const delay = (progress.weekDelays ?? []).slice(0, week).reduce((sum, d) => sum + d, 0)
+  return addCalendarDays(sessionDate(progress.startedOn, progress.days, week, day), delay)
+}
+
+export function repeatBeginnerWeek(progress: BeginnerProgress): BeginnerProgress {
+  const delays = Array.from({ length: 9 }, (_, i) => progress.weekDelays?.[i] ?? 0)
+  delays[progress.week - 1] += 7
+  const current = `:${progress.week}:`
+  return { ...progress, weekDelays: delays, completed: progress.completed.filter(id => !id.includes(current)), paused: false, pausedOn: null }
+}
+
+export function resumeBeginnerProgress(progress: BeginnerProgress, today: string): BeginnerProgress {
+  if (!progress.paused) return progress
+  const from = progress.pausedOn ?? today
+  const elapsed = Math.max(0, Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400000))
+  const delays = Array.from({ length: 9 }, (_, i) => progress.weekDelays?.[i] ?? 0)
+  delays[progress.week - 1] += elapsed
+  return { ...progress, paused: false, pausedOn: null, weekDelays: delays }
+}
+
 export function countCompleted(progress: BeginnerProgress, sessions: readonly BeginnerSession[]): number {
   const completed = new Set(progress.completed)
   return sessions.filter(session => completed.has(sessionId(session, progress.revision))).length
 }
 
 export function defaultBeginnerProgress(today: string): BeginnerProgress {
-  return { startedOn: today, days: ['Monday', 'Wednesday', 'Friday'], completed: [], week: 1, paused: false, revision: 0 }
+  return { startedOn: today, days: ['Monday', 'Wednesday', 'Friday'], completed: [], week: 1, paused: false, revision: 0, weekDelays: Array(9).fill(0), pausedOn: null }
 }
 
 /** Untrusted browser storage should never be allowed to invent a session or schedule. */
@@ -56,7 +88,9 @@ export function parseBeginnerProgress(raw: string | null, today: string): Beginn
         !candidate.completed.every(id => typeof id === 'string' && /^\d+:([1-9]):[123]$/.test(id)) ||
         !Number.isInteger(candidate.week) || candidate.week! < 1 || candidate.week! > 9 ||
         !Number.isInteger(candidate.revision) || candidate.revision! < 0 ||
-        typeof candidate.paused !== 'boolean') return defaultBeginnerProgress(today)
+        typeof candidate.paused !== 'boolean' ||
+        (candidate.weekDelays !== undefined && (!Array.isArray(candidate.weekDelays) || candidate.weekDelays.length !== 9 || !candidate.weekDelays.every(d => Number.isInteger(d) && d >= 0 && d <= 3650))) ||
+        (candidate.pausedOn != null && (typeof candidate.pausedOn !== 'string' || !/^\\d{4}-\\d\\d-\\d\\d$/.test(candidate.pausedOn)))) return defaultBeginnerProgress(today)
     return candidate as BeginnerProgress
   } catch { return defaultBeginnerProgress(today) }
 }

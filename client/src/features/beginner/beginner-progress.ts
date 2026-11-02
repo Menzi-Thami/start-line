@@ -52,7 +52,7 @@ export function beginnerDate(progress: BeginnerProgress, week: number, day: numb
 
 export function repeatBeginnerWeek(progress: BeginnerProgress): BeginnerProgress {
   const delays = Array.from({ length: 9 }, (_, i) => progress.weekDelays?.[i] ?? 0)
-  delays[progress.week - 1] += 7
+  delays[progress.week - 1] = (delays[progress.week - 1] ?? 0) + 7
   const current = `:${progress.week}:`
   return { ...progress, weekDelays: delays, completed: progress.completed.filter(id => !id.includes(current)), paused: false, pausedOn: null }
 }
@@ -62,7 +62,7 @@ export function resumeBeginnerProgress(progress: BeginnerProgress, today: string
   const from = progress.pausedOn ?? today
   const elapsed = Math.max(0, Math.round((Date.parse(`${today}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400000))
   const delays = Array.from({ length: 9 }, (_, i) => progress.weekDelays?.[i] ?? 0)
-  delays[progress.week - 1] += elapsed
+  delays[progress.week - 1] = (delays[progress.week - 1] ?? 0) + elapsed
   return { ...progress, paused: false, pausedOn: null, weekDelays: delays }
 }
 

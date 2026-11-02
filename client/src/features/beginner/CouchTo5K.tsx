@@ -26,14 +26,15 @@ export function CouchTo5K() {
   const [progress, setProgress] = useState<BeginnerProgress>(read)
   const [serverReady, setServerReady] = useState(false)
   const [syncError, setSyncError] = useState('')
-  const [stravaRuns, setStravaRuns] = useState<readonly BeginnerRecordedRun[]>([])
+  const [stravaSnapshot, setStravaSnapshot] = useState<{ owner: string; runs: readonly BeginnerRecordedRun[] } | null>(null)
   const [showCalendar, setShowCalendar] = useState(false)
   const saveVersion = useRef(0)
   const lastSaved = useRef('')
   const saveQueue = useRef(Promise.resolve())
   const accountEpoch = useRef(0)
+  const owner = account?.homeAccountId ?? account?.localAccountId ?? account?.username ?? ''
   const sessions = programme.filter(s => s.week === progress.week)
-  const automatic = matchBeginnerStrava(progress, programme, stravaRuns, Date.now())
+  const automatic = matchBeginnerStrava(progress, programme, stravaSnapshot?.owner === owner ? stravaSnapshot.runs : [], Date.now())
   const done = programme.filter(s => progress.completed.includes(sessionId(s, progress.revision)) || automatic.has(sessionId(s, progress.revision))).length
   const update = (next: BeginnerProgress) => { if (!account || serverReady) setProgress(next) }
   useEffect(() => {
@@ -105,10 +106,10 @@ export function CouchTo5K() {
     if (!account) return
     let cancelled = false
     getToken().then(token => token ? api.me.running(token, true) : []).then(runs => {
-      if (!cancelled) setStravaRuns(runs.filter(run => run.source === 'Strava'))
-    }).catch(() => { if (!cancelled) setStravaRuns([]) })
+      if (!cancelled) setStravaSnapshot({ owner, runs: runs.filter(run => run.source === 'Strava') })
+    }).catch(() => { if (!cancelled) setStravaSnapshot({ owner, runs: [] }) })
     return () => { cancelled = true }
-  }, [account, getToken])
+  }, [account, getToken, owner])
 
   const schedules: readonly (readonly [BeginnerDay, BeginnerDay, BeginnerDay])[] = [
     ['Monday', 'Wednesday', 'Friday'],

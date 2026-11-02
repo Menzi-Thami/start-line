@@ -1,4 +1,5 @@
 import { ReadinessCheckIn } from './ReadinessCheckIn'
+import { BeginnerHomeCard } from './BeginnerHomeCard'
 import { MilestoneCards } from '../milestones/MilestoneCards'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
@@ -542,6 +543,7 @@ export function Home({
           <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
         </button>}
         </div>
+        {!current && <BeginnerHomeCard today={today} onOpenProgramme={onBuildPlan} />}
         <TickCard plan={plan} today={today} coach={coach} runs={runs} />
         {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />

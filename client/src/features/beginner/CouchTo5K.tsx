@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
-import { apiOrigin } from '../../lib/api-client'
+import { api, apiOrigin } from '../../lib/api-client'
 import { beginnerSessionSummary, couchTo5k } from './couch-to-5k'
-import { beginnerDate, countCompleted, defaultBeginnerProgress, parseBeginnerProgress, repeatBeginnerWeek, resumeBeginnerProgress, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
+import { beginnerDate, defaultBeginnerProgress, parseBeginnerProgress, repeatBeginnerWeek, resumeBeginnerProgress, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
 
 const STORAGE_KEY = 'taperday:beginner-progress:v1'
 const programme = couchTo5k()
@@ -25,12 +25,16 @@ export function CouchTo5K() {
   const [progress, setProgress] = useState<BeginnerProgress>(read)
   const [serverReady, setServerReady] = useState(false)
   const [syncError, setSyncError] = useState('')
+  const [stravaDates, setStravaDates] = useState<readonly string[]>([])
+  const [showCalendar, setShowCalendar] = useState(false)
   const saveVersion = useRef(0)
   const lastSaved = useRef('')
   const saveQueue = useRef(Promise.resolve())
   const accountEpoch = useRef(0)
   const sessions = programme.filter(s => s.week === progress.week)
-  const done = countCompleted(progress, programme)
+  const matchedDates = new Set(stravaDates)
+  const automatic = new Set(programme.filter(s => matchedDates.has(beginnerDate(progress, s.week, s.day))).map(s => sessionId(s, progress.revision)))
+  const done = programme.filter(s => progress.completed.includes(sessionId(s, progress.revision)) || automatic.has(sessionId(s, progress.revision))).length
   const update = (next: BeginnerProgress) => { if (!account || serverReady) setProgress(next) }
   useEffect(() => {
     if (account) return // Never leak one signed-in runner's account state into another runner's anonymous device state.
@@ -95,6 +99,17 @@ export function CouchTo5K() {
     return () => { cancelled = true }
   }, [progress, serverReady, account, getToken])
 
+  // Cached Strava runs count on read, not as durable manual checkoffs.
+  // When the provider's cached records expire, the automatic indicator disappears.
+  useEffect(() => {
+    if (!account) return
+    let cancelled = false
+    getToken().then(token => token ? api.me.running(token, true) : []).then(runs => {
+      if (!cancelled) setStravaDates(runs.filter(run => run.source === 'Strava' && (!run.cachedUntil || Date.parse(run.cachedUntil) > Date.now())).map(run => run.date))
+    }).catch(() => { if (!cancelled) setStravaDates([]) })
+    return () => { cancelled = true }
+  }, [account, getToken])
+
   const schedules: readonly (readonly [BeginnerDay, BeginnerDay, BeginnerDay])[] = [
     ['Monday', 'Wednesday', 'Friday'],
     ['Tuesday', 'Thursday', 'Saturday'],
@@ -146,10 +161,20 @@ export function CouchTo5K() {
         <button className="button button-quiet" type="button" disabled={!!account && !serverReady} onClick={resetWeek}>Repeat this week (+7 days)</button>
       </div>
       {progress.paused && <p role="status">Paused. Your progress is kept here until you resume.</p>}
+      <button className="button button-quiet" type="button" aria-expanded={showCalendar} onClick={() => setShowCalendar(value => !value)}>{showCalendar ? 'Hide programme calendar' : 'View all 9 weeks'}</button>
+      {showCalendar && <section aria-label="Couch to 5K programme calendar">
+        <ol className="days">{programme.map(session => {
+          const id = sessionId(session, progress.revision)
+          const date = beginnerDate(progress, session.week, session.day)
+          const complete = progress.completed.includes(id) || automatic.has(id)
+          return <li className="day" key={id}><strong>Week {session.week}, session {session.day}</strong> · {date} · {complete ? 'Completed' : 'Scheduled'}{automatic.has(id) && !progress.completed.includes(id) ? ' via Strava' : ''}</li>
+        })}</ol>
+      </section>}
       <ol className="days">
         {sessions.map(session => {
           const id = sessionId(session, progress.revision)
-          const checked = progress.completed.includes(id)
+          const viaStrava = automatic.has(id)
+          const checked = progress.completed.includes(id) || viaStrava
           return (
             <li className="day" key={id}>
               <div>
@@ -158,8 +183,8 @@ export function CouchTo5K() {
                 <p>{beginnerSessionSummary(session)}</p>
                 <p className="field-help">5 min walking cool-down · About {Math.round(session.totalSeconds / 60)} minutes total</p>
                 <label className="session-done">
-                  <input type="checkbox" disabled={progress.paused || (!!account && !serverReady)} checked={checked} onChange={() => toggle(id)} />
-                  {checked ? 'Completed' : 'Mark this session complete'}
+                  <input type="checkbox" disabled={progress.paused || viaStrava || (!!account && !serverReady)} checked={checked} onChange={() => toggle(id)} />
+                  {viaStrava && !progress.completed.includes(id) ? 'Completed via Strava' : checked ? 'Completed' : 'Mark this session complete'}
                 </label>
               </div>
             </li>

@@ -1,29 +1,6 @@
 import type { BeginnerProgress } from './beginner-progress'
-import { beginnerDate, sessionId } from './beginner-progress'
-import { couchTo5k } from './couch-to-5k'
-
-const programme = couchTo5k()
-
-export type BeginnerTrainingStatus = 'confirmed' | 'recorded' | 'planned'
-
-/** Explicit check-ins and temporary provider observations are different facts. */
-export function beginnerTrainingStatus(
-  progress: BeginnerProgress, week: number, day: 1 | 2 | 3, recorded: ReadonlySet<string>,
-): BeginnerTrainingStatus {
-  const id = sessionId({ week, day }, progress.revision)
-  if (progress.completed.includes(id)) return 'confirmed'
-  if (recorded.has(id)) return 'recorded'
-  return 'planned'
-}
-
-export function beginnerWeekSummary(
-  progress: BeginnerProgress, week: number, recorded: ReadonlySet<string>,
-) {
-  const sessions = programme.filter(session => session.week === week)
-  const confirmed = sessions.filter(session => beginnerTrainingStatus(progress, session.week, session.day, recorded) === 'confirmed').length
-  const provisional = sessions.filter(session => beginnerTrainingStatus(progress, session.week, session.day, recorded) === 'recorded').length
-  return { confirmed, provisional, remaining: sessions.length - confirmed - provisional, total: sessions.length }
-}
+import { beginnerDate } from './beginner-progress'
+import { beginnerTrainingStatus, beginnerWeekSummary, type BeginnerTrainingStatus } from './beginner-training-status'
 
 const STATUS: Record<BeginnerTrainingStatus, { symbol: string; label: string }> = {
   confirmed: { symbol: '✓', label: 'Confirmed complete' },

@@ -486,3 +486,6 @@ client/node_modules/
 client/dist/
 client/coverage/
 *.local
+
+# Keep Vite caches isolated between Git worktrees.
+client/.vite/

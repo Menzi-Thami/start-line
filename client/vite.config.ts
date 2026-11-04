@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   const siteUrl = (loadEnv(mode, process.cwd(), 'VITE_').VITE_SITE_URL || 'https://taperday.run').replace(/\/+$/, '')
 
   return {
+    cacheDir: '.vite',
     plugins: [react(), { name: 'site-url', transformIndexHtml: (html: string) => html.replaceAll('%SITE_URL%', siteUrl) }],
     build: {
       // Small font subsets would otherwise be inlined as data: URIs, which the site's CSP (font-src 'self') blocks.

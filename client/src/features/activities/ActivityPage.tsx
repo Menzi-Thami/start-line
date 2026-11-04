@@ -150,6 +150,12 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       <ShoePicker run={run} />
       <RunProvenance run={run} />
 
+      <dl className="activity-stats activity-stats-primary">
+        <Stat label="Distance" value={formatDistance(run.distanceKm, units)} lead />
+        <Stat label="Moving time" value={formatDuration(run.movingSeconds)} lead />
+        <Stat label="Pace" value={formatPace(run.paceSecondsPerKm, units)} lead />
+      </dl>
+
       <div role="tablist" aria-label="Run analysis" className="activity-tabs" onKeyDown={event => {
         const current = tabs.indexOf(selectedTab)
         const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
@@ -188,11 +194,6 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       </section>
 
       <WorkoutStages execution={execution} units={units} />
-      <dl className="activity-stats activity-stats-primary">
-        <Stat label="Distance" value={formatDistance(run.distanceKm, units)} lead />
-        <Stat label="Moving time" value={formatDuration(run.movingSeconds)} lead />
-        <Stat label="Pace" value={formatPace(run.paceSecondsPerKm, units)} lead />
-      </dl>
       <details className="activity-more-stats"><summary>More run statistics</summary><dl className="activity-stats activity-stats-secondary">
         {run.elevationGainMetres != null && <Stat label="Elevation gain" value={`${run.elevationGainMetres} m`} />}
         {run.averageHeartRate != null && <Stat label="Avg heart rate" value={`${run.averageHeartRate} bpm`} />}

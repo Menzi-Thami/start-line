@@ -99,6 +99,8 @@ for (const width of [320, 768, 1440]) {
     await page.getByRole('button', { name: /Open day details/ }).click()
     await page.getByRole('button', { name: 'View run analysis', exact: true }).click()
     const evidence = page.getByRole('region', { name: 'Workout stage evidence' })
+    await page.evaluate(() => scrollTo(0, 0))
+    await expect(page.locator('.activity-stats-primary')).toBeInViewport({ ratio: 1 })
     await expect(evidence).toContainText('Estimated alignment')
     await expect(evidence).toContainText('Window covered')
     await expect(evidence).toContainText('0% of sampled')

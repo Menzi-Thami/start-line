@@ -21,11 +21,20 @@ describe('Couch to 5K Strava matching', () => {
   })
   it('does not assign the same running day twice after repeating a week', () => {
     const progress = repeatBeginnerWeek(defaultBeginnerProgress('2026-11-02'))
-    const matched = matchBeginnerStrava(progress, couchTo5k(), [{ date: '2026-11-09', source: 'Strava' }], NOW)
+    const matched = matchBeginnerStrava(progress, couchTo5k(), [{ date: '2026-11-09', source: 'Strava', cachedUntil: '2026-11-05T00:00:00Z' }], NOW)
     expect(matched.size).toBe(1)
+  })
+  it('does not treat a Strava run with missing or invalid cache expiry as durable completion', () => {
+    const progress = defaultBeginnerProgress('2026-11-02')
+    const runs = [
+      { date: '2026-11-02', source: 'Strava' },
+      { date: '2026-11-02', source: 'Strava', cachedUntil: 'not-a-date' },
+      { date: '2026-11-02', source: 'Strava', cachedUntil: '2026-11-04T12:00:00Z' },
+    ]
+    expect(matchBeginnerStrava(progress, couchTo5k(), runs, NOW).size).toBe(0)
   })
   it('does not automatically tick paused programmes', () => {
     const progress = { ...defaultBeginnerProgress('2026-11-02'), paused: true }
-    expect(matchBeginnerStrava(progress, couchTo5k(), [{ date: '2026-11-02', source: 'Strava' }], NOW).size).toBe(0)
+    expect(matchBeginnerStrava(progress, couchTo5k(), [{ date: '2026-11-02', source: 'Strava', cachedUntil: '2026-11-05T00:00:00Z' }], NOW).size).toBe(0)
   })
 })

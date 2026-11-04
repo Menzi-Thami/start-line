@@ -140,7 +140,7 @@ for (const width of [320, 768, 1440]) {
         const actions = await page.locator('.wizard-nav').boundingBox()
         expect(actions!.y).toBeGreaterThanOrEqual(review!.y + review!.height)
       }
-      if (screen === 'runs') await expect(page.getByRole('button', { name: /Open the run on/ })).toBeVisible()
+      if (screen === 'runs') await expect(page.getByRole('button', { name: /Run analysis/ })).toBeVisible()
       if (screen === 'account') {
         await expect(page.getByRole('region', { name: 'Account overview' })).toContainText('Strava not connected')
         await page.getByRole('button', { name: 'Manage run connections' }).click()

@@ -199,7 +199,7 @@ export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
         <ul className="weeks runs" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-4)' }}>
           {inRange(list.runs, range).map((run) => (
             <li className="run-feed-row" key={run.id}>
-              <button type="button" className="run-feed-open" aria-label={`Open the run on ${formatDate(run.localDate, 'long')}, ${formatDistance(run.distanceKm, units)}, ${formatDuration(run.movingSeconds)}`} onClick={() => onOpen(run.id)}><span>
+              <button type="button" className="run-feed-open" onClick={() => onOpen(run.id)}><span>
                 <span className="run-card-distance">{formatDistance(run.distanceKm, units)}</span>
                 <span className="week-name">{run.plannedTitle ?? KIND_LABEL[run.kind]}</span>
                 <span className="tag">{run.source.kind === 'Strava' ? 'From Strava' : 'Uploaded recording'}</span>

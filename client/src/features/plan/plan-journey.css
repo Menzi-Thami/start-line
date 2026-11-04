@@ -5,7 +5,7 @@
 .plan .week-agenda .week-day { min-width: 0; padding: 0; margin: 0; }
 .plan .week-agenda .week-day-button { display: flex; flex-direction: column; justify-content: center; gap: .3rem; width: 100%; min-width: 0; min-height: 88px; padding: .5rem 0; border-radius: 14px; border: 1px solid transparent; }
 .plan .week-agenda .week-day-name { font-size: .7rem; }
-.plan .week-agenda .week-day-dot { width: auto; height: auto; border: 0; background: none; color: inherit; }
+.plan .week-agenda .week-day-dot { width: auto; height: auto; border: 0; background: none; color: var(--ink); opacity: 1; }
 .plan .week-agenda .week-day-workout, .plan .week-status-label { display: none; }
 .plan .week-day-button[data-selected="true"] { border-color: var(--ink); background: rgba(190, 215, 167, .12); }
 .plan .week-day-button[aria-current="date"] .week-day-dot { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .25rem; }

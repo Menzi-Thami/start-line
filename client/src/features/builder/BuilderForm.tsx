@@ -374,10 +374,11 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const reviewRow = (label: string, value: ReactNode, target: number) => (
     <div className="review-row">
       <dt>{label}</dt>
-      <dd>{value}</dd>
-      <button type="button" className="link-button" onClick={() => goTo(target)} aria-label={`Change ${label.toLowerCase()}`}>
-        Change
-      </button>
+      <dd><span>{value}</span>
+        <button type="button" className="link-button" onClick={() => goTo(target)} aria-label={`Change ${label.toLowerCase()}`}>
+          Change
+        </button>
+      </dd>
     </div>
   )
 
@@ -412,8 +413,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
         <nav className="wizard-steps" aria-label="Plan builder steps">
           <ol>{STEP_NAMES.map((name, index) => (
             <li key={name}>
-              <button type="button" aria-label={`Step ${index + offset + 1}: ${name}`} aria-current={index === step ? 'step' : undefined} disabled={index > furthestStep} onClick={() => goTo(index)}>
-                <span aria-hidden="true">{index + offset + 1}</span>{name}
+              <button type="button" aria-current={index === step ? 'step' : undefined} disabled={index > furthestStep} onClick={() => goTo(index)}>
+                <span>{index + offset + 1}</span>{' '}{name}
               </button>
             </li>
           ))}</ol>

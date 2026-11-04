@@ -97,7 +97,7 @@ test('rest-day imports open automatically, log once and survive navigation and c
   await page.keyboard.press('Escape')
   await expect(day).toHaveCount(0)
   await expect(button).toBeFocused()
-  await expect(button).toHaveAttribute('aria-label', /activity recorded/)
+  await expect(button).toHaveAccessibleName(/activity recorded/i)
   await page.getByRole('button', { name: 'Expire imported details', exact: true }).click()
   await button.click()
   await page.getByRole('button', { name: /Open day details/ }).click()

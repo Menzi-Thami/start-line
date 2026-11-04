@@ -103,7 +103,7 @@ test('training stays focused while all detail remains reachable @phone', async (
   await expect(page.getByRole('button', { name: 'Change strength days', exact: true })).toBeVisible()
   await strength.click()
   await navigation.getByRole('button', { name: 'Runs', exact: true }).click()
-  await expect(page.getByRole('button', { name: /^Open the run on/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Run analysis/ })).toBeVisible()
   await expect(page.getByText('Upload runs', { exact: true })).not.toBeVisible()
   await page.locator('summary').filter({ hasText: /^Add runs from a file$/ }).click()
   await expect(page.getByText('Upload runs', { exact: true })).toBeVisible()

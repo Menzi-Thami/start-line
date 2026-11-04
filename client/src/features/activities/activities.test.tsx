@@ -182,7 +182,7 @@ describe('my runs', () => {
     const item = (await screen.findByText('Long run')).closest('li')!
     expect(within(item).getByText('15.4 km')).toBeInTheDocument()
     expect(within(item).getByText(/1:42:12 · 6:40\/km/)).toBeInTheDocument()
-    await user.click(within(item).getByRole('button', { name: /Open the run on/ }))
+    await user.click(within(item).getByRole('button', { name: /Run analysis/ }))
 
     expect(await screen.findByRole('heading', { name: 'Long run', level: 2 })).toBeInTheDocument()
   })

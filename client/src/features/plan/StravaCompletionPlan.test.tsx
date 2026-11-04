@@ -49,7 +49,7 @@ describe('a plan session completed via Strava', () => {
   it('shows done on the week, the calendar and the week’s count, with provenance and the longer-run words', async () => {
     coachWith([hills])
 
-    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, recorded via strava/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026:.*Hill repeats.*Recorded via Strava/ })).toBeInTheDocument()
     const day = await openWeekDay('2026-10-13')
     expect(within(day).getByText('Activity recorded via Strava · provisional', { selector: '.day-summary-status' })).toBeInTheDocument()
     expect(within(day).getByText(/You covered 6\.4 km against 5\.5 km planned\. More isn't always better — try to follow your planned distance next time/)).toBeInTheDocument()
@@ -70,7 +70,7 @@ describe('a plan session completed via Strava', () => {
 
     expect(saves).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
     await closePlanDay()
-    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, completed/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026:.*Hill repeats.*Completed/ })).toBeInTheDocument()
     expect(screen.queryByText('Activity recorded via Strava · provisional', { selector: '.day-summary-status' })).not.toBeInTheDocument()
   })
 
@@ -78,7 +78,8 @@ describe('a plan session completed via Strava', () => {
     const skipped = { date: '2026-10-13', sessionType: 'Hills', status: 'Skipped', effort: null, pain: 'None', updatedAt: '2026-10-13T20:00:00Z', distanceUnreported: false, isAdditional: false } as CheckIn
     coachWith([{ ...hills, state: 'Conflict' }], [skipped])
 
-    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats(?!, done)/ })).toBeInTheDocument()
+    const date = await screen.findByRole('button', { name: /^Tuesday 13 October 2026:.*Hill repeats/ })
+    expect(date).not.toHaveAccessibleName(/Completed|, done/)
     const day = await openWeekDay('2026-10-13')
     expect(within(day).getByText('Skipped', { selector: '.day-summary-status' })).toBeInTheDocument()
     expect(within(day).getByText('You marked this skipped.')).toBeInTheDocument()
@@ -88,7 +89,7 @@ describe('a plan session completed via Strava', () => {
   it('without a completion from the API, a synced run alone completes nothing', async () => {
     coachWith([])
 
-    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, activity recorded/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026:.*Hill repeats.*Activity recorded/ })).toBeInTheDocument()
     const day = await openWeekDay('2026-10-13')
     expect(within(day).queryByText('Activity recorded via Strava · provisional')).not.toBeInTheDocument()
   })

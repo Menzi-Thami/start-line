@@ -552,7 +552,7 @@ export function Home({
               </>
             )}
           </section>
-        {plan && progress && <button type="button" className="home-race-brief" onClick={onOpenPlan} aria-label="Open your training plan">
+        {plan && progress && <button type="button" className="home-race-brief" onClick={onOpenPlan} aria-description="Open your training plan">
           <span><span className="field-help">Your finish line</span><strong>{plan.race.name}</strong><RaceLine plan={plan} week={week} units={units} /></span>
           <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
         </button>}

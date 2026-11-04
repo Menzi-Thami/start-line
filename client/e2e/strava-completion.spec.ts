@@ -63,7 +63,7 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   // The schedule keeps provisional recording distinct from the runner's own completion.
   await page.setViewportSize({ width: 320, height: 900 })
   await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()
-  const day = page.getByRole('button', { name: /^Sunday 18 October 2026: Long run, recorded via strava/ })
+  const day = page.getByRole('button', { name: /^Sunday 18 October 2026:.*Long run.*Recorded via Strava/ })
   await expect(day).toBeVisible()
   await day.click()
   await page.getByRole('button', { name: /Open day details/ }).click()

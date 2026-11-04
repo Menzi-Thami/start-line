@@ -79,6 +79,8 @@ interface Props {
   intro?: ReactNode
   /** Offered while changing the answers of a plan that's already built. */
   onCancel?: () => void
+  /** Open the dedicated beginner programme rather than nesting it in the race builder. */
+  onOpenBeginner?: () => void
   /** Something to finish before the questions, like signing up. While present, it's the screen shown. */
   gate?: Gate
 }
@@ -236,7 +238,7 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
   )
 }
 
-export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
+export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate, onOpenBeginner }: Props) {
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
   const [creatingPlan] = useState(() => initial === null)
   const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
@@ -382,7 +384,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   return (
     <div className="builder wizard">
       {position === 0 && intro}
-      {creatingPlan && step === 0 && !gate && <div className="panel"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" aria-expanded={showBeginner} onClick={() => setShowBeginner(v => !v)}>{showBeginner ? 'Hide beginner programme' : 'Explore Couch to 5K'}</button>{showBeginner && <CouchTo5K />}</div>}
+      {creatingPlan && step === 0 && !gate && <div className="panel"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" aria-expanded={showBeginner} onClick={() => { if (onOpenBeginner) onOpenBeginner(); else setShowBeginner(v => !v) }}>{onOpenBeginner ? 'Open Couch to 5K' : showBeginner ? 'Hide beginner programme' : 'Explore Couch to 5K'}</button>{!onOpenBeginner && showBeginner && <CouchTo5K />}</div>}
 
       <div className="wizard-progress">
         <p className="wizard-count">

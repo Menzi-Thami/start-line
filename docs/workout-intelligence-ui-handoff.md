@@ -7,15 +7,57 @@ Keep Plan > This week / Calendar / Progress as a highly scannable weekly schedul
 
 User scenario: Tue 3 Nov 2026 Goal pace run: 10 km planned, 5.05 km recorded from Strava, activity recorded but workout only partially done. Show both planned instructions and observed performance without conflating “showed up” with “followed prescription.”
 
+## Approved adaptive weekly schedule layout (supersedes vertical-only direction)
+
+**Mobile: HYBRID — seven-day horizontal date strip + selected-day preview.** This is the default on narrow viewports, replacing the earlier seven-full-rows layout as the primary mobile presentation. The strip shows all seven dates of the current week together at common phone widths: weekday initials, date number, subtle dot/indicator for scheduled or completed activity, selected-day state and today state (these must remain distinguishable). Each date is a large enough accessible touch target; no compulsory sideways swipe to discover hidden dates. At very narrow widths (e.g. 320px), intelligently adjust padding/font sizing while preserving readable touch targets and no overflow; if physical constraints make seven 44px targets impossible, provide an accessible alternative without truncating/overlapping dates. Include clear previous/next week navigation and planned km / session count summary.
+
+Beneath the date strip, show a **focused preview of the selected day**: title, activity kind, planned distance, recorded/completion status, 1-line purpose or instruction teaser, and one prominent action/tap target to open full day details. Beneath preview optionally show a **short upcoming sessions list** (typically next 2–3 relevant workouts; no duplication of every full week's card and no confusing second day selector). Day strip selection changes preview in place, with keyboard focus/announcement; tapping the preview opens a new dedicated day detail route. This intentionally differentiates **select date** from **open full detail**.
+
+**Tablet/desktop: master-detail.** Use a vertical list of all seven dated workout rows at left and a selected-day preview/detail panel at right. Use available width meaningfully. Selecting a day updates the right panel; provide an explicit accessible “Open full details” navigation. On mobile, open a full-screen dedicated day view (not an accordion). The This week / Calendar / Progress modes remain and calendar dates lead to same day-detail route. Desktop breakpoints should be determined by actual content fit, not an arbitrary device name.
+
+**Status presentation:** no misleading checkmark for activity recorded when prescribed stages are unverified; distinguish recorded/partial/prescribed completion. Preserve pending/strength/rest/multiple-activities days and existing interactions. Night Run tokens, sage selected states, refined consistent typography and restrained motion. Respect screen reader, reduced-motion and long translated labels.
+
+**Layout acceptance:** mobile 320/375/390/430 px date selection and preview, tablet 768/1024 px and desktop 1280/1440 px master-detail. Seven dates visible at standard smartphone widths, no horizontal body overflow; sufficient touch target sizes; focus and back behavior; no clipped calendar selector/nav. Take actual before/after screenshots on all form factors.
+
+Mobile wireframe:
+```
+TAPERDAY / PLAN                         26 km planned · 5 runs
+           [‹]  2–8 November  [›]
+      M     T     W     T     F     S     S
+      2     3    [4]    5     6     7     8
+      •     •           •           •     •
+
+      WEDNESDAY'S TRAINING
+      [ Mobility + light strength                  ]
+      [ Recovery day · quality movement            ]
+      [                              Open day ›     ]
+
+      COMING UP
+      Thu 5   Easy run + strides          3 km   ›
+      Sat 7   Easy run                    3 km   ›
+      Sun 8   Long run                    7 km   ›
+```
+Desktop wireframe:
+```
+[Week nav + weekly metrics]
+[Mon 2 Recovery           ] | [Selected day preview / details]
+[Tue 3 Goal pace run      ] | [Planned stages and recorded summary]
+[Wed 4 Mobility  selected ] | [Open full day details]
+[Thu 5 Easy + strides     ] |
+[Fri 6 Mobility           ] |
+[Sat 7 Easy               ] |
+[Sun 8 Long               ] |
+```
+
 ## Approved UI flow and visual guidance
-1. **Weekly plan (keep existing)** — seven legible rows with weekday/date, session name, distance, concise status (e.g. “5.05 / 10 km recorded”), one chevron. Today highlight subtle sage. No inline giant card, no table or detailed coaching on list. Entire row is button/link and keyboard accessible. Preserve This week / Calendar / Progress selector and current progress functionality.
+1. **Weekly plan (adaptive hybrid)** — mobile uses a full seven-date horizontal selector plus a selected-day workout preview and short coming-up list; selecting a date switches preview, tapping preview opens full day detail. Tablet/desktop shows a vertical seven-day list with a selected-day preview/detail panel. Statuses stay concise and factual (e.g. “5.05 / 10 km recorded”). Today highlight is subtle sage. No inline giant accordion. Preserve This week / Calendar / Progress and current progress functionality.
 2. **Day detail** — contextual back to week/calendar, date and workout title, goal/type and distance, compact status/progress indicator, structured numbered workout steps (warm-up, repeats/work, recovery, cool-down), “Why this matters,” planned activities including multiple sessions, strength, rest, race, additional runs. Show actual matched activity summary when present, then a clear **View run analysis** action. All existing log/edit/skip/Keep this tick/conﬂict actions remain accessible.
 3. **Run detail (Runs area and linked from day)** — first screen shows clean title/date and distance, pace, recording source/availability. Use sections/tabs **Overview / Pacing / Coach / Splits** (or adaptive accessible equivalent). Overview = progress and stage summary; Pacing = chart or bars with planned vs actual where data exists; Coach = evidence-bound, encouraging deterministic feedback; Splits = complete accessible table with HR when consented. Advanced details (heart rate, best efforts, removal rules) live in secondary collapsibles rather than giant uninterrupted scroll. Preserve “View on Strava” and official unmodified branding, Garmin credit where relevant.
 4. On desktop show usefully wider, balanced grid, not a stretched phone view. Tablet support and full responsive PWA, iOS safe areas. Use existing Night Run near-black/sage/electric-lime tokens, consistent type and card spacing, purposeful 180–250 ms transitions with prefers-reduced-motion support; no hard-coded screenshot pixel dimensions.
 
 Text wireframes (prior assistant UI concepts are design references, not assets):
 ```
-PLAN / THIS WEEK                       DAY / TUE 3 NOV
+DESKTOP WEEK LIST                      DAY / TUE 3 NOV
 Mon 2  Recovery run          >          ← This week
 Tue 3  Goal pace run         >          Goal pace run — 10 km planned
        5.05 of 10 km recorded           [Activity recorded] 5.05 / 10km
@@ -56,7 +98,7 @@ Do not assume screenshots are committed. The conversation UI mocks are illustrat
 
 ## Implementation slices (small independently reviewable commits, same feature branch if sensible)
 A. Audit and plan existing code, save notes in this doc. Confirm overlap with draft PR #179 (Couch to 5K): do not merge/rebase onto it or modify its unfinished contracts.
-B. Week rows + day-detail navigation, routes, history/back and keyboard focus; preserve calendar and other day actions.
+B. Responsive hybrid schedule: seven-date mobile strip with selected-day preview + concise coming-up list, desktop vertical master-detail; date selection, preview-to-detail navigation, routes, history/back and keyboard focus; preserve calendar and other day actions.
 C. Day detail structured prescription, log/status, Strava match presentation, link to run review.
 D. Runs listing + detail UI cleanup, tabs, responsive layout and chart/splits accordions; all actions preserved.
 E. Reuse/extend deterministic review and provenance-safe stage comparison on currently available data. Confidence/missing-data states, accessibility and explanatory text. Do not fake metrics.
@@ -64,7 +106,7 @@ F. Tests, docs, screenshots in actual browsers, final review.
 
 ## Acceptance tests
 - Mobile 320px up through common iPhones, tablet and 1440px desktop: no horizontal overflow, clipping, bottom navigation overlap or giant whitespace; safe area respected.
-- Click/tap and Enter/Space on any day row opens day detail; back works to same week/month and focus restores; deep linking/back/refresh behave.
+- On mobile click/tap/keyboard selection of any date updates the preview without automatically opening detail; clicking/tapping/keyboard activating the selected-day preview opens full day detail. On desktop selecting a row updates the detail panel; explicit Open full details action navigates. Back works to same week/month and focus restores; deep linking/back/refresh behave.
 - Rest/strength/multiple-session/Couch-to-5K days render correctly; planned 10km vs actual 5.05km is clearly partial and recorded, not claimed completed-as-prescribed.
 - Loading, missing, expired, deleted, revoked, unauthorized Strava data, no connection, no HR consent, FIT/TCX/GPX/manual and ambiguous matched runs present honest fallbacks.
 - Accurate stage comparisons with synthetic streams across pace changes, GPS noise/pauses, missing/recovery stages, time-only stages and partial runs; no fabricated stage scores from splits.

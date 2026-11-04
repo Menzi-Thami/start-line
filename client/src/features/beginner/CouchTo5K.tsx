@@ -3,7 +3,7 @@ import { useAuth } from '../../app/auth-context'
 import { api, apiOrigin } from '../../lib/api-client'
 import { beginnerSessionSummary, couchTo5k } from './couch-to-5k'
 import { matchBeginnerStrava, type BeginnerRecordedRun } from './strava-match'
-import { BeginnerCalendar, BeginnerProgress } from './BeginnerTrainingViews'
+import { BeginnerCalendar, BeginnerProgress as BeginnerProgressView } from './BeginnerTrainingViews'
 import './beginner-journey.css'
 import { beginnerDate, defaultBeginnerProgress, parseBeginnerProgress, repeatBeginnerWeek, resumeBeginnerProgress, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
 
@@ -197,7 +197,7 @@ export function CouchTo5K() {
       </ol>
       </>}
       {activeTab === 'calendar' && <BeginnerCalendar progress={progress} recorded={automatic} onChooseWeek={week => { update({ ...progress, week }); setActiveTab('week') }} />}
-      {activeTab === 'progress' && <BeginnerProgress progress={progress} recorded={automatic} />}
+      {activeTab === 'progress' && <BeginnerProgressView progress={progress} recorded={automatic} />}
       <p className="field-help">Progress is saved on this device and synchronised to your Taperday account when you're signed in and connected.</p>
       <p className="field-help">After week nine, aim for 30 minutes of comfortable running. That may not yet be 5 km. Build distance gradually; rest or repeat whenever needed.</p>
     </section>

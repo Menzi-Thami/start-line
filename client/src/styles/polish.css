@@ -64,13 +64,11 @@
   .home { gap: var(--space-4); }
   .home-hello { padding: var(--space-2) 0; }
   .home-title { font-size: clamp(2.1rem, 3.5vw, 3.25rem); max-width: 23ch; }
-  .home-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (min-width: 75rem) {
   .page:has(.home) { max-width: 76rem; }
   .home { gap: var(--space-5); }
-  .home-top { gap: var(--space-5); }
   .home-title { letter-spacing: -0.045em; }
   .home-section { padding-block: var(--space-2); }
 }
@@ -169,8 +167,7 @@
 }
 
 /* Compact screens, including 320px phones and enlarged text, must never force a card wider than the page. */
-.home-top { grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); }
-.home-hello > div, .home-top > *, .home-panel > *, .home-week-body > div { min-width: 0; }
+.home-hello > div, .home-panel > *, .home-week-body > div { min-width: 0; }
 .home-title { overflow-wrap: anywhere; }
 .home-tile-value, .home-best-time { font-variant-numeric: tabular-nums; }
 .home-tile { position: relative; overflow: hidden; }
@@ -233,7 +230,6 @@ button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(
 @media (min-width: 48rem) {
   .home-intro { padding-top: var(--space-2); }
   .home-intro .home-hello { align-items: flex-start; }
-  .home-top { grid-template-columns: 1.2fr 1fr; }
   .home-panel { gap: var(--space-4); }
 }
 
@@ -299,7 +295,6 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .home-bar.is-selected { background: var(--accent-soft); }
 .home-bar.is-selected .home-bar-ran { opacity: 1; }
 .home-chart-detail { min-height: 3em; margin-block: var(--space-3); font-size: var(--text-sm); color: var(--ink-2); }
-.home-top { align-items: start; }
 .home-panel { padding-top: var(--space-3); }
 .home-today { border-color: color-mix(in srgb, var(--accent) 35%, transparent); background: linear-gradient(140deg, var(--accent-soft), transparent 65%), var(--glass); }
 .home-today-run { width: 100%; }
@@ -312,7 +307,6 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .home-data-state .link-button { min-height: var(--tap); text-align: left; }
 .home-panel .home-section { margin-top: var(--space-3); }
 .home-panel > .your-week { background: var(--surface-sunk); }
-.home-top .home-card { padding: var(--space-4) var(--space-5); }
 .home-tile { padding: var(--space-3) var(--space-4); }
 .home-history, .home-records { align-self: start; }
 .session-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2); align-items: center; }
@@ -336,7 +330,6 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
   .home-countdown-row { flex-direction: column; align-items: end; gap: var(--space-2); }
   .home-countdown { flex-direction: column; gap: 0; }
   .home-countdown-label { font-size: 0.7rem; }
-  .home-top .home-card { padding: var(--space-4); }
   .home-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
   .home-tiles > :last-child { grid-column: 1 / -1; }
   .home-tile-value { font-size: 1.6rem; }
@@ -412,7 +405,6 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 /* Focused training: one purpose per screen, summaries before detail. Night run tokens stay unchanged. */
 .home-focus { gap: var(--space-5); }
 #home-panel-today.home-focus { grid-template-columns: minmax(0, 1fr); }
-.home-focus .home-top { gap: var(--space-4); align-items: start; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'today' 'week' 'race'; }
 .home-focus .home-card { background: var(--surface-sunk); box-shadow: none; gap: var(--space-2); }
 .home-focus .home-card-heading { color: var(--muted); font-size: var(--text-sm); }
 .home-focus .home-today-title { font-size: clamp(1.5rem, 3vw, 2rem); }
@@ -471,8 +463,6 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .week-agenda .week-day-workout .field-help { font-size: .75rem; }
 .week-day-chevron { color: var(--muted); text-align: right; }
 .week-agenda .week-day.has-activity .week-day-button::after { display: none; }
-.week-agenda .week-day-button[aria-expanded='true'] { background: var(--accent-soft); padding-inline: var(--space-2); }
-.week-agenda .day-summary { margin: var(--space-2) 0 var(--space-3); }
 .day-summary { max-width: 32rem; max-height: min(22rem, 55dvh); padding: 0 var(--space-3) var(--space-3); border-color: var(--line); background: var(--surface-sunk); box-shadow: none; }
 .day-summary-head { padding-block: var(--space-2); }
 .day-summary-head h3 { font-size: var(--text-md); }
@@ -483,8 +473,6 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .day-summary .check-in-summary { margin-top: var(--space-2); }
 .day-summary .session-more { margin-block: var(--space-2); }
 @media (min-width: 64rem) {
-  .home-focus .home-top { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); grid-template-areas: 'today week' 'today race'; }
-  .home-focus .home-top > .home-today { height: 100%; }
   .home-hello { margin-bottom: var(--space-4); }
 }
 @media (max-width: 25rem) {
@@ -516,9 +504,6 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .home-focus .home-workout-facts { margin-block: var(--space-2); }
 .plan .plan-notes { font-size: var(--text-sm); }
 .home-focus .home-today .run-result { border: 0; background: transparent; padding: var(--space-2) 0; }
-.home-focus .home-top > .home-today { grid-area: today; }
-.home-focus .home-top > .home-week { grid-area: week; }
-.home-focus .home-top > .home-race-brief { grid-area: race; }
 
 .notification-choices { border: 1px solid var(--line); border-radius: var(--radius-sm, 0.5rem); padding: var(--space-4); margin-block: var(--space-4); min-width: 0; }
 .notification-choices legend { font-weight: 600; padding-inline: var(--space-2); }

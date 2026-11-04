@@ -789,20 +789,6 @@ select {
   max-width: 34rem;
 }
 
-/* Back and Continue stay in reach on a phone, even halfway down a long race list. */
-.wizard-nav {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-  padding: var(--space-3) 0 max(var(--space-3), env(safe-area-inset-bottom));
-  background: var(--paper);
-  border-top: 1px solid var(--line);
-}
 
 .review {
   margin: 0 0 var(--space-5);

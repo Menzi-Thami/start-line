@@ -47,6 +47,7 @@ interface Props {
   strava?: StravaStatus
   onOpenPlan: () => void
   onOpenDay?: (date: string) => void
+  onOpenProgress?: () => void
   onBuildPlan: () => void
   onOpenRun: (id: string) => void
   onOpenRuns: () => void
@@ -418,6 +419,7 @@ export function Home({
   strava,
   onOpenPlan,
   onOpenDay,
+  onOpenProgress,
   onBuildPlan,
   onOpenRun,
   onOpenRuns,
@@ -431,6 +433,7 @@ export function Home({
   const reviewRef = useRef<HTMLDetailsElement>(null)
   const [toolsOpen, setToolsOpen] = useState(() => tabFromUrl() === 'tools')
   const [toolsOpened, setToolsOpened] = useState(toolsOpen)
+  const [insightsVisited, setInsightsVisited] = useState(false)
   const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
   // Sessions a held Strava run completes, computed by the API on each read; asked for again as check-ins or runs change.
@@ -504,7 +507,6 @@ export function Home({
 
       <div className="home-panel home-focus" id="home-panel-today">
         {current && planFailed && <div className="home-data-state" role="alert"><p>{plan ? 'Your plan couldn’t refresh. Showing the last plan loaded on this device.' : 'Your plan couldn’t load. You can try again.'}</p><button type="button" className="button" onClick={retryPlan}>Retry plan</button></div>}
-        {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
         <div className="home-top">
           {current ? (
             <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={onOpenDay} />
@@ -555,10 +557,10 @@ export function Home({
           <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
         </button>}
         </div>
+        {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
         <TickCard plan={plan} today={today} coach={coach} />
         {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} syncedFor={coach ? (s) => completedViaStrava(s, coach) : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
-        {runs.length > 0 && <details className="disclosure"><summary>Share a milestone</summary><MilestoneCards runs={runs} /></details>}
         <ReadinessCheckIn today={today} onReview={plan && week && progress?.kind !== 'race' ? () => { setReviewOpen(true); requestAnimationFrame(() => reviewRef.current?.scrollIntoView?.({ block: 'start' })) } : undefined} />
 
         <section className="section home-section" aria-labelledby="home-training">
@@ -579,6 +581,11 @@ export function Home({
             </details>)}
             <button type="button" className="link-button" onClick={onOpenPlan}>View runs in your plan →</button>
           </section>}
+          <div className="home-history-actions">
+            <button type="button" className="link-button" onClick={onOpenRuns}>View all runs →</button>
+            {current && onOpenProgress && <button type="button" className="button button-quiet" onClick={onOpenProgress}>View training progress →</button>}
+          </div>
+          <details className="disclosure home-insights" onToggle={event => { if (event.currentTarget.open) setInsightsVisited(true) }}><summary>Running insights <span className="field-help">Totals, trends & personal bests</span></summary>
           {logFailed ? (
             <div className="home-data-state" role="alert">
               <p>Your running totals couldn’t load. Try again when you’re ready.</p>
@@ -617,9 +624,9 @@ export function Home({
             {(fromStrava || log?.some(run => run.source === 'Strava')) && ' Strava contributions update with your connection and are removed if the imported run is deleted or no longer available. Your own saved distances remain.'}
           </p>
           </details>
-        </section>
 
-        <details className="disclosure home-insights"><summary>Running insights <span className="field-help">Trends, history & personal bests</span></summary>
+          {insightsVisited && <>
+          {runs.length > 0 && <section aria-label="Share a milestone"><h3>Share a milestone</h3><MilestoneCards runs={runs} /></section>}
         {current && (
           <section className="section home-section home-trends" aria-labelledby="home-trends">
             <h2 id="home-trends" className="home-heading">
@@ -669,7 +676,9 @@ export function Home({
             </ul>
           )}
         </section>
-        </details>
+          </>}
+          </details>
+        </section>
       </div>
 
       <details className="disclosure home-tools" open={toolsOpen} onToggle={event => {

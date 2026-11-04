@@ -399,6 +399,9 @@ describe('a signed-up runner', () => {
     expect(new URLSearchParams(window.location.search).get('day')).toBe('2026-10-13')
     await user.click(within(day).getByRole('button', { name: /Back to plan/ }))
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'View training progress →' }))
+    expect(await screen.findByRole('tab', { name: 'Progress' }, { timeout: 10000 })).toHaveAttribute('aria-selected', 'true')
+    expect(await screen.findByRole('region', { name: 'Training progress evidence' })).toBeVisible()
   })
 
   it('checks in on a run of their plan: how it felt, and it’s ticked off', async () => {

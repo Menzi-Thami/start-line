@@ -105,6 +105,7 @@ describe('Home', () => {
   it('makes an empty history useful and opens the supported run upload view', async () => {
     server.use(http.get('*/api/v1/me/running', () => HttpResponse.json([])))
     const { user, onOpenRuns } = renderHome({}, { signIn: true })
+    await openDisclosure('Running insights')
     await user.click(await screen.findByRole('button', { name: 'Add your runs →' }))
     expect(onOpenRuns).toHaveBeenCalledOnce()
     expect(screen.queryByRole('table', { name: 'Weekly distance, last 12 weeks' })).toBeNull()
@@ -147,12 +148,26 @@ describe('Home', () => {
     expect(screen.queryByRole('tablist', { name: 'Home' })).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'This week' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Your running' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Personal bests' })).not.toBeVisible()
+    expect(screen.queryByRole('region', { name: 'Personal bests' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Calculators' })).not.toBeInTheDocument()
 
     await openTab('Tools')
     expect(await screen.findByRole('region', { name: 'Calculators' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'This week' })).toBeVisible()
+  })
+
+  it('loads historical insights only when opened, retaining them when the disclosure is reopened', async () => {
+    let requests = 0
+    server.use(http.get('*/api/v1/me/plans/:id/progress', () => { requests++; return HttpResponse.json([]) }))
+    const { user } = renderHome(withPlan, { signIn: true })
+    expect(requests).toBe(0)
+    await openDisclosure('Running insights')
+    expect(await within(screen.getByRole('region', { name: 'Your progress' })).findByText('Your progress isn’t available right now.')).toBeVisible()
+    expect(requests).toBe(1)
+    const summary = screen.getByText('Running insights', { selector: 'summary' })
+    await user.click(summary)
+    await user.click(summary)
+    expect(requests).toBe(1)
   })
 
   it('summarises the week without repeating the plan agenda on Home', () => {

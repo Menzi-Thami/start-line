@@ -90,7 +90,7 @@ export function CouchTo5K() {
       }
     }).catch(() => { if (!cancelled) setSyncError('Your account progress could not be loaded. Check your connection before marking sessions complete.') })
     return () => { cancelled = true }
-  }, [account, getToken])
+  }, [account, getToken, owner])
 
   useEffect(() => {
     if (!account || !serverReady) return

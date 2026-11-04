@@ -5,7 +5,7 @@ import type { ActivitySummary, PersonalBest, PlanWeek } from '../../lib/types'
 import { milestonesFromRuns } from '../milestones/milestones'
 import { VolumeChart } from './VolumeChart'
 import type { dayStatus } from './training-status'
-import { calendarDaysEnding, comparablePaceGroups } from './progress-evidence'
+import { calendarDaysEnding, comparablePaceGroups, volumeWeeksInPeriod } from './progress-evidence'
 import './progress-insights.css'
 
 export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, statusFor, onOpenDate, bests = [], onOpenRun }: {
@@ -27,13 +27,16 @@ export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, 
   const maximum = Math.max(...points.map(run => run.paceSecondsPerKm), 300) + 10
   const x = (index: number) => 25 + index * 550 / Math.max(1, points.length - 1)
   const y = (pace: number) => 20 + (pace - minimum) * 140 / (maximum - minimum)
-  const visibleWeeks = weeks.filter(week => week.startDate <= today && week.startDate >= calendarDaysEnding(days[0]!, 7)[0]!)
+  const visibleWeeks = volumeWeeksInPeriod(weeks, today, period)
   const milestones = milestonesFromRuns(runs ?? [])
   return <section className="progress-insights" aria-label="Training progress evidence">
     <div className="progress-period" role="group" aria-label="Progress period">{[4, 8, 12].map(value => <button type="button" className="chip-button" key={value} aria-pressed={period === value} onClick={() => { setPeriod(value); setPoint(0) }}>{value} weeks</button>)}</div>
     <h3>Weekly distance</h3>
     <p className="field-help">Planned versus recorded or logged distance. Existing estimates and source availability apply; an empty record does not prove you missed training.</p>
-    <VolumeChart weeks={visibleWeeks} units={units} currentWeek={currentWeek} ran={ran} />
+    {visibleWeeks.length > 0 ? <>
+      {visibleWeeks[0]!.startDate > today && <p className="field-help">Your plan has not started yet. These bars show upcoming planned weeks, without implying any recorded training.</p>}
+      <VolumeChart weeks={visibleWeeks} units={units} currentWeek={currentWeek} ran={ran} />
+    </> : <p>No planned weeks fall in this period. Recorded activity can still appear in the evidence below.</p>}
     <div className="progress-evidence-grid">
     <section className="panel" aria-labelledby={`${id}-pace`}><h3 id={`${id}-pace`}>Comparable pace</h3>
       <p className="field-help">Matched easy or recovery runs, grouped by workout type, approximate distance and recording source. Routes and conditions can still differ. Pace alone does not establish improving fitness. Higher on this chart is faster.</p>

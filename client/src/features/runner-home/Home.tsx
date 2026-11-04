@@ -44,6 +44,7 @@ interface Props {
   strava?: StravaStatus
   onOpenPlan: () => void
   onBuildPlan: () => void
+  onOpenBeginner: () => void
   onOpenRun: (id: string) => void
   onOpenRuns: () => void
   onOpenAccount: () => void
@@ -413,6 +414,7 @@ export function Home({
   strava,
   onOpenPlan,
   onBuildPlan,
+  onOpenBeginner,
   onOpenRun,
   onOpenRuns,
   onOpenAccount,
@@ -549,7 +551,7 @@ export function Home({
           <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
         </button>}
         </div>
-        {!current && <BeginnerHomeCard today={today} onOpenProgramme={onBuildPlan} />}
+        {!current && <BeginnerHomeCard today={today} onOpenProgramme={onOpenBeginner} />}
         <TickCard plan={plan} today={today} coach={coach} />
         {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} syncedFor={coach ? (s) => completedViaStrava(s, coach) : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />

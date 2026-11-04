@@ -382,7 +382,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   return (
     <div className="builder wizard">
       {position === 0 && intro}
-      {creatingPlan && position === 0 && !gate && <div className="panel"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" aria-expanded={showBeginner} onClick={() => setShowBeginner(v => !v)}>{showBeginner ? 'Hide beginner programme' : 'Explore Couch to 5K'}</button>{showBeginner && <CouchTo5K />}</div>}
+      {creatingPlan && step === 0 && !gate && <div className="panel"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" aria-expanded={showBeginner} onClick={() => setShowBeginner(v => !v)}>{showBeginner ? 'Hide beginner programme' : 'Explore Couch to 5K'}</button>{showBeginner && <CouchTo5K />}</div>}
 
       <div className="wizard-progress">
         <p className="wizard-count">

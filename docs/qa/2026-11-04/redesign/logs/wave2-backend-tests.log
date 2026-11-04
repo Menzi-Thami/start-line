@@ -1,0 +1,16 @@
+Test run for /workspace/pr187/tests/StartLine.Application.Tests/bin/Release/net10.0/StartLine.Application.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for /workspace/pr187/tests/StartLine.Architecture.Tests/bin/Release/net10.0/StartLine.Architecture.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:   127, Skipped:     0, Total:   127, Duration: 4 s - StartLine.Application.Tests.dll (net10.0)
+Test run for /workspace/pr187/tests/StartLine.Domain.Tests/bin/Release/net10.0/StartLine.Domain.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     7, Skipped:     0, Total:     7, Duration: 28 s - StartLine.Architecture.Tests.dll (net10.0)
+Test run for /workspace/pr187/tests/StartLine.Integration.Tests/bin/Release/net10.0/StartLine.Integration.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:  1103, Skipped:     0, Total:  1103, Duration: 18 s - StartLine.Domain.Tests.dll (net10.0)
+
+Passed!  - Failed:     0, Passed:   342, Skipped:     0, Total:   342, Duration: 3 m 53 s - StartLine.Integration.Tests.dll (net10.0)

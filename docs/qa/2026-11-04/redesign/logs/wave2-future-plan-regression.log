@@ -1,0 +1,13 @@
+
+> start-line-client@0.0.0 test
+> vitest run src/features/plan/progress-evidence.test.ts --maxWorkers=1
+
+
+ RUN  v5.0.5 /workspace/pr187/client
+
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  15:09:28
+   Duration  1.17s (environment 65%, setup 21%, transform 11%, tests 2%, worker 1%, import 1%)
+

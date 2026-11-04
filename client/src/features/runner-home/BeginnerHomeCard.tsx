@@ -10,7 +10,7 @@ import { couchTo5k } from '../beginner/couch-to-5k'
 export function BeginnerHomeCard({ today, onOpenProgramme }: { today: string; onOpenProgramme: () => void }) {
   const { account, getToken } = useAuth()
   const [loaded, setLoaded] = useState<{ owner: string; value: BeginnerProgress | null } | null>(null)
-  const owner = account?.homeAccountId ?? account?.localAccountId ?? account?.username ?? ''
+  const owner = account?.email ?? account?.name ?? ''
   useEffect(() => {
     if (!account) return
     let cancelled = false
@@ -26,7 +26,7 @@ export function BeginnerHomeCard({ today, onOpenProgramme }: { today: string; on
     return () => { cancelled = true }
   }, [account, getToken, owner, today])
 
-  const progress = loaded?.owner === owner ? loaded.value : null
+  const progress = loaded && loaded.owner === owner ? loaded.value : null
   if (!progress) return null
   const sessions = couchTo5k()
   const done = countCompleted(progress, sessions)

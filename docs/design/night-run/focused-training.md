@@ -7,7 +7,7 @@ Taperday keeps Night run's near-black surfaces, volt accent, wordmark and type f
 | Destination | Leads with | Detail lives here |
 | --- | --- | --- |
 | Home | Today's workout and one logging action; compact weekly progress | Recent saved activity expands to existing editing/sharing; coaching review, history/personal bests and running tools open separately |
-| Plan | This week's seven compact day rows | One inline day for the selected date; Calendar for monthly navigation/full schedule; Progress for distance, goal outlook, insights and paces |
+| Plan | This week's seven compact day rows | Selected-date preview, then a dedicated day screen; Calendar for monthly navigation/full schedule; Progress for distance, goal outlook, insights and paces |
 | Runs | Compact rows of imported activities and existing range filters | A row opens the activity; file-upload guidance opens on demand; Training log links to the plan calendar |
 | Account | Named settings groups | Profile/picture, connections/run sources, app/calendars, notifications, data/privacy; sign-out belongs here |
 
@@ -19,8 +19,8 @@ Home has no nested Today/Tools navigation or repeated weekly workout list. Legac
 
 - Four main destinations: Home, Plan, Runs, Account. Three Plan views: This week, Calendar, Progress.
 - Keep the prescription separate from what happened. Imported activity does not silently complete training; saved logs, source availability, unknown measurements and failures retain their existing meaning.
-- Calendar day details appear at their agenda row, or under the monthly calendar. Only one is open. No full-page day screen, duplicated full weekly cards or modal focus trap.
-- An outside click acts before it dismisses the inline day. Dismissing on pointerdown can move the clicked control before its click lands. Use the event's original path so a submitted form disappearing still counts as an inside click.
+- Week and calendar select a compact day preview. Open day details navigates to one canonical screen, preserving the existing logging and strength controls. The day URL supports Back/Forward and refresh.
+- The dedicated day screen remains open during outside actions; Back/Close/Escape returns to the schedule.
 - Agenda Up/Down moves one day; monthly Up/Down moves a week. Opened-day controls keep their own keyboard behavior. Close/Escape returns focus appropriately.
 - Keep risk warnings and the current coach's note visible. Move reference material and management actions, not essential safety feedback, behind named controls.
 - Printing opens training guides/instructions and restores sections that were previously closed. Settings and calculator inputs stay mounted when folded, preserving drafts.

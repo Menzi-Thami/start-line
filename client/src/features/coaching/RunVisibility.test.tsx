@@ -1,5 +1,5 @@
-import { openDisclosure, openWeekDay, openRecentRun } from '../../test/user-navigation'
-import { render, screen, within } from '@testing-library/react'
+import { closePlanDay, openDisclosure, openWeekDay, openRecentRun } from '../../test/user-navigation'
+import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it, vi } from 'vitest'
@@ -55,29 +55,30 @@ describe('saved runs stay visible throughout the logging journey', () => {
     expect(persisted.entries()[0]).toMatchObject({ date, activityId: imported.id, distanceKm: null, distanceUnreported: true })
 
     await user.click(screen.getByRole('button', { name: 'Visit calendar' }))
-    const week = screen.getByRole('tabpanel', { name: 'This week' })
-    await openWeekDay(date)
+    const week = await openWeekDay(date)
     const inCalendar = await within(week).findByRole('article', { name })
     expect(within(inCalendar).getByText('10 km · 1:00:00')).toBeVisible()
     expect(within(week).getAllByRole('article', { name })).toHaveLength(1)
     expect(within(week).queryByText(/Unplanned run/)).not.toBeInTheDocument()
     expect(within(week).queryAllByRole('checkbox').every(box => !(box as HTMLInputElement).checked)).toBe(true)
-    if (date === '2026-10-14') expect(inCalendar.closest('li')!.querySelector('.week-day-button')!).toHaveTextContent('Rest day')
-    if (date === '2026-10-12') expect(inCalendar.closest('li')!.querySelector('.week-day-button')!).toHaveTextContent('Strength & mobility')
-    if (date === '2026-10-13') expect(inCalendar.closest('li')!.querySelector('.week-day-button')!).toHaveTextContent('Hill repeats')
+    if (date === '2026-10-14') expect(week).toHaveTextContent('Rest day')
+    if (date === '2026-10-12') expect(week).toHaveTextContent('Strength & mobility')
+    if (date === '2026-10-13') expect(week).toHaveTextContent('Hill repeats')
 
     // Cache deletion must remove imported measurements, never the saved entry.
     rerender(<Journey runs={[]} />)
     expect(within(within(week).getByRole('article', { name })).getByText(/Distance not recorded/)).toBeVisible()
     expect(within(within(week).getByRole('article', { name })).getByText(/Imported activity is no longer available/)).toBeVisible()
+    await closePlanDay()
     await user.click(screen.getByRole('tab', { name: 'Calendar' }))
     const allWeeks = screen.getByRole('tabpanel', { name: 'Calendar' })
-    const monthDay = within(allWeeks).getByRole('button', { name: new RegExp(`^${Number(date.slice(8))} October: .*1 additional run logged$`) })
+    const monthDay = within(allWeeks).getByRole('button', { name: new RegExp(`^${Number(date.slice(8))} October: .*1 additional run logged`) })
     await user.click(monthDay)
+    await user.click(screen.getByRole('button', { name: /Open day details/ }))
     const daySummary = await screen.findByRole('region', { name: formatDate(date, 'long') })
     expect(within(daySummary).getByRole('article', { name })).toBeVisible()
     await user.click(within(daySummary).getByRole('button', { name: 'Close day' }))
-    expect(monthDay).toHaveFocus()
+    await waitFor(() => expect(monthDay).toHaveFocus())
 
     await user.click(screen.getByRole('button', { name: 'Return home' }))
     await openRecentRun(date)
@@ -171,15 +172,15 @@ describe('saved runs stay visible throughout the logging journey', () => {
     const user = userEvent.setup()
     render(<Journey runs={[uploaded]} />)
     await user.click(screen.getByRole('button', { name: 'Visit calendar' }))
-    const week = screen.getByRole('tabpanel', { name: 'This week' })
-    await openWeekDay(date)
+    const week = await openWeekDay(date)
     const cards = await within(week).findAllByRole('article', { name: 'Additional run on Wednesday 14 October 2026' })
     expect(cards).toHaveLength(2)
     expect(cards[0]).toHaveTextContent('5 km · 30:00')
     expect(cards[1]).toHaveTextContent('Distance not recorded · 42:00')
     expect(within(week).queryByText('Unplanned run · 5 km')).not.toBeInTheDocument()
+    await closePlanDay()
     await user.click(screen.getByRole('tab', { name: 'Calendar' }))
-    expect(screen.getByRole('button', { name: /^14 October: rest.*2 additional runs logged$/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /^14 October: rest.*2 additional runs logged/ })).toBeVisible()
   })
 
   it('does not remove a saved run when its delete request fails', async () => {

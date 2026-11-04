@@ -1,4 +1,4 @@
-import { findPlanControl, openWeekDay, openDisclosure } from '../../test/user-navigation'
+import { closePlanDay, findPlanControl, openWeekDay, openDisclosure } from '../../test/user-navigation'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -406,6 +406,7 @@ describe('a signed-up runner', () => {
     // Shown on This week and in All weeks alike.
     expect((await screen.findAllByText('Done · felt 7/10, hard')).length).toBeGreaterThan(0)
     expect(db.checkIns).toEqual([{ path: 'plan-1/2026-10-13/Hills', body: expect.objectContaining({ status: 'Done', effort: 7 }) }])
+    await closePlanDay()
     // Only the hills, of this week's runs, are ticked off.
     expect(screen.getByRole('button', { name: /^Tuesday 13 October 2026:/ })).toHaveAccessibleName(/done/)
   })

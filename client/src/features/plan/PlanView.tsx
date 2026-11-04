@@ -1,3 +1,6 @@
+import './plan-journey.css'
+import { DayPreview } from './DayPreview'
+import { dayStatus } from './training-status'
 import { LifeHappens } from './LifeHappens'
 import { WorkoutExport } from './WorkoutExport'
 import { RaceWeek } from './RaceWeek'
@@ -120,22 +123,67 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
   const daySummaryId = useId()
-  const [selectedDay, setSelectedDay] = useState<{ planKey: string; date: string; tab: TabId; trigger: HTMLButtonElement } | null>(null)
+  const [selectedDay, setSelectedDay] = useState<{ planKey: string; date: string; tab: TabId; trigger?: HTMLButtonElement } | null>(() => readDayRoute() ? { planKey, date: readDayRoute()!, tab: new URLSearchParams(window.location.search).get('planTab') === 'all' ? 'all' : 'week' } : null)
   const selectedDate = selectedDay?.planKey === planKey ? selectedDay.date : null
   const selectDate = (date: string, trigger: HTMLButtonElement) => {
     trigger.focus({ preventScroll: true })
-    setSelectedDay(current => current?.planKey === planKey && current.date === date && current.tab === tab ? null : { planKey, date, tab, trigger })
+    setSelectedDay({ planKey, date, tab, trigger })
   }
-  const closeDay = useCallback(() => setSelectedDay(null), [setSelectedDay])
+  const [detailDate, setDetailDate] = useState<string | null>(() => readDayRoute())
+  const returnPosition = useRef(0)
+  const previousDetail = useRef(detailDate)
+  const openDay = (date: string) => {
+    returnPosition.current = window.scrollY
+    const url = new URL(window.location.href)
+    url.searchParams.set('planTab', tab)
+    if (shown) url.searchParams.set('planWeek', String(shown.week.number))
+    if (tab === 'all') url.searchParams.set('month', date.slice(0, 7))
+    window.history.replaceState(window.history.state, '', url)
+    url.searchParams.set('day', date)
+    window.history.pushState({ ...window.history.state, taperdayDay: true }, '', url)
+    setDetailDate(date)
+    window.scrollTo?.({ top: 0 })
+  }
+  const closeDay = useCallback(() => {
+    if (window.history.state?.taperdayDay) { setDetailDate(null); window.history.back() }
+    else {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('day')
+      window.history.replaceState(window.history.state, '', url)
+      setDetailDate(null)
+    }
+  }, [])
+  useEffect(() => {
+    const onPop = () => setDetailDate(readDayRoute())
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+  useEffect(() => {
+    const wasDetail = previousDetail.current
+    previousDetail.current = detailDate
+    if (wasDetail && !detailDate) {
+      window.scrollTo?.({ top: returnPosition.current })
+      const trigger = selectedDay?.trigger ?? [...document.querySelectorAll<HTMLButtonElement>(`[data-date="${selectedDay?.date ?? ''}"]`)].find(button => !button.closest('[hidden]'))
+      trigger?.focus({ preventScroll: true })
+    }
+  }, [detailDate, selectedDay])
   const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
   const runLogRef = useRef<HTMLDivElement>(null)
   const logImportedRun = (run: ActivitySummary) => { setRequestedRun(run); requestAnimationFrame(() => runLogRef.current?.scrollIntoView({ behavior: prefersMotion() ? 'smooth' : 'auto', block: 'center' })) }
   const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle')
   const tabs: readonly { id: TabId; label: string }[] = PLAN_TABS
-  const [tab, setTab] = useState<TabId>('week')
+  const [tab, setTab] = useState<TabId>(() => new URLSearchParams(window.location.search).get('planTab') === 'all' ? 'all' : 'week')
   const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
   const currentWeek = weekContaining(plan, today)
-  const shown = weekToShow(plan, today, currentWeek)
+  const [weekOffset, setWeekOffset] = useState(() => {
+    const requested = Number(new URLSearchParams(window.location.search).get('planWeek'))
+    const requestedIndex = plan.weeks.findIndex(week => week.number === requested)
+    const base = weekToShow(plan, today, weekContaining(plan, today))
+    return requestedIndex < 0 ? 0 : requestedIndex - Math.max(0, plan.weeks.findIndex(week => week.number === base?.week.number))
+  })
+  const currentShown = weekToShow(plan, today, currentWeek)
+  const weekIndex = Math.max(0, Math.min(plan.weeks.length - 1, plan.weeks.findIndex(week => week.number === currentShown?.week.number) + weekOffset))
+  const shown = plan.weeks[weekIndex] ? { week: plan.weeks[weekIndex]!, when: weekOffset === 0 ? currentShown?.when : 'other' } : null
   const goalSeconds = parseTimeSpan(plan.goalTime) ?? 0
   const progress = planProgress(plan, today)
   const entries = coach?.entries ?? plan.weeks.flatMap((w) => w.sessions).flatMap((s) => { const c = coach?.get(s); return c ? [c] : [] })
@@ -312,14 +360,15 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     className: `tab-panel${tab === id && direction ? ` slide-${direction}` : ''}`,
   })
 
-  const daySummary = (calendarTab: TabId) => selectedDay?.tab === calendarTab && selectedDate && (
-    <Suspense fallback={<p role="status">Opening day…</p>}>
-      <DaySummary key={`${planKey}|${selectedDate}`} id={daySummaryId} trigger={selectedDay.trigger} date={selectedDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} />
-    </Suspense>
-  )
+  const previewDate = selectedDate ?? (shown && today >= shown.week.startDate && today <= weekEnd(shown.week) ? today : shown?.week.startDate ?? today)
+  const sessionsOn = (date: string) => plan.weeks.flatMap(week => week.sessions).filter(session => session.date === date)
+  const statusOn = (date: string) => dayStatus(sessionsOn(date), effectiveDone, entries.filter(entry => entry.date === date), activityDates.includes(date), sessionsOn(date).some(session => completedViaStrava(session, coach)))
+  const preview = (date: string) => <DayPreview id={daySummaryId} date={date} sessions={sessionsOn(date)} status={statusOn(date)} units={units} onOpen={() => openDay(date)} />
 
   return (
     <section className={`plan${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
+      {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} /></Suspense>}
+      <div hidden={detailDate !== null}>
       {onBack && (
         <button type="button" className="plan-back" aria-label="Back to Home" onClick={onBack}>
           ‹ Home
@@ -344,10 +393,6 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
       {coach && <div ref={runLogRef} hidden={selectedDate !== null}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
       {coach && earlierEntries.length > 0 && <section aria-label="Earlier logged runs"><details className="disclosure"><summary>Earlier logged runs · {earlierEntries.length}</summary>{earlierEntries.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}</details></section>}
 
-      <details ref={preparationRef} className="disclosure preparation-card" open={preparationOpen} onToggle={event => setPreparationOpen(event.currentTarget.open)}>
-        <summary>{preparationMode === 'long' ? 'Long-run preparation' : 'Race-day checklist & pacing'}</summary>
-        <PreparationGuide plan={plan} units={units} mode={preparationMode} date={preparation?.date ?? preparationQuery.get('date')} />
-      </details>
       {plan.outlook?.verdict === 'AtRisk' && <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />}
       {plan.warnings.length > 0 && (
         <div className="callout plan-notes" role="note">
@@ -359,6 +404,135 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </div>
       )}
 
+      <div className="tabs tabs-frame">
+        <div ref={tabListRef} className="tabs-scroll" data-fade={tabsFade} role="tablist" aria-label="Your plan" onKeyDown={onTabKey} onScroll={syncTabsFade}>
+          {tabs.map((t, i) => (
+            <button
+              key={t.id}
+              ref={(el) => {
+                tabRefs.current[i] = el
+              }}
+              type="button"
+              role="tab"
+              id={`plan-tab-${t.id}`}
+              className="tab"
+              aria-selected={tab === t.id}
+              aria-controls={`plan-panel-${t.id}`}
+              tabIndex={tab === t.id ? 0 : -1}
+              onClick={() => showTab(i)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="tab-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
+        <div {...panel('week')}>
+          {progress.kind === 'race' && (
+            <div className="race-day-card">
+              <span className="race-day-confetti" aria-hidden="true">
+                {Array.from({ length: 14 }, (_, i) => (
+                  <i key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `-${(i % 5) * 0.35}s`, animationDuration: `${1.8 + (i % 4) * 0.4}s` }} />
+                ))}
+              </span>
+              <p className="mono">{formatDate(plan.race.date, 'long').toUpperCase()}</p>
+              <h3>It’s race day.</h3>
+              <p>Start at goal pace, not faster, and save something for the second half. This is what every run was for. Enjoy it.</p>
+            </div>
+          )}
+          {shown && (
+            <>
+              <div className="this-week-head">
+                <h3>
+                  {shown.when === 'now' ? `Week ${shown.week.number} of ${plan.weeks.length}` : shown.when === 'soon' ? 'Your first week' : 'Race week'}
+                  {shown.week.isCutback && <span className="tag">Easier week</span>}
+                  {shown.week.isReplanned && <span className="tag">Rebuilt</span>}
+                </h3>
+                <p className="week-meta">
+                  {shown.when === 'soon' ? `Starts ${formatDate(shown.week.startDate, 'long')}` : `From ${formatDate(shown.week.startDate)}`} ·{' '}
+                  {PHASES[shown.week.phase]} · {formatDistance(trainingKm(shown.week), units)}
+                </p>
+              </div>
+              {shown.week.guidance && <p className="week-guidance">{shown.week.guidance}</p>}
+              {shown.when === 'now' && coachNotes?.find((n) => n.weekStart === shown.week.startDate) && (
+                <CoachNote
+                  note={coachNotes.find((n) => n.weekStart === shown.week.startDate)!}
+                  onInjuryReplan={onInjuryReplan}
+                  fasterGoal={plan.suggestedGoal && (parseTimeSpan(plan.suggestedGoal) ?? goalSeconds) < goalSeconds ? (parseTimeSpan(plan.suggestedGoal) ?? undefined) : undefined}
+                  onUseGoal={onUseGoal}
+                />
+              )}
+              <div className="week-navigation" aria-label="Choose plan week">
+                <button type="button" className="button button-quiet" disabled={weekIndex === 0} onClick={() => { setWeekOffset(n => n - 1); setSelectedDay(null) }}>← Previous week</button>
+                <button type="button" className="button button-quiet" disabled={weekIndex === plan.weeks.length - 1} onClick={() => { setWeekOffset(n => n + 1); setSelectedDay(null) }}>Next week →</button>
+              </div>
+              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={previewDate} daySummaryId={daySummaryId} renderSelectedDay={() => preview(previewDate)} statusFor={statusOn} />
+              <p className="field-help">
+                {coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Ticks are saved on this device.'}{' '}
+                <button type="button" className="link-button" onClick={() => showTab(tabs.findIndex((t) => t.id === 'all'))}>
+                  Open calendar
+                </button>
+              </p>
+            </>
+          )}
+          <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts"><summary>Strength workouts</summary><StrengthTab plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={onEditStrength} /></details>
+          {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
+        </div>
+
+        <div {...panel('all')}>
+          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} historyDates={entries.map(entry => entry.date)} statusFor={statusOn} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} />
+          {selectedDay?.tab === 'all' && selectedDate && preview(selectedDate)}
+          <p className="tab-intro">{coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Tick sessions off as you go. Ticks are saved on this device only.'}</p>
+          <details className="disclosure training-guide"><summary>Full training schedule</summary><WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} canCompleteRuns={canCompleteRuns} /></details>
+        </div>
+
+        <div {...panel('progress')}>
+          <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
+          {plan.outlook && plan.outlook.verdict !== 'AtRisk' && (
+            <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />
+          )}
+          {runs && (
+            <details className="disclosure training-guide" aria-label="Running insights">
+              <summary>Running insights</summary>
+              <Overview showVolumeChart={false} plan={plan} units={units} today={today} currentWeek={currentWeek}
+                week={shown?.when === 'now' ? shown.week : null} runs={runs} bests={bests} strava={strava}
+                onOpenRun={onOpenRun} onOpenAccount={onOpenAccount} onOpenRuns={onOpenRuns} />
+            </details>
+          )}
+          <details className="disclosure training-guide" aria-label="Training paces">
+            <summary>Training paces</summary>
+            {latestPaced(coachNotes) ? <PacesIntro notes={coachNotes} goalSeconds={goalSeconds} /> : (
+              <p className="tab-intro">Every pace comes from your goal time, so easy days stay easy and hard days hit the right effort.</p>
+            )}
+            <ul className="zones">
+              {plan.paces.map(pace => (
+                <li className="zone" key={pace.zone}>
+                  <span className="zone-swatch" style={{ background: ZONES[pace.zone].colour }} aria-hidden="true" />
+                  <span className="zone-name">{ZONES[pace.zone].name}</span>
+                  <span className="zone-pace">{formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}</span>
+                  <span className="zone-note">{ZONES[pace.zone].note}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+          <p className="tab-intro">{FOCUS[plan.category]}</p>
+          <h3>Weekly distance</h3>
+          <p>It builds gradually, eases off every fourth week, and drops away before race day so you start fresh.</p>
+          <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
+          <PredictedTimes notes={coachNotes} goalSeconds={goalSeconds} />
+          {ran && ran.size > 0 && (
+            <>
+              <h3 className="week-totals-title">What you ran</h3>
+              <WeekTotals weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
+            </>
+          )}
+        </div>
+      </div>
+      <details ref={preparationRef} className="disclosure preparation-card" open={preparationOpen} onToggle={event => setPreparationOpen(event.currentTarget.open)}>
+        <summary>{preparationMode === 'long' ? 'Long-run preparation' : 'Race-day checklist & pacing'}</summary>
+        <PreparationGuide plan={plan} units={units} mode={preparationMode} date={preparation?.date ?? preparationQuery.get('date')} />
+      </details>
       <LifeHappens plan={plan} today={today} units={units} actions={coach?.adjustments?.life} />
       <WorkoutExport plan={plan} units={units} />
       <RaceWeek plan={plan} today={today} />
@@ -427,127 +601,14 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         {replan}
       </details>
 
-      <div className="tabs tabs-frame">
-        <div ref={tabListRef} className="tabs-scroll" data-fade={tabsFade} role="tablist" aria-label="Your plan" onKeyDown={onTabKey} onScroll={syncTabsFade}>
-          {tabs.map((t, i) => (
-            <button
-              key={t.id}
-              ref={(el) => {
-                tabRefs.current[i] = el
-              }}
-              type="button"
-              role="tab"
-              id={`plan-tab-${t.id}`}
-              className="tab"
-              aria-selected={tab === t.id}
-              aria-controls={`plan-panel-${t.id}`}
-              tabIndex={tab === t.id ? 0 : -1}
-              onClick={() => showTab(i)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="tab-viewport" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} onTouchCancel={() => { touchStart.current = null }}>
-        <div {...panel('week')}>
-          {progress.kind === 'race' && (
-            <div className="race-day-card">
-              <span className="race-day-confetti" aria-hidden="true">
-                {Array.from({ length: 14 }, (_, i) => (
-                  <i key={i} style={{ left: `${(i * 41) % 100}%`, animationDelay: `-${(i % 5) * 0.35}s`, animationDuration: `${1.8 + (i % 4) * 0.4}s` }} />
-                ))}
-              </span>
-              <p className="mono">{formatDate(plan.race.date, 'long').toUpperCase()}</p>
-              <h3>It’s race day.</h3>
-              <p>Start at goal pace, not faster, and save something for the second half. This is what every run was for. Enjoy it.</p>
-            </div>
-          )}
-          {shown && (
-            <>
-              <div className="this-week-head">
-                <h3>
-                  {shown.when === 'now' ? `Week ${shown.week.number} of ${plan.weeks.length}` : shown.when === 'soon' ? 'Your first week' : 'Race week'}
-                  {shown.week.isCutback && <span className="tag">Easier week</span>}
-                  {shown.week.isReplanned && <span className="tag">Rebuilt</span>}
-                </h3>
-                <p className="week-meta">
-                  {shown.when === 'soon' ? `Starts ${formatDate(shown.week.startDate, 'long')}` : `From ${formatDate(shown.week.startDate)}`} ·{' '}
-                  {PHASES[shown.week.phase]} · {formatDistance(trainingKm(shown.week), units)}
-                </p>
-              </div>
-              {shown.week.guidance && <p className="week-guidance">{shown.week.guidance}</p>}
-              {shown.when === 'now' && coachNotes?.find((n) => n.weekStart === shown.week.startDate) && (
-                <CoachNote
-                  note={coachNotes.find((n) => n.weekStart === shown.week.startDate)!}
-                  onInjuryReplan={onInjuryReplan}
-                  fasterGoal={plan.suggestedGoal && (parseTimeSpan(plan.suggestedGoal) ?? goalSeconds) < goalSeconds ? (parseTimeSpan(plan.suggestedGoal) ?? undefined) : undefined}
-                  onUseGoal={onUseGoal}
-                />
-              )}
-              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'week' ? selectedDate : null} daySummaryId={daySummaryId} renderSelectedDay={() => daySummary('week')} />
-              <p className="field-help">
-                {coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Ticks are saved on this device.'}{' '}
-                <button type="button" className="link-button" onClick={() => showTab(tabs.findIndex((t) => t.id === 'all'))}>
-                  Open calendar
-                </button>
-              </p>
-            </>
-          )}
-          <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts"><summary>Strength workouts</summary><StrengthTab plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={onEditStrength} /></details>
-          {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
-        </div>
-
-        <div {...panel('all')}>
-          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} historyDates={entries.map(entry => entry.date)} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} />
-          {daySummary('all')}
-          <p className="tab-intro">{coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Tick sessions off as you go. Ticks are saved on this device only.'}</p>
-          <details className="disclosure training-guide"><summary>Full training schedule</summary><WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} canCompleteRuns={canCompleteRuns} /></details>
-        </div>
-
-        <div {...panel('progress')}>
-          <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
-          {plan.outlook && plan.outlook.verdict !== 'AtRisk' && (
-            <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />
-          )}
-          {runs && (
-            <details className="disclosure training-guide" aria-label="Running insights">
-              <summary>Running insights</summary>
-              <Overview showVolumeChart={false} plan={plan} units={units} today={today} currentWeek={currentWeek}
-                week={shown?.when === 'now' ? shown.week : null} runs={runs} bests={bests} strava={strava}
-                onOpenRun={onOpenRun} onOpenAccount={onOpenAccount} onOpenRuns={onOpenRuns} />
-            </details>
-          )}
-          <details className="disclosure training-guide" aria-label="Training paces">
-            <summary>Training paces</summary>
-            {latestPaced(coachNotes) ? <PacesIntro notes={coachNotes} goalSeconds={goalSeconds} /> : (
-              <p className="tab-intro">Every pace comes from your goal time, so easy days stay easy and hard days hit the right effort.</p>
-            )}
-            <ul className="zones">
-              {plan.paces.map(pace => (
-                <li className="zone" key={pace.zone}>
-                  <span className="zone-swatch" style={{ background: ZONES[pace.zone].colour }} aria-hidden="true" />
-                  <span className="zone-name">{ZONES[pace.zone].name}</span>
-                  <span className="zone-pace">{formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}</span>
-                  <span className="zone-note">{ZONES[pace.zone].note}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-          <p className="tab-intro">{FOCUS[plan.category]}</p>
-          <h3>Weekly distance</h3>
-          <p>It builds gradually, eases off every fourth week, and drops away before race day so you start fresh.</p>
-          <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
-          <PredictedTimes notes={coachNotes} goalSeconds={goalSeconds} />
-          {ran && ran.size > 0 && (
-            <>
-              <h3 className="week-totals-title">What you ran</h3>
-              <WeekTotals weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
-            </>
-          )}
-        </div>
       </div>
     </section>
   )
+}
+
+function readDayRoute(): string | null {
+  const date = new URLSearchParams(window.location.search).get('day')
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
+  const parsed = new Date(`${date}T12:00:00Z`)
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? date : null
 }

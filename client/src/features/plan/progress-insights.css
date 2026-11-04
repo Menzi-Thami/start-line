@@ -1,0 +1,16 @@
+.progress-period { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 1rem; }
+.progress-evidence-grid { display: grid; gap: 1rem; margin-block: 1.5rem; }
+.progress-evidence-grid > * { min-width: 0; }
+.progress-pace-line { display: block; width: 100%; height: auto; }
+.progress-insights .input { max-width: 100%; min-height: 44px; }
+.progress-insights table:not(.visually-hidden) { width: 100%; font-size: .85rem; }
+.consistency-calendar { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: .25rem; margin-block: 1rem; }
+.consistency-date { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 44px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.consistency-date.is-complete { color: var(--accent); background: var(--accent-soft); }
+.consistency-date.is-partial { color: light-dark(#805200, #f5bf72); }
+.progress-milestones { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); }
+@media (min-width: 1024px) { .progress-evidence-grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } }
+/* Preserve accessible chart tables without allowing intrinsic table width to expand the page. */
+.plan table.visually-hidden { display: block; width: 1px; max-width: 1px; overflow: hidden; }
+.progress-personal-bests { list-style: none; padding: 0; display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.progress-personal-bests li { padding: 1rem; border: 1px solid var(--line); border-radius: 16px; }

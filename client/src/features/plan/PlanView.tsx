@@ -31,7 +31,7 @@ import { FOCUS, PHASES, ZONES } from './copy'
 import { sessionKey, trainingKm } from './plan-math'
 import { PlanProgress } from './PlanProgress'
 import { OutlookCard } from './OutlookCard'
-import { VolumeChart } from './VolumeChart'
+import { ProgressInsights } from './ProgressInsights'
 import { WeekList } from './WeekList'
 import { PlanCalendar } from './PlanCalendar'
 import { WeekGlance } from './WeekGlance'
@@ -123,7 +123,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
   const [done, setDone] = useState(() => loadDone(planKey))
   const daySummaryId = useId()
-  const [selectedDay, setSelectedDay] = useState<{ planKey: string; date: string; tab: TabId; trigger?: HTMLButtonElement } | null>(() => readDayRoute() ? { planKey, date: readDayRoute()!, tab: new URLSearchParams(window.location.search).get('planTab') === 'all' ? 'all' : 'week' } : null)
+  const [selectedDay, setSelectedDay] = useState<{ planKey: string; date: string; tab: TabId; trigger?: HTMLButtonElement } | null>(() => readDayRoute() ? { planKey, date: readDayRoute()!, tab: readPlanTab() } : null)
   const selectedDate = selectedDay?.planKey === planKey ? selectedDay.date : null
   const selectDate = (date: string, trigger: HTMLButtonElement) => {
     trigger.focus({ preventScroll: true })
@@ -172,7 +172,8 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const logImportedRun = (run: ActivitySummary) => { setRequestedRun(run); requestAnimationFrame(() => runLogRef.current?.scrollIntoView({ behavior: prefersMotion() ? 'smooth' : 'auto', block: 'center' })) }
   const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle')
   const tabs: readonly { id: TabId; label: string }[] = PLAN_TABS
-  const [tab, setTab] = useState<TabId>(() => new URLSearchParams(window.location.search).get('planTab') === 'all' ? 'all' : 'week')
+  const [tab, setTab] = useState<TabId>(() => readPlanTab())
+  const [progressVisited, setProgressVisited] = useState(() => readPlanTab() === 'progress')
   const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
   const currentWeek = weekContaining(plan, today)
   const [weekOffset, setWeekOffset] = useState(() => {
@@ -314,12 +315,13 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   if (openTab && openTab.seq !== askedSeq) {
     setAskedSeq(openTab.seq)
     const asked = tabs.find((t) => t.id === openTab.id)
-    if (asked && asked.id !== tab) { setSelectedDay(null); setTab(asked.id) }
+    if (asked && asked.id !== tab) { if (asked.id === 'progress') setProgressVisited(true); setSelectedDay(null); setTab(asked.id) }
   }
 
   const showTab = (next: number, focus = false) => {
     const target = tabs[(next + tabs.length) % tabs.length]!
     if (target.id === tab) return
+    if (target.id === 'progress') setProgressVisited(true)
     setSelectedDay(null)
     setDirection(next > index ? 'forward' : 'back')
     setTab(target.id)
@@ -517,9 +519,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
             </ul>
           </details>
           <p className="tab-intro">{FOCUS[plan.category]}</p>
-          <h3>Weekly distance</h3>
-          <p>It builds gradually, eases off every fourth week, and drops away before race day so you start fresh.</p>
-          <VolumeChart weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
+          {progressVisited && <ProgressInsights weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} runs={runs} today={today} statusFor={statusOn} bests={bests} onOpenRun={onOpenRun} onOpenDate={(date, trigger, period) => { const url = new URL(window.location.href); url.searchParams.set('progressWeeks', String(period)); window.history.replaceState(window.history.state, '', url); setSelectedDay({ planKey, date, tab, trigger }); openDay(date) }} />}
           <PredictedTimes notes={coachNotes} goalSeconds={goalSeconds} />
           {ran && ran.size > 0 && (
             <>
@@ -611,4 +611,9 @@ function readDayRoute(): string | null {
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null
   const parsed = new Date(`${date}T12:00:00Z`)
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date ? date : null
+}
+
+function readPlanTab(): TabId {
+  const tab = new URLSearchParams(window.location.search).get('planTab')
+  return tab === 'all' || tab === 'progress' ? tab : 'week'
 }

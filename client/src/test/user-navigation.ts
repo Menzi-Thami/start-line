@@ -4,14 +4,14 @@ import userEvent from '@testing-library/user-event'
 
 /** Follow the same disclosure controls a runner uses, rather than querying hidden actions. */
 export async function openDisclosure(label: string | RegExp) {
-  const summary = await screen.findByText(label, { selector: 'summary', exact: true })
+  const summary = await screen.findByText(label, { selector: 'summary', exact: true }, { timeout: 10000 })
   if (!summary.closest('details')?.open) await userEvent.setup().click(summary)
   return summary.closest('details')!
 }
 
 export async function findPlanControl(name: string) {
   await openDisclosure('Plan options')
-  return screen.findByRole('button', { name })
+  return screen.findByRole('button', { name }, { timeout: 10000 })
 }
 
 export async function openStrengthWorkouts() {

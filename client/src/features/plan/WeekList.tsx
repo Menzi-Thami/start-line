@@ -60,7 +60,7 @@ function RunMark({ run, units, unplanned, onOpenRun, logged = false }: { run: Ac
   )
 }
 
-export function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns, canCompleteRuns = true }: {
+export function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns, canCompleteRuns = true, expanded = false }: {
   session: Session
   pace: PaceZoneRange | undefined
   units: Units
@@ -70,6 +70,7 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
   /** The runner's runs on the session's day, for linking a check-in to one. */
   dayRuns?: readonly ActivitySummary[]
   canCompleteRuns?: boolean
+  expanded?: boolean
 }) {
   // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
   const [bursts, setBursts] = useState(0)
@@ -94,13 +95,13 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
         <RunWalkChip runWalk={session.runWalk} />
       </div>
       {/* Compact: the session's name and numbers lead; how to run it and why open from the chevron (and always print). */}
-      <details className="session-more">
+      <details className="session-more" open={expanded || undefined}>
         <summary>{session.type === 'Strength' ? 'About this session' : 'How to run it'}</summary>
         <p className="session-detail">{session.detail}</p>
         <SessionSteps steps={session.steps} units={units} />
         <p className="session-why">Why: {session.purpose}</p>
       </details>
-      {session.exercises.length > 0 && (
+      {session.exercises.length > 0 && (expanded ? <div className="strength-moves"><p className="strength-moves-head">{sets.done}/{sets.total} sets</p><ExerciseList session={session} done={done} onDoneChange={onDoneChange} /></div> :
         <details className="strength-moves strength-disclosure">
           <summary>View exercises · {sets.done}/{sets.total} sets done</summary>
           <p className="strength-moves-head">

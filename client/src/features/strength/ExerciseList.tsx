@@ -4,6 +4,7 @@ import { ExerciseFigure } from './ExerciseFigure'
 import { setKey, withSetDone, type DoneUpdate } from './strength-progress'
 
 interface Tracking {
+  readOnly?: boolean
   session: Session
   done: Set<string>
   onDoneChange: (update: DoneUpdate) => void
@@ -47,10 +48,16 @@ function ExerciseCard({ exercise, step, prescription, tracking }: {
       {prescription && tracking && (
         <fieldset className="exercise-sets">
           <legend className="visually-hidden">{info.name} sets</legend>
+          <p aria-live="polite">{ticked} of {sets.length} sets recorded</p>
+          <button type="button" className="button button-quiet" disabled={complete || tracking.readOnly} onClick={() => tracking.onDoneChange(current => {
+            const next = sets.find(index => !current.has(setKey(tracking.session, exercise, index)))
+            return next == null ? current : withSetDone(current, tracking.session, exercise, next, true)
+          })}>Mark next set for {info.name}</button>
           {sets.map((i) => (
             <label className="pill exercise-set" key={i}>
               <input
                 type="checkbox"
+                disabled={tracking.readOnly}
                 checked={tracking.done.has(setKey(tracking.session, exercise, i))}
                 onChange={(e) => {
                   const isDone = e.target.checked
@@ -71,11 +78,11 @@ function ExerciseCard({ exercise, step, prescription, tracking }: {
  * A strength session's exercises as a numbered list, in the order to do them: each with its own demo, a line on how
  * to do it, a few cues, its sets and reps, and a tick for every set.
  */
-export function ExerciseList({ session, done, onDoneChange }: Tracking) {
+export function ExerciseList({ session, done, onDoneChange, readOnly = false }: Tracking) {
   return (
     <ol className="exercises" aria-label={`${session.title}: exercises in order`}>
       {session.exercises.map((e, i) => (
-        <ExerciseCard key={e.exercise} exercise={e.exercise} step={i + 1} prescription={e} tracking={{ session, done, onDoneChange }} />
+        <ExerciseCard key={e.exercise} exercise={e.exercise} step={i + 1} prescription={e} tracking={{ session, done, onDoneChange, readOnly }} />
       ))}
     </ol>
   )

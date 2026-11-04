@@ -1,0 +1,31 @@
+
+Running 23 tests using 1 worker
+
+(node:35138) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/23] e2e/calendar-day.spec.ts:52:1 › rest-day imports open automatically, log once and survive navigation and cache deletion @phone
+[2/23] e2e/calendar-day.spec.ts:121:1 › a replacement retains its original prescription beside the actual run @phone
+[3/23] e2e/calendar-day.spec.ts:156:1 › manual time-only logs stay visible, retry failed deletion, and remove only when requested @phone
+[4/23] e2e/calendar-day.spec.ts:190:1 › calendar preview opens canonical day and restores month and focus on back @phone
+[5/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 320px
+[6/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 375px
+[7/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 390px
+[8/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 430px
+[9/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 768px
+[10/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 1024px
+[11/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 1280px
+[12/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 1440px
+[13/23] e2e/redesign.spec.ts:4:3 › Plan → day → run, keyboard and back at 1920px
+[14/23] e2e/redesign.spec.ts:49:3 › preview and detail in light
+[15/23] e2e/redesign.spec.ts:49:3 › preview and detail in zoom
+[16/23] e2e/redesign.spec.ts:49:3 › preview and detail in landscape
+[17/23] e2e/redesign.spec.ts:62:1 › actual App preserves day URLs across plan fetch and refresh, then drills down from Progress
+[18/23] e2e/redesign.spec.ts:84:3 › Progress charts and stage evidence at 320px
+[19/23] e2e/redesign.spec.ts:84:3 › Progress charts and stage evidence at 768px
+[20/23] e2e/redesign.spec.ts:84:3 › Progress charts and stage evidence at 1440px
+[21/23] e2e/redesign.spec.ts:108:3 › Home, builder, Runs and Account at 320px
+[22/23] e2e/redesign.spec.ts:108:3 › Home, builder, Runs and Account at 768px
+[23/23] e2e/redesign.spec.ts:108:3 › Home, builder, Runs and Account at 1440px
+  23 passed (1.7m)

@@ -8,6 +8,7 @@ import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
 import { PlanTheatre } from './PlanTheatre'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
+import './builder-navigation.css'
 
 export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } | { kind: 'error'; message: string }
 
@@ -412,7 +413,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
             {gate.body}
           </section>
         ) : (
-          <form onSubmit={submit} noValidate aria-label="Build your plan">
+          <form className="plan-builder-flow" onSubmit={submit} noValidate aria-label="Build your plan">
             <section key={step} className={slide} aria-labelledby={`${id}-title`}>
               <h2 className="wizard-title" id={`${id}-title`} ref={titleRef} tabIndex={-1}>
                 {current.title}

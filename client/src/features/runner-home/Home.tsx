@@ -25,6 +25,10 @@ import { completionsKey, useSyncedCompletions } from '../coaching/useSyncedCompl
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
+import '../plan/training-status.css'
+import './home-navigation.css'
+import { dayStatus } from '../plan/training-status'
+import { sessionKey } from '../plan/plan-math'
 import { FirstWeek } from './FirstWeek'
 import { change, todayInPlan, trainingTotals, weeklyBars, type Change } from './home-math'
 import { YourWeek } from './YourWeek'
@@ -42,6 +46,7 @@ interface Props {
   bests?: PersonalBest[]
   strava?: StravaStatus
   onOpenPlan: () => void
+  onOpenDay?: (date: string) => void
   onBuildPlan: () => void
   onOpenRun: (id: string) => void
   onOpenRuns: () => void
@@ -279,13 +284,14 @@ function RaceLine({ plan, week, units }: { plan: TrainingPlan; week: PlanWeek | 
  * Today's session from the runner's plan. The card and its button stay put while the plan loads, so a tap on "Open your
  * plan" always lands, however quickly it comes.
  */
-function TodayCard({ plan, failed, today, units, runs, coach, onOpenPlan }: { plan: TrainingPlan | null; failed: boolean; today: string; units: Units; runs: ActivitySummary[]; coach?: SessionCoach; onOpenPlan: () => void }) {
+function TodayCard({ plan, failed, today, units, runs, coach, onOpenPlan, onOpenDay }: { plan: TrainingPlan | null; failed: boolean; today: string; units: Units; runs: ActivitySummary[]; coach?: SessionCoach; onOpenPlan: () => void; onOpenDay?: (date: string) => void }) {
   return (
     <section className="panel home-card home-today" aria-labelledby="home-today">
       <h2 id="home-today" className="home-card-heading">
         Today
       </h2>
       {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : failed ? <p>Today’s session will appear when your plan loads.</p> : <div className="skeleton-stack" role="status" aria-label="Loading today's session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
+      {plan && onOpenDay && <button type="button" className="button button-primary" onClick={() => onOpenDay(today)}>Open today's workout</button>}
       <button type="button" className="link-button home-plan-link" onClick={onOpenPlan}>
         Open your plan
       </button>
@@ -301,14 +307,11 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
     const zone = s.zone ? byZone.get(s.zone) : undefined
     return zone ? formatPaceRange(zone.fastestSecondsPerKm, zone.slowestSecondsPerKm, units) : null
   }
-  // The runner's own word comes first: a tick or check-in, or a run they uploaded. Without it, a Strava run Taperday holds
-  // now completes the session "via Strava" until the copy lapses; it is never their tick.
-  const ranToday = runs.some((r) => !coach?.entries?.some((c) => c.isAdditional && c.activityId === r.id) && r.localDate === today && r.kind !== 'Other' && r.source.kind !== 'Strava')
+  // The runner's own answer takes priority. Recordings and provisional Strava evidence stay separate from that answer.
   const ownDone = (s: Session) => {
     const checkIn = coach?.get(s)
-    return checkIn ? checkIn.status !== 'Skipped' : ranToday
+    return checkIn ? checkIn.status !== 'Skipped' : false
   }
-  const isDone = (s: Session) => ownDone(s) || completedViaStrava(s, coach)
 
   const body = (() => {
     if (progress.kind === 'before') return <p>Your plan starts {formatDate(plan.startDate, 'long')}. Easy running until then.</p>
@@ -329,11 +332,14 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
       )
     }
     // The facts first: what, how far, how fast and whether it's done. How to run it and why sit one tap away.
-    return day.runs.map((s) => (
-      <div key={`${s.date}|${s.type}`} className={`home-today-run${isDone(s) ? ' is-done' : ''}`}>
+    return day.runs.map((s) => {
+      const entry = coach?.get(s)
+      const status = dayStatus([s], new Set(entry && entry.status !== 'Skipped' ? [sessionKey(s)] : []), entry ? [entry] : [], runs.some(run => run.localDate === s.date && run.kind !== 'Other'), completedViaStrava(s, coach))
+      return <div key={`${s.date}|${s.type}`} className={`home-today-run${status.kind === 'complete' ? ' is-done' : ''}`}>
+
         <p className="home-today-title">
           {s.title}
-          {isDone(s) && <span className="chip chip-good home-done-chip">Done</span>}
+          {status.kind !== 'planned' && <span className={`chip training-status is-${status.kind} ${status.kind === 'complete' ? 'home-done-chip' : 'home-status-chip'}`}><span aria-hidden="true">{status.icon}</span> {status.kind === 'complete' ? 'Done' : status.label}</span>}
         </p>
         {coach && !ownDone(s) && <StravaCompletion session={s} coach={coach} />}
         <dl className="home-workout-facts">
@@ -351,7 +357,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
         {/* Once it's ticked or checked in on, the usual check-in: how it felt, or a change of mind. */}
         {coach && <CheckInCard session={s} coach={coach} runs={runs} done={ownDone(s)} compactActions />}
       </div>
-    ))
+    })
   })()
 
   return (
@@ -411,6 +417,7 @@ export function Home({
   bests,
   strava,
   onOpenPlan,
+  onOpenDay,
   onBuildPlan,
   onOpenRun,
   onOpenRuns,
@@ -500,7 +507,7 @@ export function Home({
         {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
         <div className="home-top">
           {current ? (
-            <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} />
+            <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={onOpenDay} />
           ) : (
             <section className="panel home-card home-today" aria-labelledby="home-goal">
               <h2 id="home-goal" className="home-card-heading">

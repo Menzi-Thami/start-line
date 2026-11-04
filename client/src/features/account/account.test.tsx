@@ -387,6 +387,20 @@ describe('a signed-up runner', () => {
     expect(await within(today).findByText('Hill repeats', {}, { timeout: 3000 })).toBeInTheDocument()
   })
 
+  it('opens today from Home in the canonical day screen and returns Home on Back', async () => {
+    vi.setSystemTime(new Date(2026, 9, 13, 9))
+    accountApi({ runner: thandi, plans: [current] })
+    const user = renderWith(signedIn())
+    await openTheirPlan(user)
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    const today = await screen.findByRole('region', { name: 'Today' })
+    await user.click(await within(today).findByRole('button', { name: "Open today's workout" }))
+    const day = await screen.findByRole('region', { name: 'Tuesday 13 October 2026' }, { timeout: 10000 })
+    expect(new URLSearchParams(window.location.search).get('day')).toBe('2026-10-13')
+    await user.click(within(day).getByRole('button', { name: /Back to plan/ }))
+    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeVisible()
+  })
+
   it('checks in on a run of their plan: how it felt, and it’s ticked off', async () => {
     vi.setSystemTime(new Date(2026, 9, 14, 19, 0))
     const db = accountApi({ runner: thandi, plans: [current] })
@@ -408,7 +422,7 @@ describe('a signed-up runner', () => {
     expect(db.checkIns).toEqual([{ path: 'plan-1/2026-10-13/Hills', body: expect.objectContaining({ status: 'Done', effort: 7 }) }])
     await closePlanDay()
     // Only the hills, of this week's runs, are ticked off.
-    expect(screen.getByRole('button', { name: /^Tuesday 13 October 2026:/ })).toHaveAccessibleName(/done/)
+    expect(screen.getByRole('button', { name: /^Tuesday 13 October 2026:/ })).toHaveAccessibleName(/completed/)
   })
 
   it('opens on this week’s coach’s note', async () => {

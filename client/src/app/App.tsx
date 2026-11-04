@@ -883,6 +883,7 @@ export function App() {
                 today={today}
                 onSubmit={buildFromWizard}
                 onCancel={plan.kind === 'ready' ? backToPlan : undefined}
+                onOpenBeginner={() => go('beginner')}
                 gate={gate}
                 intro={
                   <>

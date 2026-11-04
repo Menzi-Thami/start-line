@@ -1,5 +1,7 @@
 # Taperday redesign and workout evidence verification
 
+The latest Home/Builder/navigation refinements and current frontend validation are recorded in [the refinement report](../refinements/verification.md). Backend code is unchanged from the validated evidence below.
+
 Implementation of the approved #185 direction on draft #187, based on `main` at `6ba76a92335572f792ec497f02fc1dabef017d34`. #179 (Couch to 5K), #185 (specification) and #186 (announcement) remain separate. No merge, deployment, customer message, production database or real Strava account was used. The remote heads were rechecked: #179 `f02e0eb`, #185 `06d7f0c`, #186 `50d7c03`; main is unchanged. Comparing authored changes from each common ancestor found overlap with #179 in `BuilderForm.tsx`, `Home.tsx`, `Configurations.cs` and the EF model snapshot. No overlap with #185 or #186. Beginner generators/models/contracts are untouched; eventual integration must reconcile the shared UI and EF snapshot without reverting either branch.
 
 ## Implemented and exercised
@@ -10,11 +12,11 @@ Implementation of the approved #185 direction on draft #187, based on `main` at 
 - **Runs:** activity cards lead with distance, date, duration, pace and source, with an explicit analysis action. The four keyboard-accessible Overview/Pacing/Coach/Splits tabs retain shoes, source attribution, consent-aware HR context, best efforts, sharing and deletion. Pacing offers an interactive split trace, optional target band, exact selector and split table; split pace never establishes interval execution.
 - **Workout structure:** a bounded domain calculation uses dense time/distance samples already acquired by the importer. It expands repeats and measures prescription windows aligned to recording start. Distance stages, timed work, stationary recovery, partial/unreached stages, 10-second pace windows and a disclosed tolerance are handled. Coverage, pace and the runner's completion answer remain separate. Sparse, implausible, missing-start or ambiguous evidence is unavailable. Multiple prescriptions or multiple same-day recordings suppress stage assessment. Refresh replaces evidence, including clearing it when unavailable.
 - **Progress:** existing interactive planned/recorded volume bars; 4/8/12-week controls; an interactive line and exact table for comparable easy/recovery recordings grouped by type, approximate distance and source; a keyboard-navigable consistency calendar and date finder; milestone and personal-best cards with run/day drilldowns. Missing records are never called missed training; source-dependent milestones are explicitly not all-time record claims.
-- **Other audit improvements:** Home opens today's canonical workout; Builder action layout and touch targets are consistent with safe-area padding; Account summarizes profile and live connection state, with a focusable connection shortcut and useful two-column content on desktop. Existing settings drafts, destructive confirmation and provider branding remain.
+- **Other audit improvements:** Home now leads with Today before setup, groups historical insights and links to canonical day/Progress routes. Builder has visited-step navigation, retained drafts and a separate phone action row with short-viewport fallback. Home grid and Builder navigation styles have component owners. Account summarizes profile and live connection state with useful two-column desktop content. Existing settings drafts, destructive confirmation and provider branding remain.
 
 ## Data and architecture boundaries
 
-Backend evidence implementation is commit `403af47`; the final product and browser-test tree is through `59d1d07`. The migration adds one nullable JSON `Activities.WorkoutExecution` column. Existing rows remain valid and are not backfilled by fetching provider history. The OpenAPI TypeScript schema was regenerated from the local API; no plan generator version or saved-plan contract changed.
+Backend evidence implementation is commit `403af47`; the initial evidence tree is through `59d1d07`; the current product/test tree is `a157f2c`. The migration adds one nullable JSON `Activities.WorkoutExecution` column. Existing rows remain valid and are not backfilled by fetching provider history. The OpenAPI TypeScript schema was regenerated from the local API; no plan generator version or saved-plan contract changed.
 
 Assessment is deterministic application code. It does not send runner data to AI or another service, request extra provider streams, persist raw streams, or add HR/GPS coordinates. Derived Strava evidence lives on the existing cached activity and shares its existing expiry/deletion/disconnect lifecycle. The activity API retains ownership checks and no-store behavior. The open run screen hides expired evidence and withholds stage observations without a valid Strava lifetime. Runner-owned uploads retain their existing lifetime.
 
@@ -22,7 +24,7 @@ Assessment is deterministic application code. It does not send runner data to AI
 
 ## Executed checks
 
-These commands were executed against the product/test tree through `59d1d07`. Earlier verification logs remain available, but do not replace the final runs.
+These wave-two commands were executed against the product/test tree through `59d1d07`. See the [refinement report](../refinements/verification.md) for current frontend/browser runs, including the final narrow-phone tab check at `a157f2c`. The backend source has not changed.
 
 - Strict Release solution build: 0 warnings, 0 errors. [Output](logs/wave2-backend-build.log).
 - Backend suite: **1,103 domain + 127 application + 7 architecture + 342 SQL integration = 1,579 passed**, none skipped. The disposable local SQL container exercised migrations, JSON round trip, ownership, ambiguous recordings and existing activity lifecycles. [Output](logs/wave2-backend-tests.log).
@@ -66,11 +68,11 @@ Pacing and week/day/run after captures also cover all nine requested widths. Sta
 
 ## Precise continuation checklist — retain draft status
 
-- [ ] Complete the remaining audit composition work: simplify duplicated Home insights, strengthen Builder step hierarchy and persistent mobile navigation without obscuring review content, and finish shared CSS consolidation only with cross-screen regression evidence. This wave improves these screens but does not claim the entire design backlog is closed.
+- [x] Refine Home hierarchy/history, Builder step navigation and unobscured phone actions, and consolidate the conflicting Home grid/Builder navigation styles. See the [refinement implementation and evidence](../refinements/verification.md). Broader unrelated legacy CSS layers remain; no wholesale stylesheet rewrite is claimed.
 - [ ] For a future precise stage-matching feature, use reliable lap/segment evidence with confidence rules. Current recording-start windows are deliberately conservative estimates; older or sparse recordings remain unavailable. Do not infer success from kilometre splits or matching totals.
 - [ ] Validate coexistence with #179's final Couch to 5K contracts after that independent work is ready. Existing time-based prescriptions and generator versions are preserved here; #179 was not absorbed or modified.
 - [ ] Run the literal `scripts/check.sh` before any eventual merge. Its component gates are reported individually here; do not substitute this record for a fresh pre-merge run.
-- [ ] Verify Firefox, Safari, screen readers, contrast/grayscale and physical iOS/Android/PWA behavior, including safe areas, native sharing and real text scaling. Chromium emulation does not establish these results.
+- [ ] Verify Safari/WebKit, screen readers, full contrast/grayscale and physical iOS/Android/PWA behavior, including safe areas, native sharing and real text scaling. Firefox is now exercised by the refinement suite; browser emulation does not establish physical-device results.
 - [ ] Complete product/design review against the approved wireframes and real-device acceptance. Keep #186 announcement assets and sending separate.
 
 No merge or deployment is part of this work.

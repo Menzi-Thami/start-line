@@ -1,0 +1,155 @@
+[WebServer] (node:69757) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] [plugin builtin:vite-reporter] 
+[WebServer] (!) Some chunks are larger than 500 kB after minification. Consider:
+[WebServer] - Using dynamic import() to code-split the application
+[WebServer] - Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+[WebServer] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+
+[WebServer] (node:69779) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+[WebServer] (node:69792) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 128 tests using 1 worker
+
+(node:69811) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/128] [desktop] › e2e/account-responsive.spec.ts:3:1 › responsive account surface has no horizontal overflow and keeps controls accessible @phone
+[2/128] [desktop] › e2e/automatic-totals.spec.ts:42:1 › a synced 10 km run counts automatically before and after logging, reload and sync updates @phone
+[3/128] [desktop] › e2e/automatic-totals.spec.ts:85:1 › an independently entered correction counts once after cache expiry and later reopening @phone
+[4/128] [desktop] › e2e/calendar-day.spec.ts:52:1 › rest-day imports open automatically, log once and survive navigation and cache deletion @phone
+[5/128] [desktop] › e2e/calendar-day.spec.ts:121:1 › a replacement retains its original prescription beside the actual run @phone
+[6/128] [desktop] › e2e/calendar-day.spec.ts:156:1 › manual time-only logs stay visible, retry failed deletion, and remove only when requested @phone
+[7/128] [desktop] › e2e/calendar-day.spec.ts:190:1 › calendar preview opens canonical day and restores month and focus on back @phone
+[8/128] [desktop] › e2e/focused-training.spec.ts:8:1 › training stays focused while all detail remains reachable @phone
+[9/128] [desktop] › e2e/frame-brand.spec.ts:4:1 › Frame colors, SVG animation accents and responsive shell @phone
+[10/128] [desktop] › e2e/frame-brand.spec.ts:37:1 › Frame reduced motion removes decorative animations
+[11/128] [desktop] › e2e/life-happens.spec.ts:3:1 › a runner moves the long run to a safe day, previewed before it applies, at every width @phone
+[12/128] [desktop] › e2e/milestone-sharing.spec.ts:3:1 › milestone card updates preview when name visibility changes @phone
+[13/128] [desktop] › e2e/mobile-usability.spec.ts:3:1 › form fields and navigation remain usable on handheld screens @phone
+[14/128] [desktop] › e2e/notification-settings.spec.ts:51:1 › notification choices survive reload and recover from a failed save @phone
+[15/128] [desktop] › e2e/notification-settings.spec.ts:84:1 › push destinations open preparation, weekly review and connection details @phone
+[16/128] [desktop] › e2e/plan-edit-history.spec.ts:9:3 › Wednesday manual history survives changed days, strength, a failed save and a new start @phone
+[17/128] [desktop] › e2e/plan-edit-history.spec.ts:9:3 › Wednesday time-only history survives changed days, strength, a failed save and a new start @phone
+[18/128] [desktop] › e2e/plan-edit-history.spec.ts:9:3 › Wednesday tick history survives changed days, strength, a failed save and a new start @phone
+[19/128] [desktop] › e2e/plan-edit-history.spec.ts:9:3 › Wednesday strava history survives changed days, strength, a failed save and a new start @phone
+[20/128] [desktop] › e2e/plan-theatre.spec.ts:14:1 › review tips work by keyboard, fit each screen and never hold back a ready plan @phone
+[21/128] [desktop] › e2e/plan-theatre.spec.ts:35:1 › the film can be paused and responds when reduced motion changes
+[22/128] [desktop] › e2e/plan-theatre.spec.ts:50:1 › strength has its own workout cards and stays out of the run count @phone
+[23/128] [desktop] › e2e/plan-theatre.spec.ts:67:1 › adding strength to a plan with a past custom start preserves its running schedule @phone
+[24/128] [desktop] › e2e/profile-picture.spec.ts:46:1 › large phone photos become small avatars, survive reload and replace/delete the current picture @phone
+[25/128] [desktop] › e2e/profile-picture.spec.ts:76:1 › failed uploads/deletes and unsupported phone files preserve the current picture and allow retry @phone
+[26/128] [desktop] › e2e/progress-story.spec.ts:35:1 › the progress story compares spans, switches between 4, 8 and 12 weeks and fits every width @phone
+[27/128] [desktop] › e2e/race-week.spec.ts:3:1 › race-week checklist persists on device, stays visible on race day, and fits phones @phone
+[28/128] [desktop] › e2e/readiness.spec.ts:34:1 › a runner logs how they feel, sees safe guidance and their last two weeks, at every width @phone
+[29/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 320px
+[30/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 375px
+[31/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 390px
+[32/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 430px
+[33/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 768px
+[34/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 1024px
+[35/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 1280px
+[36/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 1440px
+[37/128] [desktop] › e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 1920px
+[38/128] [desktop] › e2e/redesign.spec.ts:53:3 › preview and detail in light
+[39/128] [desktop] › e2e/redesign.spec.ts:53:3 › preview and detail in zoom
+[40/128] [desktop] › e2e/redesign.spec.ts:53:3 › preview and detail in landscape
+[41/128] [desktop] › e2e/redesign.spec.ts:66:1 › actual App preserves day URLs across plan fetch and refresh, then drills down from Progress
+[42/128] [desktop] › e2e/redesign.spec.ts:88:3 › Progress charts and stage evidence at 320px
+[43/128] [desktop] › e2e/redesign.spec.ts:88:3 › Progress charts and stage evidence at 768px
+[44/128] [desktop] › e2e/redesign.spec.ts:88:3 › Progress charts and stage evidence at 1440px
+[45/128] [desktop] › e2e/redesign.spec.ts:114:3 › Home, builder, Runs and Account at 320px
+[46/128] [desktop] › e2e/redesign.spec.ts:114:3 › Home, builder, Runs and Account at 768px
+[47/128] [desktop] › e2e/redesign.spec.ts:114:3 › Home, builder, Runs and Account at 1440px
+[48/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 320px
+[49/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 375px
+[50/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 390px
+[51/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 430px
+[52/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 768px
+[53/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 1024px
+[54/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 1280px
+[55/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 1440px
+[56/128] [desktop] › e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 1920px
+[57/128] [desktop] › e2e/refinements.spec.ts:72:1 › review shortcuts preserve drafts and cannot submit an invalid goal
+[58/128] [desktop] › e2e/refinements.spec.ts:92:3 › Home no-plan state retains usable actions at 320px
+[59/128] [desktop] › e2e/refinements.spec.ts:92:3 › Home race-week state retains usable actions at 320px
+[60/128] [desktop] › e2e/refinements.spec.ts:92:3 › Home expired state retains usable actions at 320px
+[61/128] [desktop] › e2e/refinements.spec.ts:92:3 › Home error state retains usable actions at 320px
+[62/128] [desktop] › e2e/refinements.spec.ts:92:3 › Home long-name state retains usable actions at 320px
+[63/128] [desktop] › e2e/refinements.spec.ts:105:3 › Builder falls back to page scrolling in 900×430
+[64/128] [desktop] › e2e/refinements.spec.ts:105:3 › Builder falls back to page scrolling in 375×430
+[65/128] [desktop] › e2e/refinements.spec.ts:116:1 › a fresh Builder cannot skip unanswered steps and retains its draft after viewport changes
+[66/128] [desktop] › e2e/refinements.spec.ts:133:3 › Builder step text has accessible contrast in light and works with 200% zoom
+[67/128] [desktop] › e2e/refinements.spec.ts:133:3 › Builder step text has accessible contrast in dark and works with 200% zoom
+[68/128] [desktop] › e2e/run-data.spec.ts:42:1 › a runner sees what their total is made of and retries a run that failed to arrive @phone
+[69/128] [desktop] › e2e/run-history.spec.ts:9:3 › logging a run on a rest day survives navigation, reload and cache expiry @phone
+[70/128] [desktop] › e2e/run-history.spec.ts:9:3 › logging a run on a strength day survives navigation, reload and cache expiry @phone
+[71/128] [desktop] › e2e/run-history.spec.ts:9:3 › logging a run on a planned-run day survives navigation, reload and cache expiry @phone
+[72/128] [desktop] › e2e/run-responsive.spec.ts:3:1 › responsive run surface has no horizontal overflow and keeps controls accessible @phone
+[73/128] [desktop] › e2e/run-sticker.spec.ts:5:1 › production image policy permits a locally generated PNG sticker preview @phone
+[74/128] [desktop] › e2e/run-sticker.spec.ts:37:1 › all sticker layouts export real PNGs, preserve actual metrics and keep the clear layout transparent @phone
+[75/128] [desktop] › e2e/shoes.spec.ts:29:1 › a runner sees a pair nearing its limit and adds a new pair from the reminder link @phone
+[76/128] [desktop] › e2e/strava-completion.spec.ts:45:1 › a held Strava run completes today’s session, fits small phones, lapses, and can be kept as the runner’s tick @phone
+[77/128] [desktop] › e2e/taperday.spec.ts:22:1 › the home page counts down to the next race on the list
+[78/128] [desktop] › e2e/taperday.spec.ts:28:1 › builds a plan one question at a time, from a race on the list
+[79/128] [desktop] › e2e/taperday.spec.ts:50:1 › the plan opens on this week, and its tabs and keys move between views
+[80/128] [desktop] › e2e/taperday.spec.ts:68:1 › a calendar can subscribe to the plan, and the feed it subscribes to works
+[81/128] [desktop] › e2e/taperday.spec.ts:86:1 › a shared link builds the plan straight away and survives a reload
+[82/128] [desktop] › e2e/taperday.spec.ts:96:1 › installs as an app: the manifest, its icons, and a service worker that opens Taperday with no signal
+[83/128] [desktop] › e2e/taperday.spec.ts:114:1 › distances switch to miles
+[84/128] [desktop] › e2e/taperday.spec.ts:129:3 › with motion › the starting-gun intro plays once per visit, and a tap skips it
+[85/128] [desktop] › e2e/taperday.spec.ts:143:1 › on a phone nothing scrolls sideways @phone
+[86/128] [desktop] › e2e/taperday.spec.ts:152:1 › Strava’s callback page loads the app, and the webhook stays shut without its secret @phone
+[87/128] [desktop] › e2e/training-insights.spec.ts:33:1 › training trends explain the next step and fit every width, light and dark @phone
+[88/128] [desktop] › e2e/ui-polish.spec.ts:9:1 › training views fit phone, tablet, desktop and ultrawide screens @phone
+[89/128] [desktop] › e2e/ui-polish.spec.ts:33:1 › chart inspection works by keyboard and reduced motion keeps controls still
+(node:73800) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[90/128] [phone] › e2e/account-responsive.spec.ts:3:1 › responsive account surface has no horizontal overflow and keeps controls accessible @phone
+[91/128] [phone] › e2e/automatic-totals.spec.ts:42:1 › a synced 10 km run counts automatically before and after logging, reload and sync updates @phone
+[92/128] [phone] › e2e/automatic-totals.spec.ts:85:1 › an independently entered correction counts once after cache expiry and later reopening @phone
+[93/128] [phone] › e2e/calendar-day.spec.ts:52:1 › rest-day imports open automatically, log once and survive navigation and cache deletion @phone
+[94/128] [phone] › e2e/calendar-day.spec.ts:121:1 › a replacement retains its original prescription beside the actual run @phone
+[95/128] [phone] › e2e/calendar-day.spec.ts:156:1 › manual time-only logs stay visible, retry failed deletion, and remove only when requested @phone
+[96/128] [phone] › e2e/calendar-day.spec.ts:190:1 › calendar preview opens canonical day and restores month and focus on back @phone
+[97/128] [phone] › e2e/focused-training.spec.ts:8:1 › training stays focused while all detail remains reachable @phone
+[98/128] [phone] › e2e/frame-brand.spec.ts:4:1 › Frame colors, SVG animation accents and responsive shell @phone
+[99/128] [phone] › e2e/life-happens.spec.ts:3:1 › a runner moves the long run to a safe day, previewed before it applies, at every width @phone
+[100/128] [phone] › e2e/milestone-sharing.spec.ts:3:1 › milestone card updates preview when name visibility changes @phone
+[101/128] [phone] › e2e/mobile-usability.spec.ts:3:1 › form fields and navigation remain usable on handheld screens @phone
+[102/128] [phone] › e2e/notification-settings.spec.ts:51:1 › notification choices survive reload and recover from a failed save @phone
+[103/128] [phone] › e2e/notification-settings.spec.ts:84:1 › push destinations open preparation, weekly review and connection details @phone
+[104/128] [phone] › e2e/plan-edit-history.spec.ts:9:3 › Wednesday manual history survives changed days, strength, a failed save and a new start @phone
+[105/128] [phone] › e2e/plan-edit-history.spec.ts:9:3 › Wednesday time-only history survives changed days, strength, a failed save and a new start @phone
+[106/128] [phone] › e2e/plan-edit-history.spec.ts:9:3 › Wednesday tick history survives changed days, strength, a failed save and a new start @phone
+[107/128] [phone] › e2e/plan-edit-history.spec.ts:9:3 › Wednesday strava history survives changed days, strength, a failed save and a new start @phone
+[108/128] [phone] › e2e/plan-theatre.spec.ts:14:1 › review tips work by keyboard, fit each screen and never hold back a ready plan @phone
+[109/128] [phone] › e2e/plan-theatre.spec.ts:50:1 › strength has its own workout cards and stays out of the run count @phone
+[110/128] [phone] › e2e/plan-theatre.spec.ts:67:1 › adding strength to a plan with a past custom start preserves its running schedule @phone
+[111/128] [phone] › e2e/profile-picture.spec.ts:46:1 › large phone photos become small avatars, survive reload and replace/delete the current picture @phone
+[112/128] [phone] › e2e/profile-picture.spec.ts:76:1 › failed uploads/deletes and unsupported phone files preserve the current picture and allow retry @phone
+[113/128] [phone] › e2e/progress-story.spec.ts:35:1 › the progress story compares spans, switches between 4, 8 and 12 weeks and fits every width @phone
+[114/128] [phone] › e2e/race-week.spec.ts:3:1 › race-week checklist persists on device, stays visible on race day, and fits phones @phone
+[115/128] [phone] › e2e/readiness.spec.ts:34:1 › a runner logs how they feel, sees safe guidance and their last two weeks, at every width @phone
+[116/128] [phone] › e2e/run-data.spec.ts:42:1 › a runner sees what their total is made of and retries a run that failed to arrive @phone
+[117/128] [phone] › e2e/run-history.spec.ts:9:3 › logging a run on a rest day survives navigation, reload and cache expiry @phone
+[118/128] [phone] › e2e/run-history.spec.ts:9:3 › logging a run on a strength day survives navigation, reload and cache expiry @phone
+[119/128] [phone] › e2e/run-history.spec.ts:9:3 › logging a run on a planned-run day survives navigation, reload and cache expiry @phone
+[120/128] [phone] › e2e/run-responsive.spec.ts:3:1 › responsive run surface has no horizontal overflow and keeps controls accessible @phone
+[121/128] [phone] › e2e/run-sticker.spec.ts:5:1 › production image policy permits a locally generated PNG sticker preview @phone
+[122/128] [phone] › e2e/run-sticker.spec.ts:37:1 › all sticker layouts export real PNGs, preserve actual metrics and keep the clear layout transparent @phone
+[123/128] [phone] › e2e/shoes.spec.ts:29:1 › a runner sees a pair nearing its limit and adds a new pair from the reminder link @phone
+[124/128] [phone] › e2e/strava-completion.spec.ts:45:1 › a held Strava run completes today’s session, fits small phones, lapses, and can be kept as the runner’s tick @phone
+[125/128] [phone] › e2e/taperday.spec.ts:143:1 › on a phone nothing scrolls sideways @phone
+[126/128] [phone] › e2e/taperday.spec.ts:152:1 › Strava’s callback page loads the app, and the webhook stays shut without its secret @phone
+[127/128] [phone] › e2e/training-insights.spec.ts:33:1 › training trends explain the next step and fit every width, light and dark @phone
+[128/128] [phone] › e2e/ui-polish.spec.ts:9:1 › training views fit phone, tablet, desktop and ultrawide screens @phone
+  128 passed (8.6m)

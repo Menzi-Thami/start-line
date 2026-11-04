@@ -1,0 +1,51 @@
+
+Running 43 tests using 1 worker
+
+(node:77233) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/43] e2e/calendar-day.spec.ts:52:1 › rest-day imports open automatically, log once and survive navigation and cache deletion @phone
+[2/43] e2e/calendar-day.spec.ts:121:1 › a replacement retains its original prescription beside the actual run @phone
+[3/43] e2e/calendar-day.spec.ts:156:1 › manual time-only logs stay visible, retry failed deletion, and remove only when requested @phone
+[4/43] e2e/calendar-day.spec.ts:190:1 › calendar preview opens canonical day and restores month and focus on back @phone
+[5/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 320px
+[6/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 375px
+[7/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 390px
+[8/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 430px
+[9/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 768px
+[10/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 1024px
+[11/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 1280px
+[12/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 1440px
+[13/43] e2e/redesign.spec.ts:8:3 › Plan → day → run, keyboard and back at 1920px
+[14/43] e2e/redesign.spec.ts:56:3 › preview and detail in light
+[15/43] e2e/redesign.spec.ts:56:3 › preview and detail in zoom
+[16/43] e2e/redesign.spec.ts:56:3 › preview and detail in landscape
+[17/43] e2e/redesign.spec.ts:69:1 › actual App preserves day URLs across plan fetch and refresh, then drills down from Progress
+[18/43] e2e/redesign.spec.ts:91:3 › Progress charts and stage evidence at 320px
+[19/43] e2e/redesign.spec.ts:91:3 › Progress charts and stage evidence at 768px
+[20/43] e2e/redesign.spec.ts:91:3 › Progress charts and stage evidence at 1440px
+[21/43] e2e/redesign.spec.ts:117:3 › Home, builder, Runs and Account at 320px
+[22/43] e2e/redesign.spec.ts:117:3 › Home, builder, Runs and Account at 768px
+[23/43] e2e/redesign.spec.ts:117:3 › Home, builder, Runs and Account at 1440px
+[24/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 320px
+[25/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 375px
+[26/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 390px
+[27/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 430px
+[28/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 768px
+[29/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 1024px
+[30/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 1280px
+[31/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 1440px
+[32/43] e2e/refinements.spec.ts:23:3 › Home hierarchy and unobscured Builder navigation at 1920px
+[33/43] e2e/refinements.spec.ts:72:1 › review shortcuts preserve drafts and cannot submit an invalid goal
+[34/43] e2e/refinements.spec.ts:92:3 › Home no-plan state retains usable actions at 320px
+[35/43] e2e/refinements.spec.ts:92:3 › Home race-week state retains usable actions at 320px
+[36/43] e2e/refinements.spec.ts:92:3 › Home expired state retains usable actions at 320px
+[37/43] e2e/refinements.spec.ts:92:3 › Home error state retains usable actions at 320px
+[38/43] e2e/refinements.spec.ts:92:3 › Home long-name state retains usable actions at 320px
+[39/43] e2e/refinements.spec.ts:105:3 › Builder falls back to page scrolling in 900×430
+[40/43] e2e/refinements.spec.ts:105:3 › Builder falls back to page scrolling in 375×430
+[41/43] e2e/refinements.spec.ts:116:1 › a fresh Builder cannot skip unanswered steps and retains its draft after viewport changes
+[42/43] e2e/refinements.spec.ts:133:3 › Builder step text has accessible contrast in light and works with 200% zoom
+[43/43] e2e/refinements.spec.ts:133:3 › Builder step text has accessible contrast in dark and works with 200% zoom
+  43 passed (1.6m)

@@ -33,6 +33,9 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     await expect(day).toBeVisible()
     await page.getByRole('button', { name: 'View run analysis', exact: true }).click()
     const overview = page.getByRole('tab', { name: 'Overview', exact: true })
+    for (const button of await page.getByRole('tablist', { name: 'Run analysis' }).getByRole('tab').all()) {
+      expect(await button.evaluate(element => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1)
+    }
     await overview.focus()
     await page.keyboard.press('ArrowRight')
     const pacing = page.getByRole('tabpanel', { name: 'Pacing' })

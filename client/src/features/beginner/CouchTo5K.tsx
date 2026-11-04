@@ -18,8 +18,9 @@ const read = (): BeginnerProgress => {
   catch { return defaultBeginnerProgress(today) }
 }
 
-/** A standalone beginner journey. Training history is saved on this device
- * only until the authenticated account-backed plan API is integrated.
+/** Beginner journey with account-backed persistence for signed-in runners.
+ * Anonymous progress remains on this device; never overwrite account data
+ * from stale localStorage before account hydration completes.
  */
 export function CouchTo5K() {
   const { account, getToken } = useAuth()
@@ -78,13 +79,15 @@ export function CouchTo5K() {
     if (payload === lastSaved.current) return
     const version = ++saveVersion.current
     const epoch = accountEpoch.current
-    let cancelled = false
-    // Serialize saves: two rapid check-offs must not finish out of order and
-    // roll account progress back to an older snapshot.
+    // Each queued payload MUST remain eligible after progress changes.
+    // React cleans up the previous effect on every new checkbox click;
+    // cancelling that effect here silently dropped intermediate saves.
+    // Keep the serialized queue, but invalidate all prior work only when
+    // the account epoch changes (sign-out/switch), not on each render.
     saveQueue.current = saveQueue.current.catch(() => {}).then(async () => {
-      if (cancelled || epoch !== accountEpoch.current) return
+      if (epoch !== accountEpoch.current) return
       const token = await getToken()
-      if (cancelled || epoch !== accountEpoch.current) return
+      if (epoch !== accountEpoch.current) return
       if (!token) throw new Error('Sign-in expired.')
       const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, {
         method: 'PUT',
@@ -93,11 +96,10 @@ export function CouchTo5K() {
       })
       if (!response.ok) throw new Error('Could not sync your programme to your account.')
       if (epoch === accountEpoch.current) lastSaved.current = payload
-      if (!cancelled && epoch === accountEpoch.current && version === saveVersion.current) setSyncError('')
+      if (epoch === accountEpoch.current && version === saveVersion.current) setSyncError('')
     }).catch(() => {
-      if (!cancelled && epoch === accountEpoch.current && version === saveVersion.current) setSyncError('Account sync failed. Your latest changes have not been saved online.')
+      if (epoch === accountEpoch.current && version === saveVersion.current) setSyncError('Account sync failed. Your latest changes have not been saved online.')
     })
-    return () => { cancelled = true }
   }, [progress, serverReady, account, getToken])
 
   // Cached Strava runs count on read, not as durable manual checkoffs.

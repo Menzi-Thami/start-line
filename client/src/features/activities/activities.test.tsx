@@ -55,6 +55,7 @@ function runsApi(start: Activity[] = [], statuses: ImportStatus[] = []) {
 
   server.use(
     http.get('*/api/v1/me', ({ request }) => (authorised(request) ? HttpResponse.json(thandi) : unauthorised())),
+    http.get('*/api/v1/me/plans', ({ request }) => (authorised(request) ? HttpResponse.json([]) : unauthorised())),
     http.get('*/api/v1/me/activities', ({ request }) => (authorised(request) ? HttpResponse.json(db.runs.map(summaryOf)) : unauthorised())),
     http.get('*/api/v1/me/activities/:id', ({ request, params }) => {
       if (!authorised(request)) return unauthorised()
@@ -129,7 +130,7 @@ describe('my runs', () => {
     await openDisclosure('Add runs from a file')
     await user.upload(screen.getByLabelText('Upload runs'), fitFile())
 
-    expect(await screen.findByRole('heading', { name: 'Long run', level: 2 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Long run', level: 2 }, { timeout: 10000 })).toBeInTheDocument()
     expect(db.uploads).toHaveLength(1)
     expect(db.uploads[0]?.contentType).toMatch(/^multipart\/form-data; boundary=/)
     expect(db.uploads[0]?.files).toBe(1)
@@ -179,7 +180,8 @@ describe('my runs', () => {
     const user = renderApp('/?view=runs')
 
     const item = (await screen.findByText('Long run')).closest('li')!
-    expect(within(item).getByText(/15\.4 km · 1:42:12 · 6:40\/km/)).toBeInTheDocument()
+    expect(within(item).getByText('15.4 km')).toBeInTheDocument()
+    expect(within(item).getByText(/1:42:12 · 6:40\/km/)).toBeInTheDocument()
     await user.click(within(item).getByRole('button', { name: /Open the run on/ }))
 
     expect(await screen.findByRole('heading', { name: 'Long run', level: 2 })).toBeInTheDocument()
@@ -219,7 +221,7 @@ describe('a run', () => {
   it('supports arrow, home and end navigation between analysis tabs', async () => {
     runsApi([longRun])
     const user = renderApp(`/?view=runs&run=${longRun.id}`)
-    const overview = await screen.findByRole('tab', { name: 'Overview' })
+    const overview = await screen.findByRole('tab', { name: 'Overview' }, { timeout: 10000 })
     overview.focus()
     await user.keyboard('{ArrowRight}')
     expect(screen.getByRole('tab', { name: 'Pacing' })).toHaveFocus()

@@ -3436,6 +3436,7 @@ export interface components {
             heartRate: null | components["schemas"]["HeartRateDto"];
             source: components["schemas"]["SourceDto"];
             shoe?: null | components["schemas"]["ShoeRefDto"];
+            workoutExecution?: null | components["schemas"]["WorkoutExecution"];
         };
         /** @enum {unknown} */
         ActivityKind: "Run" | "TrailRun" | "TreadmillRun" | "Other";
@@ -4390,6 +4391,31 @@ export interface components {
         };
         /** @enum {unknown} */
         SplitRole: "Steady" | "WarmUp" | "Work" | "CoolDown";
+        StageExecution: {
+            /** Format: int32 */
+            number: number;
+            kind: components["schemas"]["StepKind"];
+            /** Format: double */
+            plannedMetres: null | number;
+            /** Format: double */
+            plannedSeconds: null | number;
+            /** Format: double */
+            recordedMetres: number;
+            /** Format: double */
+            movingSeconds: number;
+            /** Format: double */
+            elapsedSeconds: number;
+            /** Format: double */
+            coverage: number;
+            /** Format: double */
+            paceSecondsPerKm: null | number;
+            /** Format: double */
+            fastestSecondsPerKm: null | number;
+            /** Format: double */
+            slowestSecondsPerKm: null | number;
+            /** Format: double */
+            inTargetShare: null | number;
+        };
         /** @enum {unknown} */
         StepKind: "WarmUp" | "Run" | "Recover" | "CoolDown" | "Repeat";
         StravaConnectDto: {
@@ -4613,6 +4639,9 @@ export interface components {
             recovery: components["schemas"]["RecoveryReadiness"];
             /** @default false */
             recoveryFromCheckIn: boolean;
+        };
+        WorkoutExecution: {
+            stages: components["schemas"]["StageExecution"][];
         };
         /** @enum {unknown} */
         WorkShape: "Steady" | "Continuous" | "Reps" | "ByEffort";

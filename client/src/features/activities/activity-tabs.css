@@ -6,3 +6,6 @@
 .activity [role="tabpanel"] .splits { width: 100%; }
 .pace-profile svg { display: block; width: 100%; max-width: 60rem; height: auto; }
 .pace-profile circle:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.workout-stages > ol { display: grid; gap: 1rem; list-style: none; padding: 0; }
+.workout-stage { border-bottom: 1px solid var(--line); padding-bottom: 1rem; }
+@media (min-width: 900px) { .workout-stages > ol { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; } }

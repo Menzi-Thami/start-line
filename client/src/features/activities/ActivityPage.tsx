@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { PaceProfile } from './PaceProfile'
+import './activity-tabs.css'
+import { useEffect, useId, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
@@ -36,6 +38,9 @@ interface Props {
 /** One run, judged against what it was for: the verdict, the numbers, km by km, heart rate, and any bests worth a mention. */
 export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAccount }: Props) {
   const auth = useAuth()
+  const tabId = useId()
+  const tabs = ['Overview', 'Pacing', 'Coach', 'Splits'] as const
+  const [selectedTab, setSelectedTab] = useState<(typeof tabs)[number]>('Overview')
   const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
   const [confirming, setConfirming] = useState(false)
@@ -131,6 +136,19 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       <ShoePicker run={run} />
       <RunProvenance run={run} />
 
+      <div role="tablist" aria-label="Run analysis" className="activity-tabs" onKeyDown={event => {
+        const current = tabs.indexOf(selectedTab)
+        const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
+          : event.key === 'ArrowLeft' ? (current + tabs.length - 1) % tabs.length
+            : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1
+        if (next < 0) return
+        event.preventDefault()
+        setSelectedTab(tabs[next]!)
+        document.getElementById(`${tabId}-tab-${tabs[next]}`)?.focus()
+      }}>
+        {tabs.map(tab => <button type="button" role="tab" key={tab} id={`${tabId}-tab-${tab}`} aria-controls={`${tabId}-panel-${tab}`} aria-selected={selectedTab === tab} tabIndex={selectedTab === tab ? 0 : -1} className="button button-quiet" onClick={() => setSelectedTab(tab)}>{tab}</button>)}
+      </div>
+      <div role="tabpanel" id={`${tabId}-panel-Overview`} aria-labelledby={`${tabId}-tab-Overview`} hidden={selectedTab !== 'Overview'} tabIndex={0}>
       <section className="panel verdict" aria-labelledby="verdict-title" data-pace={run.plan?.pace ?? 'Unplanned'}>
         <h3 id="verdict-title" className="verdict-headline">
           {verdict.headline}
@@ -168,12 +186,24 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         {run.elapsedSeconds - run.movingSeconds >= 60 && <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />}
       </dl></details>
 
-      <div className="activity-analysis-grid">
-        {run.splits.length > 0 && <details className="activity-section"><summary>Splits &amp; pacing</summary><Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /></details>}
-
-      {run.heartRate && <details className="activity-section"><summary>Heart rate &amp; effort</summary><HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /></details>}
-
-      {run.bestEfforts.length > 0 && <details className="activity-section"><summary>Best efforts</summary><BestEfforts efforts={run.bestEfforts} units={units} /></details>}
+      {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
+      </div>
+      <div role="tabpanel" id={`${tabId}-panel-Pacing`} aria-labelledby={`${tabId}-tab-Pacing`} hidden={selectedTab !== 'Pacing'} tabIndex={0}>
+        <h3>Pacing</h3>
+        <PaceProfile splits={run.splits} plan={run.plan} units={units} />
+        <p>{halvesSummary(run.halves, units) || 'Pacing comparison is unavailable for this run.'}</p>
+        <p className="field-help">Kilometre splits describe recorded pace. They cannot confirm precise interval or recovery completion.</p>
+        {run.heartRate ? <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /> : <p>Heart-rate analysis is unavailable for this run.</p>}
+      </div>
+      <div role="tabpanel" id={`${tabId}-panel-Coach`} aria-labelledby={`${tabId}-tab-Coach`} hidden={selectedTab !== 'Coach'} tabIndex={0}>
+        <h3>Coach</h3>
+        <p>{verdict.headline}</p>
+        {verdict.details.map(line => <p key={line}>{line}</p>)}
+        {verdict.next && <p>{verdict.next}</p>}
+        <p className="field-help">Based on recorded run statistics and available plan targets. Workout structure is not assessed here; this does not change your check-in.</p>
+      </div>
+      <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
+        {run.splits.length > 0 ? <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /> : <p>Split data is unavailable for this run.</p>}
       </div>
 
       {run.source.kind === 'Strava' ? (

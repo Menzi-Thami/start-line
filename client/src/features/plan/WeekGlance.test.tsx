@@ -42,7 +42,7 @@ describe('strength stays separate from running', () => {
     const marker = container.querySelectorAll('.week-day')[1]!
     expect(marker).toHaveClass('has-activity')
     expect(marker).not.toHaveClass('is-done')
-    expect(marker.querySelector('button')).toHaveAccessibleName(/no completion recorded, activity recorded/)
+    expect(marker.querySelector('button')).toHaveAccessibleName(/Activity recorded/)
   })
   it('shows an additional run on a rest day without completing running or strength sessions', () => {
     const { container } = render(<WeekGlance week={week} onSelectDate={vi.fn()} done={new Set()} additionalDates={['2026-10-14', strength.date, '2026-10-13']} today="2026-10-18" units="km" />)

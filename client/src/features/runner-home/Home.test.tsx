@@ -88,7 +88,7 @@ describe('Home', () => {
   it('puts today before the countdown and groups the workout facts above its instructions', () => {
     renderHome({ ...withPlan, today: '2026-10-20' })
     const today = screen.getByRole('region', { name: 'Today' })
-    const race = screen.getByRole('button', { name: 'Open your training plan' })
+    const race = screen.getByRole('button', { name: /Your finish line/ })
     expect(today.compareDocumentPosition(race) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(within(today).getByText('Distance')).toBeInTheDocument()
     expect(within(today).getByText('Target pace')).toBeInTheDocument()
@@ -184,8 +184,8 @@ describe('Home', () => {
 
   it('opens the current plan from the race countdown without inventing a workout action', async () => {
     const { user, onOpenPlan } = renderHome(withPlan)
-    expect(screen.getByRole('button', { name: 'Open your training plan' })).toHaveTextContent('51days to go')
-    await user.click(screen.getByRole('button', { name: 'Open your training plan' }))
+    expect(screen.getByRole('button', { name: /Your finish line/ })).toHaveTextContent('51days to go')
+    await user.click(screen.getByRole('button', { name: /Your finish line/ }))
     expect(onOpenPlan).toHaveBeenCalledOnce()
   })
 

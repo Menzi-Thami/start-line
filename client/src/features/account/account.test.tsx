@@ -429,7 +429,7 @@ describe('a signed-up runner', () => {
     expect(db.checkIns).toEqual([{ path: 'plan-1/2026-10-13/Hills', body: expect.objectContaining({ status: 'Done', effort: 7 }) }])
     await closePlanDay()
     // Only the hills, of this week's runs, are ticked off.
-    expect(screen.getByRole('button', { name: /^Tuesday 13 October 2026:/ })).toHaveAccessibleName(/completed/)
+    expect(screen.getByRole('button', { name: /^Tuesday 13 October 2026:/ })).toHaveAccessibleName(/Completed/)
   })
 
   it('opens on this week’s coach’s note', async () => {

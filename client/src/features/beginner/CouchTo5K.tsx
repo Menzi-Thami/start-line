@@ -3,6 +3,8 @@ import { useAuth } from '../../app/auth-context'
 import { api, apiOrigin } from '../../lib/api-client'
 import { beginnerSessionSummary, couchTo5k } from './couch-to-5k'
 import { matchBeginnerStrava, type BeginnerRecordedRun } from './strava-match'
+import { BeginnerCalendar, BeginnerProgress } from './BeginnerTrainingViews'
+import './beginner-journey.css'
 import { beginnerDate, defaultBeginnerProgress, parseBeginnerProgress, repeatBeginnerWeek, resumeBeginnerProgress, sessionId, validRunDays, type BeginnerDay, type BeginnerProgress } from './beginner-progress'
 
 const STORAGE_KEY = 'taperday:beginner-progress:v1'
@@ -29,7 +31,7 @@ export function CouchTo5K() {
   const [syncError, setSyncError] = useState('')
   const [syncAttempt, setSyncAttempt] = useState(0)
   const [stravaSnapshot, setStravaSnapshot] = useState<{ owner: string; runs: readonly BeginnerRecordedRun[] } | null>(null)
-  const [showCalendar, setShowCalendar] = useState(false)
+  const [activeTab, setActiveTab] = useState<'week' | 'calendar' | 'progress'>('week')
   const saveVersion = useRef(0)
   const lastSaved = useRef('')
   const saveQueue = useRef(Promise.resolve())
@@ -37,7 +39,8 @@ export function CouchTo5K() {
   const owner = account?.homeAccountId ?? account?.localAccountId ?? account?.username ?? ''
   const sessions = programme.filter(s => s.week === progress.week)
   const automatic = matchBeginnerStrava(progress, programme, stravaSnapshot?.owner === owner ? stravaSnapshot.runs : [], Date.now())
-  const done = programme.filter(s => progress.completed.includes(sessionId(s, progress.revision)) || automatic.has(sessionId(s, progress.revision))).length
+  const confirmed = programme.filter(s => progress.completed.includes(sessionId(s, progress.revision))).length
+  const recordedUnconfirmed = programme.filter(s => !progress.completed.includes(sessionId(s, progress.revision)) && automatic.has(sessionId(s, progress.revision))).length
   const update = (next: BeginnerProgress) => { if (!account || serverReady) setProgress(next) }
   useEffect(() => {
     if (account) return // Never leak one signed-in runner's account state into another runner's anonymous device state.
@@ -139,8 +142,12 @@ export function CouchTo5K() {
       <p>Start with gentle run/walk intervals. There are no pace targets. Rest between sessions, and repeat a week if you need to.</p>
       {account && !serverReady && !syncError && <p role="status">Loading your saved programme…</p>}
       {syncError && <div role="alert" className="field-help"><p>{syncError}</p>{account && serverReady && <button type="button" className="button button-quiet" onClick={() => setSyncAttempt(n => n + 1)}>Retry saving progress</button>}</div>}
-      <p aria-live="polite"><strong>{done} of 27 sessions completed</strong> · {Math.round(done / 27 * 100)}%</p>
-      <progress value={done} max={27} style={{ width: '100%' }} aria-label="Couch to 5K completed sessions" />
+      <p aria-live="polite"><strong>{confirmed} of 27 sessions confirmed</strong> · {Math.round(confirmed / 27 * 100)}%{recordedUnconfirmed > 0 && <span> · {recordedUnconfirmed} recorded via Strava (not confirmed)</span>}</p>
+      <progress value={confirmed} max={27} style={{ width: '100%' }} aria-label="Couch to 5K confirmed workouts" />
+      <div className="beginner-tabs" role="group" aria-label="Beginner training views">
+        {([['week', 'This week'], ['calendar', 'Calendar'], ['progress', 'Progress']] as const).map(([id, label]) => <button key={id} type="button" className={`beginner-tab${activeTab === id ? ' is-active' : ''}`} aria-pressed={activeTab === id} onClick={() => setActiveTab(id)}>{label}</button>)}
+      </div>
+      {activeTab === 'week' && <>
       <div className="field">
         <label className="field-label" htmlFor="couch-start">Programme start date</label>
         <input className="input" type="date" id="couch-start" disabled={!!account && !serverReady} value={progress.startedOn}
@@ -165,20 +172,12 @@ export function CouchTo5K() {
         <button className="button button-quiet" type="button" disabled={!!account && !serverReady} onClick={resetWeek}>Repeat this week (+7 days)</button>
       </div>
       {progress.paused && <p role="status">Paused. Your progress is kept here until you resume.</p>}
-      <button className="button button-quiet" type="button" aria-expanded={showCalendar} onClick={() => setShowCalendar(value => !value)}>{showCalendar ? 'Hide programme calendar' : 'View all 9 weeks'}</button>
-      {showCalendar && <section aria-label="Couch to 5K programme calendar">
-        <ol className="days">{programme.map(session => {
-          const id = sessionId(session, progress.revision)
-          const date = beginnerDate(progress, session.week, session.day)
-          const complete = progress.completed.includes(id) || automatic.has(id)
-          return <li className="day" key={id}><strong>Week {session.week}, session {session.day}</strong> · {date} · {complete ? 'Completed' : 'Scheduled'}{automatic.has(id) && !progress.completed.includes(id) ? ' via Strava' : ''}</li>
-        })}</ol>
-      </section>}
+      <button className="button button-quiet" type="button" onClick={() => setActiveTab('calendar')}>View all 9 weeks</button>
       <ol className="days">
         {sessions.map(session => {
           const id = sessionId(session, progress.revision)
           const viaStrava = automatic.has(id)
-          const checked = progress.completed.includes(id) || viaStrava
+          const checked = progress.completed.includes(id)
           return (
             <li className="day" key={id}>
               <div>
@@ -186,15 +185,19 @@ export function CouchTo5K() {
                 <p className="field-help">5 min brisk walking warm-up</p>
                 <p>{beginnerSessionSummary(session)}</p>
                 <p className="field-help">5 min walking cool-down · About {Math.round(session.totalSeconds / 60)} minutes total</p>
+                {viaStrava && !checked && <p className="beginner-recorded">↗ Recorded via Strava · workout not yet confirmed</p>}
                 <label className="session-done">
-                  <input type="checkbox" disabled={progress.paused || viaStrava || (!!account && !serverReady)} checked={checked} onChange={() => toggle(id)} />
-                  {viaStrava && !progress.completed.includes(id) ? 'Completed via Strava' : checked ? 'Completed' : 'Mark this session complete'}
+                  <input type="checkbox" disabled={progress.paused || (!!account && !serverReady)} checked={checked} onChange={() => toggle(id)} />
+                  {checked ? '✓ Confirmed complete' : 'Mark this session complete'}
                 </label>
               </div>
             </li>
           )
         })}
       </ol>
+      </>}
+      {activeTab === 'calendar' && <BeginnerCalendar progress={progress} recorded={automatic} onChooseWeek={week => { update({ ...progress, week }); setActiveTab('week') }} />}
+      {activeTab === 'progress' && <BeginnerProgress progress={progress} recorded={automatic} />}
       <p className="field-help">Progress is saved on this device and synchronised to your Taperday account when you're signed in and connected.</p>
       <p className="field-help">After week nine, aim for 30 minutes of comfortable running. That may not yet be 5 km. Build distance gradually; rest or repeat whenever needed.</p>
     </section>

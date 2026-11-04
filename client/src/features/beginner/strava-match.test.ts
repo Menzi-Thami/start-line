@@ -21,7 +21,7 @@ describe('Couch to 5K Strava matching', () => {
   })
   it('does not assign the same running day twice after repeating a week', () => {
     const progress = repeatBeginnerWeek(defaultBeginnerProgress('2026-11-02'))
-    const matched = matchBeginnerStrava(progress, couchTo5k(), [{ date: '2026-11-09', source: 'Strava', cachedUntil: '2026-11-05T00:00:00Z' }], NOW)
+    const matched = matchBeginnerStrava(progress, couchTo5k(), [{ date: '2026-11-09', source: 'Strava', cachedUntil: '2026-11-12T00:00:00Z' }], NOW)
     expect(matched.size).toBe(1)
   })
   it('does not treat a Strava run with missing or invalid cache expiry as durable completion', () => {

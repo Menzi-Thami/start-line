@@ -49,14 +49,14 @@ describe('a plan session completed via Strava', () => {
   it('shows done on the week, the calendar and the week’s count, with provenance and the longer-run words', async () => {
     coachWith([hills])
 
-    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, done/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, recorded via strava/ })).toBeInTheDocument()
     const day = await openWeekDay('2026-10-13')
     expect(within(day).getByText('Activity recorded via Strava · provisional', { selector: '.day-summary-status' })).toBeInTheDocument()
     expect(within(day).getByText(/You covered 6\.4 km against 5\.5 km planned\. More isn't always better — try to follow your planned distance next time/)).toBeInTheDocument()
 
     await closePlanDay()
     await userEvent.click(screen.getByRole('tab', { name: 'Calendar' }))
-    expect(screen.getByRole('button', { name: /^13 [A-Za-z]+: Hill repeats, done/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^13 [A-Za-z]+: Hill repeats, recorded via strava/ })).toBeInTheDocument()
 
     const schedule = await openDisclosure('Full training schedule')
     expect(within(schedule).getByText(/· 1 of \d+ done/)).toBeInTheDocument()
@@ -70,7 +70,7 @@ describe('a plan session completed via Strava', () => {
 
     expect(saves).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
     await closePlanDay()
-    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, done/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, completed/ })).toBeInTheDocument()
     expect(screen.queryByText('Activity recorded via Strava · provisional', { selector: '.day-summary-status' })).not.toBeInTheDocument()
   })
 
@@ -88,7 +88,7 @@ describe('a plan session completed via Strava', () => {
   it('without a completion from the API, a synced run alone completes nothing', async () => {
     coachWith([])
 
-    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, no completion recorded/ })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, activity recorded/ })).toBeInTheDocument()
     const day = await openWeekDay('2026-10-13')
     expect(within(day).queryByText('Activity recorded via Strava · provisional')).not.toBeInTheDocument()
   })

@@ -26,7 +26,12 @@ export function SessionSteps({ steps, units }: { steps?: readonly SessionStep[];
   return (
     <div className="session-steps">
       <p className="session-steps-head">How to run it</p>
+      {usesTime(steps) && <p className="field-help">Timed stages, including recoveries, add distance according to your pace. The headline distance is an estimate; follow the prescribed stages.</p>}
       <StepList steps={steps} units={units} />
     </div>
   )
+}
+
+function usesTime(steps: readonly SessionStep[] | undefined): boolean {
+  return steps?.some(step => step.durationSeconds != null || usesTime(step.steps)) ?? false
 }

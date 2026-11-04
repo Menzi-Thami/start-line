@@ -1,3 +1,4 @@
+import './training-status.css'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { Session } from '../../lib/types'
 import type { dayStatus } from './training-status'

@@ -1,0 +1,4 @@
+.training-status { font-size: .85rem; }
+.training-status.is-complete { color: var(--accent); }
+.training-status.is-partial { color: light-dark(#805200, #f5bf72); }
+.training-status.is-recorded { color: light-dark(#3c607c, #b8cbe3); }

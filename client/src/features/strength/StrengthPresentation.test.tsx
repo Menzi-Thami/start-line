@@ -1,4 +1,4 @@
-import { openStrengthWorkouts, openWeekDay, openDisclosure } from '../../test/user-navigation'
+import { openStrengthWorkouts, openWeekDay } from '../../test/user-navigation'
 import { useState } from 'react'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -40,9 +40,8 @@ describe('compact strength workouts', () => {
     expect(within(week).getByText('Strength & mobility', { exact: true })).toBeVisible()
     within(week).getAllByRole('checkbox', { name: /Squat, set/ }).forEach(box => expect(box).not.toBeVisible())
     const day = await openWeekDay('2026-10-12')
-    await openDisclosure('View exercises and completion')
-    await user.click(within(day).getByText(/^View exercises ·/))
-    await user.click(within(day).getByRole('checkbox', { name: /Squat, set 1 of/ }))
+    expect(within(day).getByRole('checkbox', { name: /Squat, set 1 of/ })).toBeVisible()
+    await user.click(within(day).getByRole('button', { name: 'Mark next set for Squat' }))
     await openStrengthWorkouts()
     const summary = container.querySelector('.strength-session > summary')!
     expect(summary.closest('details')).not.toHaveAttribute('open')

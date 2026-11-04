@@ -110,7 +110,6 @@ export function App() {
   // On a phone the app's navigation sits in a bar at the bottom, as an installed app's does; wider, it stays in the header.
   const phone = useMediaQuery('(max-width: 47.99rem)')
   // Plan navigation can return to the current week from any training detail.
-  const [planTabAsk, setPlanTabAsk] = useState<{ id: string; seq: number } | undefined>(undefined)
   // The runner's own picture, if they added one; initials show until it arrives, or without one.
   const [photo, setPhoto] = useState<string | null>(null)
   // Moving to another page fades its content in. The page you load on is left alone: there's nothing to move from, and
@@ -443,8 +442,14 @@ export function App() {
     if (item === 'home') return go('home')
     if (item === 'runs') return go('runs')
     if (item === 'account') return go('account')
-    setPlanTabAsk((asked) => ({ id: 'week', seq: (asked?.seq ?? 0) + 1 }))
-    if (view === 'build' && plan.kind === 'ready') return
+    if (view === 'build' && plan.kind === 'ready') {
+      const url = new URL(window.location.href)
+      url.searchParams.set('planTab', 'week')
+      url.searchParams.delete('day')
+      window.history.replaceState(window.history.state, '', url)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      return
+    }
     if (ownPlan) openOwnPlan()
     else go('build')
   }
@@ -477,6 +482,7 @@ export function App() {
   const openOwnDay = (date: string) => {
     if (!ownPlan) return
     const query = new URLSearchParams(window.location.search)
+    query.set('planTab', 'week')
     query.set('day', date)
     window.history.pushState({ taperdayDay: true }, '', `?${query}`)
     openSaved(ownPlan.inputs)
@@ -512,10 +518,13 @@ export function App() {
   }
 
   // The runner's own plan, from Home. Back comes back to Home.
-  const openOwnPlan = () => {
+  const openOwnPlan = (tab: 'week' | 'all' | 'progress' = 'week') => {
     const own = ownPlan
     if (!own) return
-    moveTo(window.location.search, true)
+    const query = new URLSearchParams(window.location.search)
+    query.delete('day')
+    query.set('planTab', tab)
+    moveTo(`?${query}`, true)
     openSaved(own.inputs)
     window.scrollTo?.({ top: 0 })
   }
@@ -810,9 +819,9 @@ export function App() {
             strava={synced.strava ?? copy?.strava}
             initialPlan={copy?.plan}
             onPlanLoaded={savePlan}
-            onOpenPlan={openOwnPlan}
+            onOpenPlan={() => openOwnPlan()}
             onOpenDay={openOwnDay}
-            onOpenProgress={() => { openOwnPlan(); setPlanTabAsk(asked => ({ id: 'progress', seq: (asked?.seq ?? 0) + 1 })) }}
+            onOpenProgress={() => openOwnPlan('progress')}
             onBuildPlan={startFresh}
             onOpenRun={(id) => showRun(id)}
             onOpenRuns={() => go('runs')}
@@ -834,7 +843,7 @@ export function App() {
               onOpenAccount={() => go('account')}
             />
           ) : (
-            <MyRuns units={units} onOpen={showRun} onOpenPlan={ownPlan ? () => { openOwnPlan(); setPlanTabAsk(asked => ({ id: 'all', seq: (asked?.seq ?? 0) + 1 })) } : undefined} />
+            <MyRuns units={units} onOpen={showRun} onOpenPlan={ownPlan ? () => openOwnPlan('all') : undefined} />
           ))}
 
         {view === 'account' && state.kind === 'ready' && (
@@ -950,7 +959,6 @@ export function App() {
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
                 reveal={revealPlan}
-                openTab={planTabAsk}
                 onBack={state.kind === 'ready' ? () => go('home') : undefined}
                 units={units}
                 onUnitsChange={changeUnits}

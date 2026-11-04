@@ -154,11 +154,6 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     }
   }, [])
   useEffect(() => {
-    const onPop = () => setDetailDate(readDayRoute())
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [])
-  useEffect(() => {
     const wasDetail = previousDetail.current
     previousDetail.current = detailDate
     if (wasDetail && !detailDate) {
@@ -174,6 +169,17 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const tabs: readonly { id: TabId; label: string }[] = PLAN_TABS
   const [tab, setTab] = useState<TabId>(() => readPlanTab())
   const [progressVisited, setProgressVisited] = useState(() => readPlanTab() === 'progress')
+  useEffect(() => {
+    const onPop = () => {
+      const next = readPlanTab()
+      setTab(next)
+      if (next === 'progress') setProgressVisited(true)
+      setSelectedDay(current => current?.tab === next ? current : null)
+      setDetailDate(readDayRoute())
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
   const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
   const currentWeek = weekContaining(plan, today)
   const [weekOffset, setWeekOffset] = useState(() => {
@@ -325,6 +331,9 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     setSelectedDay(null)
     setDirection(next > index ? 'forward' : 'back')
     setTab(target.id)
+    const url = new URL(window.location.href)
+    url.searchParams.set('planTab', target.id)
+    window.history.replaceState(window.history.state, '', url)
     if (focus) tabRefs.current[tabs.indexOf(target)]?.focus()
   }
 

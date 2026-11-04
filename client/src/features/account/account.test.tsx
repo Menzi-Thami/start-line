@@ -402,6 +402,10 @@ describe('a signed-up runner', () => {
     await user.click(screen.getByRole('button', { name: 'View training progress →' }))
     expect(await screen.findByRole('tab', { name: 'Progress' }, { timeout: 10000 })).toHaveAttribute('aria-selected', 'true')
     expect(await screen.findByRole('region', { name: 'Training progress evidence' })).toBeVisible()
+    expect(new URLSearchParams(window.location.search).get('planTab')).toBe('progress')
+    await user.click(screen.getByRole('button', { name: 'Home' }))
+    await user.click(await screen.findByRole('button', { name: 'Open your plan' }))
+    expect(await screen.findByRole('tab', { name: 'This week' }, { timeout: 10000 })).toHaveAttribute('aria-selected', 'true')
   })
 
   it('checks in on a run of their plan: how it felt, and it’s ticked off', async () => {

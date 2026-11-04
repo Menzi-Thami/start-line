@@ -1,2 +1,19 @@
-/* Secondary labels and disclosure actions must stay legible on the sage Today surface. */
+/* Home composition is owned here; global skin still supplies Night Run colors. */
+.home-focus .home-top { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'today' 'week' 'race'; gap: 1rem; align-items: stretch; }
+.home-focus .home-top > * { min-width: 0; }
+.home-focus .home-top > .home-today { grid-area: today; }
+.home-focus .home-top > .home-week { grid-area: week; background: var(--surface); }
+.home-focus .home-top > .home-race-brief { grid-area: race; border-radius: var(--radius-md); }
+.home-focus .home-top .home-card { padding: var(--space-4); }
+.home-history-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-block: 1rem; }
+.home-history-actions > button { min-height: 44px; }
+.home .first-week { margin-block: 1.25rem; }
+/* Secondary labels and disclosure actions stay legible on the sage Today surface. */
 .panel.home-card.home-today :is(dt, dd, summary) { color: var(--on-sage); }
+@media (min-width: 768px) {
+  .home-focus .home-top { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); grid-template-areas: 'today week' 'today race'; gap: 1.5rem; }
+  .home-focus .home-top:not(:has(.home-race-brief)) { grid-template-areas: 'today week'; }
+  .home-focus .home-top > .home-today { height: 100%; }
+  .home-focus .home-top .home-card { padding: var(--space-4) var(--space-5); }
+}
+@media (prefers-reduced-motion: reduce) { .home-focus .home-top > * { animation: none !important; } }

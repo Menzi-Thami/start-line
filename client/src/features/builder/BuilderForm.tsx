@@ -8,6 +8,7 @@ import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
 import { PlanTheatre } from './PlanTheatre'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
+import { useQuestionFrame } from './useQuestionFrame'
 import './builder-navigation.css'
 
 export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } | { kind: 'error'; message: string }
@@ -60,6 +61,7 @@ const STEPS = [
 ] as const satisfies readonly { title: string; hint: string; fields: readonly Field[] }[]
 
 const LAST_STEP = STEPS.length - 1
+const STEP_NAMES = ['Race', 'Goal', 'Days', 'You', 'Review'] as const
 
 function firstStepWith(errors: FieldErrors): number | null {
   const index = STEPS.findIndex((step) => step.fields.some((field) => errors[field]))
@@ -245,6 +247,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const [clientErrors, setClientErrors] = useState<FieldErrors>({})
   // Changing an existing plan opens on the summary: every answer is already there.
   const [step, setStep] = useState(() => firstStepWith(serverErrors) ?? (initial ? LAST_STEP : 0))
+  const [furthestStep, setFurthestStep] = useState(() => initial ? LAST_STEP : firstStepWith(serverErrors) ?? 0)
   const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
   const [seenServerErrors, setSeenServerErrors] = useState(serverErrors)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -272,6 +275,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const offset = gateCounted ? 1 : 0
   const totalSteps = STEPS.length + offset
   const position = gate ? 0 : step + offset
+  const { formRef, frameHeight } = useQuestionFrame(step, gateKey)
 
   // Move focus to each new screen so keyboard and screen-reader users land on it, but not on first load.
   useEffect(() => {
@@ -295,6 +299,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     setClientErrors(keepErrors)
     setDirection(next > step ? 'forward' : 'back')
     setStep(next)
+    setFurthestStep(previous => Math.max(previous, next))
   }
 
   const sameRace = initial !== null && (initial.raceSlug ? draft.race === initial.raceSlug
@@ -403,6 +408,18 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
         )}
       </div>
 
+      {!gate && (
+        <nav className="wizard-steps" aria-label="Plan builder steps">
+          <ol>{STEP_NAMES.map((name, index) => (
+            <li key={name}>
+              <button type="button" aria-label={`Step ${index + offset + 1}: ${name}`} aria-current={index === step ? 'step' : undefined} disabled={index > furthestStep} onClick={() => goTo(index)}>
+                <span aria-hidden="true">{index + offset + 1}</span>{name}
+              </button>
+            </li>
+          ))}</ol>
+        </nav>
+      )}
+
       <div className="wizard-viewport">
         {gate ? (
           <section key={`gate-${gate.key}`} className={slide} aria-labelledby={`${id}-title`}>
@@ -413,8 +430,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
             {gate.body}
           </section>
         ) : (
-          <form className="plan-builder-flow" onSubmit={submit} noValidate aria-label="Build your plan">
-            <section key={step} className={slide} aria-labelledby={`${id}-title`}>
+          <form ref={formRef} className="plan-builder-flow" data-framed={frameHeight != null || undefined} style={frameHeight != null ? { height: frameHeight } : undefined} onSubmit={submit} noValidate aria-label="Build your plan">
+            <section key={step} className={`${slide} wizard-question`} aria-labelledby={`${id}-title`} tabIndex={frameHeight != null ? 0 : undefined}>
               <h2 className="wizard-title" id={`${id}-title`} ref={titleRef} tabIndex={-1}>
                 {current.title}
               </h2>
@@ -646,7 +663,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               )}
             </section>
     
-            <div className="wizard-nav">
+            <div className="wizard-nav" role="group" aria-label="Plan builder actions">
               {step > 0 ? (
                 <button type="button" className="button button-quiet" onClick={() => goTo(step - 1)}>
                   Back

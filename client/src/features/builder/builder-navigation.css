@@ -1,5 +1,28 @@
-.plan-builder-flow .wizard-nav { position: static; display: flex; flex-wrap: wrap; gap: .75rem; justify-content: space-between; }
+/* Builder layout and navigation live here, including the phone action row. */
+.builder .wizard-title { max-width: 22ch; font-size: clamp(1.65rem, 3vw, 2.5rem); }
+.builder .wizard-hint { max-width: 40ch; margin: .65rem 0 1.5rem; }
+.wizard-steps { margin-block: .75rem 1.25rem; }
+.wizard-steps ol { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .25rem; padding: 0; margin: 0; list-style: none; }
+.wizard-steps button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; width: 100%; min-height: 48px; padding: .5rem .125rem; border: 0; border-bottom: 2px solid var(--line); background: transparent; color: var(--ink-2); font-size: .8rem; }
+.wizard-steps button > span { display: grid; place-items: center; width: 1.5rem; height: 1.5rem; border: 1px solid currentColor; border-radius: 50%; }
+.wizard-steps button[aria-current='step'] { border-color: var(--accent); color: var(--ink); font-weight: 700; }
+.wizard-steps button[aria-current='step'] > span { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.wizard-steps button:disabled { opacity: .5; }
+.plan-builder-flow .wizard-nav { position: static; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; margin-top: var(--space-6); padding: var(--space-3) 0 max(var(--space-3), env(safe-area-inset-bottom)); background: var(--paper); border-top: 1px solid var(--line); }
 .plan-builder-flow :is(input, select, button) { min-height: 44px; }
+.plan-builder-flow[data-framed] { display: grid; grid-template-rows: minmax(0, 1fr) auto; }
+.plan-builder-flow[data-framed] > .wizard-question { min-height: 0; overflow-y: auto; scrollbar-gutter: stable; scroll-padding-block: 1rem; padding: .25rem; }
+.plan-builder-flow[data-framed] > .wizard-nav { margin-top: .75rem; }
 @media (max-width: 767px) {
-  .plan-builder-flow .wizard-nav { padding: .75rem .75rem calc(.75rem + env(safe-area-inset-bottom)); background: var(--paper); border: 1px solid var(--line); border-radius: 20px; }
+  .builder .wizard-nav > .button-primary { min-width: 0; flex: 1; }
+  .plan-builder-flow .wizard-nav { padding: .75rem .75rem calc(.75rem + env(safe-area-inset-bottom)); border: 1px solid var(--line); border-radius: 20px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .wizard-steps button { transition: color 200ms, border-color 200ms, background-color 200ms; }
+  .builder .wizard-question { animation-duration: 200ms; }
+}
+@media print {
+  .wizard-steps, .plan-builder-flow .wizard-nav { display: none; }
+  .plan-builder-flow[data-framed] { display: block; height: auto !important; }
+  .plan-builder-flow[data-framed] > .wizard-question { overflow: visible; }
 }

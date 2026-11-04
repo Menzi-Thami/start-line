@@ -812,6 +812,7 @@ export function App() {
             onPlanLoaded={savePlan}
             onOpenPlan={openOwnPlan}
             onOpenDay={openOwnDay}
+            onOpenProgress={() => { openOwnPlan(); setPlanTabAsk(asked => ({ id: 'progress', seq: (asked?.seq ?? 0) + 1 })) }}
             onBuildPlan={startFresh}
             onOpenRun={(id) => showRun(id)}
             onOpenRuns={() => go('runs')}

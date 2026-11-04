@@ -183,7 +183,6 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
   .intro.hero { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
   .intro.hero h1, .intro.hero h1 em { font-size: clamp(4rem, 1rem + 5vw, 7rem); }
   .countdown { justify-self: center; width: 100%; }
-  .home-top { gap: clamp(1.25rem, 2vw, 2rem); }
   .home-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .home-title { max-width: 28ch; }
 }

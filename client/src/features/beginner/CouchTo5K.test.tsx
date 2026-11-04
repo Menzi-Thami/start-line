@@ -27,11 +27,11 @@ describe('Couch to 5K account journey', () => {
   it('hydrates server progress and shows Week, Calendar and Progress without confusing recorded runs and confirmations', async () => {
     render(<AuthContext.Provider value={signedIn}><CouchTo5K /></AuthContext.Provider>)
     expect(await screen.findByText(/1 of 27 sessions confirmed/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Calendar', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar' }))
     expect(screen.getByRole('region', { name: 'Couch to 5K calendar' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Week 2, from 2026-11-09/i }))
     expect(screen.getByText('Week 2 of 9')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Progress', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Progress' }))
     expect(screen.getByRole('region', { name: 'Couch to 5K progress' })).toBeInTheDocument()
   })
 
@@ -50,7 +50,7 @@ describe('Couch to 5K account journey', () => {
       http.get('*/api/v1/me/beginner', () => new HttpResponse(null, { status: 204 })),
       http.put('*/api/v1/me/beginner', async ({ request }) => {
         writes.push(await request.json())
-        return HttpResponse.json(writes.at(-1))
+        return HttpResponse.json(saved)
       }),
     )
     render(<AuthContext.Provider value={signedIn}><CouchTo5K /></AuthContext.Provider>)

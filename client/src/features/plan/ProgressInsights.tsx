@@ -5,7 +5,7 @@ import type { ActivitySummary, PersonalBest, PlanWeek } from '../../lib/types'
 import { milestonesFromRuns } from '../milestones/milestones'
 import { VolumeChart } from './VolumeChart'
 import type { dayStatus } from './training-status'
-import { calendarDaysEnding, comparablePaceGroups, volumeWeeksInPeriod } from './progress-evidence'
+import { calendarDaysEnding, comparablePaceGroups, progressDistanceTotals, volumeWeeksInPeriod } from './progress-evidence'
 import './progress-insights.css'
 
 export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, statusFor, onOpenDate, bests = [], onOpenRun }: {
@@ -16,6 +16,7 @@ export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, 
   const id = useId()
   const [period, setPeriod] = useState(() => { const requested = Number(new URLSearchParams(window.location.search).get('progressWeeks')); return requested === 4 || requested === 12 ? requested : 8 })
   const [focusedDate, setFocusedDate] = useState(() => new URLSearchParams(window.location.search).get('day') ?? today)
+  const [metric, setMetric] = useState(() => new URLSearchParams(window.location.search).get('progressMetric') === 'pace' ? 'pace' : 'distance')
   const [group, setGroup] = useState('')
   const [point, setPoint] = useState(0)
   const days = calendarDaysEnding(today, period * 7)
@@ -29,16 +30,41 @@ export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, 
   const y = (pace: number) => 20 + (pace - minimum) * 140 / (maximum - minimum)
   const visibleWeeks = volumeWeeksInPeriod(weeks, today, period)
   const milestones = milestonesFromRuns(runs ?? [])
+  const totals = progressDistanceTotals(visibleWeeks, ran, today)
+  const confirmedDays = days.filter(date => statusFor(date).kind === 'complete').length
+  const upcoming = visibleWeeks.length > 0 && visibleWeeks[0]!.startDate > today
+  const remember = (key: string, value: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set(key, value)
+    window.history.replaceState(window.history.state, '', url)
+  }
+  const choosePeriod = (value: number) => {
+    setPeriod(value)
+    setPoint(0)
+    const from = calendarDaysEnding(today, value * 7)[0]!
+    setFocusedDate(date => date >= from && date <= today ? date : today)
+    remember('progressWeeks', String(value))
+  }
   return <section className="progress-insights" aria-label="Training progress evidence">
-    <div className="progress-period" role="group" aria-label="Progress period">{[4, 8, 12].map(value => <button type="button" className="chip-button" key={value} aria-pressed={period === value} onClick={() => { setPeriod(value); setPoint(0) }}>{value} weeks</button>)}</div>
-    <h3>Weekly distance</h3>
-    <p className="field-help">Planned versus recorded or logged distance. Existing estimates and source availability apply; an empty record does not prove you missed training.</p>
-    {visibleWeeks.length > 0 ? <>
-      {visibleWeeks[0]!.startDate > today && <p className="field-help">Your plan has not started yet. These bars show upcoming planned weeks, without implying any recorded training.</p>}
-      <VolumeChart weeks={visibleWeeks} units={units} currentWeek={currentWeek} ran={ran} />
-    </> : <p>No planned weeks fall in this period. Recorded activity can still appear in the evidence below.</p>}
+    <div className="progress-period" role="group" aria-label="Progress period">{[4, 8, 12].map(value => <button type="button" className="chip-button" key={value} aria-pressed={period === value} onClick={() => choosePeriod(value)}>{value} weeks</button>)}</div>
+    <dl className="progress-summary" aria-label="Progress summary">
+      <div><dt>{upcoming ? 'Upcoming planned distance' : 'Planned distance'}</dt><dd><strong>{formatDistance(totals.plannedKm, units)}</strong><span>Across the plan weeks shown.</span></dd></div>
+      <div><dt>Recorded or logged</dt><dd><strong>{totals.recordedKm === null ? 'Not available yet' : formatDistance(totals.recordedKm, units)}</strong><span>{totals.recordedKm === null ? 'No distance data for these plan weeks.' : `Available totals in ${totals.recordedWeeks} of ${totals.elapsedWeeks} shown plan weeks. Includes existing estimates.`}</span></dd></div>
+      <div><dt>Confirmed days</dt><dd><strong>{confirmedDays}</strong><span>Days with every planned session confirmed in this period. Execution is assessed separately.</span></dd></div>
+    </dl>
+    <p className="field-help">Distances use the plan weeks shown; confirmed days cover the selected period. Source availability and cache limits still apply. An empty record does not prove you missed training.</p>
     <div className="progress-evidence-grid">
-    <section className="panel" aria-labelledby={`${id}-pace`}><h3 id={`${id}-pace`}>Comparable pace</h3>
+    <div className="progress-primary-chart">
+      <div className="progress-metric" role="group" aria-label="Progress metric">{(['distance', 'pace'] as const).map(value => <button type="button" className="chip-button" key={value} aria-pressed={metric === value} aria-controls={`${id}-${value}`} onClick={() => { setMetric(value); remember('progressMetric', value) }}>{value === 'distance' ? 'Weekly distance' : 'Comparable pace'}</button>)}</div>
+      <section id={`${id}-distance`} className="panel progress-chart" hidden={metric !== 'distance'} aria-labelledby={`${id}-distance-heading`}>
+        <h3 id={`${id}-distance-heading`}>Weekly distance</h3>
+        <p className="field-help">Planned versus recorded or logged distance. Zero means no distance in the currently available records, not a missed-workout verdict.</p>
+        {visibleWeeks.length > 0 ? <>
+          {upcoming && <p className="field-help">Your plan has not started yet. These bars show upcoming planned weeks, without implying any recorded training.</p>}
+          <VolumeChart weeks={visibleWeeks} units={units} currentWeek={currentWeek} ran={ran} />
+        </> : <p>No planned weeks fall in this period. Select comparable pace to explore available recordings.</p>}
+      </section>
+    <section id={`${id}-pace`} className="panel progress-chart" hidden={metric !== 'pace'} aria-labelledby={`${id}-pace-heading`}><h3 id={`${id}-pace-heading`}>Comparable pace</h3>
       <p className="field-help">Matched easy or recovery runs, grouped by workout type, approximate distance and recording source. Routes and conditions can still differ. Pace alone does not establish improving fitness. Higher on this chart is faster.</p>
       {groups.length ? <><label htmlFor={`${id}-group`}>Compare similar runs</label><select className="input" id={`${id}-group`} value={chosen!.label} onChange={event => { setGroup(event.target.value); setPoint(0) }}>{groups.map(item => <option key={item.label}>{item.label}</option>)}</select>
         {points.length >= 2 ? <svg className="progress-pace-line" viewBox="0 0 600 180" role="slider" tabIndex={0} aria-valuemin={1} aria-valuemax={points.length} aria-valuenow={Math.min(point, points.length - 1) + 1} aria-valuetext={active ? `${formatDate(active.localDate)}: ${formatPace(active.paceSecondsPerKm, units)}` : undefined} aria-label={`Recorded pace across ${points.length} comparable runs; inspect exact values below`} onKeyDown={event => {
@@ -51,9 +77,10 @@ export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, 
         <details><summary>Comparable pace data</summary><table><thead><tr><th>Date</th><th>Distance</th><th>Pace</th></tr></thead><tbody>{points.map(run => <tr key={run.id}><th scope="row">{formatDate(run.localDate)}</th><td>{formatDistance(run.distanceKm, units)}</td><td>{formatPace(run.paceSecondsPerKm, units)}</td></tr>)}</tbody></table></details>
       </> : <p>No comparable easy or recovery recordings in this period. Unplanned and different workout types are not combined into a fitness trend.</p>}
     </section>
+    </div>
     <section className="panel" aria-labelledby={`${id}-consistency`}><h3 id={`${id}-consistency`}>Training consistency</h3>
       <p className="field-help">Confirmed, partial and recorded sessions stay distinct. Select a date for its prescription and history.</p>
-      <label htmlFor={`${id}-date`}>Find a training date</label><input className="input" id={`${id}-date`} type="date" min={days[0]} max={today} onChange={event => {
+      <label htmlFor={`${id}-date`}>Find a training date</label><input className="input" id={`${id}-date`} type="date" min={days[0]} max={today} value={focusedDate} onChange={event => {
         const date = event.target.value
         if (date >= days[0]! && date <= today) { setFocusedDate(date); document.getElementById(`${id}-${date}`)?.focus() }
       }} />

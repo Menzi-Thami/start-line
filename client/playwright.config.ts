@@ -9,8 +9,9 @@ const web = 'http://localhost:5173'
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
-  // A hard ceiling on the whole run, so a hang fails fast with a report instead of running away.
-  globalTimeout: 12 * 60_000,
+  // Includes the responsive, cross-theme WCAG journeys as well as the production app tests.
+  // Individual test timeouts still fail hangs; this ceiling accommodates the expanded serial suite.
+  globalTimeout: 15 * 60_000,
   maxFailures: process.env.CI ? 3 : 0,
   expect: { timeout: 15_000 },
   fullyParallel: false,

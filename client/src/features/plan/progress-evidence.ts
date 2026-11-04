@@ -25,3 +25,15 @@ export function volumeWeeksInPeriod(weeks: PlanWeek[], today: string, period: nu
   const recordedPeriod = weeks.filter(week => week.startDate >= from && week.startDate <= today)
   return recordedPeriod.length ? recordedPeriod : weeks.filter(week => week.startDate > today).slice(0, period)
 }
+
+/** Reuse the chart's source-aware week totals, retaining unknown values and excluding future history. */
+export function progressDistanceTotals(weeks: readonly PlanWeek[], ran: ReadonlyMap<number, number> | undefined, today: string) {
+  const elapsed = weeks.filter(week => week.startDate <= today)
+  const recorded = elapsed.map(week => ran?.get(week.number)).filter((value): value is number => value != null && Number.isFinite(value) && value >= 0)
+  return {
+    plannedKm: weeks.reduce((sum, week) => sum + week.plannedKm, 0),
+    recordedKm: recorded.length ? recorded.reduce((sum, value) => sum + value, 0) : null,
+    recordedWeeks: recorded.length,
+    elapsedWeeks: elapsed.length,
+  }
+}

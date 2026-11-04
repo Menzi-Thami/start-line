@@ -1,3 +1,4 @@
+import { screenshotPath } from './screenshots'
 import { expect, test } from '@playwright/test'
 
 // Also run through the repository-wide suite, whose default URL serves the production build.
@@ -15,7 +16,7 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     expect(new URL(page.url()).searchParams.has('day')).toBe(false)
     const overflow = () => page.evaluate(() => document.documentElement.scrollWidth - innerWidth)
     expect(await overflow()).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `../docs/qa/2026-11-04/redesign/week-after-${width}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `week-after-${width}.png`), fullPage: true })
     await page.getByRole('button', { name: /Open day details/ }).click()
     await expect(page).toHaveURL(/day=2026-10-13/)
     const day = page.getByRole('region', { name: 'Tuesday 13 October 2026', exact: true })
@@ -23,7 +24,7 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     await expect(day.getByText('How to run it')).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Calendar' })).toBeHidden()
     expect(await overflow()).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `../docs/qa/2026-11-04/redesign/day-after-${width}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `day-after-${width}.png`), fullPage: true })
     await page.goBack()
     await expect(selector).toBeFocused()
     await page.goForward()
@@ -38,12 +39,12 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     await expect(pacing).toBeVisible()
     await pacing.getByLabel('Inspect recorded split').selectOption('1')
     await expect(pacing.getByRole('status')).toContainText('Split 2')
-    await page.screenshot({ path: `../docs/qa/2026-11-04/redesign/pacing-after-${width}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `pacing-after-${width}.png`), fullPage: true })
     await page.getByRole('tab', { name: 'Pacing', exact: true }).focus()
     await page.keyboard.press('End')
     await expect(page.getByRole('table')).toBeVisible()
     expect(await overflow()).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `../docs/qa/2026-11-04/redesign/run-after-${width}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `run-after-${width}.png`), fullPage: true })
     expect(errors).toEqual([])
   })
 }
@@ -58,7 +59,7 @@ for (const variant of ['light', 'zoom', 'landscape'] as const) {
     await page.getByRole('button', { name: /Open day details/ }).click()
     await expect(page.getByRole('region', { name: 'Tuesday 13 October 2026', exact: true })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `../docs/qa/2026-11-04/redesign/day-${variant}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `day-${variant}.png`), fullPage: true })
   })
 }
 
@@ -93,7 +94,7 @@ for (const width of [320, 768, 1440]) {
     await progress.getByLabel('Inspect a run').selectOption('2')
     await expect(progress.getByRole('status')).toContainText('5:50/km')
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `../docs/qa/2026-11-04/redesign/progress-after-${width}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `progress-after-${width}.png`), fullPage: true })
     await page.getByRole('tab', { name: 'This week', exact: true }).click()
     await page.getByRole('button', { name: /^Tuesday 13 October 2026:/ }).click()
     await page.getByRole('button', { name: /Open day details/ }).click()
@@ -105,7 +106,7 @@ for (const width of [320, 768, 1440]) {
     await expect(evidence).toContainText('Window covered')
     await expect(evidence).toContainText('0% of sampled')
     await expect(evidence).not.toContainText('Completed as prescribed')
-    await page.screenshot({ path: `../docs/qa/2026-11-04/redesign/stages-after-${width}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `stages-after-${width}.png`), fullPage: true })
   })
 }
 
@@ -143,7 +144,7 @@ for (const width of [320, 768, 1440]) {
         await expect(page.getByText('Connections & run sources', { exact: true })).toBeFocused()
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-      await page.screenshot({ path: `../docs/qa/2026-11-04/redesign/${screen}-after-${width}.png`, fullPage: true })
+      await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `${screen}-after-${width}.png`), fullPage: true })
     }
     expect(errors).toEqual([])
   })

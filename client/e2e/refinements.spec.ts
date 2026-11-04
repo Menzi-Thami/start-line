@@ -1,3 +1,4 @@
+import { screenshotPath } from './screenshots'
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 
@@ -38,7 +39,7 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     await expect(page.locator('.home-tiles')).toBeHidden()
     expect(state.progressRequests).toBe(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `../docs/qa/2026-11-04/refinements/home-after-${width}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'refinements', `home-after-${width}.png`), fullPage: true })
     await page.locator('.home-insights > summary').click()
     await expect(page.getByRole('heading', { name: 'Personal bests', exact: true })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Your progress', exact: true }).getByText('Your progress isn’t available right now.')).toBeVisible()
@@ -55,11 +56,11 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
       await pane.evaluate(element => { element.scrollTop = element.scrollHeight })
       await expect(page.getByText('Your plan also lives in its link, so you can share it with anyone.')).toBeInViewport()
       await expect(actions).toBeInViewport()
-      await page.screenshot({ path: `../docs/qa/2026-11-04/refinements/builder-bottom-${width}.png`, fullPage: true })
+      await page.screenshot({ path: screenshotPath(test.info(), 'refinements', `builder-bottom-${width}.png`), fullPage: true })
       await pane.evaluate(element => { element.scrollTop = 0 })
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `../docs/qa/2026-11-04/refinements/builder-after-${width}.png`, fullPage: true })
+    await page.screenshot({ path: screenshotPath(test.info(), 'refinements', `builder-after-${width}.png`), fullPage: true })
     await page.getByRole('button', { name: 'Step 2: Goal' }).click()
     await page.getByRole('group', { name: 'Goal finish time', exact: true }).getByLabel('Minutes', { exact: true }).fill('25')
     await page.getByRole('button', { name: 'Step 5: Review' }).click()

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { defaultBeginnerProgress } from './beginner-progress'
-import { beginnerTrainingStatus, beginnerWeekSummary } from './BeginnerTrainingViews'
+import { beginnerTrainingStatus, beginnerWeekSummary } from './beginner-training-status'
 
 describe('beginner training calendar and progress', () => {
   it('keeps runner-confirmed and cached recordings separate', () => {

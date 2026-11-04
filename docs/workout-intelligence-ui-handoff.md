@@ -117,3 +117,13 @@ F. Tests, docs, screenshots in actual browsers, final review.
 
 ## Codex execution instructions
 Read this spec and repository guidance first. Work on a fresh implementation branch based on updated `main`, not this docs-only branch unless the spec is merged. Reference this PR/spec in your implementation PR. Check current open PRs for conflicts. Implement slices A–F, commit changes, run relevant checks, fix failures, document limitations, and open a separate **draft implementation PR** for manual review. Preserve approved UI direction without asking for another design decision. Do not merge or deploy. If blocked by permissions, tools, rate limits or missing screenshot assets, record the blocker accurately in the PR instead of claiming completion.
+
+## Approved Calendar, Progress, and cross-screen refinements (4 Nov 2026)
+
+Canonical detailed UI audit: [`docs/design/taperday-cross-screen-ux-audit.md`](design/taperday-cross-screen-ux-audit.md). **Treat these as approved scope for a UI improvement roadmap**, delivered in separately reviewable waves rather than a risky single sweeping code change.
+
+- **Calendar:** colored *and* icon-labeled statuses: sage/green check for confirmed completion, amber minus for partial, neutral scheduled dot, distinct today/selected ring; other meanings (recorded unconfirmed, skipped, rest, multiple sessions) get independent honest labels. Selected date shows a compact preview; full day detail remains canonical. Do not use color alone.
+- **Progress:** bars for weekly distance and planned-vs-recorded, lines for comparable pace trends, consistency calendar/heatmap where meaningful, target-band trace for structured workout pace. Interactive period/point selection + accessible data alternatives, no invented statistics. Avoid exclusive use of bar charts.
+- **Home, Builder, Strength, Account, global navigation and CSS:** follow the prioritized source-grounded findings in the cross-screen audit. Ensure a single cohesive Night Run system and full mobile/tablet/desktop responsiveness.
+- **Source limitation:** no live browser screenshots have been obtained in this planning review. All UI fidelity requires explicit implementation-time visual/interaction testing.
+- **PR strategy:** handle core week/day + run analysis first, then Calendar/Progress and additional screen polish in focused draft PRs; never merge/deploy without review.

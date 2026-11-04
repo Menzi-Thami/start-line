@@ -16,6 +16,7 @@ import { SessionItem } from './WeekList'
 import { RunWalkChip } from './RunWalkChip'
 
 interface Props {
+  dedicated?: boolean
   id: string
   trigger?: HTMLButtonElement
   date: string
@@ -32,7 +33,7 @@ interface Props {
 }
 
 /** One date, with prescription and history kept separate. Opening it never changes completion. */
-export default function DaySummary({ id: panelId, trigger, date, today, plan, units, done, onDoneChange, runs, coach, canCompleteRuns, onOpenRun, onClose }: Props) {
+export default function DaySummary({ dedicated = false, id: panelId, trigger, date, today, plan, units, done, onDoneChange, runs, coach, canCompleteRuns, onOpenRun, onClose }: Props) {
   const id = useId()
   const panelRef = useRef<HTMLElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -68,7 +69,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
         const restoreFocus = panelRef.current?.contains(document.activeElement) || document.activeElement === document.body
         onClose()
         if (restoreFocus && trigger?.isConnected && !trigger.closest('[hidden]')) trigger.focus({ preventScroll: true })
-      } else if (event.target instanceof Element && !event.composedPath().includes(panelRef.current!) && !event.target.closest('.week-day-button, .plan-calendar-day')) {
+      } else if (!dedicated && event.target instanceof Element && !event.composedPath().includes(panelRef.current!) && !event.target.closest('.week-day-button, .plan-calendar-day')) {
         onClose()
       }
     }
@@ -80,19 +81,20 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
       document.removeEventListener('click', dismiss)
       document.removeEventListener('keydown', dismiss)
     }
-  }, [onClose, trigger])
+  }, [onClose, trigger, dedicated])
 
   const savedSession = (entry: CheckIn): Session => sessions.find(session => session.type === entry.sessionType) ?? {
     date, type: entry.sessionType, title: 'Logged run', distanceKm: entry.prescribedKm ?? 0, zone: null, detail: '', purpose: '', exercises: [], steps: [],
   }
-  const openRun = (runId: string) => { onClose(); onOpenRun?.(runId) }
+  const openRun = (runId: string) => { if (!dedicated) onClose(); onOpenRun?.(runId) }
   const logRun = (run: ActivitySummary) => {
     setRequestedRun(run)
     requestAnimationFrame(() => logRef.current?.scrollIntoView?.({ block: 'nearest' }))
   }
 
   return (
-    <section id={panelId} ref={panelRef} className="day-summary" aria-labelledby={`${id}-title`}>
+    <section id={panelId} ref={panelRef} className={`day-summary${dedicated ? ' day-detail-page' : ''}`} aria-labelledby={`${id}-title`}>
+      {dedicated && <button type="button" className="button button-quiet" onClick={close}>← Back to plan</button>}
       <div className="day-summary-head">
         <h3 id={`${id}-title`} ref={headingRef} tabIndex={-1} aria-label={formatDate(date, 'long')}>{formatDate(date, 'weekday')} · {formatDate(date, 'dayMonth')}</h3>
         <button type="button" className="day-summary-close" aria-label="Close day" onClick={() => close()}>×</button>
@@ -111,8 +113,8 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
                 <h5>{session.title}</h5>
                 <p className="mono">{formatDistance(session.distanceKm, units)}{pace ? ` · ${formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}` : ''}</p>
                 <RunWalkChip runWalk={session.runWalk} />
-                <p className="day-summary-status">{!historyReady ? 'Completion history unavailable' : entry?.status === 'Skipped' ? 'Skipped' : viaStrava ? 'Completed via Strava' : complete ? 'Completed' : future ? 'Upcoming' : date === today ? 'Scheduled today' : 'No completion recorded'}</p>
-                <details className="session-more"><summary>How to run it</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
+                <p className="day-summary-status">{!historyReady ? 'Completion history unavailable' : entry?.status === 'Skipped' ? 'Skipped' : entry?.status === 'CutShort' ? 'Cut short' : viaStrava ? 'Activity recorded via Strava · provisional' : complete ? 'Completed' : future ? 'Upcoming' : date === today ? 'Scheduled today' : 'No completion recorded'}</p>
+                <details className="session-more" open={dedicated || undefined}><summary>How to run it</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
                 {historyReady && coach && <StravaCompletion session={session} coach={coach} />}
                 {historyReady && coach && (!entry || entry.status === 'Skipped') && session.type !== 'Race' && <CheckInCard session={session} coach={coach} runs={dayRuns} completion compactActions done={complete && !viaStrava} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}
                 {historyReady && !coach && session.type !== 'Race' && !future && <label className="session-done"><input type="checkbox" checked={complete} onChange={event => onDoneChange(current => withSessionDone(current, session, event.target.checked))} /> Complete on this device</label>}
@@ -129,7 +131,8 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
             {historyReady && coach && entries.map(entry => <div key={entry.id ?? `${entry.date}|${entry.sessionType}`} className="day-summary-saved">
               {entry.isAdditional ? <AdditionalRun entry={entry} coach={coach} runs={dayRuns} onOpenRun={onOpenRun ? openRun : undefined} /> : <>
                 <CheckInCard key={entry.updatedAt} session={savedSession(entry)} coach={{ ...coach, get: () => entry }} runs={dayRuns} done onDone={value => onDoneChange(current => withSessionDone(current, savedSession(entry), value))} />
-                {onOpenRun && entry.activityId && dayRuns.some(run => run.id === entry.activityId) && <button type="button" className="link-button" onClick={() => openRun(entry.activityId!)}>View imported run</button>}
+                {entry.activityId && dayRuns.find(run => run.id === entry.activityId) && <p className="field-help">{compareWorkoutDistance(savedSession(entry).distanceKm, dayRuns.find(run => run.id === entry.activityId)!.distanceKm).label}</p>}
+                {onOpenRun && entry.activityId && dayRuns.some(run => run.id === entry.activityId) && <button type="button" className="link-button" onClick={() => openRun(entry.activityId!)}>View run analysis</button>}
               </>}
               {entry.note && <p className="field-help">Your note: {entry.note}</p>}
             </div>)}
@@ -140,7 +143,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
               <p className="field-help">Moving time{run.averageHeartRate ? ` · ${run.averageHeartRate} bpm average` : ''}</p>
               {singlePlannedRun && <p className="field-help" aria-label="Distance-only comparison, not a confirmed workout match">{compareWorkoutDistance(singlePlannedRun.distanceKm, run.distanceKm).label} · Same-day activity; not automatically matched to the session.</p>}
               <div className="day-summary-actions">
-                {onOpenRun && <button type="button" className="link-button" onClick={() => openRun(run.id)}>View run</button>}
+                {onOpenRun && <button type="button" className="link-button" onClick={() => openRun(run.id)}>View run analysis</button>}
                 {historyReady && coach?.saveAdditional && inPlan && <button type="button" className="link-button" onClick={() => logRun(run)}>Log this run</button>}
               </div>
               <RunSticker units={units} run={{ date, title: 'Run completed', distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} />

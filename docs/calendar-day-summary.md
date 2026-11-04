@@ -1,6 +1,8 @@
 # Calendar day summaries
 
-Select any date in **This week** or the monthly calendar in **Calendar** to see that date's plan and recorded sessions. A compact dropdown expands beside the selected agenda row, or below the monthly calendar. The weekly agenda replaces the duplicate full session list. Selecting the same date again collapses it; selecting another date replaces its contents. The calendar stays in the page, and Close/Escape returns focus to the selected date.
+Select any date in **This week** or **Calendar** to show a compact preview. Selecting another date changes the preview; **Open day details** navigates to the canonical day screen with a `day=YYYY-MM-DD` query parameter. The weekly schedule uses a seven-date strip on phones and a vertical schedule beside the preview on larger screens. Previous/next week controls and a short coming-up list keep the schedule scannable.
+
+The dedicated day screen preserves the existing prescription, logging and exercise controls. It has no internal height cap or outside-click dismissal. Back/Close/Escape returns to the schedule and restores focus; browser Back/Forward and refresh retain the day URL. Week, tab and month context is included in the history entry.
 
 **Planned** keeps the current prescription identifiable: workout name, distance, pace, instructions and steps, strength exercises, or a rest day. A past outstanding workout says **No completion recorded**, rather than assuming the runner missed it. Future dates show upcoming training; dates outside the plan are explicitly identified.
 
@@ -12,7 +14,9 @@ Imported measurements still follow their source's availability. Removing an acti
 
 ## Accessibility and performance
 
-Date buttons expose their date, prescription and status in text. Arrow keys, Home and End move between dates (Up/Down move one week in the monthly calendar). Date buttons expose expanded state and identify their controlled dropdown. Its heading receives focus when opened; keyboard focus can move naturally back to the calendar or onward to the page. Close and Escape restore the selected date, while outside clicks and tab changes dismiss without stealing focus. Outside controls receive their action before the inline day closes, so layout changes do not swallow taps. The page stays scrollable and interactive. The dropdown is bounded to 32 rem wide and the smaller of 22 rem/55% of the viewport high, scrolling longer content internally. Controls inside it retain their own touch gestures. Reduced-motion users get no entrance animation. The day view is loaded as a separate JavaScript chunk on first use.
+Date buttons expose date, prescription, status and pressed selection in text. Arrow keys, Home and End move between dates (Up/Down move one week in the monthly calendar). Preview selection keeps focus on the date. Opening detail focuses its heading; Back/Close/Escape restores the date. At very narrow widths larger previous/next-date buttons complement the seven-date strip. Detail pages scroll naturally and include bottom safe-area padding. Reduced-motion users get no entrance animation. The day view remains a separately loaded JavaScript chunk.
+
+Shared week/calendar/preview statuses distinguish confirmed completion, cut-short and skipped answers, provisional Strava evidence, recorded activity, scheduled training and rest. An activity on a rest day does not imply a prescribed workout was completed. Comparison text explicitly states that distance alone does not assess structure.
 
 Unloaded imported history is distinguished from an empty list. A loading/failed check-in request is not displayed as an empty saved history, and logging stays unavailable until the existing check-in load succeeds. Failed save/delete actions retain the existing form/entry and error/retry flow.
 
@@ -20,4 +24,6 @@ Unloaded imported history is distinguished from an empty list. A loading/failed 
 
 `DaySummary.test.tsx` covers planned versus actual, rest days, independent runs, explicit links, saved entries after cache removal, time-only records, skipped/future/outside-plan days, unavailable history, strength tracking, distance units and mutation failures. Existing run-visibility journeys now open a day instead of jumping to its week.
 
-`client/e2e/calendar-day.spec.ts` drives the real PlanView and check-in hook in Chromium with synthetic API responses: opening by keyboard, natural focus movement/return, same-date toggling, date/month/tab changes, compact bounds, responsive widths, reduced motion, sticker creation, link/save/reload, replacements, edits, time-only logs, cache removal and failed/successful deletion. No real runner, production database or live provider is used. Physical Safari/iOS/Android and live Entra authorization are not established by these tests.
+`client/e2e/calendar-day.spec.ts` drives the real PlanView and check-in hook in Chromium with synthetic API responses: preview-to-detail navigation, opening by keyboard, natural focus movement/return, date/month/tab changes, responsive page bounds, reduced motion, sticker creation, link/save/reload, replacements, edits, time-only logs, cache removal and failed/successful deletion. No real runner, production database or live provider is used. Physical Safari/iOS/Android and live Entra authorization are not established by these tests.
+
+See [redesign verification](qa/2026-11-04/redesign/verification.md) for the executed checks, screenshots and remaining rollout scope.

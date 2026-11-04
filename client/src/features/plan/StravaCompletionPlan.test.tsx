@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ActivitySummary, CheckIn, CheckInRequest, Session, SyncedCompletion, TrainingPlan } from '../../lib/types'
 import plan5k from '../../test/fixtures/plan-5k.json'
-import { openDisclosure, openWeekDay } from '../../test/user-navigation'
+import { closePlanDay, openDisclosure, openWeekDay } from '../../test/user-navigation'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { PlanView } from './PlanView'
 
@@ -51,9 +51,10 @@ describe('a plan session completed via Strava', () => {
 
     expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, done/ })).toBeInTheDocument()
     const day = await openWeekDay('2026-10-13')
-    expect(within(day).getByText('Completed via Strava', { selector: '.day-summary-status' })).toBeInTheDocument()
+    expect(within(day).getByText('Activity recorded via Strava · provisional', { selector: '.day-summary-status' })).toBeInTheDocument()
     expect(within(day).getByText(/You covered 6\.4 km against 5\.5 km planned\. More isn't always better — try to follow your planned distance next time/)).toBeInTheDocument()
 
+    await closePlanDay()
     await userEvent.click(screen.getByRole('tab', { name: 'Calendar' }))
     expect(screen.getByRole('button', { name: /^13 [A-Za-z]+: Hill repeats, done/ })).toBeInTheDocument()
 
@@ -68,8 +69,9 @@ describe('a plan session completed via Strava', () => {
     await userEvent.click(within(day).getByRole('button', { name: 'Keep this tick' }))
 
     expect(saves).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
+    await closePlanDay()
     expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, done/ })).toBeInTheDocument()
-    expect(screen.queryByText('Completed via Strava', { selector: '.day-summary-status' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Activity recorded via Strava · provisional', { selector: '.day-summary-status' })).not.toBeInTheDocument()
   })
 
   it('leaves a skipped session skipped and shows the run beside it', async () => {
@@ -88,6 +90,6 @@ describe('a plan session completed via Strava', () => {
 
     expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026: Hill repeats, no completion recorded/ })).toBeInTheDocument()
     const day = await openWeekDay('2026-10-13')
-    expect(within(day).queryByText('Completed via Strava')).not.toBeInTheDocument()
+    expect(within(day).queryByText('Activity recorded via Strava · provisional')).not.toBeInTheDocument()
   })
 })

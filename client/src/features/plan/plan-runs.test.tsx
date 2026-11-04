@@ -47,7 +47,7 @@ describe('the plan beside what was run', () => {
 
     let day = await openWeekDay('2026-10-13')
     const hills = within(day).getByRole('article', { name: 'Recorded run: 5.6 km' })
-    await userEvent.click(within(hills).getByRole('button', { name: 'View run' }))
+    await userEvent.click(within(hills).getByRole('button', { name: 'View run analysis' }))
     expect(onOpenRun).toHaveBeenCalledWith('hills')
 
     // Both runs on the same day remain distinct, in their original order.
@@ -71,7 +71,7 @@ describe('the plan beside what was run', () => {
     expect(screen.queryByRole('button', { name: /open your run/i })).not.toBeInTheDocument()
     let day = await openWeekDay('2026-10-13')
     expect(within(day).getByRole('article', { name: 'Recorded run: 3.5 mi' })).toBeVisible()
-    expect(within(day).queryByRole('button', { name: 'View run' })).not.toBeInTheDocument()
+    expect(within(day).queryByRole('button', { name: 'View run analysis' })).not.toBeInTheDocument()
     day = await openWeekDay('2026-10-14')
     expect(within(day).getByRole('article', { name: 'Recorded run: 2.5 mi' })).toBeVisible()
   })

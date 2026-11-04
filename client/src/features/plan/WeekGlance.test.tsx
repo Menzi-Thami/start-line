@@ -26,7 +26,7 @@ describe('strength stays separate from running', () => {
   it('opens rest days by date and supports keyboard movement across the week', () => {
     const select = vi.fn()
     render(<WeekGlance week={week} onSelectDate={select} done={new Set()} today="2026-10-18" units="km" />)
-    const days = screen.getAllByRole('button')
+    const days = screen.getAllByRole('button').filter(button => button.classList.contains('week-day-button'))
     days[0]!.focus()
     fireEvent.keyDown(days[0]!, { key: 'ArrowRight' })
     expect(days[1]).toHaveFocus()

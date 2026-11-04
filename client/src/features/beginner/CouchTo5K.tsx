@@ -75,7 +75,11 @@ export function CouchTo5K() {
         const loaded = response.status === 204 ? defaultBeginnerProgress(today) : parseBeginnerProgress(JSON.stringify(await response.json()), today)
         // A new account may offer to import this device's anonymous programme.
         // Never silently replace saved server progress or overwrite another account.
-        const rawLocal = response.status === 204 ? window.localStorage.getItem(STORAGE_KEY) : null
+        let rawLocal: string | null = null
+        if (response.status === 204) {
+          try { rawLocal = window.localStorage.getItem(STORAGE_KEY) }
+          catch { /* Storage may be blocked; account hydration must still work. */ }
+        }
         const local = rawLocal ? parseBeginnerProgress(rawLocal, today) : null
         const transfer = local && JSON.stringify(local) !== JSON.stringify(defaultBeginnerProgress(today)) ? local : null
         setTransferCandidate(transfer)

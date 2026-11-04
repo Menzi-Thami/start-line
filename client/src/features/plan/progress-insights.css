@@ -14,3 +14,22 @@
 .plan table.visually-hidden { display: block; width: 1px; max-width: 1px; overflow: hidden; }
 .progress-personal-bests { list-style: none; padding: 0; display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
 .progress-personal-bests li { padding: 1rem; border: 1px solid var(--line); border-radius: 16px; }
+
+.progress-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-block: 1rem; }
+.progress-summary > div { min-width: 0; padding: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
+.progress-summary > div:last-child { grid-column: 1 / -1; }
+.progress-summary dt { font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); }
+.progress-summary dd { margin: .5rem 0 0; overflow-wrap: anywhere; }
+.progress-summary dd strong { display: block; font-size: clamp(1.2rem, 2vw, 1.8rem); font-variant-numeric: tabular-nums; }
+.progress-summary dd span { display: block; margin-top: .5rem; font-size: var(--text-xs); line-height: 1.5; color: var(--ink-2); }
+.progress-primary-chart { min-width: 0; }
+.progress-metric { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
+.progress-metric button { flex: 1 1 120px; min-width: 0; min-height: 44px; }
+.progress-chart[hidden] { display: none; }
+@media (min-width: 768px) {
+  .progress-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .progress-summary > div:last-child { grid-column: auto; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .progress-metric button { transition: background-color 200ms, border-color 200ms; }
+}

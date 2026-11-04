@@ -7,6 +7,7 @@ export interface BeginnerRecordedRun { date: string; source: string; cachedUntil
 /** Only one verified Strava running day is assigned to one scheduled workout.
  * Do not consume an imported run multiple times if a shifted schedule overlaps.
  * Ticked and manually uploaded records aren't treated as Strava evidence.
+ * Missing cache expiry is not proof a Strava activity is still permitted.
  */
 export function matchBeginnerStrava(
   progress: BeginnerProgress,
@@ -17,7 +18,7 @@ export function matchBeginnerStrava(
   if (progress.paused) return new Set()
   const dates = new Set(runs.filter(run =>
     run.source === 'Strava' &&
-    (!run.cachedUntil || (Number.isFinite(Date.parse(run.cachedUntil)) && Date.parse(run.cachedUntil) > now)) &&
+    (!!run.cachedUntil && Number.isFinite(Date.parse(run.cachedUntil)) && Date.parse(run.cachedUntil) > now) &&
     /^\d{4}-\d{2}-\d{2}$/.test(run.date),
   ).map(run => run.date))
   const used = new Set<string>()

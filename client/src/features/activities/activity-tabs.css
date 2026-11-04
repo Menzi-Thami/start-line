@@ -1,0 +1,8 @@
+.activity-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; margin-block: 1.5rem; }
+.activity-tabs .button { min-width: 0; padding-inline: .25rem; min-height: 44px; }
+.activity-tabs [aria-selected="true"] { color: var(--accent, #c9ef75); box-shadow: inset 0 -2px currentColor; }
+.activity [role="tabpanel"] { min-width: 0; }
+.activity [role="tabpanel"][hidden] { display: none; }
+.activity [role="tabpanel"] .splits { width: 100%; }
+.pace-profile svg { display: block; width: 100%; max-width: 60rem; height: auto; }
+.pace-profile circle:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }

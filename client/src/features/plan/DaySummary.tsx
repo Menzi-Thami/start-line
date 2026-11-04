@@ -11,6 +11,7 @@ import { RunSticker } from '../sharing/RunSticker'
 import { withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey } from './plan-math'
 import { SessionSteps } from './SessionSteps'
+import { compareWorkoutDistance } from './workout-distance-feedback'
 import { SessionItem } from './WeekList'
 import { RunWalkChip } from './RunWalkChip'
 
@@ -43,6 +44,10 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
   const importsUnavailable = !!coach && runs === undefined
   const dayRuns = [...new Map((runs ?? []).filter(run => run.localDate === date && run.kind !== 'Other').map(run => [run.id, run])).values()]
   const unlinked = dayRuns.filter(run => !entries.some(entry => entry.activityId === run.id))
+  // Only compare an unmatched run when there is exactly one prescribed run on the date.
+  // Multiple workouts are ambiguous and must never be auto-associated by date alone.
+  const singlePlannedRun = sessions.filter(session => session.type !== 'Strength').length === 1
+    ? sessions.find(session => session.type !== 'Strength') : undefined
   const deviceRuns = sessions.filter(session => session.type !== 'Strength' && done.has(sessionKey(session)) && !coach?.get(session) && !completedViaStrava(session, coach))
   const completedStrength = sessions.filter(session => session.type === 'Strength' && done.has(sessionKey(session)))
   const inPlan = date >= plan.startDate && date <= plan.race.date
@@ -133,6 +138,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
               <h5>{formatDistance(run.distanceKm, units)}</h5>
               <p className="mono">{formatDuration(run.movingSeconds)}{run.distanceKm > 0 && run.movingSeconds > 0 ? ` · ${formatPace(run.movingSeconds / run.distanceKm, units)}` : ''}</p>
               <p className="field-help">Moving time{run.averageHeartRate ? ` · ${run.averageHeartRate} bpm average` : ''}</p>
+              {singlePlannedRun && <p className="field-help" aria-label="Distance-only comparison, not a confirmed workout match">{compareWorkoutDistance(singlePlannedRun.distanceKm, run.distanceKm).label} · Same-day activity; not automatically matched to the session.</p>}
               <div className="day-summary-actions">
                 {onOpenRun && <button type="button" className="link-button" onClick={() => openRun(run.id)}>View run</button>}
                 {historyReady && coach?.saveAdditional && inPlan && <button type="button" className="link-button" onClick={() => logRun(run)}>Log this run</button>}

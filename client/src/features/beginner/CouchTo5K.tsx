@@ -27,6 +27,7 @@ export function CouchTo5K() {
   const [progress, setProgress] = useState<BeginnerProgress>(read)
   const [serverReady, setServerReady] = useState(false)
   const [syncError, setSyncError] = useState('')
+  const [syncAttempt, setSyncAttempt] = useState(0)
   const [stravaSnapshot, setStravaSnapshot] = useState<{ owner: string; runs: readonly BeginnerRecordedRun[] } | null>(null)
   const [showCalendar, setShowCalendar] = useState(false)
   const saveVersion = useRef(0)
@@ -100,7 +101,7 @@ export function CouchTo5K() {
     }).catch(() => {
       if (epoch === accountEpoch.current && version === saveVersion.current) setSyncError('Account sync failed. Your latest changes have not been saved online.')
     })
-  }, [progress, serverReady, account, getToken])
+  }, [progress, serverReady, account, getToken, syncAttempt])
 
   // Cached Strava runs count on read, not as durable manual checkoffs.
   // When the provider's cached records expire, the automatic indicator disappears.
@@ -137,7 +138,7 @@ export function CouchTo5K() {
       <h2 id="beginner-title">Couch to 5K</h2>
       <p>Start with gentle run/walk intervals. There are no pace targets. Rest between sessions, and repeat a week if you need to.</p>
       {account && !serverReady && !syncError && <p role="status">Loading your saved programme…</p>}
-      {syncError && <p role="alert" className="field-help">{syncError}</p>}
+      {syncError && <div role="alert" className="field-help"><p>{syncError}</p>{account && serverReady && <button type="button" className="button button-quiet" onClick={() => setSyncAttempt(n => n + 1)}>Retry saving progress</button>}</div>}
       <p aria-live="polite"><strong>{done} of 27 sessions completed</strong> · {Math.round(done / 27 * 100)}%</p>
       <progress value={done} max={27} style={{ width: '100%' }} aria-label="Couch to 5K completed sessions" />
       <div className="field">

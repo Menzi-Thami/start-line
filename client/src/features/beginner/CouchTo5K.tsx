@@ -27,6 +27,8 @@ const read = (): BeginnerProgress => {
 export function CouchTo5K() {
   const { account, getToken } = useAuth()
   const [progress, setProgress] = useState<BeginnerProgress>(read)
+  const [progressOwner, setProgressOwner] = useState('anonymous')
+  const [transferCandidate, setTransferCandidate] = useState<BeginnerProgress | null>(null)
   const [serverReady, setServerReady] = useState(false)
   const [syncError, setSyncError] = useState('')
   const [syncAttempt, setSyncAttempt] = useState(0)
@@ -42,12 +44,12 @@ export function CouchTo5K() {
   const automatic = matchBeginnerStrava(progress, programme, stravaSnapshot && stravaSnapshot.owner === owner ? stravaSnapshot.runs : [], evaluationTime)
   const confirmed = programme.filter(s => progress.completed.includes(sessionId(s, progress.revision))).length
   const recordedUnconfirmed = programme.filter(s => !progress.completed.includes(sessionId(s, progress.revision)) && automatic.has(sessionId(s, progress.revision))).length
-  const update = (next: BeginnerProgress) => { if (!account || serverReady) setProgress(next) }
+  const update = (next: BeginnerProgress) => { if (!account || (serverReady && progressOwner === owner)) setProgress(next) }
   useEffect(() => {
-    if (account) return // Never leak one signed-in runner's account state into another runner's anonymous device state.
+    if (account || progressOwner !== 'anonymous') return // Signed-in state must never spill into anonymous localStorage.
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(progress)) }
     catch { /* Private browsing / restricted storage: continue in memory */ }
-  }, [progress, account])
+  }, [progress, account, progressOwner])
 
   // A signed-in runner's server state is canonical. Device state remains a
   // fallback when not signed in; never overwrite the account before hydration.
@@ -56,7 +58,7 @@ export function CouchTo5K() {
     const epoch = ++accountEpoch.current
     if (!account) {
       void Promise.resolve().then(() => {
-        if (!cancelled) { setServerReady(false); setProgress(read()); setSyncError('') }
+        if (!cancelled) { setServerReady(false); setProgress(read()); setProgressOwner('anonymous'); setTransferCandidate(null); setSyncError('') }
       })
       return () => { cancelled = true }
     }
@@ -69,8 +71,16 @@ export function CouchTo5K() {
       const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
       if (!response.ok && response.status !== 204) throw new Error('Unable to load your saved programme.')
       if (!cancelled && epoch === accountEpoch.current) {
-        const loaded = response.status === 204 ? defaultBeginnerProgress(todayLocal()) : parseBeginnerProgress(JSON.stringify(await response.json()), todayLocal())
+        const today = todayLocal()
+        const loaded = response.status === 204 ? defaultBeginnerProgress(today) : parseBeginnerProgress(JSON.stringify(await response.json()), today)
+        // A new account may offer to import this device's anonymous programme.
+        // Never silently replace saved server progress or overwrite another account.
+        const rawLocal = response.status === 204 ? window.localStorage.getItem(STORAGE_KEY) : null
+        const local = rawLocal ? parseBeginnerProgress(rawLocal, today) : null
+        const transfer = local && JSON.stringify(local) !== JSON.stringify(defaultBeginnerProgress(today)) ? local : null
+        setTransferCandidate(transfer)
         setProgress(loaded)
+        setProgressOwner(owner)
         lastSaved.current = JSON.stringify(loaded)
         setServerReady(true)
       }
@@ -142,7 +152,8 @@ export function CouchTo5K() {
       <h2 id="beginner-title">Couch to 5K</h2>
       <p>Start with gentle run/walk intervals. There are no pace targets. Rest between sessions, and repeat a week if you need to.</p>
       {account && !serverReady && !syncError && <p role="status">Loading your saved programme…</p>}
-      {syncError && <div role="alert" className="field-help"><p>{syncError}</p>{account && serverReady && <button type="button" className="button button-quiet" onClick={() => setSyncAttempt(n => n + 1)}>Retry saving progress</button>}</div>}
+      {syncError && <div role="alert" className="field-help"><p>{syncError}</p>{account && serverReady && progressOwner === owner && <button type="button" className="button button-quiet" onClick={() => setSyncAttempt(n => n + 1)}>Retry saving progress</button>}</div>}
+      {account && serverReady && progressOwner === owner && transferCandidate && <div className="panel" role="status"><p>You have a Couch to 5K programme saved on this device. Move it to your account?</p><button type="button" className="button button-quiet" onClick={() => { update(transferCandidate); setTransferCandidate(null) }}>Move my programme</button><button type="button" className="button button-quiet" onClick={() => setTransferCandidate(null)}>Keep account programme</button></div>}
       <p aria-live="polite"><strong>{confirmed} of 27 sessions confirmed</strong> · {Math.round(confirmed / 27 * 100)}%{recordedUnconfirmed > 0 && <span> · {recordedUnconfirmed} recorded via Strava (not confirmed)</span>}</p>
       <progress value={confirmed} max={27} style={{ width: '100%' }} aria-label="Couch to 5K confirmed workouts" />
       <div className="beginner-tabs" role="group" aria-label="Beginner training views">

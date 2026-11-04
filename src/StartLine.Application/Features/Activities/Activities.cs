@@ -48,7 +48,7 @@ internal sealed class ImportActivityValidator : AbstractValidator<ImportActivity
     }
 }
 
-internal sealed class ImportActivityHandler(IApplicationDbContext db, CurrentRunner current, ActivityImporter importer, PersonalBests personalBests, Shoes.ShoeKeeper shoes)
+internal sealed class ImportActivityHandler(IApplicationDbContext db, CurrentRunner current, ActivityImporter importer, PersonalBests personalBests, Shoes.ShoeKeeper shoes, TimeProvider time)
     : IRequestHandler<ImportActivityCommand, ActivityDto>
 {
     public async Task<ActivityDto> Handle(ImportActivityCommand request, CancellationToken cancellationToken)
@@ -58,7 +58,8 @@ internal sealed class ImportActivityHandler(IApplicationDbContext db, CurrentRun
         await shoes.RemindAsync(runner.Id, cancellationToken);
         var bests = await personalBests.ForRunnerAsync(runner.Id, cancellationToken);
         var worn = await Shoes.ShoeViews.WornInAsync(db, runner.Id, [activity.Id], cancellationToken);
-        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent, worn.GetValueOrDefault(activity.Id));
+        var result = ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent, worn.GetValueOrDefault(activity.Id));
+        return await WorkoutEvidenceVisibility.FilterAsync(db, activity, result, time.GetUtcNow(), cancellationToken);
     }
 }
 
@@ -131,7 +132,8 @@ internal sealed class GetMyActivityHandler(IApplicationDbContext db, CurrentRunn
 
         var bests = await personalBests.ForRunnerAsync(runner!.Id, cancellationToken);
         var worn = await Shoes.ShoeViews.WornInAsync(db, runner.Id, [activity.Id], cancellationToken);
-        return ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent, worn.GetValueOrDefault(activity.Id));
+        var result = ActivityDto.From(activity, bests.FromRunsOtherThan(activity.Id), runner.MaxHeartRate, runner.HeartRateConsent, worn.GetValueOrDefault(activity.Id));
+        return await WorkoutEvidenceVisibility.FilterAsync(db, activity, result, time.GetUtcNow(), cancellationToken);
     }
 }
 
@@ -189,5 +191,16 @@ internal sealed class ListMyBestsHandler(IApplicationDbContext db, CurrentRunner
                 e.ActivityId,
                 e.LocalDate,
                 e.Source))];
+    }
+}
+
+internal static class WorkoutEvidenceVisibility
+{
+    internal static async Task<ActivityDto> FilterAsync(IApplicationDbContext db, Activity activity, ActivityDto result, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (result.WorkoutExecution is null) return result;
+        var anotherRun = await db.Activities.Visible(now).AnyAsync(other => other.RunnerId == activity.RunnerId
+            && other.LocalDate == activity.LocalDate && other.Id != activity.Id, cancellationToken);
+        return anotherRun ? result with { WorkoutExecution = null } : result;
     }
 }

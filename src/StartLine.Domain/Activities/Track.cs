@@ -84,6 +84,26 @@ internal sealed class Track
         return new Track(distance, elapsed, moving, altitude, heartRate);
     }
 
+    internal double MetresAtMovingSeconds(double seconds) => MetresAt(seconds, moving);
+
+    internal double MetresAtElapsedSeconds(double seconds) => MetresAt(seconds, elapsed);
+
+    private double MetresAt(double seconds, double[] axis)
+    {
+        if (seconds >= axis[^1]) return TotalMetres;
+        if (seconds <= 0) return 0;
+        var index = Array.BinarySearch(axis, seconds);
+        if (index >= 0)
+        {
+            while (index > 0 && axis[index - 1] == seconds) index--;
+            return distance[index];
+        }
+
+        index = ~index;
+        var span = axis[index] - axis[index - 1];
+        return distance[index - 1] + (distance[index] - distance[index - 1]) * (seconds - axis[index - 1]) / span;
+    }
+
     /// <summary>Moving time from the start until the runner first reached this distance.</summary>
     public double MovingSecondsAt(double metres) => Interpolate(moving, FirstIndexReaching(metres), metres);
 

@@ -127,8 +127,14 @@ internal sealed class ActivityConfiguration : IEntityTypeConfiguration<Activity>
             halves.Property(h => h.SecondHalf).HasColumnName("SecondHalfSeconds").HasConversion(Seconds);
         });
 
+        builder.Property(a => a.WorkoutExecution).HasColumnName("WorkoutExecution")
+            .HasConversion(
+                value => value == null ? null : JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+                value => value == null ? null : JsonSerializer.Deserialize<WorkoutExecution>(value, (JsonSerializerOptions?)null));
+
         builder.ComplexProperty(a => a.PlannedSession, planned =>
         {
+            planned.Ignore(p => p.Steps);
             planned.Property(p => p.PlanName).HasColumnName("PlannedPlanName").HasMaxLength(PlannedSessionMatch.MaxPlanNameLength);
             planned.Property(p => p.SessionType).HasColumnName("PlannedSessionType").HasConversion<string>().HasMaxLength(32);
             planned.Property(p => p.Title).HasColumnName("PlannedTitle").HasMaxLength(PlannedSessionMatch.MaxTitleLength);

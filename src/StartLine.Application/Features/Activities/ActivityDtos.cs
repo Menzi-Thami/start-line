@@ -60,7 +60,8 @@ public sealed record ActivityDto(
     IReadOnlyList<BestEffortDto> BestEfforts,
     HeartRateDto? HeartRate,
     SourceDto Source,
-    Shoes.ShoeRefDto? Shoe = null)
+    Shoes.ShoeRefDto? Shoe = null,
+    WorkoutExecution? WorkoutExecution = null)
 {
     /// <param name="bestFromOtherRuns">The runner's fastest time per standard distance across their other runs.</param>
     /// <param name="runnerMaxHeartRate">The max heart rate the runner set, or null: no zones without it.</param>
@@ -95,7 +96,8 @@ public sealed record ActivityDto(
             [.. a.BestEfforts.OrderBy(e => e.DistanceMetres).Select(e => BestEffortDto.From(e, bestFromOtherRuns, isRace))],
             HeartRateDto.From(a, runnerMaxHeartRate),
             SourceDto.From(a),
-            shoe);
+            shoe,
+            a.WorkoutExecution);
         return showHeartRate
             ? dto
             : dto with

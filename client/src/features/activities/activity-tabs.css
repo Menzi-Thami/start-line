@@ -1,5 +1,6 @@
 .activity-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .25rem; margin-block: 1.5rem; }
 .activity-tabs .button { min-width: 0; padding-inline: .25rem; min-height: 44px; }
+@media (max-width: 479px) { .activity-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .activity-tabs [aria-selected="true"] { color: var(--accent, #c9ef75); box-shadow: inset 0 -2px currentColor; }
 .activity [role="tabpanel"] { min-width: 0; }
 .activity [role="tabpanel"][hidden] { display: none; }

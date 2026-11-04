@@ -1,4 +1,4 @@
-import { openSyncedRuns, openRecentRun } from './navigation'
+import { openSyncedRuns, openRecentRun, openDisclosure } from './navigation'
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import type { CheckIn, CheckInRequest } from '../src/lib/types'
@@ -42,6 +42,7 @@ const value = (page: Page, label: string) => tile(page, label).locator('.home-ti
 test('a synced 10 km run counts automatically before and after logging, reload and sync updates @phone', async ({ page }, info) => {
   const state = await history(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-14&km=10')
+  await openDisclosure(page, /^Running insights/)
   await expect(value(page, 'This month')).toHaveText('10')
   await expect(value(page, 'This year')).toHaveText('10')
   await expect(value(page, 'Weekly average')).toHaveText('0')
@@ -66,6 +67,7 @@ test('a synced 10 km run counts automatically before and after logging, reload a
   await page.setViewportSize({ width: 375, height: 1000 })
   await running.screenshot({ path: info.outputPath('automatic-10km-totals.png') })
   await page.reload()
+  await openDisclosure(page, /^Running insights/)
   await expect(value(page, 'This month')).toHaveText('10')
   await expect(value(page, 'This year')).toHaveText('10')
   state.distance = 11
@@ -89,6 +91,7 @@ test('an independently entered correction counts once after cache expiry and lat
   await running.getByLabel('Run details', { exact: true }).selectOption('')
   await running.getByLabel('Distance (km)', { exact: true }).fill('12')
   await running.getByRole('button', { name: 'Save check-in', exact: true }).click()
+  await openDisclosure(page, /^Running insights/)
   await expect(value(page, 'This month')).toHaveText('12')
   await expect(tile(page, 'This month').getByText('1 run', { exact: true })).toBeVisible()
   expect(state.entries).toHaveLength(1)
@@ -98,6 +101,7 @@ test('an independently entered correction counts once after cache expiry and lat
   await expect(value(page, 'This month')).toHaveText('12')
   state.available = true
   await page.reload()
+  await openDisclosure(page, /^Running insights/)
   await expect(value(page, 'This month')).toHaveText('12')
   await expect(value(page, 'This year')).toHaveText('12')
   await expect(tile(page, 'This month').getByText('1 run', { exact: true })).toBeVisible()

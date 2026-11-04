@@ -1,11 +1,13 @@
 import './app-styles'
 import { createRoot } from 'react-dom/client'
+import { useState } from 'react'
 import { AuthContext, accountsOff } from '../../src/app/auth-context'
 import { AccountPage } from '../../src/features/account/AccountPage'
 import { Home } from '../../src/features/runner-home/Home'
 import { BuilderForm } from '../../src/features/builder/BuilderForm'
 import { MyRuns } from '../../src/features/activities/MyRuns'
 import { fromSearchParams } from '../../src/lib/plan-url'
+import type { PlanInputs } from '../../src/lib/plan-url'
 import type { Runner, TrainingPlan, ActivitySummary, Race } from '../../src/lib/types'
 import plan from '../../src/test/fixtures/plan-5k.json'
 import races from '../../src/test/fixtures/races.json'
@@ -17,11 +19,14 @@ const runner: Runner = { id: 'qa-runner', displayName: 'QA runner', email: 'qa@e
 const initial = fromSearchParams(new URLSearchParams('km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08'))
 const screen = new URLSearchParams(location.search).get('screen')
 export function Fixture() {
+  const [submitted, setSubmitted] = useState<PlanInputs | null>(null)
+  const query = new URLSearchParams(location.search)
+  const mode = query.get('mode')
   return <AuthContext.Provider value={auth}><div style={{ maxWidth: 1200, margin: '0 auto', padding: 16 }}>
     {screen === 'account' ? <AccountPage runner={runner} onSaved={noop} onDeleted={noop} onOpenRuns={noop} />
-      : screen === 'builder' ? <BuilderForm races={{ kind: 'ready', races: races as Race[] }} onRetryRaces={noop} initial={initial} units="km" busy={false} serverErrors={{}} today="2026-10-08" onSubmit={noop} />
+      : screen === 'builder' ? <><BuilderForm races={{ kind: 'ready', races: races as Race[] }} onRetryRaces={noop} initial={query.has('fresh') ? null : initial} units="km" busy={false} serverErrors={{}} today="2026-10-08" onSubmit={setSubmitted} />{submitted && <output data-testid="builder-submission">{JSON.stringify(submitted)}</output>}</>
         : screen === 'runs' ? <MyRuns units="km" onOpen={noop} />
-          : <Home runner={runner} today="2026-10-13" units="km" current={current} initialPlan={{ id: current.id, plan: plan as TrainingPlan }} runs={[run as ActivitySummary]} onOpenPlan={noop} onOpenDay={noop} onBuildPlan={noop} onOpenRun={noop} onOpenRuns={noop} onOpenAccount={noop} />}
+          : <Home runner={mode === 'long-name' ? { ...runner, displayName: 'A runner with an exceptionally long display name' } : runner} today={mode === 'race-week' ? '2026-12-13' : '2026-10-13'} units="km" current={mode === 'no-plan' ? null : current} initialPlan={mode === 'error' ? undefined : { id: current.id, plan: plan as TrainingPlan }} runs={mode === 'expired' ? [] : [run as ActivitySummary]} onOpenPlan={noop} onOpenDay={noop} onOpenProgress={noop} onBuildPlan={noop} onOpenRun={noop} onOpenRuns={noop} onOpenAccount={noop} />}
   </div></AuthContext.Provider>
 }
 createRoot(document.getElementById('root')!).render(<Fixture />)

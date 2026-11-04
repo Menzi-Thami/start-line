@@ -51,6 +51,9 @@ test('training stays focused while all detail remains reachable @phone', async (
     await page.screenshot({ path: info.outputPath(`focused-home-${width}.png`) })
   }
   const tools = page.locator('summary').filter({ hasText: /^Running tools/ })
+  await page.getByRole('button', { name: 'View training progress →', exact: true }).click()
+  await expect(page.getByRole('tab', { name: 'Progress', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await navigation.getByRole('button', { name: 'Home', exact: true }).click()
   await tools.focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()

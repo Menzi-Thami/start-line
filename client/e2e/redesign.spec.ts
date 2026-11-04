@@ -129,7 +129,8 @@ for (const width of [320, 768, 1440]) {
       if (screen === 'home') await expect(page.getByRole('button', { name: "Open today's workout" })).toBeVisible()
       if (screen === 'builder') {
         await expect(page.getByRole('button', { name: 'Build my plan' })).toBeVisible()
-        const review = await page.locator('.review').boundingBox()
+        const framed = await page.locator('.plan-builder-flow[data-framed]').count()
+        const review = await page.locator(framed ? '.wizard-question' : '.review').boundingBox()
         const actions = await page.locator('.wizard-nav').boundingBox()
         expect(actions!.y).toBeGreaterThanOrEqual(review!.y + review!.height)
       }

@@ -48,7 +48,8 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
 
   const today = page.getByRole('region', { name: 'Today', exact: true })
   await expect(today.getByText('Completed via Strava', { exact: true })).toBeVisible()
-  await expect(today.locator('.home-done-chip')).toHaveText('Done')
+  await expect(today.locator('.home-status-chip')).toContainText('Recorded via Strava · provisional')
+  await expect(today.locator('.home-done-chip')).toHaveCount(0)
   await expect(today.locator('.strava-completion-figures')).toHaveText('Planned 6 km · Ran 4.1 km')
   await expect(today.getByText(/You got out there — that counts\. You ran 4\.1 km of your planned 6 km today\./)).toBeVisible()
   expect(state.writes).toEqual([])
@@ -59,12 +60,13 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
     if (width < 400) await today.screenshot({ path: info.outputPath(`strava-completion-today-${width}.png`) })
   }
 
-  // The calendar marks it done "via Strava" too, and the open day still fits a 320 px phone.
+  // The schedule keeps provisional recording distinct from the runner's own completion.
   await page.setViewportSize({ width: 320, height: 900 })
   await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()
-  const day = page.getByRole('button', { name: /^Sunday 18 October 2026: Long run, done/ })
+  const day = page.getByRole('button', { name: /^Sunday 18 October 2026: Long run, recorded via strava/ })
   await expect(day).toBeVisible()
   await day.click()
+  await page.getByRole('button', { name: /Open day details/ }).click()
   const summary = page.getByRole('region', { name: 'Sunday 18 October 2026', exact: true })
   await expect(summary.getByText('Completed via Strava', { exact: true }).first()).toBeVisible()
   await noSidewaysScroll(page)
@@ -87,6 +89,6 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   expect(state.writes).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
   state.held = false
   await page.reload()
-  await expect(today.locator('.home-done-chip')).toHaveText('Done')
+  await expect(today.locator('.home-done-chip')).toHaveText('✓ Done')
   await expect(today.getByText('Completed via Strava', { exact: true })).toHaveCount(0)
 })

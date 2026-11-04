@@ -174,11 +174,11 @@ describe('Home', () => {
     expect(onOpenPlan).toHaveBeenCalledOnce()
   })
 
-  it('leads today’s card with the run and marks it done, with why one tap away', async () => {
+  it('leads today’s card with recorded activity, leaving confirmation separate', async () => {
     const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-20', 6.5)] })
 
     const today = screen.getByRole('region', { name: 'Today' })
-    expect(within(today).getByText('Done')).toBeInTheDocument()
+    expect(within(today).getByText('Activity recorded')).toBeInTheDocument()
     const why = within(today).getByText('Why this run')
     expect(why.closest('details')).not.toHaveAttribute('open')
     await user.click(why)
@@ -489,7 +489,7 @@ describe('Completed via Strava', () => {
 
     const todayCard = screen.getByRole('region', { name: 'Today' })
     expect(await within(todayCard).findByText('Completed via Strava')).toBeInTheDocument()
-    expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
+    expect(todayCard.querySelector('.home-status-chip')).toHaveTextContent('Recorded via Strava · provisional')
     expect(todayCard.querySelector('.strava-completion-figures')).toHaveTextContent('Planned 6.5 km · Ran 4.1 km')
     expect(within(todayCard).getByText(/You got out there — that counts\. You ran 4\.1 km of your planned 6\.5 km today\./)).toBeInTheDocument()
     // Computed, not the runner's tick: nothing is saved until they keep it.
@@ -561,7 +561,7 @@ describe('Completed via Strava', () => {
       renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
       const todayCard = screen.getByRole('region', { name: 'Today' })
       await vi.waitFor(() => expect(within(todayCard).getByText('Completed via Strava')).toBeInTheDocument())
-      expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
+      expect(todayCard.querySelector('.home-status-chip')).toHaveTextContent('Recorded via Strava · provisional')
 
       await act(async () => { await vi.advanceTimersByTimeAsync(60_100) })
 

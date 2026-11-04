@@ -1,0 +1,2 @@
+/* Secondary labels and disclosure actions must stay legible on the sage Today surface. */
+.panel.home-card.home-today :is(dt, dd, summary) { color: var(--on-sage); }

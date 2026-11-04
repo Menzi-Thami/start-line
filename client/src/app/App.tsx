@@ -178,7 +178,13 @@ export function App() {
     inflight.current = controller
 
     const withDate = { ...inputs, planFrom: inputs.planFrom ?? localToday() }
-    if (!beforeShow) window.history.replaceState(null, '', `?${toSearchParams(withDate)}`)
+    const query = toSearchParams(withDate)
+    const navigation = new URLSearchParams(window.location.search)
+    for (const key of ['day', 'planTab', 'planWeek', 'month', 'progressWeeks']) {
+      const value = navigation.get(key)
+      if (value) query.set(key, value)
+    }
+    if (!beforeShow) window.history.replaceState(window.history.state, '', `?${query}`)
 
     api
       .plan(toRequest(withDate), controller.signal)
@@ -186,7 +192,7 @@ export function App() {
         if (controller.signal.aborted) return
         await beforeShow?.(toRequest(withDate), controller.signal)
         if (controller.signal.aborted) return
-        window.history.replaceState(null, '', `?${toSearchParams(withDate)}`)
+        window.history.replaceState(window.history.state, '', `?${query}`)
         setPlan({ kind: 'ready', plan: result, inputs: withDate })
         setRevealPlan(true)
         setEditing(false)
@@ -466,6 +472,14 @@ export function App() {
     setOpenRun({ id, uploaded })
     moveTo(`?view=runs&run=${encodeURIComponent(id)}`, true)
     window.scrollTo?.({ top: 0 })
+  }
+
+  const openOwnDay = (date: string) => {
+    if (!ownPlan) return
+    const query = new URLSearchParams(window.location.search)
+    query.set('day', date)
+    window.history.pushState({ taperdayDay: true }, '', `?${query}`)
+    openSaved(ownPlan.inputs)
   }
 
   // Nothing loaded, nothing half-typed, no link remembered, so a plan that's gone (or another one) never comes back by itself.
@@ -797,6 +811,7 @@ export function App() {
             initialPlan={copy?.plan}
             onPlanLoaded={savePlan}
             onOpenPlan={openOwnPlan}
+            onOpenDay={openOwnDay}
             onBuildPlan={startFresh}
             onOpenRun={(id) => showRun(id)}
             onOpenRuns={() => go('runs')}

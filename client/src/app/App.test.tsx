@@ -88,6 +88,16 @@ describe('the home page', () => {
     expect(intro()).toBeNull()
   })
 
+  it('retains a deep-linked day and calendar context through asynchronous plan loading', async () => {
+    window.history.replaceState(null, '', '/?km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08&day=2026-10-13&planTab=all&month=2026-10')
+    const { user } = setup()
+    expect(await screen.findByRole('region', { name: 'Tuesday 13 October 2026' }, { timeout: 10000 })).toBeVisible()
+    expect(new URLSearchParams(window.location.search).get('day')).toBe('2026-10-13')
+    await user.click(screen.getByRole('button', { name: /Back to plan/ }))
+    expect(screen.getByRole('tab', { name: 'Calendar' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('heading', { name: 'October 2026' })).toBeVisible()
+  })
+
   it('goes straight to a shared plan, without the intro', async () => {
     withMotion()
     window.history.replaceState(null, '', '/?km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08')
@@ -495,7 +505,7 @@ describe('a shared plan', () => {
 
     await user.click(screen.getByRole('radio', { name: 'Miles' }))
 
-    expect(screen.getByText('3.1 mi')).toBeInTheDocument()
+    expect(screen.getByText('3.1 mi', { selector: '.plan-facts > li' })).toBeInTheDocument()
     expect(screen.getAllByText(/\/mi/).length).toBeGreaterThan(0)
     expect(window.localStorage.getItem('startline:units')).toBe('mi')
   })
@@ -507,7 +517,6 @@ describe('a shared plan', () => {
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
     await openWeekDay('2026-10-12')
-    await openDisclosure('View exercises and completion')
     const firstDone = screen.getAllByRole('checkbox', { name: 'Done' })[0]!
     await user.click(firstDone)
     expect(firstDone).toBeChecked()
@@ -516,9 +525,7 @@ describe('a shared plan', () => {
     unmount()
 
     setup()
-    await screen.findByRole('heading', { name: 'Parkrun PB' })
-    await openWeekDay('2026-10-12')
-    await openDisclosure('View exercises and completion')
+    await screen.findByRole('region', { name: 'Monday 12 October 2026' }, { timeout: 10000 })
     await waitFor(() => expect(screen.getAllByRole('checkbox', { name: 'Done' })[0]).toBeChecked())
     // ...but a session that was already done doesn't celebrate again on every visit.
     expect(document.querySelector('.sparks')).toBeNull()
@@ -592,8 +599,7 @@ describe('a shared plan', () => {
     await screen.findByRole('heading', { name: 'Parkrun PB' })
     const openMonday = async () => {
       const day = await openWeekDay('2026-10-12')
-      await openDisclosure('View exercises and completion')
-      return day
+        return day
     }
     let day = await openMonday()
     await user.click(within(day).getByRole('checkbox', { name: 'Done' }))

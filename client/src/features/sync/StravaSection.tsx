@@ -7,6 +7,8 @@ import { ConnectWithStrava, PoweredByStrava } from './StravaBrand'
 import { StravaDeviceGuide } from './StravaDeviceGuide'
 
 interface Props {
+  /** Reuse this section's request for the Account overview, including unavailable data. */
+  onStatusChange?: (status: StravaStatus | 'error' | null) => void
   /** What just happened on the way back from Strava, to say at the top of the section. */
   notice?: string | null
   /** Strava sent the runner back and the connection is still being saved: say so, and don't offer Connect again. */
@@ -16,7 +18,7 @@ interface Props {
 type State = { kind: 'loading' } | { kind: 'ready'; status: StravaStatus } | { kind: 'error'; message: string }
 
 /** Account: connect Strava so runs arrive by themselves, see how it stands, or disconnect (which deletes the copies). */
-export function StravaSection({ notice, connecting = false }: Props) {
+export function StravaSection({ notice, connecting = false, onStatusChange }: Props) {
   const auth = useAuth()
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [busy, setBusy] = useState(false)
@@ -34,6 +36,10 @@ export function StravaSection({ notice, connecting = false }: Props) {
       cancelled = true
     }
   }, [auth])
+
+  useEffect(() => {
+    onStatusChange?.(state.kind === 'ready' ? state.status : state.kind === 'error' ? 'error' : null)
+  }, [state, onStatusChange])
 
   const withToken = async (action: (token: string) => Promise<void>) => {
     setBusy(true)

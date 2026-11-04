@@ -1,0 +1,8 @@
+.account-overview { display: grid; gap: 1.5rem; }
+.account-settings .settings-group { min-width: 0; }
+.account-settings summary { min-height: 44px; }
+.account-settings .settings-columns { display: grid; gap: 1.5rem; }
+.account-settings .settings-columns > * { min-width: 0; }
+@media (min-width: 1100px) {
+  .account-overview, .account-settings .settings-columns { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}

@@ -1,8 +1,9 @@
+import './account-layout.css'
 import { OfflineStatus } from './OfflineStatus'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
-import type { Runner } from '../../lib/types'
+import type { Runner, StravaStatus } from '../../lib/types'
 import { InstallSection } from '../install/InstallApp'
 import { RemindersSection } from '../reminders/Reminders'
 import { StravaSection } from '../sync/StravaSection'
@@ -31,6 +32,8 @@ interface Props {
 /** Profile, where runs come from, a copy of everything we hold, and the way out. */
 export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
+  const connectionsRef = useRef<HTMLDetailsElement>(null)
+  const [connectionStatus, setConnectionStatus] = useState<StravaStatus | 'error' | null>(null)
   // A shoe reminder links straight here (?settings=shoes).
   const [shoesOpen, setShoesOpen] = useState(new URLSearchParams(window.location.search).get('settings') === 'shoes')
   const [connectionsOpen, setConnectionsOpen] = useState(!!stravaNotice || stravaConnecting || new URLSearchParams(window.location.search).get('settings') === 'connections')
@@ -82,7 +85,13 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <p className="plan-focus">Signed in as {runner.email ?? runner.displayName}.</p>
       <p className="account-intro-note">Your running profile, connected apps and preferences in one place.</p>
 
+      <section className="account-overview panel" aria-label="Account overview">
+        <div><h3>{runner.displayName}</h3><p>{runner.units === 'Miles' ? 'Miles' : 'Kilometres'} · {runner.timeZone}</p></div>
+        <div><h3>Run connections</h3><p role="status">{stravaConnecting ? 'Connecting Strava…' : !connectionStatus ? 'Checking Strava connection…' : connectionStatus === 'error' ? 'Could not check Strava. Open connections to try again.' : !connectionStatus.available ? 'Strava is unavailable' : connectionStatus.status === 'NeedsReconnect' ? 'Strava needs reconnection' : connectionStatus.connected ? 'Strava connected' : 'Strava not connected'}</p>
+        <button type="button" className="button button-quiet" onClick={() => { setConnectionsOpen(true); requestAnimationFrame(() => { connectionsRef.current?.querySelector('summary')?.focus(); connectionsRef.current?.scrollIntoView?.({ block: 'nearest' }) }) }}>Manage run connections</button></div>
+      </section>
       <details className="settings-group"><summary>Profile & picture</summary>
+      <div className="settings-columns">
       {onPhotoChange && (
         <div className="section">
           <h3>Your picture</h3>
@@ -95,12 +104,14 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         <ProfileForm runner={runner} onSaved={onSaved} />
       </div>
 
+      </div>
       </details>
-      <details className="settings-group" open={connectionsOpen} onToggle={event => setConnectionsOpen(event.currentTarget.open)}><summary>Connections & run sources</summary>
-      <StravaSection notice={stravaNotice} connecting={stravaConnecting} />
+      <details ref={connectionsRef} className="settings-group" open={connectionsOpen} onToggle={event => setConnectionsOpen(event.currentTarget.open)}><summary>Connections & run sources</summary>
+      <div className="settings-columns">
+      <StravaSection onStatusChange={setConnectionStatus} notice={stravaNotice} connecting={stravaConnecting} />
 
       <RunSources onOpenRuns={onOpenRuns} />
-
+      </div>
       </details>
       <details className="settings-group" open={shoesOpen} onToggle={event => setShoesOpen(event.currentTarget.open)}><summary>Shoes</summary>
         <ShoeTracker units={runner.units === 'Miles' ? 'mi' : 'km'} />

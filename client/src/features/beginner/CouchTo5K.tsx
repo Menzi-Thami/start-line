@@ -32,13 +32,14 @@ export function CouchTo5K() {
   const [syncAttempt, setSyncAttempt] = useState(0)
   const [stravaSnapshot, setStravaSnapshot] = useState<{ owner: string; runs: readonly BeginnerRecordedRun[] } | null>(null)
   const [activeTab, setActiveTab] = useState<'week' | 'calendar' | 'progress'>('week')
+  const [evaluationTime] = useState(() => Date.now())
   const saveVersion = useRef(0)
   const lastSaved = useRef('')
   const saveQueue = useRef(Promise.resolve())
   const accountEpoch = useRef(0)
-  const owner = account?.homeAccountId ?? account?.localAccountId ?? account?.username ?? ''
+  const owner = account?.email ?? account?.name ?? ''
   const sessions = programme.filter(s => s.week === progress.week)
-  const automatic = matchBeginnerStrava(progress, programme, stravaSnapshot?.owner === owner ? stravaSnapshot.runs : [], Date.now())
+  const automatic = matchBeginnerStrava(progress, programme, stravaSnapshot && stravaSnapshot.owner === owner ? stravaSnapshot.runs : [], evaluationTime)
   const confirmed = programme.filter(s => progress.completed.includes(sessionId(s, progress.revision))).length
   const recordedUnconfirmed = programme.filter(s => !progress.completed.includes(sessionId(s, progress.revision)) && automatic.has(sessionId(s, progress.revision))).length
   const update = (next: BeginnerProgress) => { if (!account || serverReady) setProgress(next) }

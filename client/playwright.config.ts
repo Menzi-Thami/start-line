@@ -21,6 +21,9 @@ export default defineConfig({
   use: {
     baseURL: web,
     channel: process.env.PW_CHANNEL,
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, args: ['--no-sandbox'] }
+      : {},
     // CI runs on UTC; PW_TZ lets a local run reproduce another time zone.
     timezoneId: process.env.PW_TZ,
     // The starting-gun intro is tested on its own; everywhere else it would only sit in front of the page.

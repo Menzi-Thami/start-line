@@ -1,3 +1,4 @@
+import { WorkoutStages } from './WorkoutStages'
 import { PaceProfile } from './PaceProfile'
 import './activity-tabs.css'
 import { useEffect, useId, useState } from 'react'
@@ -22,7 +23,7 @@ import {
   ZONE_LABEL,
 } from './activity-copy'
 
-type LoadState = { kind: 'loading' } | { kind: 'ready'; activity: Activity } | { kind: 'error'; message: string }
+type LoadState = { kind: 'loading' } | { kind: 'ready'; activity: Activity; checkedAt: number } | { kind: 'error'; message: string }
 
 interface Props {
   id: string
@@ -41,7 +42,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
   const tabId = useId()
   const tabs = ['Overview', 'Pacing', 'Coach', 'Splits'] as const
   const [selectedTab, setSelectedTab] = useState<(typeof tabs)[number]>('Overview')
-  const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial } : { kind: 'loading' }))
+  const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial, checkedAt: Date.now() } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
   const [confirming, setConfirming] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -53,12 +54,20 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
     auth
       .getToken()
       .then((token) => (token ? api.me.activity(token, id) : Promise.reject(new Error('Sign in to see your runs.'))))
-      .then((activity) => !cancelled && setState({ kind: 'ready', activity }))
+      .then((activity) => !cancelled && setState({ kind: 'ready', activity, checkedAt: Date.now() }))
       .catch((error: unknown) => !cancelled && setState({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
     return () => {
       cancelled = true
     }
   }, [auth, id, initial, attempt])
+
+  useEffect(() => {
+    if (state.kind !== 'ready' || state.activity.source.kind !== 'Strava' || !state.activity.source.cachedUntil) return
+    const remaining = Date.parse(state.activity.source.cachedUntil) - Date.now()
+    if (!Number.isFinite(remaining)) return
+    const timer = window.setTimeout(() => setState({ kind: 'error', message: 'This Strava recording has expired. Refresh to check whether a current copy is available.' }), Math.max(0, Math.min(remaining, 2147483647)))
+    return () => window.clearTimeout(timer)
+  }, [state])
 
   const remove = async () => {
     setDeleting(true)
@@ -79,6 +88,10 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       ← All runs
     </button>
   )
+
+  if (state.kind === 'ready' && state.activity.source.kind === 'Strava' && state.activity.source.cachedUntil && Date.parse(state.activity.source.cachedUntil) <= state.checkedAt) {
+    return <section>{back}<p role="status">This Strava recording has expired. Reload to check whether a current copy is available.</p><button type="button" className="button button-quiet" onClick={() => { setState({ kind: 'loading' }); setAttempt(n => n + 1) }}>Refresh recording</button></section>
+  }
 
   if (state.kind === 'loading') {
     return (
@@ -113,6 +126,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
   }
 
   const run = state.activity
+  const execution = run.source.kind === 'Strava' && (!run.source.cachedUntil || !Number.isFinite(Date.parse(run.source.cachedUntil))) ? null : run.workoutExecution
   const title = run.plan?.title ?? KIND_LABEL[run.kind]
   const verdict = runVerdict(run, units)
 
@@ -173,6 +187,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         {verdict.next && <p className="verdict-next">{verdict.next}</p>}
       </section>
 
+      <WorkoutStages execution={execution} units={units} />
       <dl className="activity-stats activity-stats-primary">
         <Stat label="Distance" value={formatDistance(run.distanceKm, units)} lead />
         <Stat label="Moving time" value={formatDuration(run.movingSeconds)} lead />
@@ -197,10 +212,11 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       </div>
       <div role="tabpanel" id={`${tabId}-panel-Coach`} aria-labelledby={`${tabId}-tab-Coach`} hidden={selectedTab !== 'Coach'} tabIndex={0}>
         <h3>Coach</h3>
+        {execution && <p>There is useful evidence in this recording: {execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} prescription windows are covered when aligned from the recording start. Coverage is separate from pace or following the instructions. If you changed your session, you can explain that in your check-in.</p>}
         <p>{verdict.headline}</p>
         {verdict.details.map(line => <p key={line}>{line}</p>)}
         {verdict.next && <p>{verdict.next}</p>}
-        <p className="field-help">Based on recorded run statistics and available plan targets. Workout structure is not assessed here; this does not change your check-in.</p>
+        <p className="field-help">Based on recorded run statistics and available plan targets. Stage evidence, when available, is aligned to the recording start and remains an estimate. This does not change your check-in.</p>
       </div>
       <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
         {run.splits.length > 0 ? <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /> : <p>Split data is unavailable for this run.</p>}

@@ -1,0 +1,10 @@
+.runs { display: grid; gap: .75rem; }
+.run-feed-row { border: 1px solid var(--line); border-radius: 20px; background: var(--surface); overflow: hidden; }
+.run-feed-open { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 90px; gap: 1rem; padding: 1rem; text-align: left; }
+.run-card-distance { display: block; font-size: clamp(1.4rem, 2.5vw, 2rem); font-weight: 600; color: var(--ink); }
+.run-card-action { color: var(--accent); flex-shrink: 0; font-size: .8rem; }
+.run-feed-open .week-meta { white-space: normal; }
+@media (max-width: 430px) { .run-feed-open { align-items: flex-start; flex-direction: column; gap: .5rem; } }
+@media (min-width: 1100px) { .runs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: no-preference) { .run-feed-open { transition: background-color 200ms; } }
+.run-feed-open > span:first-child { min-width: 0; overflow-wrap: anywhere; }

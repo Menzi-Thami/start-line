@@ -197,6 +197,7 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
             Slowest(PaceZone.Easy),
             Math.Round(Pace.Of(plan.RaceDistance, plan.GoalTime).SecondsPerKilometre, 1),
             next?.Title,
-            next?.Date);
+            next?.Date)
+        { Steps = (IReadOnlyList<SessionStep>?)session.Steps ?? [] };
     }
 }

@@ -81,6 +81,9 @@ public sealed class Activity
     /// <summary>Where the session's real work sat in the run: the fastest stretch of the work block's (or one rep's) length.</summary>
     public WorkWindow? Work { get; private set; }
 
+    /// <summary>Stream-derived summary; synced evidence expires and is deleted with its activity.</summary>
+    public WorkoutExecution? WorkoutExecution { get; private set; }
+
     /// <summary>Percent the pace per heartbeat dropped from first half to second. Null without heart rate.</summary>
     public double? HeartRateDriftPercent { get; private set; }
 
@@ -159,7 +162,12 @@ public sealed class Activity
         activity.HeartRateTime = track.TimeAtHeartRate();
         activity.splits.AddRange(Activities.Splits.ByKilometre(track));
         activity.bestEfforts.AddRange(Activities.BestEfforts.Find(track));
-        activity.PlannedSession = PlannedSessionMatch.Pick(plannedThatDay, activity.DistanceKm);
+        var candidates = plannedThatDay.Where(candidate => candidate.SessionType != SessionType.Strength).ToList();
+        activity.PlannedSession = PlannedSessionMatch.Pick(candidates, activity.DistanceKm);
+        if (candidates.Count == 1 && activity.PlannedSession is { } prescription)
+        {
+            activity.WorkoutExecution = Domain.Activities.WorkoutExecution.Assess(recording.Samples, prescription.Steps);
+        }
         if (activity.PlannedSession?.WorkMetres is { } workMetres && track.FastestWindow(Math.Min(workMetres, track.TotalMetres)) is { } window)
         {
             activity.Work = new WorkWindow(window.StartMetres, Math.Min(workMetres, track.TotalMetres), TimeSpan.FromSeconds(window.Seconds));
@@ -198,6 +206,7 @@ public sealed class Activity
         HeartRateTime = fresh.HeartRateTime;
         PlannedSession = fresh.PlannedSession;
         Work = fresh.Work;
+        WorkoutExecution = fresh.WorkoutExecution;
         splits.Clear();
         splits.AddRange(fresh.splits);
         bestEfforts.Clear();

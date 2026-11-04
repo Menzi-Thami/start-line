@@ -128,6 +128,19 @@ public sealed class ActivityImportTests(StartLineApiFactory factory) : IClassFix
         compared.GetProperty("plannedKm").GetDouble().ShouldBe(session.GetProperty("distanceKm").GetDouble());
         compared.GetProperty("actualKm").GetDouble().ShouldBe(8, tolerance: 0.01);
         compared.GetProperty("pace").GetString().ShouldBeOneOf("Faster", "OnTarget", "Slower", "NoTarget");
+        var stages = run.GetProperty("workoutExecution").GetProperty("stages");
+        stages.GetArrayLength().ShouldBeGreaterThan(0);
+        var id = run.GetProperty("id").GetGuid();
+        var reloaded = await Json(await client.GetAsync(Url($"/api/v1/me/activities/{id}")));
+        reloaded.GetProperty("workoutExecution").GetProperty("stages").GetArrayLength().ShouldBe(stages.GetArrayLength());
+        var stranger = await SignedUp();
+        (await stranger.GetAsync(Url($"/api/v1/me/activities/{id}"))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        var another = await Uploaded(client, FitFiles.Run(day.ToDateTime(new TimeOnly(5, 0), DateTimeKind.Utc), 6000, 360));
+        another.GetProperty("workoutExecution").ValueKind.ShouldBe(JsonValueKind.Null);
+        var ambiguous = await Json(await client.GetAsync(Url($"/api/v1/me/activities/{id}")));
+        ambiguous.GetProperty("workoutExecution").ValueKind.ShouldBe(JsonValueKind.Null);
+
+
 
         var listed = await Json(await client.GetAsync(Url("/api/v1/me/activities")));
         listed[0].GetProperty("plannedTitle").GetString().ShouldBe(session.GetProperty("title").GetString());

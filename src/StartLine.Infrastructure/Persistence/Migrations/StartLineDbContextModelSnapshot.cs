@@ -126,6 +126,10 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("WorkoutExecution")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("WorkoutExecution");
+
                     b.ComplexProperty(typeof(Dictionary<string, object>), "Halves", "StartLine.Domain.Activities.Activity.Halves#Halves", b1 =>
                         {
                             b1.IsRequired();

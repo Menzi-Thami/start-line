@@ -27,6 +27,8 @@ public sealed record PlannedSessionMatch(
     string? NextTitle = null,
     DateOnly? NextDate = null)
 {
+    public IReadOnlyList<SessionStep> Steps { get; init; } = [];
+
     public const int MaxPlanNameLength = SavedPlan.MaxNameLength;
     public const int MaxTitleLength = 100;
 

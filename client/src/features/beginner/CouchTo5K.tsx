@@ -176,7 +176,7 @@ export function CouchTo5K() {
           {schedules.map(days => <option key={days.join('|')} value={days.join('|')}>{days.join(' · ')}</option>)}
         </select>
       </fieldset>
-      <div className="wizard-nav">
+      <div className="beginner-week-controls">
         <button className="button button-quiet" type="button" disabled={progress.week === 1 || (!!account && !serverReady)} onClick={() => update({ ...progress, week: Math.max(1, progress.week - 1) })}>Previous week</button>
         <strong aria-live="polite">Week {progress.week} of 9</strong>
         <button className="button button-quiet" type="button" disabled={progress.week === 9 || (!!account && !serverReady)} onClick={() => update({ ...progress, week: Math.min(9, progress.week + 1) })}>Next week</button>

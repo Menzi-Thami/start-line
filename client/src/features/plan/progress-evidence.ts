@@ -1,4 +1,4 @@
-import type { ActivitySummary } from '../../lib/types'
+import type { ActivitySummary, PlanWeek } from '../../lib/types'
 
 export function comparablePaceGroups(runs: readonly ActivitySummary[], from: string, today: string) {
   const groups = new Map<string, ActivitySummary[]>()
@@ -18,4 +18,10 @@ export function calendarDaysEnding(today: string, count: number) {
     day.setUTCDate(day.getUTCDate() - (count - 1 - index))
     return day.toISOString().slice(0, 10)
   })
+}
+
+export function volumeWeeksInPeriod(weeks: PlanWeek[], today: string, period: number) {
+  const from = calendarDaysEnding(today, period * 7 + 6)[0]!
+  const recordedPeriod = weeks.filter(week => week.startDate >= from && week.startDate <= today)
+  return recordedPeriod.length ? recordedPeriod : weeks.filter(week => week.startDate > today).slice(0, period)
 }

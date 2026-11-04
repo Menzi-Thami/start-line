@@ -1,4 +1,4 @@
-import { openSyncedRuns, openRecentRun } from './navigation'
+import { openSyncedRuns, openRecentRun, openDisclosure } from './navigation'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import type { CheckIn, CheckInRequest } from '../src/lib/types'
@@ -82,6 +82,7 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     await page.reload()
     await openRecentRun(page, date!)
     await expect(running.getByRole('article', { name, exact: true })).toBeVisible()
+    await openDisclosure(page, /^Running insights/)
     await expect(running.getByText('1 run', { exact: true })).toHaveCount(2)
     expect(entries).toHaveLength(1)
     expect(pageErrors).toEqual([])

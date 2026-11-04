@@ -17,7 +17,7 @@ using StartLine.Domain.Runners;
 
 namespace StartLine.Application.Features.Insights;
 
-/// <summary>What one runner's recap says: last week's running, how the plan went, and the week ahead.</summary>
+/// <summary>What one runner's recap says: the week's running, how the plan went, and the week ahead.</summary>
 public sealed record WeeklyRecapContent(
     string DisplayName,
     DateOnly WeekStart,
@@ -47,8 +47,8 @@ public static class WeeklyRecap
         var km = Km(recap.Km);
         var title = recap.Runs == 0 ? "A quiet week." : $"{km} km over {Plural(recap.Runs, "run")}.";
         var intro = recap.Runs == 0
-            ? "No runs logged last week. That's fine: your plan is ready when you are."
-            : "Here's what you logged last week, and what's next.";
+            ? "No runs logged. That's fine: your plan is ready when you are."
+            : "Here's what you logged, and what's next.";
 
         // Laid out like the Monday report: figures up top, then sage bars for how much of the plan got run.
         List<(string, string)> figures = [("Runs", recap.Runs.ToString(En)), ("Distance", $"{km} km")];
@@ -73,7 +73,7 @@ public static class WeeklyRecap
             body.Append(EmailLayout.Heading("Your progress"));
             if (lastWeek is { } week)
             {
-                body.Append(EmailLayout.Bar("Planned sessions run last week", (double)week.Done / week.Planned, $"{week.Done} of {week.Planned}"));
+                body.Append(EmailLayout.Bar("Planned sessions run", (double)week.Done / week.Planned, $"{week.Done} of {week.Planned}"));
             }
 
             if (month is not null)
@@ -108,7 +108,7 @@ public static class WeeklyRecap
             body: body.ToString(),
             buttonText: "Open this week",
             buttonUrl: EmailLayout.Site,
-            footer: "You're getting this because you turned on the weekly recap in Taperday.",
+            footer: "Taperday sends every runner a weekly recap. Stop it any time with the button below, or in Account.",
             unsubscribeUrl: unsubscribe?.Page.AbsoluteUri,
             unsubscribeFrom: "the weekly recap");
 
@@ -164,9 +164,9 @@ public static class WeeklyRecap
 
         List<(string, string)> lines = [("Next step", trends.NextStep switch
         {
-            NextStep.HoldVolume => "Hold your distance this week" + (trends.Reasons.Contains(NextStepReason.LoadSpike) ? ": last week jumped well above your usual." : ": a week you can manage beats building on gaps."),
+            NextStep.HoldVolume => "Hold your distance in the week ahead" + (trends.Reasons.Contains(NextStepReason.LoadSpike) ? ": the week just gone jumped well above your usual." : ": a week you can manage beats building on gaps."),
             NextStep.EaseOff => "Ease off: you reported pain that changed how you ran. Run easy until it settles, and see a professional if it doesn't.",
-            NextStep.LogMore => "Log your runs this week, so your trends can take shape.",
+            NextStep.LogMore => "Log your runs in the week ahead, so your trends can take shape.",
             _ => "Carry on as planned.",
         })];
         if (trends.Load is { Signal: not LoadSignal.NotEnoughHistory, ChangePercent: { } change })
@@ -212,9 +212,10 @@ public interface IWeeklyRecaps
 }
 
 /// <summary>
-/// Sends the weekly recap to every runner who turned it on, at 07:00 on their own Monday, about the week before. Each
+/// Sends the weekly recap to every runner who hasn't turned it off, between 07:00 and 08:00 on their own Monday, about the
+/// previous Monday–Sunday week. Each
 /// runner and week is claimed in <see cref="WeeklyRecapDelivery"/> first, so it's sent once however often this runs or
-/// however many app instances run it. A Monday the app missed entirely is skipped, never sent late on Tuesday.
+/// however many app instances run it. An hour the app missed entirely is skipped, never sent late.
 /// </summary>
 internal sealed partial class WeeklyRecapSender(
     IApplicationDbContext db,
@@ -225,16 +226,16 @@ internal sealed partial class WeeklyRecapSender(
     IEmailSettings settings,
     ILogger<WeeklyRecapSender> logger) : IWeeklyRecaps
 {
+    /// <summary>The runner-local Monday morning sending hour, 07:00–07:59.</summary>
     public const int SendHour = 7;
 
-    /// <summary>The Monday of the week to recap for this runner now, or null when it isn't their Monday morning yet.</summary>
+    /// <summary>The Monday of the previous week to recap, or null outside Monday morning.</summary>
     public static DateOnly? WeekDue(Runner runner, DateTimeOffset now)
     {
         ArgumentNullException.ThrowIfNull(runner);
         var local = TimeZoneInfo.ConvertTime(now, TimeProviderExtensions.ZoneOf(runner.TimeZone));
-        return local.DayOfWeek == DayOfWeek.Monday && local.Hour >= SendHour
-            ? DateOnly.FromDateTime(local.Date).AddDays(-7)
-            : null;
+        var today = DateOnly.FromDateTime(local.Date);
+        return local.DayOfWeek == DayOfWeek.Monday && local.Hour == SendHour ? today.AddDays(-7) : null;
     }
 
     public async Task<int> SendDueAsync(DateTimeOffset now, CancellationToken cancellationToken)
@@ -338,19 +339,27 @@ internal sealed partial class WeeklyRecapSender(
                 if (lastWeek.Count > 0)
                 {
                     var checkIns = await db.SessionCheckIns.AsNoTracking()
-                        .Where(c => c.SavedPlanId == saved.Id && c.Date >= week && c.Date <= end && !c.IsAdditional)
+                        .Where(c => c.SavedPlanId == saved.Id && c.Date >= week && c.Date <= end)
                         .ToListAsync(cancellationToken);
-                    var uploads = await db.Activities.AsNoTracking()
-                        .Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.LocalDate >= week && a.LocalDate <= end)
+                    // Uploads, and the Strava runs held now: a held run completes its session for this read only, as on Home.
+                    var runs = await db.Activities.AsNoTracking().Visible(now)
+                        .Where(a => a.RunnerId == runner.Id && a.Kind != ActivityKind.Other && a.LocalDate >= week && a.LocalDate <= end)
                         .ToListAsync(cancellationToken);
+                    var synced = SyncedCompletions.Of(
+                            sessions,
+                            [.. checkIns.Select(c => new TrendCheckIn(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.ActivityId, c.IsAdditional))],
+                            [.. runs.Select(TrendRun.Of)])
+                        .Where(c => c.State == SyncedCompletionState.Completed)
+                        .ToList();
                     planned = lastWeek.Count;
-                    done = lastWeek.Count(s => checkIns.FirstOrDefault(c => c.Date == s.Date && c.SessionType == s.Type) is { } c
+                    done = lastWeek.Count(s => checkIns.FirstOrDefault(c => !c.IsAdditional && c.Date == s.Date && c.SessionType == s.Type) is { } c
                         ? c.Status != CheckInStatus.Skipped
-                        : uploads.Any(a => a.LocalDate == s.Date && a.PlannedSession?.SessionType == s.Type));
+                        : runs.Any(a => a.Source == ActivitySource.Upload && a.LocalDate == s.Date && a.PlannedSession?.SessionType == s.Type)
+                            || synced.Any(c => c.Date == s.Date && c.SessionType == s.Type));
                 }
 
                 next = [.. sessions.Where(s => s.Date >= monday && s.Date < monday.AddDays(7)).Select(s => (s.Date, s.Title, s.DistanceKm))];
-                // As Home would have shown it on Sunday night: the week just gone is the latest in the trends.
+                // Read through the previous Sunday, which is the recap's completed week.
                 trends = await TrainingTrendsReader.ReadAsync(db, reader, runner, saved.Id, sessions, end, now, cancellationToken);
                 if (plan.RaceDate >= monday)
                 {

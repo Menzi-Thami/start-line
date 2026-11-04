@@ -5,6 +5,8 @@ import type { ActivitySummary, PaceZone, PaceZoneRange, PlanWeek, Session } from
 import { PHASES, ZONES } from './copy'
 import { Runner } from '../shared/Runner'
 import { CheckInCard } from '../coaching/CheckInCard'
+import { StravaCompletion } from '../coaching/StravaCompletion'
+import { completedViaStrava } from '../coaching/strava-completion'
 import { SavedRun } from '../coaching/SavedRun'
 import { reviewLine, reviewWeek } from '../coaching/week-review'
 import type { SessionCoach } from '../coaching/useCheckIns'
@@ -65,13 +67,15 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
   done: Set<string>
   onDoneChange: (update: DoneUpdate) => void
   coach?: SessionCoach
-  /** The runner's runs on the session's day, for "Ran this? Tick it" when Strava has one. */
+  /** The runner's runs on the session's day, for linking a check-in to one. */
   dayRuns?: readonly ActivitySummary[]
   canCompleteRuns?: boolean
 }) {
   // Counts ticks made here, so confetti bursts when a session is ticked, not every time a done one is shown.
   const [bursts, setBursts] = useState(0)
+  // Done includes a session a held Strava run completes (computed, never stored); the check-in's own tick stays the runner's.
   const isDone = done.has(sessionKey(session))
+  const viaStrava = completedViaStrava(session, coach)
   const strength = session.type === 'Strength'
   const zone = !strength && session.zone ? ZONES[session.zone] : undefined
   const numbers = strength ? [`${session.exercises.length} exercises`] : [
@@ -135,7 +139,8 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
       {coach && session.type !== 'Strength' && session.type !== 'Race' && (
         <>
           {/* A check-in that says the run happened ticks it off too, and a skipped one unticks it. */}
-          <CheckInCard session={session} coach={coach} runs={dayRuns} completion done={isDone} onDone={(ran) => onDoneChange((current) => withSessionDone(current, session, ran))} />
+          <StravaCompletion session={session} coach={coach} />
+          <CheckInCard session={session} coach={coach} runs={dayRuns} completion done={isDone && !viaStrava} onDone={(ran) => onDoneChange((current) => withSessionDone(current, session, ran))} />
         </>
       )}
     </div>
@@ -245,7 +250,7 @@ export function WeekList({ weeks, paces, units, currentWeek, done, onDoneChange,
             {today && (runs || coach) && addDays(week.startDate, 6) < today && (
               <p className="week-review">
                 <span className="week-review-label">How it went:</span>{' '}
-                {reviewLine(reviewWeek(week, runs ? [...runs.values()].flat() : [], today, coach?.get, coach?.entries), units)}
+                {reviewLine(reviewWeek(week, runs ? [...runs.values()].flat() : [], today, coach?.get, coach?.entries, (s) => completedViaStrava(s, coach)), units)}
               </p>
             )}
             <WeekDays week={week} byZone={byZone} units={units} done={done} onDoneChange={onDoneChange} runs={runs} onOpenRun={onOpenRun} onLogRun={onLogRun} coach={coach} canCompleteRuns={canCompleteRuns} />

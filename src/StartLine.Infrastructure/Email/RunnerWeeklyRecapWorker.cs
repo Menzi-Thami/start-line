@@ -19,8 +19,8 @@ internal sealed class RunnerWeeklyRecapOptions
 }
 
 /// <summary>
-/// Every 15 minutes, sends the weekly recaps that are due (<see cref="IWeeklyRecaps"/>): 07:00 on each runner's own
-/// Monday. It replaces the maker's Monday report. Without a Brevo key, or while <see cref="RunnerWeeklyRecapOptions.Enabled"/>
+/// Every 15 minutes, sends the weekly recaps that are due (<see cref="IWeeklyRecaps"/>): 19:00 on each runner's own
+/// Sunday. It replaces the maker's Monday report. Without a Brevo key, or while <see cref="RunnerWeeklyRecapOptions.Enabled"/>
 /// is off, nothing goes to runners.
 /// </summary>
 internal sealed partial class RunnerWeeklyRecapWorker(

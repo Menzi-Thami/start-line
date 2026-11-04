@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<ActivityImporter>();
         services.AddScoped<RunningLogReader>();
         services.AddScoped<Features.Insights.IWeeklyRecaps, Features.Insights.WeeklyRecapSender>();
+        services.AddScoped<Features.Onboarding.IOnboardingReminders, Features.Onboarding.OnboardingReminderSender>();
         services.AddScoped<Features.Shoes.ShoeMileage>();
         services.AddScoped<Features.Shoes.ShoeKeeper>();
         services.AddSingleton<StravaRateGate>();

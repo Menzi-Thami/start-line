@@ -22,6 +22,7 @@ import { SignInWait } from '../features/account/SignInWait'
 import { InstallCard } from '../features/install/InstallApp'
 import { RemindersSection } from '../features/reminders/Reminders'
 import { useCheckIns } from '../features/coaching/useCheckIns'
+import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { Hero, RaceTicker } from '../features/home/Hero'
@@ -286,6 +287,8 @@ export function App() {
   const savedOnScreen =
     plan.kind === 'ready' && currentPlan.current && samePlan(toRequest(plan.inputs), currentPlan.current.inputs) ? currentPlan.current.id : null
   const checkIns = useCheckIns(savedOnScreen)
+  // Sessions a held Strava run completes on that plan: computed by the API on each read, never stored.
+  const stravaCompletions = useSyncedCompletions(savedOnScreen, completionsKey(checkIns.entries, runs ?? []))
   // On the runner's own plan, the calendar menu subscribes to their personal feed, which follows every change to it.
   const calendarLink = useCalendarLink(owner, savedOnScreen !== null)
 
@@ -345,6 +348,20 @@ export function App() {
   // there's nothing to show yet: a first sign-in here, or a brand new account.
   const knownHere = copy?.runner !== undefined
   const latestPlan = currentPlan.current
+  // Completing Microsoft sign-in must not strand returning runners on the sign-in URL.
+  // Wait for the saved-plan lookup; only then decide between their plan and Home.
+  useEffect(() => {
+    if (view !== 'sign-in' || runner.state.kind !== 'ready' || latestPlan === undefined) return
+    if (latestPlan) {
+      landing.current = false
+      setLanded(true)
+      setView('build')
+      window.history.replaceState(null, '', window.location.pathname)
+    } else {
+      setView('home')
+      window.history.replaceState(null, '', '?view=home')
+    }
+  }, [view, runner.state.kind, latestPlan])
   useEffect(() => {
     if (landing.current || !(found || knownHere) || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
     landing.current = true
@@ -720,7 +737,7 @@ export function App() {
         )}
 
         {view === 'sign-in' && state.kind === 'signed-out' && <SignInLanding onSignIn={auth.signIn} onSignUp={auth.signUp} onBack={() => go('build')} />}
-        {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty"><p>You’re already signed in or your account is loading.</p><button type="button" className="button" onClick={() => go('home')}>Continue to Taperday</button></div>}
+        {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty" role="status"><p>{state.kind === 'loading' || state.kind === 'ready' ? 'Finding your training plan…' : 'Finish your account setup to continue.'}</p>{state.kind === 'needs-sign-up' && <button type="button" className="button" onClick={() => go('sign-up')}>Finish setting up your account</button>}</div>}
         {view === 'privacy' && <PrivacyPolicy />}
         {view === 'unsubscribe' && <Unsubscribe token={new URLSearchParams(window.location.search).get('t')} weekly={new URLSearchParams(window.location.search).get('list') === 'weekly'} onOpenAccount={() => go('account')} />}
 
@@ -935,7 +952,7 @@ export function App() {
                 onOpenAccount={state.kind === 'ready' ? () => go('account') : undefined}
                 onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
-                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
+                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, synced: stravaCompletions.get, save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
                   reviewRemaining: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your week.'); return api.me.reviewRemainingWeek(token, savedOnScreen) },
                   applyRemaining: async (proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your week.'); const result = await api.me.applyRemainingWeek(token, savedOnScreen, proposalToken); setPlan({ kind: 'ready', plan: result.proposed, inputs: plan.inputs }) },
                   review: async (recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, savedOnScreen, recovery) },

@@ -11,7 +11,7 @@ public enum LoadSignal { NotEnoughHistory, Lower, Steady, Rising, RisingFast }
 /// <summary>The last 7 days against the average week of the 4 weeks before them.</summary>
 public sealed record LoadTrend(double RecentKm, double BaselineWeeklyKm, int BaselineWeeksRun, double? ChangePercent, LoadSignal Signal);
 
-/// <summary>The plan's sessions in the 4 weeks before today: run (ticked or uploaded), skipped, or not logged.</summary>
+/// <summary>The plan's sessions in the 4 weeks before today: run (ticked, uploaded or matched by a held Strava run), skipped, or not logged.</summary>
 public sealed record SessionAdherence(int Planned, int Done, int Skipped, int Unlogged, double? Share);
 
 /// <summary>
@@ -27,8 +27,21 @@ public enum NextStep { BuildAsPlanned, HoldVolume, EaseOff, LogMore }
 
 public enum NextStepReason { OnTrack, Pain, LoadSpike, MissedSessions, SparseLogs }
 
-/// <summary>A run as the trends need it: its day, distance, time, heart rate, and what kind of session it was.</summary>
-public sealed record TrendRun(Guid Id, DateOnly Date, double DistanceKm, TimeSpan MovingTime, int? AverageHeartRate, ActivitySource Source, SessionType? SessionType);
+/// <summary>
+/// A run as the trends need it: its day, distance, time, heart rate, and what kind of session it was. A synced run carries
+/// the moment its cached copy lapses.
+/// </summary>
+public sealed record TrendRun(
+    Guid Id, DateOnly Date, double DistanceKm, TimeSpan MovingTime, int? AverageHeartRate, ActivitySource Source, SessionType? SessionType,
+    DateTimeOffset? CachedUntil = null)
+{
+    public static TrendRun Of(Activity activity)
+    {
+        ArgumentNullException.ThrowIfNull(activity);
+        return new(activity.Id, activity.LocalDate, activity.DistanceKm, activity.MovingTime, activity.AverageHeartRate, activity.Source,
+            activity.PlannedSession?.SessionType, activity.CachedUntil);
+    }
+}
 
 /// <summary>A check-in as the trends need it.</summary>
 public sealed record TrendCheckIn(DateOnly Date, SessionType SessionType, CheckInStatus Status, int? Effort, PainLevel? Pain, Guid? ActivityId, bool IsAdditional);
@@ -130,18 +143,28 @@ public static class TrainingTrends
         return new(Round(recent), Round(baseline), baselineWeeksRun, Math.Round((ratio - 1) * 100), signal);
     }
 
-    /// <summary>Planned sessions in the <paramref name="windowDays"/> before today: run (ticked or uploaded), skipped, or not logged.</summary>
+    /// <summary>
+    /// Planned sessions in the <paramref name="windowDays"/> before today: run (ticked, uploaded, or matched by a Strava run
+    /// Taperday holds now: <see cref="SyncedCompletions"/>), skipped, or not logged.
+    /// </summary>
     public static SessionAdherence AdherenceOf(DateOnly today, IReadOnlyList<PlannedSession> sessions, IReadOnlyList<TrendCheckIn> checkIns, IReadOnlyList<TrendRun> runs, int windowDays = WindowDays)
     {
         var from = today.AddDays(-windowDays);
         var due = sessions.Where(s => SessionCheckIn.IsCheckable(s.Type) && s.Type != SessionType.Race && s.Date >= from && s.Date < today).ToList();
+        // A Strava run Taperday holds now completes its session while it's held (worked out here, never stored); the
+        // runner's own tick or skip always comes first.
+        var synced = SyncedCompletions.Of(sessions, checkIns, runs)
+            .Where(c => c.State == SyncedCompletionState.Completed)
+            .Select(c => (c.Date, c.SessionType))
+            .ToHashSet();
         int done = 0, skipped = 0;
         foreach (var session in due)
         {
             var entry = checkIns.FirstOrDefault(c => !c.IsAdditional && c.Date == session.Date && c.SessionType == session.Type);
             if (entry?.Status == CheckInStatus.Skipped) skipped++;
-            // A Strava run alone doesn't complete a session: the runner ticks it, or uploads the file.
-            else if (entry is not null || runs.Any(r => r.Source == ActivitySource.Upload && r.Date == session.Date && r.SessionType == session.Type)) done++;
+            else if (entry is not null
+                || runs.Any(r => r.Source == ActivitySource.Upload && r.Date == session.Date && r.SessionType == session.Type)
+                || synced.Contains((session.Date, session.Type))) done++;
         }
 
         return new(due.Count, done, skipped, due.Count - done - skipped, due.Count == 0 ? null : Math.Round((double)done / due.Count, 2));

@@ -2749,22 +2749,58 @@ a.menu-item {
   max-width: 10rem;
 }
 
-/* "Ran this? Tick it": a run from Strava waiting for the runner's own tick. */
-.ran-this {
+/* "Completed via Strava": a held Strava run completes the session until it lapses; "Keep this tick" makes it the runner's. */
+.strava-completion {
   margin-top: var(--space-2);
   padding: var(--space-3);
   border-radius: var(--radius-md);
   background: var(--accent-soft);
   border: 1px solid var(--line);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.ran-this-line {
+.strava-completion.is-conflict {
+  background: var(--warn-bg);
+  border-color: var(--warn-line);
+}
+
+/* On the sage Today card the text is always dark, so the box is a light wash of the card in both themes. */
+.panel.home-card.home-today .strava-completion {
+  background: rgb(255 255 255 / 0.4);
+  border-color: rgb(17 17 17 / 0.16);
+}
+
+.panel.home-card.home-today .strava-completion.is-conflict {
+  border-color: var(--warn-line);
+}
+
+.strava-completion-label,
+.strava-completion-figures {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.strava-completion-line {
   margin: 0 0 var(--space-2);
   font-size: var(--text-sm);
   color: var(--ink-2);
 }
 
-.ran-this .field-error {
+.strava-completion.is-conflict .strava-completion-line {
+  color: var(--warn-ink);
+}
+
+.strava-completion .field-help {
+  margin: 0 0 var(--space-2);
+}
+
+.strava-completion-button {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.strava-completion .field-error {
   margin: var(--space-2) 0 0;
 }
 
@@ -2828,7 +2864,7 @@ a.menu-item {
 @media print {
   .check-in-open,
   .check-in-form,
-  .ran-this {
+  .strava-completion {
     display: none;
   }
 }

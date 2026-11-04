@@ -40,6 +40,13 @@ The runner's own weekly email, for runners who tick **weekly recap** in their pr
 - `RunnerWeeklyRecap__TestTo`: set it to an address and the app sends one made-up preview (subject starts `[Test]`) when it next starts. Saving the setting restarts the app. **Clear it afterwards**, or every restart sends another.
 - No `Email__BrevoApiKey` means nothing is sent, and the log says so.
 
+## Onboarding emails
+
+One-off nudges for runners who haven't built a plan, haven't started it, or have gone quiet: three cohorts, each sent once (the third once per quiet spell), on the **news and updates** list, so unsubscribing never touches the weekly recap. **Off by default.** The full write-up is in [onboarding-reminders.md](onboarding-reminders.md).
+
+- `OnboardingReminder__Enabled`: `true` sends them, within a daily limit that leaves room under Brevo's 300 a day for the weekly recap.
+- `OnboardingReminder__TestTo`: one made-up preview of each email (subject starts `[Test]`) when the app next starts. **Clear it afterwards.**
+
 ## Update emails and unsubscribing
 
 "What's new" emails about Taperday itself (`UpdateEmails`, such as Race Plan v3) and the weekly recap are the emails meant for runners. Every runner copy carries a way out, for its own list only; a preview to the maker has none.

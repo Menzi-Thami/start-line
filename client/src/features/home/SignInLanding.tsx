@@ -16,7 +16,6 @@ export function SignInLanding({ onSignIn, onSignUp, onBack }: Props) {
           <button type="button" className="button button-primary" onClick={onSignIn}>Continue to sign in</button>
           <button type="button" className="button button-quiet" onClick={onSignUp}>Create an account</button>
         </div>
-        <p className="field-help">Sign-in is handled securely by the existing identity provider. Taperday never asks for your password here.</p>
         <button type="button" className="link-button" onClick={onBack}>Back to Taperday</button>
       </div>
     </section>

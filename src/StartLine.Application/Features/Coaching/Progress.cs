@@ -63,7 +63,7 @@ internal sealed class GetProgressStoryHandler(IApplicationDbContext db, CurrentR
             plan is null ? [] : [.. plan.Weeks.SelectMany(w => w.Sessions)],
             [.. checkIns.Select(c => new TrendCheckIn(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.ActivityId, c.IsAdditional))],
             [.. runs.Select(a => new ProgressRun(
-                new TrendRun(a.Id, a.LocalDate, a.DistanceKm, a.MovingTime, a.AverageHeartRate, a.Source, a.PlannedSession?.SessionType),
+                TrendRun.Of(a),
                 [.. a.BestEfforts]))],
             plan);
         return new(today, story);

@@ -3,7 +3,7 @@ import type { AdjustmentActions } from './PlanAdjustment'
 import { useAuth } from '../../app/auth-context'
 import { api, ApiError } from '../../lib/api-client'
 import type { Units } from '../../lib/format'
-import type { CheckIn, CheckInRequest, Session } from '../../lib/types'
+import type { CheckIn, CheckInRequest, Session, SyncedCompletion } from '../../lib/types'
 
 /** What a session needs to show and take a check-in. Only the runner's current saved plan has one. */
 export interface SessionCoach {
@@ -16,6 +16,8 @@ export interface SessionCoach {
   entries?: readonly CheckIn[]
   saveAdditional?: (id: string, session: Session, answers: CheckInRequest) => Promise<void>
   removeAdditional?: (id: string) => Promise<void>
+  /** A held Strava run that completes the session, worked out by the API on each read and never stored. */
+  synced?: (session: Pick<Session, 'date' | 'type'>) => SyncedCompletion | undefined
 }
 
 const key = (date: string, type: string) => `${date}|${type}`

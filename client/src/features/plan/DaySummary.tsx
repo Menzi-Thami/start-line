@@ -3,6 +3,8 @@ import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange
 import type { ActivitySummary, CheckIn, Session, TrainingPlan } from '../../lib/types'
 import { AdditionalRun } from '../coaching/AdditionalRun'
 import { CheckInCard } from '../coaching/CheckInCard'
+import { StravaCompletion } from '../coaching/StravaCompletion'
+import { completedViaStrava } from '../coaching/strava-completion'
 import { RunLog } from '../coaching/RunLog'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { RunSticker } from '../sharing/RunSticker'
@@ -41,7 +43,7 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
   const importsUnavailable = !!coach && runs === undefined
   const dayRuns = [...new Map((runs ?? []).filter(run => run.localDate === date && run.kind !== 'Other').map(run => [run.id, run])).values()]
   const unlinked = dayRuns.filter(run => !entries.some(entry => entry.activityId === run.id))
-  const deviceRuns = sessions.filter(session => session.type !== 'Strength' && done.has(sessionKey(session)) && !coach?.get(session))
+  const deviceRuns = sessions.filter(session => session.type !== 'Strength' && done.has(sessionKey(session)) && !coach?.get(session) && !completedViaStrava(session, coach))
   const completedStrength = sessions.filter(session => session.type === 'Strength' && done.has(sessionKey(session)))
   const inPlan = date >= plan.startDate && date <= plan.race.date
   const future = date > today
@@ -97,15 +99,17 @@ export default function DaySummary({ id: panelId, trigger, date, today, plan, un
           {sessions.map(session => {
             const entry = coach?.get(session)
             const complete = done.has(sessionKey(session))
+            const viaStrava = completedViaStrava(session, coach)
             const pace = plan.paces.find(pace => pace.zone === session.zone)
             return <article key={sessionKey(session)} className="day-summary-card" aria-label={`Planned: ${session.title}`}>
               {session.type === 'Strength' ? future ? <><h5>{session.title}</h5><p>{session.exercises.length} exercises · Upcoming</p><p>{session.detail}</p></> : <><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : 'No completion recorded'}</p><details className="session-more"><summary>View exercises and completion</summary><SessionItem session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></details></> : <>
                 <h5>{session.title}</h5>
                 <p className="mono">{formatDistance(session.distanceKm, units)}{pace ? ` · ${formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}` : ''}</p>
                 <RunWalkChip runWalk={session.runWalk} />
-                <p className="day-summary-status">{!historyReady ? 'Completion history unavailable' : entry?.status === 'Skipped' ? 'Skipped' : complete ? 'Completed' : future ? 'Upcoming' : date === today ? 'Scheduled today' : 'No completion recorded'}</p>
+                <p className="day-summary-status">{!historyReady ? 'Completion history unavailable' : entry?.status === 'Skipped' ? 'Skipped' : viaStrava ? 'Completed via Strava' : complete ? 'Completed' : future ? 'Upcoming' : date === today ? 'Scheduled today' : 'No completion recorded'}</p>
                 <details className="session-more"><summary>How to run it</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
-                {historyReady && coach && (!entry || entry.status === 'Skipped') && session.type !== 'Race' && <CheckInCard session={session} coach={coach} runs={dayRuns} completion compactActions done={complete} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}
+                {historyReady && coach && <StravaCompletion session={session} coach={coach} />}
+                {historyReady && coach && (!entry || entry.status === 'Skipped') && session.type !== 'Race' && <CheckInCard session={session} coach={coach} runs={dayRuns} completion compactActions done={complete && !viaStrava} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}
                 {historyReady && !coach && session.type !== 'Race' && !future && <label className="session-done"><input type="checkbox" checked={complete} onChange={event => onDoneChange(current => withSessionDone(current, session, event.target.checked))} /> Complete on this device</label>}
               </>}
             </article>

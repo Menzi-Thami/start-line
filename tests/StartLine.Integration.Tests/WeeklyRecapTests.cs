@@ -43,7 +43,7 @@ public sealed class RecapFactory : StartLineApiFactory
 }
 
 /// <summary>
-/// The weekly recap: 07:00 on each runner's own Monday, about the week before, once per runner and week whatever runs it,
+/// The weekly recap: 07:00 to 08:00 on each runner's own Monday, about the previous completed week, once per runner and week whatever runs it,
 /// retried after a failure, and with a link that stops the recap and nothing else.
 /// </summary>
 public sealed class WeeklyRecapTests
@@ -68,35 +68,36 @@ public sealed class WeeklyRecapTests
     }
 
     [Fact]
-    public async Task Each_runner_gets_it_once_at_seven_on_their_own_Monday_with_last_weeks_running_and_the_week_ahead()
+    public async Task Each_runner_gets_it_once_at_seven_on_their_own_Monday_morning_with_the_weeks_running_and_the_week_ahead()
     {
         await using var factory = new RecapFactory();
-        factory.Time.SetUtcNow(new DateTimeOffset(2026, 10, 28, 18, 0, 0, TimeSpan.Zero));
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 4, 18, 0, 0, TimeSpan.Zero));
         var (joburg, joburgEmail) = await Runner(factory, "Africa/Johannesburg");
         var (_, londonEmail) = await Runner(factory, "Europe/London");
         var (_, optedOut) = await Runner(factory, "Africa/Johannesburg", weekly: false);
         var plan = await Json(await joburg.PostAsJsonAsync(Url("/api/v1/me/plans"), new { plan = new { raceName = "Flexible 10K", distanceKm = 10, raceDate = "2026-12-20", goalTime = "00:52:00", runDays = new[] { "Monday", "Wednesday", "Friday", "Sunday" }, longRunDay = "Sunday", currentWeeklyKm = 30, planFrom = "2026-10-19", version = 2 } }));
-        await Json(await joburg.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan.GetProperty("id").GetGuid()}/check-ins/additional/{Guid.NewGuid()}/2026-10-28/Easy"), new { status = "Done", actualSessionType = "Easy", distanceKm = 10, duration = "01:00:00" }));
+        await Json(await joburg.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan.GetProperty("id").GetGuid()}/check-ins/additional/{Guid.NewGuid()}/2026-11-04/Easy"), new { status = "Done", actualSessionType = "Easy", distanceKm = 10, duration = "01:00:00" }));
 
-        // Sunday evening and early Monday: nobody's Monday 07:00 yet.
-        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 2, 4, 30, 0, TimeSpan.Zero));
+        // Sunday evening: no one is due until Monday morning.
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 8, 17, 30, 0, TimeSpan.Zero));
         await SendDue(factory);
         factory.Mail.To(joburgEmail).ShouldBeEmpty();
 
-        // 07:30 in Johannesburg, 05:30 in London.
-        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 2, 5, 30, 0, TimeSpan.Zero));
+        // Monday 07:30 Johannesburg, 05:30 London.
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 9, 5, 30, 0, TimeSpan.Zero));
         await SendDue(factory);
         await SendDue(factory);
         var recap = factory.Mail.To(joburgEmail).ShouldHaveSingleItem();
         factory.Mail.To(londonEmail).ShouldBeEmpty();
         recap.Subject.ShouldBe("Your Taperday week");
         recap.Html.ShouldContain("10 km over 1 run.");
-        recap.Html.ShouldContain("26 Oct – 1 Nov");
+        recap.Html.ShouldContain("2 Nov – 8 Nov");
+        recap.Html.ShouldContain("Taperday sends every runner a weekly recap.");
         recap.Html.ShouldContain("The week ahead");
-        recap.Text.ShouldContain("Mon 2 Nov");
+        recap.Text.ShouldContain("Mon 9 Nov");
 
-        // 07:05 in London: their turn, and Johannesburg's isn't sent again.
-        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 2, 7, 5, 0, TimeSpan.Zero));
+        // 07:05 in London: their turn, Johannesburg has passed its sending hour.
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 9, 7, 5, 0, TimeSpan.Zero));
         await SendDue(factory);
         factory.Mail.To(londonEmail).ShouldHaveSingleItem().Html.ShouldContain("A quiet week.");
         factory.Mail.To(joburgEmail).Count.ShouldBe(1);
@@ -109,7 +110,7 @@ public sealed class WeeklyRecapTests
         await using var factory = new RecapFactory();
         var (_, email) = await Runner(factory, "Africa/Johannesburg");
         factory.Mail.FailuresFor[email] = 1;
-        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 2, 6, 0, 0, TimeSpan.Zero));
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 9, 5, 30, 0, TimeSpan.Zero));
 
         await SendDue(factory);
         factory.Mail.To(email).ShouldBeEmpty();
@@ -124,7 +125,7 @@ public sealed class WeeklyRecapTests
     {
         await using var factory = new RecapFactory();
         var (client, email) = await Runner(factory, "Africa/Johannesburg");
-        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 2, 6, 0, 0, TimeSpan.Zero));
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 9, 5, 30, 0, TimeSpan.Zero));
         await SendDue(factory);
         var links = factory.Mail.To(email).ShouldHaveSingleItem().Unsubscribe.ShouldNotBeNull();
         links.Page.Query.ShouldContain("list=weekly");
@@ -135,8 +136,44 @@ public sealed class WeeklyRecapTests
         me.GetProperty("weeklyEmails").GetBoolean().ShouldBeFalse();
         me.GetProperty("updateEmails").GetBoolean().ShouldBeTrue();
 
-        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 9, 6, 0, 0, TimeSpan.Zero));
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 16, 5, 30, 0, TimeSpan.Zero));
         await SendDue(factory);
         factory.Mail.To(email).Count.ShouldBe(1);
+    }
+    [Fact]
+    public async Task An_hour_missed_is_skipped_never_sent_late()
+    {
+        await using var factory = new RecapFactory();
+        var (_, email) = await Runner(factory, "Africa/Johannesburg");
+
+        // Monday 08:30 in Johannesburg: the sending hour has passed.
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 9, 6, 30, 0, TimeSpan.Zero));
+        await SendDue(factory);
+        factory.Mail.To(email).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Every_Monday_sends_the_previous_week_without_a_repeat()
+    {
+        await using var factory = new RecapFactory();
+        var (_, email) = await Runner(factory, "Africa/Johannesburg");
+
+        // Sunday 1 November: never send on Sunday.
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 1, 17, 30, 0, TimeSpan.Zero));
+        await SendDue(factory);
+        factory.Mail.To(email).ShouldBeEmpty();
+
+        // Monday 2 November from 07:00: the week before, once.
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 2, 5, 30, 0, TimeSpan.Zero));
+        await SendDue(factory);
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 2, 6, 30, 0, TimeSpan.Zero));
+        await SendDue(factory);
+        factory.Mail.To(email).ShouldHaveSingleItem().Html.ShouldContain("26 Oct – 1 Nov");
+
+        // Monday 9 November 07:30: the next completed week.
+        factory.Time.SetUtcNow(new DateTimeOffset(2026, 11, 9, 5, 30, 0, TimeSpan.Zero));
+        await SendDue(factory);
+        factory.Mail.To(email).Count.ShouldBe(2);
+        factory.Mail.To(email).ShouldContain(m => m.Html.Contains("2 Nov – 8 Nov"));
     }
 }

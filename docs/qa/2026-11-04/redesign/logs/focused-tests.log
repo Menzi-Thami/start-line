@@ -1,0 +1,27 @@
+
+> start-line-client@0.0.0 test
+> vitest run --maxWorkers=1 --testTimeout=30000 src/features/activities/PaceProfile.test.tsx src/features/activities/activities.test.tsx src/features/plan/PlanTabs.test.tsx src/features/plan/DaySummary.test.tsx src/features/plan/StravaCompletionPlan.test.tsx
+
+
+ RUN  v5.0.5 /workspace/pr187/client
+
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+Not implemented: Window's scrollTo() method
+
+ Test Files  5 passed (5)
+      Tests  46 passed (46)
+   Start at  13:41:13
+   Duration  19.55s (tests 65%, environment 21%, setup 7%, import 4%, transform 3%)
+
+    Isolate  5 workers spawned · ~919ms startup each (spawn + environment, per file)
+             at least ~3.68s faster with isolate: false — reuses workers across files instead of one per file
+

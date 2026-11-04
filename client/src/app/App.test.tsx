@@ -98,6 +98,16 @@ describe('the home page', () => {
   })
 })
 
+describe('beginner journey deep links', () => {
+  it('opens the full Couch to 5K programme without a race plan', async () => {
+    window.history.replaceState(null, '', '/?view=beginner')
+    setup()
+    expect(await screen.findByRole('heading', { name: 'Couch to 5K' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Progress' }))
+    expect(screen.getByRole('region', { name: 'Couch to 5K progress' })).toBeInTheDocument()
+  })
+})
+
 describe('building a plan', () => {
   it('shows the film on review and opens the finished plan without waiting for a scene', async () => {
     const { user } = setup()

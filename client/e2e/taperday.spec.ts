@@ -28,7 +28,7 @@ test('the home page counts down to the next race on the list', async ({ page }) 
 test('personal goals appear before the race rack without losing the original race animation @phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/')
-  const custom = page.getByText('Build for your own distance or event', { exact: true })
+  const custom = page.getByText('Another race — build for your own distance or event', { exact: true })
   const firstBib = page.locator('.race-bib').first()
   await expect(custom).toBeVisible()
   await expect(firstBib).toBeVisible()

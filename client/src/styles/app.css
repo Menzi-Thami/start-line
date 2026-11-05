@@ -5856,3 +5856,47 @@ button.plan-calendar-day {
 .runner-status-copy { min-width:0; }
 .runner-status-copy .field-help { margin-top:var(--space-1); }
 .finding-plan-runner { min-width:40px; padding-top:3px; }
+
+
+/*
+ * The running cartoon is a brand moment while a plan is prepared.
+ * Give it a dedicated, readable loading screen instead of placing it
+ * below a long review form. Use the existing theme tokens and motion.
+ */
+.plan-theatre.plan-theatre-building {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  margin: 0;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background: var(--paper);
+  color: var(--ink);
+  text-align: center;
+  overflow: auto;
+}
+.plan-theatre-building .wait-film {
+  width: min(100%, 24rem);
+  max-width: 24rem;
+  flex: 0 0 auto;
+}
+.plan-theatre-building .plan-theatre-copy {
+  width: min(100%, 28rem);
+}
+.plan-theatre-building .plan-theatre-copy strong {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  line-height: 1.18;
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-theatre-building .wait-film,
+  .plan-theatre-building .wait-film * {
+    animation: none !important;
+  }
+}

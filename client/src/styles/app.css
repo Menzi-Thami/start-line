@@ -5848,3 +5848,11 @@ button.plan-calendar-day {
     animation: none;
   }
 }
+
+
+/* Signature runner feedback: preserve the existing runner animation and brand tokens. */
+.runner-status { display:flex; align-items:center; gap:var(--space-4); margin:var(--space-5) 0; padding:var(--space-4); border:1px solid var(--line); border-radius:var(--radius-md); background:var(--glass); color:var(--ink); }
+.runner-status-character,.finding-plan-runner { color:var(--accent); display:inline-flex; align-items:center; justify-content:center; flex:none; }
+.runner-status-copy { min-width:0; }
+.runner-status-copy .field-help { margin-top:var(--space-1); }
+.finding-plan-runner { min-width:40px; padding-top:3px; }

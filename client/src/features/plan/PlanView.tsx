@@ -487,7 +487,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
               </p>
             </>
           )}
-          <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts"><summary>Strength workouts</summary><StrengthTab plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={onEditStrength} /></details>
+          <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts" open={!!shown?.week.sessions.some(session => session.type === 'Strength')}><summary>Strength workouts {shown?.week.sessions.filter(session => session.type === 'Strength').length ? `· ${shown.week.sessions.filter(session => session.type === 'Strength').length} planned` : ''}</summary><StrengthTab plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={onEditStrength} /></details>
           {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
         </div>
 

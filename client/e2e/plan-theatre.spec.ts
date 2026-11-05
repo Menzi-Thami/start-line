@@ -106,3 +106,38 @@ test('adding strength to a plan with a past custom start preserves its running s
   expect(query.get('v')).toBe('2')
   expect(query.get('gym')).toBe('mo.we')
 })
+
+test('race selection keeps Continue visible and all bibs readable in light and dark @phone', async ({ page }) => {
+  for (const theme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: theme })
+    await page.goto('/')
+    const bibs = page.locator('.race-bib .bib-card')
+    await expect(bibs.first()).toBeVisible()
+    const colors = await bibs.evaluateAll((cards) => cards.map((card) => {
+      const style = getComputedStyle(card)
+      return { name: card.textContent?.trim(), foreground: style.color, background: style.backgroundColor }
+    }))
+    const luminance = (rgb: string) => {
+      const channels = rgb.match(/[\\d.]+/g)?.slice(0, 3).map(Number) ?? []
+      const linear = channels.map(value => {
+        const c = value / 255
+        return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4
+      })
+      return linear[0]! * .2126 + linear[1]! * .7152 + linear[2]! * .0722
+    }
+    for (const color of colors) {
+      const dark = Math.min(luminance(color.foreground), luminance(color.background))
+      const light = Math.max(luminance(color.foreground), luminance(color.background))
+      expect((light + .05) / (dark + .05), `${theme}: ${color.name}`).toBeGreaterThanOrEqual(4.5)
+    }
+    await page.getByRole('radio', { name: /Comrades/ }).click()
+    const form = page.getByRole('form', { name: 'Build your plan' })
+    await expect(form).toHaveAttribute('data-race-selected', 'true')
+    const button = form.getByRole('button', { name: 'Continue' })
+    await expect(button).toBeVisible()
+    expect(await button.evaluate(element => getComputedStyle(element.parentElement!).position)).toBe('fixed')
+    const rectangle = await button.boundingBox()
+    expect(rectangle).not.toBeNull()
+    expect(rectangle!.y + rectangle!.height).toBeLessThanOrEqual(page.viewportSize()!.height + 1)
+  }
+})

@@ -33,3 +33,32 @@
   .plan-builder-flow[data-framed] { display: block; height: auto !important; }
   .plan-builder-flow[data-framed] > .wizard-question { overflow: visible; }
 }
+
+/* The plan request, not the review step, owns the loading experience. */
+.builder { position: relative; }
+.plan-build-overlay {
+  position: fixed; inset: 0; z-index: 180;
+  display: grid; place-items: center; padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  background: var(--page); overflow-y: auto;
+}
+.plan-build-loading {
+  width: min(100%, 37rem); padding: clamp(1.5rem, 6vw, 3.5rem);
+  background: var(--paper); color: var(--ink);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-lg);
+  box-shadow: 0 24px 80px rgba(0,0,0,.12); text-align: center;
+}
+.plan-build-eyebrow { font-size: var(--text-xs); letter-spacing: .13em; font-weight: 700; color: var(--accent-strong); }
+.plan-build-loading h2 { font-family: var(--font-display); font-size: clamp(2.5rem, 8vw, 4.5rem); line-height: 1; margin: .85rem 0; }
+.plan-build-description { margin-inline: auto; max-width: 27rem; color: var(--ink-2); }
+.plan-build-motion { position: relative; height: 8.5rem; margin: 1.4rem 0; display: grid; place-items: center; overflow: hidden; }
+.plan-build-track { position: absolute; height: 2px; width: 100%; bottom: 1.6rem; background: var(--line-strong); }
+.plan-build-runner { position: relative; z-index: 1; color: var(--accent-strong); animation: plan-build-stride 1.1s ease-in-out infinite alternate; }
+.plan-build-finish { position: absolute; right: .5rem; bottom: 2rem; font-size: .65rem; font-weight: 700; letter-spacing: .15em; color: var(--muted); }
+.plan-build-progress { height: 6px; border-radius: 99px; overflow: hidden; background: var(--surface-sunk); }
+.plan-build-progress > span { display: block; width: 32%; height: 100%; border-radius: inherit; background: var(--accent); animation: plan-build-sweep 1.4s ease-in-out infinite alternate; }
+.plan-build-footnote { margin-top: 1rem; color: var(--muted); font-size: var(--text-sm); }
+@keyframes plan-build-sweep { to { transform: translateX(210%); } }
+@keyframes plan-build-stride { to { transform: translateX(16px); } }
+@media (prefers-reduced-motion: reduce) {
+ .plan-build-runner, .plan-build-progress > span { animation: none; }
+}

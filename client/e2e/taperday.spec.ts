@@ -30,7 +30,7 @@ test('mobile builder keeps its next action visible without scrolling through rac
   await page.goto('/')
   const choose = page.getByRole('button', { name: 'Choose a race' })
   await expect(choose).toBeInViewport()
-  await page.getByRole('radio', { name: /Build for your own distance or event/ }).check()
+  await page.getByText('Build for your own distance or event', { exact: true }).click()
   await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeInViewport()
 })
 

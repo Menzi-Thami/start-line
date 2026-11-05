@@ -109,9 +109,9 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         <div className="account-shortcuts-actions">
           <button type="button" className="button button-quiet" onClick={() => openSettings(profileRef)}>My profile</button>
           <button type="button" className="button button-quiet" onClick={() => { setConnectionsOpen(true); openSettings(connectionsRef) }}>Connected apps</button>
-          <button type="button" className="button button-quiet" onClick={() => openSettings(notificationsRef)}>Notifications</button>
+          <button type="button" className="button button-quiet" onClick={() => openSettings(notificationsRef)}>Manage reminders</button>
           <button type="button" className="button button-quiet" onClick={() => openSettings(calendarRef)}>App & calendar</button>
-          <button type="button" className="button button-quiet" onClick={() => openSettings(privacyRef)}>Data & privacy</button>
+          <button type="button" className="button button-quiet" onClick={() => openSettings(privacyRef)}>Manage privacy</button>
         </div>
       </nav>
       <details ref={profileRef} className="settings-group"><summary>Profile & picture</summary>

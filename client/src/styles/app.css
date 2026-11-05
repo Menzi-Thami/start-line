@@ -4687,6 +4687,13 @@ select.input option {
   color: var(--muted);
 }
 
+.datepick-availability-note {
+  margin: .25rem 0 .8rem;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
 .datepick-day {
   position: relative;
   display: grid;

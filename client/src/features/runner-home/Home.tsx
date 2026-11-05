@@ -25,6 +25,7 @@ import { completionsKey, useSyncedCompletions } from '../coaching/useSyncedCompl
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
+import { Runner as TaperdayRunner } from '../shared/Runner'
 import { FirstWeek } from './FirstWeek'
 import { change, todayInPlan, trainingTotals, weeklyBars, type Change } from './home-math'
 import { YourWeek } from './YourWeek'
@@ -333,7 +334,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
       <div key={`${s.date}|${s.type}`} className={`home-today-run${isDone(s) ? ' is-done' : ''}`}>
         <p className="home-today-title">
           {s.title}
-          {isDone(s) && <span className="chip chip-good home-done-chip">Done</span>}
+          {isDone(s) && <span className="chip chip-good home-done-chip"><TaperdayRunner pose="victory" size={19} /> Done</span>}
         </p>
         {coach && !ownDone(s) && <StravaCompletion session={s} coach={coach} />}
         <dl className="home-workout-facts">

@@ -236,7 +236,6 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
 
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
-  const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
   const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))
   const [clientErrors, setClientErrors] = useState<FieldErrors>({})
@@ -379,7 +378,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     <div className="builder wizard">
       {position === 0 && intro}
 
-      <div className="wizard-progress">
+      <div className="wizard-progress" aria-label={`Plan setup: step ${position + 1} of ${totalSteps}`}>
         <p className="wizard-count">
           Step {position + 1} of {totalSteps}
         </p>
@@ -430,6 +429,29 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     
               {step === 0 && (
                 <>
+                  <div className="quick-goals" role="group" aria-label="Choose a running distance">
+                    <p className="quick-goals-label">Choose your distance</p>
+                    <div className="quick-goals-grid">
+                      {SHORTCUTS.map((s) => {
+                        const value = String(Math.round((units === 'mi' ? s.km / 1.609344 : s.km) * 100) / 100)
+                        const selected = draft.race === OTHER && draft.otherKm === value
+                        return (
+                          <button type="button" key={s.label} className={`quick-goal${selected ? ' is-selected' : ''}`}
+                            aria-pressed={selected}
+                            onClick={() => setDraft((d) => ({ ...d, race: OTHER, otherKm: value }))}>
+                            <strong>{s.label}</strong><span>{selected ? 'Selected' : 'Build a plan'}</span>
+                          </button>
+                        )
+                      })}
+                      <button type="button" className={`quick-goal${draft.race === OTHER && !SHORTCUTS.some((s) => String(Math.round((units === 'mi' ? s.km / 1.609344 : s.km) * 100) / 100) === draft.otherKm) ? ' is-selected' : ''}`}
+                        aria-pressed={draft.race === OTHER && !SHORTCUTS.some((s) => String(Math.round((units === 'mi' ? s.km / 1.609344 : s.km) * 100) / 100) === draft.otherKm)}
+                        onClick={() => set('race', OTHER)}>
+                        <strong>Custom</strong><span>Any distance</span>
+                      </button>
+                    </div>
+                    <p className="field-help">You don't need to enter an organised race. Pick a distance, then choose your target date.</p>
+                  </div>
+                  <p className="quick-race-divider">Or choose an upcoming event</p>
                   <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
                     {races.kind === 'loading' && [0, 1, 2].map((i) => <div className="skeleton" key={i} aria-hidden="true" />)}
                     {races.kind === 'loading' && <span className="visually-hidden">Loading races…</span>}
@@ -625,8 +647,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     {reviewRow('Run/walk', RUN_WALK.find((r) => r.value === draft.runWalk)!.title, 3)}
                   </dl>
                   <p className="field-help">For a distant race, your plan may start later than your preferred date. The built plan will confirm when structured training starts.</p>
-                  <details className="disclosure" open={strengthOpen} onToggle={(event) => setStrengthOpen(event.currentTarget.open)}>
-                    <summary>Add strength and mobility sessions</summary>
+                  <section className="builder-strength" aria-label="Strength and mobility">
+                    <h3>Strength and mobility</h3><p className="field-help">Optional — select your strength days. They appear in your plan with your runs.</p>
                     <DayPills
                       legend="Strength days"
                       hint={`Up to three. ${draft.longRunDay ?? 'Your long-run day'} is reserved for your long run. Strength can share another running day.`}
@@ -636,7 +658,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       disabledDays={draft.longRunDay ? [draft.longRunDay] : []}
                       error={errors.strength}
                     />
-                  </details>
+                  </section>
                   <p className="field-help">Your plan also lives in its link, so you can share it with anyone.</p>
                 </>
               )}

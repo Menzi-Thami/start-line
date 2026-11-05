@@ -26,8 +26,8 @@ test('plan review is calm and Build my plan opens a real loading screen @phone',
 
   await page.getByRole('button', { name: 'Build my plan' }).click()
   await expect(loading).toBeVisible()
-  await expect(loading.getByRole('heading', { name: 'Making your plan.' })).toBeVisible()
-  await expect(loading.getByText(/Your plan will open as soon as it's ready/)).toBeVisible()
+  await expect(loading.getByRole('heading', { name: /Recovery is training|On your marks|And they’re off|Ticking off the kilometres|Through the tape/ })).toBeVisible()
+  await expect(loading.getByText(/Your plan opens when the story finishes/)).toBeVisible()
   await expect(page.getByRole('button', { name: /Next tip|Pause animation|Play animation/i })).toHaveCount(0)
 
   for (const width of [375, 820, 1440]) {

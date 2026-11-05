@@ -1259,8 +1259,9 @@ select {
 }
 
 .bib-colour-2 {
-  background: #f2f2f2;
-  color: var(--on-accent);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
 }
 
 .bib-colour-3 {

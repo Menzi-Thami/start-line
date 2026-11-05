@@ -63,13 +63,27 @@ public static partial class TrainingPlanGenerator
             throw new DomainException($"The race must be at least {MinWeeks} weeks after the plan starts.");
         }
 
+        // New plans with an explicit start date must honour that date, even when the
+        // distance-specific race block is shorter. Preserve the existing capped race
+        // block and precede it with easy foundation weeks rather than leaving a gap.
+        // Historical generator versions retain their original schedule unchanged.
+        var includeFoundation = parameters.StartOn is not null && IsV3(parameters);
         if (weekCount > profile.MaxWeeks)
         {
             weekCount = profile.MaxWeeks;
             startDate = raceWeekStart.AddDays(-7 * (weekCount - 1));
-            warnings.Add(new("starts-later",
-                $"Your plan starts on {startDate.ToString("dddd d MMMM yyyy", CultureInfo.InvariantCulture)}. " +
-                $"More than {profile.MaxWeeks} weeks of structured training rarely helps; keep running easily until then."));
+            if (includeFoundation)
+            {
+                warnings.Add(new("foundation-first",
+                    $"Your plan begins on {parameters.StartOn!.Value.ToString("dddd d MMMM yyyy", CultureInfo.InvariantCulture)} " +
+                    $"with easy foundation running. The final {profile.MaxWeeks} weeks focus on your race."));
+            }
+            else
+            {
+                warnings.Add(new("starts-later",
+                    $"Your plan starts on {startDate.ToString("dddd d MMMM yyyy", CultureInfo.InvariantCulture)}. " +
+                    $"More than {profile.MaxWeeks} weeks of structured training rarely helps; keep running easily until then."));
+            }
         }
         else if (weekCount < profile.MinWeeks)
         {
@@ -164,6 +178,41 @@ public static partial class TrainingPlanGenerator
         {
             weeks[0] = weeks[0] with { Sessions = [.. weeks[0].Sessions.Where(s => s.Date >= chosen)] };
             firstDay = chosen;
+        }
+
+        // StartOn is a promise to the runner. If the race-specific block was
+        // capped, fill every earlier week with real, conservative workouts.
+        // Do this after the structured block has been built so its phase rotations,
+        // long-run progression and taper remain exactly as designed.
+        if (includeFoundation && parameters.StartOn is { } chosenStart && chosenStart < startDate)
+        {
+            var foundationStart = MondayOf(chosenStart);
+            var foundationCount = (startDate.DayNumber - foundationStart.DayNumber) / 7;
+            var foundationWorkouts = new List<PlanWeek>(foundationCount);
+            var baselineKm = Math.Max(SmallestWeekKm(parameters),
+                Math.Min(weeks[0].PlannedKm, parameters.CurrentWeeklyKm ?? weeks[0].PlannedKm));
+
+            for (var index = 0; index < foundationCount; index++)
+            {
+                var weekStart = foundationStart.AddDays(index * 7);
+                var builder = workoutsFor(weekStart);
+                var longKm = WorkoutBuilder.Round(Math.Max(MinLongRunKm,
+                    Math.Min(LongRunCapKm(parameters, profile, builder), baselineKm * 0.35)));
+                var easyKm = WorkoutBuilder.Round(Math.Clamp(
+                    (baselineKm - longKm) / (parameters.RunsPerWeek - 1), MinRunKm, MaxEasyRunKm));
+                var sessions = layout.Days.Select(day =>
+                {
+                    var date = weekStart.AddDays(day.DayIndex);
+                    return day.Role == DayRole.Long
+                        ? builder.Long(date, SessionType.LongRun, longKm)
+                        : builder.Easy(date, SessionType.Easy, easyKm);
+                }).Where(session => session.Date >= chosenStart)
+                  .OrderBy(session => session.Date).ToList();
+                foundationWorkouts.Add(new PlanWeek(index + 1, weekStart, TrainingPhase.Base, false, sessions));
+            }
+
+            weeks = [.. foundationWorkouts, .. weeks.Select(w => w with { Number = w.Number + foundationCount })];
+            firstDay = chosenStart;
         }
 
         return new TrainingPlan(parameters.RaceDistance, profile.Category, parameters.RaceDate, parameters.GoalTime,

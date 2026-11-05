@@ -119,14 +119,15 @@ describe('beginner journey deep links', () => {
 })
 
 describe('building a plan', () => {
-  it('shows the film on review and opens the finished plan without waiting for a scene', async () => {
+  it('keeps review free of tips and opens the finished plan without an artificial delay', async () => {
     const { user } = setup()
-    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+    expect(screen.queryByRole('status', { name: 'Building your training plan' })).toBeNull()
     await answerEverything(user)
-    expect(screen.getByRole('complementary', { name: 'Running tips' })).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Building your training plan' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /Next tip|Pause animation|Play animation/i })).toBeNull()
     await buildIt(user)
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
-    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+    expect(screen.queryByRole('status', { name: 'Building your training plan' })).toBeNull()
   })
 
   it('advances only one question when Continue is double-clicked', async () => {

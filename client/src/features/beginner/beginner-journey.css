@@ -104,3 +104,8 @@
  .beginner-week-heading .button { min-height:44px; }
 }
 @media (prefers-reduced-motion: reduce) { .beginner-hero-track span { transition:none; } }
+
+/* Beginner journeys need the same breathing room on desktop as full race plans. */
+@media (min-width:64rem) {
+ .page:has(.beginner-journey) { max-width:min(100% - 4rem, 76rem); }
+}

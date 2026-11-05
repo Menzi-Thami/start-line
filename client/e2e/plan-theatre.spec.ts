@@ -121,7 +121,7 @@ test('race selection keeps Continue visible and all bibs readable in light and d
       return { name: card.textContent?.trim(), foreground: style.color, background: style.backgroundColor }
     }))
     const luminance = (rgb: string) => {
-      const channels = rgb.match(/[\\d.]+/g)?.slice(0, 3).map(Number) ?? []
+      const channels = rgb.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? []
       const linear = channels.map(value => {
         const c = value / 255
         return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4

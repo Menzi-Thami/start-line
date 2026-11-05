@@ -208,6 +208,16 @@ public static partial class TrainingPlanGenerator
                         : builder.Easy(date, SessionType.Easy, easyKm);
                 }).Where(session => session.Date >= chosenStart)
                   .OrderBy(session => session.Date).ToList();
+
+                // Foundation weeks are real training weeks: include chosen
+                // strength and mobility days, even before the race block.
+                var foundationContext = new WeekContext(weekStart, baselineKm, TrainingPhase.Base,
+                    index, 0, 0, IsCutback: false, IsFirstWeek: index == 0);
+                var longDay = layout.Days.Single(day => day.Role == DayRole.Long).DayIndex;
+                sessions.AddRange(StrengthDays(parameters, foundationContext, longDay, [])
+                    .Select(day => WorkoutBuilder.Strength(weekStart.AddDays(day), TrainingPhase.Base, false))
+                    .Where(session => session.Date >= chosenStart));
+                sessions = [.. sessions.OrderBy(session => session.Date).ThenBy(session => session.Type == SessionType.Strength)];
                 foundationWorkouts.Add(new PlanWeek(index + 1, weekStart, TrainingPhase.Base, false, sessions));
             }
 

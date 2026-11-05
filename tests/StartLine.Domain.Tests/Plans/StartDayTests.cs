@@ -66,8 +66,8 @@ public sealed class StartDayTests
 
         plan.StartDate.ShouldBe(start);
         plan.Weeks[0].StartDate.ShouldBe(start);
-        plan.Weeks[0].Sessions.First().Date.ShouldBe(start);
-        plan.Weeks[0].Sessions.ShouldAllBe(run => run.Type is SessionType.Easy or SessionType.LongRun);
+        plan.Weeks[0].Sessions[0].Date.ShouldBe(start);
+        plan.Weeks[0].Sessions.ShouldAllBe(run => run.Type == SessionType.Easy || run.Type == SessionType.LongRun);
         plan.Weeks.Take(9).ShouldAllBe(week => week.Phase == TrainingPhase.Base);
         plan.Weeks.Count.ShouldBe(29);
         plan.Weeks.Select(w => w.Number).ShouldBe(Enumerable.Range(1, 29));

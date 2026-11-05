@@ -1,6 +1,7 @@
 import type { RunnerPose } from '../shared/Runner'
 
-export const SCENE_MS = 4000
+export const SCENE_MS = 1200
+export const MOVIE_MS = SCENE_MS * 5
 
 export interface Scene {
   id: 'rest' | 'marks' | 'go' | 'km' | 'finish'
@@ -8,7 +9,7 @@ export interface Scene {
   caption: string
 }
 
-/** A little theatre while reviewing a plan; it never controls whether the finished plan can open. */
+/** Five scenes run once during plan generation, then a running state continues if the API needs longer. */
 export const SCENES: readonly Scene[] = [
   { id: 'rest', pose: 'sleep', caption: 'Recovery is training' },
   { id: 'marks', pose: 'crouch', caption: 'On your marks' },

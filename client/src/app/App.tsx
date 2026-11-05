@@ -25,6 +25,7 @@ import { useCheckIns } from '../features/coaching/useCheckIns'
 import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
+import { MOVIE_MS } from '../features/builder/plan-theatre'
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { SignInLanding } from '../features/home/SignInLanding'
 import { RaceStartIntro } from '../features/home/RaceStartIntro'
@@ -94,6 +95,25 @@ const viewFromUrl = (): View => {
   // A runner has one plan, so the old My plans page is now Home.
   if (view === 'plans') return 'home'
   return view === 'home' || view === 'beginner' || view === 'runs' || view === 'account' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
+}
+
+/** Wait for the full five-scene story without delaying reduced-motion users.
+ * The timer begins on submission, in parallel with the API and any plan saving.
+ * Aborting navigation cancels the wait immediately. */
+function finishBuildMovie(signal: AbortSignal): Promise<void> {
+  if (!prefersMotion() || signal.aborted) return Promise.resolve()
+  return new Promise(resolve => {
+    let completed = false
+    const finish = () => {
+      if (completed) return
+      completed = true
+      window.clearTimeout(timer)
+      signal.removeEventListener('abort', finish)
+      resolve()
+    }
+    const timer = window.setTimeout(finish, MOVIE_MS)
+    signal.addEventListener('abort', finish, { once: true })
+  })
 }
 
 export function App() {
@@ -172,10 +192,12 @@ export function App() {
   }
 
   // Like fetchRaces: state changes only when the request settles.
-  const fetchPlan = useCallback((inputs: PlanInputs, beforeShow?: (request: ReturnType<typeof toRequest>, signal: AbortSignal) => Promise<void>) => {
+  const fetchPlan = useCallback((inputs: PlanInputs, beforeShow?: (request: ReturnType<typeof toRequest>, signal: AbortSignal) => Promise<void>, playMovie = false) => {
     inflight.current?.abort()
     const controller = new AbortController()
     inflight.current = controller
+    // The story and network run together: the plan appears only after both finish.
+    const movie = playMovie ? finishBuildMovie(controller.signal) : Promise.resolve()
 
     const withDate = { ...inputs, planFrom: inputs.planFrom ?? localToday() }
     const query = toSearchParams(withDate)
@@ -190,7 +212,7 @@ export function App() {
       .plan(toRequest(withDate), controller.signal)
       .then(async (result) => {
         if (controller.signal.aborted) return
-        await beforeShow?.(toRequest(withDate), controller.signal)
+        await Promise.all([movie, beforeShow?.(toRequest(withDate), controller.signal)])
         if (controller.signal.aborted) return
         window.history.replaceState(window.history.state, '', `?${query}`)
         setPlan({ kind: 'ready', plan: result, inputs: withDate })
@@ -210,10 +232,10 @@ export function App() {
       })
   }, [])
 
-  const build = (inputs: PlanInputs) => {
+  const build = (inputs: PlanInputs, playMovie = false) => {
     setFieldErrors({})
     setPlan({ kind: 'loading' })
-    fetchPlan(inputs)
+    fetchPlan(inputs, undefined, playMovie)
   }
 
   const buildFromWizard = (inputs: PlanInputs) => {
@@ -228,12 +250,12 @@ export function App() {
         if (signal.aborted) return
         currentPlan.remember({ id: saved.id, name: saved.name, inputs: request })
         editingSavedPlan.current = null
-      })
+      }, true)
       return
     }
     setFreshBuild(plan.kind !== 'ready')
     setEditing(true)
-    build(inputs)
+    build(inputs, true)
   }
 
   const changeAnswers = () => {

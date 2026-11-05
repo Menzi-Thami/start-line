@@ -26,7 +26,7 @@ beforeEach(() => {
 describe('Couch to 5K account journey', () => {
   it('hydrates server progress and shows Week, Calendar and Progress without confusing recorded runs and confirmations', async () => {
     render(<AuthContext.Provider value={signedIn}><CouchTo5K /></AuthContext.Provider>)
-    expect(await screen.findByText(/1 of 27 sessions confirmed/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('progressbar', { name: 'Couch to 5K confirmed workouts' })).toHaveAttribute('aria-valuenow', '1'))
     fireEvent.click(screen.getByRole('button', { name: 'Calendar' }))
     expect(screen.getByRole('region', { name: 'Couch to 5K calendar' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Week 2, from 2026-11-09/i }))
@@ -37,9 +37,9 @@ describe('Couch to 5K account journey', () => {
 
   it('keeps account data out of anonymous device storage on sign-out', async () => {
     const { rerender } = render(<AuthContext.Provider value={signedIn}><CouchTo5K /></AuthContext.Provider>)
-    expect(await screen.findByText(/1 of 27 sessions confirmed/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('progressbar', { name: 'Couch to 5K confirmed workouts' })).toHaveAttribute('aria-valuenow', '1'))
     rerender(<AuthContext.Provider value={accountsOff}><CouchTo5K /></AuthContext.Provider>)
-    await waitFor(() => expect(screen.getByText(/0 of 27 sessions confirmed/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('progressbar', { name: 'Couch to 5K confirmed workouts' })).toHaveAttribute('aria-valuenow', '0'))
     await waitFor(() => expect(window.localStorage.getItem('taperday:beginner-progress:v1')).not.toContain('0:1:1'))
   })
 

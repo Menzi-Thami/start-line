@@ -21,7 +21,7 @@ export function PlanTheatre() {
       <p className="plan-build-description">Putting your training days, race goal and recovery together.</p>
       <div className="plan-build-motion" aria-hidden="true">
         <span className="plan-build-track" />
-        <Runner pose={reduced ? 'run' : scene.pose} size={62} className="plan-build-runner" />
+        <Runner pose={reduced ? 'sprint' : scene.pose} size={62} className="plan-build-runner" />
         <span className="plan-build-finish">FINISH</span>
       </div>
       <div className="plan-build-progress" aria-hidden="true"><span /></div>

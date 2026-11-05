@@ -51,7 +51,7 @@ const nextMonday = (today: string) => addDays(today, (8 - new Date(`${today}T00:
 // One question per screen. Each field lives on exactly one step, so an error (ours or the server's) can send the
 // runner straight back to the screen that needs fixing.
 const STEPS = [
-  { title: 'Which race?', hint: 'Choose a race or add your own.', fields: ['race', 'distance', 'date'] },
+  { title: 'What are you training for?', hint: 'Start with your own goal, or pick an upcoming race.', fields: ['race', 'distance', 'date'] },
   { title: 'What’s your goal time?', hint: 'Your goal sets your training paces.', fields: ['goal'] },
   { title: 'When can you run?', hint: 'Choose the days that work for you.', fields: ['runDays', 'longRunDay', 'startOn'] },
   { title: 'About you', hint: 'Start at your current fitness level.', fields: ['currentKm'] },
@@ -238,7 +238,7 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
   const [creatingPlan] = useState(() => initial === null)
-  const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
+  const [strengthOpen, setStrengthOpen] = useState(true)
   const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))
   const [clientErrors, setClientErrors] = useState<FieldErrors>({})
@@ -433,6 +433,11 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               {step === 0 && (
                 <>
                   <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
+                    <label className="choice choice-other">
+                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
+                      <span className="choice-name">Build for your own distance or event</span>
+                      <span className="choice-meta">First 5K, your local race, a personal best or an ultra. Set your own distance and date.</span>
+                    </label>
                     {races.kind === 'loading' && [0, 1, 2].map((i) => <div className="skeleton" key={i} aria-hidden="true" />)}
                     {races.kind === 'loading' && <span className="visually-hidden">Loading races…</span>}
     
@@ -468,11 +473,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       </div>
                     )}
     
-                    <label className="choice choice-other">
-                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
-                      <span className="choice-name">Another race</span>
-                      <span className="choice-meta">Any distance, any date: a parkrun PB, a local half, your first ultra.</span>
-                    </label>
+
                   </div>
                   <FieldError id="race-error" message={errors.race} />
     
@@ -628,7 +629,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                   </dl>
                   <p className="field-help">For a distant race, your plan may start later than your preferred date. The built plan will confirm when structured training starts.</p>
                   <details className="disclosure" open={strengthOpen} onToggle={(event) => setStrengthOpen(event.currentTarget.open)}>
-                    <summary>Add strength and mobility sessions</summary>
+                    <summary>Strength and mobility days (optional)</summary>
                     <DayPills
                       legend="Strength days"
                       hint={`Up to three. ${draft.longRunDay ?? 'Your long-run day'} is reserved for your long run. Strength can share another running day.`}

@@ -151,20 +151,34 @@ export function CouchTo5K() {
   }
   const resetWeek = () => update(repeatBeginnerWeek(progress))
   return (
-    <section className="panel" aria-labelledby="beginner-title">
-      <p className="field-help">BEGINNER · NINE WEEKS · THREE SESSIONS PER WEEK</p>
-      <h2 id="beginner-title">Couch to 5K</h2>
-      <p>Start with gentle run/walk intervals. There are no pace targets. Rest between sessions, and repeat a week if you need to.</p>
+    <section className="beginner-journey" aria-labelledby="beginner-title">
+      <div className="beginner-hero">
+        <div className="beginner-hero-top">
+          <span className="beginner-hero-kicker">START SMALL. GO FAR.</span>
+          <span className="beginner-hero-weeks">9-week journey</span>
+        </div>
+        <h2 id="beginner-title">Your first 5K starts here.</h2>
+        <p>Run a little. Walk a little. Get stronger every week. No pace pressure.</p>
+        <div className="beginner-hero-metrics" aria-live="polite">
+          <div><strong>{confirmed}<span> / 27</span></strong><small>Workouts confirmed</small></div>
+          <div><strong>{progress.week}<span> / 9</span></strong><small>Current week</small></div>
+          <div><strong>{Math.round(confirmed / 27 * 100)}%</strong><small>Your progress</small></div>
+        </div>
+        <div className="beginner-hero-track" role="progressbar" aria-label="Couch to 5K confirmed workouts" aria-valuemin={0} aria-valuemax={27} aria-valuenow={confirmed}>
+          <span style={{ width: `${confirmed / 27 * 100}%` }} />
+        </div>
+      </div>
       {account && !serverReady && !syncError && <p role="status">Loading your saved programme…</p>}
       {syncError && <div role="alert" className="field-help"><p>{syncError}</p>{account && serverReady && progressOwner === owner && <button type="button" className="button button-quiet" onClick={() => setSyncAttempt(n => n + 1)}>Retry saving progress</button>}</div>}
       {account && serverReady && progressOwner === owner && transferCandidate && <div className="panel" role="status"><p>You have a Couch to 5K programme saved on this device. Move it to your account?</p><button type="button" className="button button-quiet" onClick={() => { update(transferCandidate); setTransferCandidate(null) }}>Move my programme</button><button type="button" className="button button-quiet" onClick={() => setTransferCandidate(null)}>Keep account programme</button></div>}
-      <p aria-live="polite"><strong>{confirmed} of 27 sessions confirmed</strong> · {Math.round(confirmed / 27 * 100)}%{recordedUnconfirmed > 0 && <span> · {recordedUnconfirmed} recorded via Strava (not confirmed)</span>}</p>
-      <progress value={confirmed} max={27} style={{ width: '100%' }} aria-label="Couch to 5K confirmed workouts" />
+      {recordedUnconfirmed > 0 && <p className="beginner-recorded-summary" role="status">{recordedUnconfirmed} run{recordedUnconfirmed === 1 ? '' : 's'} recorded via Strava · confirm the sessions when you're ready.</p>}
       <div className="beginner-tabs" role="group" aria-label="Beginner training views">
         {([['week', 'This week'], ['calendar', 'Calendar'], ['progress', 'Progress']] as const).map(([id, label]) => <button key={id} type="button" className={`beginner-tab${activeTab === id ? ' is-active' : ''}`} aria-pressed={activeTab === id} onClick={() => setActiveTab(id)}>{label}</button>)}
       </div>
       {activeTab === 'week' && <>
-      <div className="field">
+      <details className="beginner-settings">
+        <summary>Adjust your start date and running days</summary>
+        <div className="field">
         <label className="field-label" htmlFor="couch-start">Programme start date</label>
         <input className="input" type="date" id="couch-start" disabled={!!account && !serverReady} value={progress.startedOn}
           onChange={e => { if (e.target.value) update({ ...progress, startedOn: e.target.value }) }} />
@@ -176,6 +190,11 @@ export function CouchTo5K() {
           {schedules.map(days => <option key={days.join('|')} value={days.join('|')}>{days.join(' · ')}</option>)}
         </select>
       </fieldset>
+      </details>
+      <div className="beginner-week-heading">
+        <div><p className="beginner-section-eyebrow">YOUR TRAINING THIS WEEK</p><h3>Week {progress.week}</h3><p className="field-help">Three runs, with recovery time in between.</p></div>
+        <button className="button button-quiet" type="button" onClick={() => setActiveTab('calendar')}>All 9 weeks</button>
+      </div>
       <div className="beginner-week-controls">
         <button className="button button-quiet" type="button" disabled={progress.week === 1 || (!!account && !serverReady)} onClick={() => update({ ...progress, week: Math.max(1, progress.week - 1) })}>Previous week</button>
         <strong aria-live="polite">Week {progress.week} of 9</strong>
@@ -188,25 +207,30 @@ export function CouchTo5K() {
         <button className="button button-quiet" type="button" disabled={!!account && !serverReady} onClick={resetWeek}>Repeat this week (+7 days)</button>
       </div>
       {progress.paused && <p role="status">Paused. Your progress is kept here until you resume.</p>}
-      <button className="button button-quiet" type="button" onClick={() => setActiveTab('calendar')}>View all 9 weeks</button>
-      <ol className="days">
+      <ol className="beginner-session-list">
         {sessions.map(session => {
           const id = sessionId(session, progress.revision)
           const viaStrava = automatic.has(id)
           const checked = progress.completed.includes(id)
           return (
-            <li className="day" key={id}>
-              <div>
-                <strong>Session {session.day} · {beginnerDate(progress, session.week, session.day)}</strong>
-                <p className="field-help">5 min brisk walking warm-up</p>
-                <p>{beginnerSessionSummary(session)}</p>
-                <p className="field-help">5 min walking cool-down · About {Math.round(session.totalSeconds / 60)} minutes total</p>
-                {viaStrava && !checked && <p className="beginner-recorded">↗ Recorded via Strava · workout not yet confirmed</p>}
-                <label className="session-done">
-                  <input type="checkbox" disabled={progress.paused || (!!account && !serverReady)} checked={checked} onChange={() => toggle(id)} />
-                  {checked ? '✓ Confirmed complete' : 'Mark this session complete'}
-                </label>
+            <li className={`beginner-session-card${checked ? ' is-complete' : ''}`} key={id}>
+              <div className="beginner-session-top">
+                <span className="beginner-session-index">0{session.day}</span>
+                <span className="beginner-session-status">{checked ? '✓ Confirmed' : viaStrava ? '↗ Recorded' : 'Planned'}</span>
               </div>
+              <h4>Run {session.day}</h4>
+              <p className="beginner-session-date">{beginnerDate(progress, session.week, session.day)}</p>
+              <p className="beginner-session-duration">{Math.round(session.totalSeconds / 60)} <span>minutes · walk + run</span></p>
+              <div className="beginner-session-workout">
+                <p><strong>Warm up</strong><span>5 min brisk walk</span></p>
+                <p><strong>Your intervals</strong><span>{beginnerSessionSummary(session)}</span></p>
+                <p><strong>Cool down</strong><span>5 min easy walk</span></p>
+              </div>
+              {viaStrava && !checked && <p className="beginner-recorded">↗ Recorded via Strava · workout not yet confirmed</p>}
+              <label className="beginner-complete-toggle">
+                <input type="checkbox" disabled={progress.paused || (!!account && !serverReady)} checked={checked} onChange={() => toggle(id)} />
+                <span>{checked ? 'Workout confirmed' : 'Mark workout complete'}</span>
+              </label>
             </li>
           )
         })}
@@ -214,8 +238,8 @@ export function CouchTo5K() {
       </>}
       {activeTab === 'calendar' && <BeginnerCalendar progress={progress} recorded={automatic} onChooseWeek={week => { update({ ...progress, week }); setActiveTab('week') }} />}
       {activeTab === 'progress' && <BeginnerProgressView progress={progress} recorded={automatic} />}
-      <p className="field-help">Progress is saved on this device and synchronised to your Taperday account when you're signed in and connected.</p>
-      <p className="field-help">After week nine, aim for 30 minutes of comfortable running. That may not yet be 5 km. Build distance gradually; rest or repeat whenever needed.</p>
+      <p className="beginner-footnote">Your check-ins are saved on this device and synced to your Taperday account when signed in.</p>
+      <p className="beginner-footnote">Every pace counts. After week nine, aim for 30 minutes of comfortable running—even if 5 km takes longer.</p>
     </section>
   )
 }

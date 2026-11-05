@@ -25,6 +25,19 @@ test('the home page counts down to the next race on the list', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
 })
 
+test('personal goals appear before the race rack without losing the original race animation @phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  const custom = page.getByText('Build for your own distance or event', { exact: true })
+  const firstBib = page.locator('.race-bib').first()
+  await expect(custom).toBeVisible()
+  await expect(firstBib).toBeVisible()
+  expect(await custom.evaluate((element) => Boolean(element.compareDocumentPosition(document.querySelector('.race-bib')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true)
+  await custom.click()
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeInViewport()
+  await expect(page.getByLabel('Race date')).toBeVisible()
+})
+
 test('builds a plan one question at a time, from a race on the list', async ({ page }) => {
   await page.goto('/')
 

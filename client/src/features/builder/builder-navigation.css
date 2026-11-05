@@ -62,3 +62,36 @@
 @media (prefers-reduced-motion: reduce) {
  .plan-build-runner, .plan-build-progress > span { animation: none; }
 }
+
+/* The race decision is the only long picker: keep Continue within thumb reach
+   after a selection, without trapping the rest of the form in a nested scroll. */
+.plan-builder-flow[data-race-step='true'][data-race-selected='true'] {
+  padding-bottom: 6.5rem;
+}
+.plan-builder-flow[data-race-step='true'][data-race-selected='true'] > .wizard-nav {
+  position: fixed;
+  z-index: 90;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100% - 2rem), 46rem);
+  margin: 0;
+  padding: .7rem .85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  box-shadow: 0 12px 36px rgb(0 0 0 / .2);
+}
+.plan-builder-flow[data-race-step='true'][data-race-selected='true'] > .wizard-nav .button-primary {
+  min-height: 48px;
+  flex: 1;
+}
+@media (max-width:767px) {
+  .plan-builder-flow[data-race-step='true'][data-race-selected='true'] > .wizard-nav {
+    width: calc(100% - 1rem);
+    bottom: max(.5rem, env(safe-area-inset-bottom));
+  }
+}
+@media print {
+ .plan-builder-flow[data-race-step='true'][data-race-selected='true'] > .wizard-nav { display: none; }
+}

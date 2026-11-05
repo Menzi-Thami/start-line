@@ -364,15 +364,15 @@ describe('building a plan', () => {
     expect(window.location.search).toContain('start=2026-10-15')
   })
 
-  it('sends no start day when the runner keeps the next Monday', async () => {
+  it('sends the displayed Next Monday as the actual training start', async () => {
     const { user } = setup()
     await answerEverything(user)
-
     await buildIt(user)
 
     await screen.findByRole('heading', { name: 'Parkrun PB' })
-    expect(lastPlanRequest.body).toMatchObject({ startOn: null })
-    expect(window.location.search).not.toContain('start=')
+    // Thursday 8 October 2026 in this fixture: next Monday is 12 October.
+    expect(lastPlanRequest.body).toMatchObject({ startOn: '2026-10-12' })
+    expect(window.location.search).toContain('start=2026-10-12')
   })
 
   it('sends no recent race when none was entered', async () => {

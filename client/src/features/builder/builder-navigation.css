@@ -16,6 +16,13 @@
 @media (max-width: 767px) {
   .builder .wizard-nav > .button-primary { min-width: 0; flex: 1; }
   .plan-builder-flow .wizard-nav { padding: .75rem .75rem calc(.75rem + env(safe-area-inset-bottom)); border: 1px solid var(--line); border-radius: 20px; }
+  /* Keep the whole question and its action in one natural scrolling page on
+     phones. An independently scrolling question put the CTA before choices in
+     mobile Safari and could hide options beneath the viewport. */
+  .plan-builder-flow[data-framed] { display: block; height: auto !important; }
+  .plan-builder-flow[data-framed] > .wizard-question { min-height: auto; overflow: visible; scrollbar-gutter: auto; }
+  .plan-builder-flow[data-framed] > .wizard-nav { margin-top: var(--space-6); }
+
 }
 @media (prefers-reduced-motion: no-preference) {
   .wizard-steps button { transition: color 200ms, border-color 200ms, background-color 200ms; }

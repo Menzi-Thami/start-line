@@ -761,6 +761,22 @@ export function App() {
       </header>
 
       <ScrollProgress />
+      {ready && !ready.needsPrivacyConsent && synced.newArrival && (
+        <section className="strava-arrival-notice" role="status" aria-live="polite" aria-label="Run imported from Strava">
+          <div>
+            <strong>Run received from Strava!</strong>
+            <p>Nice work showing up. Your run is ready to review in Taperday.</p>
+          </div>
+          <div className="strava-arrival-actions">
+            <button type="button" className="button button-primary" onClick={() => {
+              const id = synced.newArrival?.id
+              synced.dismissArrival()
+              if (id) openRunById(id)
+            }}>View run</button>
+            <button type="button" className="button button-quiet" onClick={synced.dismissArrival} aria-label="Dismiss run notification">Dismiss</button>
+          </div>
+        </section>
+      )}
       {state.kind === 'ready' && !state.runner.needsPrivacyConsent && (
         <div hidden={view === 'account' || view === 'privacy' || view === 'unsubscribe'}><RemindersSection key={state.runner.id} offer /></div>
       )}

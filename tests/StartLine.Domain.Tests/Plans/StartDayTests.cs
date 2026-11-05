@@ -48,9 +48,60 @@ public sealed class StartDayTests
     }
 
     [Fact]
-    public void A_start_day_far_ahead_still_keeps_the_plan_to_its_longest_useful_length()
+    public void A_distant_race_starts_with_foundation_runs_on_the_day_the_runner_selected()
     {
-        var plan = TrainingPlanGenerator.Generate(Marathon(startOn: Today) with { RaceDate = new DateOnly(2027, 9, 26) });
+        // The runner selected Monday 9 November. Previously this race's 20-week
+        // cap silently moved the first scheduled workout to January.
+        var start = new DateOnly(2026, 11, 9);
+        var race = new DateOnly(2027, 5, 30);
+        var selected = Marathon(startOn: start) with
+        {
+            Today = new DateOnly(2026, 11, 5),
+            RaceDate = race,
+            RunDays = [DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday, DayOfWeek.Sunday],
+            LongRunDay = DayOfWeek.Sunday,
+        };
+
+        var plan = TrainingPlanGenerator.Generate(selected);
+
+        plan.StartDate.ShouldBe(start);
+        plan.Weeks[0].StartDate.ShouldBe(start);
+        plan.Weeks[0].Sessions.First().Date.ShouldBe(start);
+        plan.Weeks[0].Sessions.ShouldAllBe(run => run.Type is SessionType.Easy or SessionType.LongRun);
+        plan.Weeks.Take(9).ShouldAllBe(week => week.Phase == TrainingPhase.Base);
+        plan.Weeks.Count.ShouldBe(29);
+        plan.Weeks.Select(w => w.Number).ShouldBe(Enumerable.Range(1, 29));
+        plan.Weeks.Zip(plan.Weeks.Skip(1)).ShouldAllBe(pair => pair.Second.StartDate == pair.First.StartDate.AddDays(7));
+        plan.Weeks[^1].Sessions[^1].Date.ShouldBe(race);
+        plan.Warnings.ShouldContain(w => w.Code == "foundation-first");
+        plan.Warnings.ShouldNotContain(w => w.Code == "starts-later");
+    }
+
+    [Fact]
+    public void An_explicit_midweek_start_on_a_distant_race_does_not_schedule_earlier_runs()
+    {
+        var start = new DateOnly(2026, 11, 12);
+        var plan = TrainingPlanGenerator.Generate(Marathon(startOn: start) with
+        {
+            Today = new DateOnly(2026, 11, 5),
+            RaceDate = new DateOnly(2027, 5, 30),
+        });
+
+        plan.StartDate.ShouldBe(start);
+        plan.Weeks[0].StartDate.ShouldBe(new DateOnly(2026, 11, 9));
+        plan.Weeks[0].Sessions.ShouldAllBe(s => s.Date >= start);
+        plan.Weeks[1].StartDate.ShouldBe(new DateOnly(2026, 11, 16));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void Historical_generators_preserve_their_original_capped_schedules(int version)
+    {
+        var plan = TrainingPlanGenerator.Generate(Marathon(startOn: Today, version: version) with
+        {
+            RaceDate = new DateOnly(2027, 9, 26),
+        });
 
         plan.Weeks.Count.ShouldBe(20);
         plan.Warnings.ShouldContain(w => w.Code == "starts-later");

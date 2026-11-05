@@ -236,7 +236,6 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
 
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
-  const [creatingPlan] = useState(() => initial === null)
   const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
   const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))

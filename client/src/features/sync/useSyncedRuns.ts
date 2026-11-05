@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { ActivitySummary, PersonalBest, StravaStatus } from '../../lib/types'
+import { findNewStravaArrival } from './run-arrival'
 
 /** While Strava has runs in flight, look again this often. */
 export const POLL_MS = 15_000
@@ -20,11 +21,16 @@ export function useSyncedRuns(enabled: boolean) {
   const [bests, setBests] = useState<PersonalBest[] | undefined>(undefined)
   const [strava, setStrava] = useState<StravaStatus | undefined>(undefined)
   const seen = useRef<string>('')
+  const previousIds = useRef<Set<string> | null>(null)
+  const [newArrival, setNewArrival] = useState<ActivitySummary | null>(null)
 
   const loadRuns = useCallback(async () => {
     const token = await auth.getToken()
     if (!token) return
     const [list, pbs] = await Promise.all([api.me.activities(token), api.me.bests(token).catch(() => undefined)])
+    const arrival = findNewStravaArrival(previousIds.current, list)
+    previousIds.current = new Set(list.map(run => run.id))
+    if (arrival) setNewArrival(arrival)
     setRuns(list)
     if (pbs) setBests(pbs)
   }, [auth])
@@ -51,6 +57,18 @@ export function useSyncedRuns(enabled: boolean) {
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [enabled, auth, loadRuns])
+
+  // Once connected, check gently while Taperday is visible. Webhooks import runs
+  // server-side; this read makes their arrival visible without push permission.
+  // A hidden tab waits for visibilitychange rather than polling in the background.
+  useEffect(() => {
+    if (!enabled || !strava?.connected || strava.status !== 'Active') return
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return
+      loadRuns().catch(() => undefined)
+    }, 60_000)
+    return () => window.clearInterval(timer)
+  }, [enabled, strava?.connected, strava?.status, loadRuns])
 
   // While runs are on their way, poll the status and reload the runs whenever more have arrived.
   const pending = strava?.connected === true && strava.pending > 0
@@ -79,5 +97,5 @@ export function useSyncedRuns(enabled: boolean) {
     return () => window.clearInterval(timer)
   }, [enabled, pending, auth, loadRuns])
 
-  return { runs, bests, strava, reload: loadRuns }
+  return { runs, bests, strava, reload: loadRuns, newArrival, dismissArrival: () => setNewArrival(null) }
 }

@@ -771,7 +771,7 @@ export function App() {
             <button type="button" className="button button-primary" onClick={() => {
               const id = synced.newArrival?.id
               synced.dismissArrival()
-              if (id) openRunById(id)
+              if (id) showRun(id)
             }}>View run</button>
             <button type="button" className="button button-quiet" onClick={synced.dismissArrival} aria-label="Dismiss run notification">Dismiss</button>
           </div>

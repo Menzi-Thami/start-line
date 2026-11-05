@@ -25,6 +25,20 @@ test('the home page counts down to the next race on the list', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
 })
 
+test('personal goals appear before the race rack without losing the original race animation @phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  const custom = page.getByText('Another race — build for your own distance or event', { exact: true })
+  const firstBib = page.locator('.race-bib').first()
+  await expect(custom).toBeVisible()
+  await expect(firstBib).toBeVisible()
+  expect(await custom.evaluate((element) => Boolean(element.compareDocumentPosition(document.querySelector('.race-bib')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true)
+  // The decorative label is overlapped by the radio; activate its semantic input.
+  await page.getByRole('radio', { name: /Another race/ }).check({ force: true })
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeInViewport()
+  await expect(page.getByLabel('Race date')).toBeVisible()
+})
+
 test('builds a plan one question at a time, from a race on the list', async ({ page }) => {
   await page.goto('/')
 
@@ -63,6 +77,23 @@ test('the plan opens on this week, and its tabs and keys move between views', as
   await page.keyboard.press('ArrowRight')
   await expect(tabs.getByRole('tab', { name: 'Progress' })).toBeFocused()
   await expect(page.getByRole('heading', { name: 'Weekly distance' })).toBeVisible()
+})
+
+test('plan and progress remain usable across phone, tablet and desktop themes', async ({ page }, info) => {
+  for (const theme of ['dark', 'light'] as const) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
+    for (const width of [320, 390, 768, 1440, 2560]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(sharedLink())
+      await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
+      const tabs = page.getByRole('tablist', { name: 'Your plan' })
+      await expect(tabs.getByRole('tab', { name: 'This week' })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1)
+      await page.screenshot({ path: info.outputPath(`ux-run-plan-${theme}-${width}.png`), fullPage: true })
+      await tabs.getByRole('tab', { name: 'Progress' }).click()
+      await expect(page.getByText('Your training at a glance')).toBeVisible()
+    }
+  }
 })
 
 test('a calendar can subscribe to the plan, and the feed it subscribes to works', async ({ page, request }) => {

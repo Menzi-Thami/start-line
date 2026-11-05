@@ -461,7 +461,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                   <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
                     <label className="choice choice-other">
                       <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
-                      <span className="choice-name">Build for your own distance or event</span>
+                      <span className="choice-name">Another race — build for your own distance or event</span>
                       <span className="choice-meta">First 5K, a personal best, a local race or an ultra. Choose your distance and target date.</span>
                     </label>
                     {races.kind === 'loading' && [0, 1, 2].map((i) => <div className="skeleton" key={i} aria-hidden="true" />)}

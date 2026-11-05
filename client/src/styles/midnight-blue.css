@@ -103,3 +103,39 @@ html,body { background:var(--page); }
 @media (prefers-reduced-motion:reduce) {
   .button,.button-primary,.button-quiet { transition:none; transform:none!important; }
 }
+
+/* Win over legacy explicit/detected dark theme token declarations. */
+:root[data-theme='dark'] {
+  --page:#071018; --paper:#0b1722; --surface:#112332; --surface-sunk:#0b1b28;
+  --glass:rgba(19,40,57,.76); --ink:#f2f7fc; --ink-2:#cedde8;
+  --muted:#a3bacb; --line:rgba(167,212,238,.16); --line-strong:rgba(167,212,238,.30);
+  --sage:#31baf7; --on-sage:#03121e; --accent:#32baff; --accent-strong:#84dcff;
+  --accent-soft:#12354c; --on-accent:#04131c; --coral:var(--accent);
+  --violet:#a4c6dc; --glow:0 0 26px rgba(34,171,244,.12);
+  --hero-top:#103247; --hero-mid:#0b2333; --hero-end:#07131e;
+  --frost-edge:rgba(224,243,255,.20); --bar:rgba(8,23,35,.86);
+  --hover-ink:#ffffff;
+  --font-display:'Instrument Sans Variable',system-ui,sans-serif;
+  --font-body:'Instrument Sans Variable',system-ui,sans-serif;
+  --font-mono:'Instrument Sans Variable',system-ui,sans-serif;
+  --radius-sm:12px; --radius-md:20px; --radius-lg:28px;
+  --column:76rem; --focus:0 0 0 3px #071018,0 0 0 5px #79ddff;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme:dark) { :root:not([data-theme='light']) {
+  --page:#071018; --paper:#0b1722; --surface:#112332; --surface-sunk:#0b1b28;
+  --glass:rgba(19,40,57,.76); --ink:#f2f7fc; --ink-2:#cedde8;
+  --muted:#a3bacb; --line:rgba(167,212,238,.16); --line-strong:rgba(167,212,238,.30);
+  --sage:#31baf7; --on-sage:#03121e; --accent:#32baff; --accent-strong:#84dcff;
+  --accent-soft:#12354c; --on-accent:#04131c; --coral:var(--accent);
+  --violet:#a4c6dc; --glow:0 0 26px rgba(34,171,244,.12);
+  --hero-top:#103247; --hero-mid:#0b2333; --hero-end:#07131e;
+  --frost-edge:rgba(224,243,255,.20); --bar:rgba(8,23,35,.86);
+  --hover-ink:#ffffff;
+  --font-display:'Instrument Sans Variable',system-ui,sans-serif;
+  --font-body:'Instrument Sans Variable',system-ui,sans-serif;
+  --font-mono:'Instrument Sans Variable',system-ui,sans-serif;
+  --radius-sm:12px; --radius-md:20px; --radius-lg:28px;
+  --column:76rem; --focus:0 0 0 3px #071018,0 0 0 5px #79ddff;
+  color-scheme:dark;
+} }

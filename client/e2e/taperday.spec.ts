@@ -25,6 +25,15 @@ test('the home page counts down to the next race on the list', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
 })
 
+test('mobile builder keeps its next action visible without scrolling through race cards @phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  const choose = page.getByRole('button', { name: 'Choose a race' })
+  await expect(choose).toBeInViewport()
+  await page.getByRole('radio', { name: /Build for your own distance or event/ }).check()
+  await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeInViewport()
+})
+
 test('builds a plan one question at a time, from a race on the list', async ({ page }) => {
   await page.goto('/')
 

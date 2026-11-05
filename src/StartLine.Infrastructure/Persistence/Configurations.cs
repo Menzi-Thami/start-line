@@ -25,6 +25,7 @@ internal sealed class RunnerConfiguration : IEntityTypeConfiguration<Runner>
         builder.Property(r => r.Email).HasMaxLength(Runner.MaxEmailLength);
         builder.Property(r => r.DisplayName).HasMaxLength(Runner.MaxNameLength).IsRequired();
         builder.Property(r => r.TimeZone).HasMaxLength(Runner.MaxTimeZoneLength).IsRequired();
+        builder.Property(r => r.BeginnerProgressJson).HasColumnType("nvarchar(max)");
         builder.Property(r => r.Units).HasConversion<string>().HasMaxLength(16);
         builder.Property(r => r.PrivacyNoticeVersion).HasMaxLength(32).IsRequired();
         // The calendar feed finds its runner by this secret alone. A concurrency token too, so two first requests at

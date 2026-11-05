@@ -361,7 +361,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       recent: recentInputs(draft.recent, today),
       // A visible 'Next Monday' is an actual start-date choice, not an omitted
       // field. Preserve null for historical plans being edited without a new start.
-      startOn: draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn : sameRace ? initial?.startOn : nextMonday(today),
+      startOn: draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn
+        : sameRace && !initial?.startOn ? undefined : nextMonday(today),
       runWalk: draft.runWalk === 'Auto' ? undefined : draft.runWalk,
     })
   }

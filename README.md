@@ -91,9 +91,25 @@ Playwright needs its browser installed once with `npx playwright install chromiu
 | Website | Azure Static Web Apps; custom domains use managed HTTPS certificates |
 | API | Azure App Service; the configured free F1 tier can sleep independently of SQL |
 | Database | Infrastructure defaults to paid Azure SQL Basic: 5 DTUs and 2 GiB; storage and processing still need monitoring |
-| Delivery | Feature branch → validated PR → merge to `main` → production deployment |
+| Delivery | Feature branch → PR to `staging` → staging site → release button → `main` → production (see below) |
 
-Run checks **before** merging. The main deployment workflow builds and applies migrations, but does not replace the complete pre-merge test suite. See [deployment and failed-run diagnosis](docs/deploy.md). This repository does not require an automatic merge.
+### Releasing: staging, then production
+
+```
+feature branch ──PR──▶ staging ──PR──▶ main
+                         │               │
+                         ▼               ▼
+                 staging site       taperday.run
+```
+
+1. **Build** on a feature branch and open a pull request into `staging`. CI runs the full test suite on it.
+2. **Merge into `staging`.** It deploys to the staging API, database and website on its own (`deploy-staging-only.yml`), then `scripts/smoke.sh` checks it: the site loads and may call its API, the database answers, races list and a plan builds. Staging has its own empty database and no email, Strava or push settings, so it never reaches a runner.
+3. **Try it** on the staging site (`https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net`) with a test account. Several changes can wait on `staging` together.
+4. **Release** with **Actions → release → Run workflow**. It checks staging passed for that exact commit, merges `staging` into `main`, deploys to taperday.run and smoke-checks production. Nothing reaches production until it is pressed.
+
+An urgent fix can go straight to `main` (merging a PR into `main` also deploys, through `deploy.yml`); merge `main` back into `staging` afterwards so they don't drift. Details and failed-run diagnosis: [docs/deploy.md](docs/deploy.md).
+
+Run checks **before** merging. The deployment workflows build and apply migrations, but don't replace the complete pre-merge test suite. This repository does not require an automatic merge.
 
 The race calendar reconciles organiser feeds, federation calendars and curated fallback entries. Source priority and confirmation status remain visible; a failed source retains its last good data. New sources implement `IRaceSource` and must respect the source site's terms.
 

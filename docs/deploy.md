@@ -110,8 +110,10 @@ Two long-lived branches, one per environment:
 1. **`staging`**: open pull requests against `staging`. CI runs on the PR; each merge (or push) deploys to **staging**
    (`deploy-staging-only.yml`), then `scripts/smoke.sh` checks it: the website loads and may call its API, the API reaches
    its database, lists races and builds a plan, the email logo is there. Try the change on the staging site.
-2. **`main`**: when staging looks right, open a pull request from `staging` to `main` and merge it. That deploys the
-   commit to **production** with no click (`deploy.yml`), and the same smoke check runs on production afterwards.
+2. **`main`**: when staging looks right, press **Actions → release → Run workflow** (`release.yml`, on `main`). It
+   checks staging passed its smoke check for that exact commit, merges `staging` into `main`, deploys it to
+   **production** and smoke-checks production. Nothing reaches production until it's pressed. (Merging a pull request
+   into `main` by hand still deploys too, through `deploy.yml`.)
 
 Both call `deploy-environment.yml`. Production never deploys from `staging`, and staging never deploys from `main`. Staging costs nothing extra:
 
@@ -125,7 +127,9 @@ Both call `deploy-environment.yml`. Production never deploys from `staging`, and
 Staging has **no Strava, email or push-test settings**, so it can never reach a real runner, send an email, or touch
 Strava's athlete limit. Its database starts empty; sign up on the staging site with a test account.
 
-To release: merge `staging` into `main`. A failed check turns that run red; fix forward on `staging` and merge again.
+To release: run **release**. It refuses if staging's check hasn't passed for that commit (tick the override to go
+anyway) or if `staging` and `main` conflict (merge `main` into `staging` first). A failed production check turns the run
+red; fix forward on `staging` and release again.
 To hold production for a risky change, add yourself as a required reviewer on the production environment for that
 release and remove it after. Keep `staging` up to date with `main` (merge `main` into it) after any fix made straight on
 `main`. Run the check yourself with `scripts/smoke.sh <site> <api>`.

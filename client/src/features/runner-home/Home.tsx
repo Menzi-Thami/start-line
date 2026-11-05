@@ -1,4 +1,5 @@
 import { ReadinessCheckIn } from './ReadinessCheckIn'
+import { BeginnerHomeCard } from './BeginnerHomeCard'
 import { MilestoneCards } from '../milestones/MilestoneCards'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
@@ -49,6 +50,7 @@ interface Props {
   onOpenDay?: (date: string) => void
   onOpenProgress?: () => void
   onBuildPlan: () => void
+  onOpenBeginner?: () => void
   onOpenRun: (id: string) => void
   onOpenRuns: () => void
   onOpenAccount: () => void
@@ -421,6 +423,7 @@ export function Home({
   onOpenDay,
   onOpenProgress,
   onBuildPlan,
+  onOpenBeginner,
   onOpenRun,
   onOpenRuns,
   onOpenAccount,
@@ -558,6 +561,7 @@ export function Home({
         </button>}
         </div>
         {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
+        {!current && <BeginnerHomeCard today={today} onOpenProgramme={onOpenBeginner ?? onBuildPlan} />}
         <TickCard plan={plan} today={today} coach={coach} />
         {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} syncedFor={coach ? (s) => completedViaStrava(s, coach) : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />

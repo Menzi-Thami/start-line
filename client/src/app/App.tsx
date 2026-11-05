@@ -45,6 +45,7 @@ import { useAuth } from './auth-context'
 const AccountPage = lazy(() => import('../features/account/AccountPage').then((module) => ({ default: module.AccountPage })))
 const ActivityPage = lazy(() => import('../features/activities/ActivityPage').then((module) => ({ default: module.ActivityPage })))
 const MyRuns = lazy(() => import('../features/activities/MyRuns').then((module) => ({ default: module.MyRuns })))
+const CouchTo5K = lazy(() => import('../features/beginner/CouchTo5K').then((module) => ({ default: module.CouchTo5K })))
 
 type PlanState =
   | { kind: 'idle' }
@@ -52,7 +53,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'home' | 'build' | 'runs' | 'account' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
+type View = 'home' | 'build' | 'beginner' | 'runs' | 'account' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -92,7 +93,7 @@ const viewFromUrl = (): View => {
   const view = new URLSearchParams(window.location.search).get('view')
   // A runner has one plan, so the old My plans page is now Home.
   if (view === 'plans') return 'home'
-  return view === 'home' || view === 'runs' || view === 'account' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
+  return view === 'home' || view === 'beginner' || view === 'runs' || view === 'account' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
 }
 
 export function App() {
@@ -442,6 +443,7 @@ export function App() {
     if (item === 'home') return go('home')
     if (item === 'runs') return go('runs')
     if (item === 'account') return go('account')
+    if (view === 'beginner') return
     if (view === 'build' && plan.kind === 'ready') {
       const url = new URL(window.location.href)
       url.searchParams.set('planTab', 'week')
@@ -463,7 +465,7 @@ export function App() {
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'home' || next === 'runs' || next === 'account' || next === 'privacy' || next === 'sign-in'
+      next === 'home' || next === 'beginner' || next === 'runs' || next === 'account' || next === 'privacy' || next === 'sign-in'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
@@ -636,7 +638,7 @@ export function App() {
   // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
   // Strength is part of Plan, so training always has one navigation destination.
   const barCurrent: TabBarItem | null =
-    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : view === 'build' && plan.kind === 'ready' ? 'plan' : null
+    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : view === 'beginner' || (view === 'build' && plan.kind === 'ready') ? 'plan' : null
 
   const gate: Gate | undefined =
     state.kind === 'signed-out'
@@ -715,7 +717,7 @@ export function App() {
                     <button type="button" className="nav-link" aria-current={view === 'home' ? 'page' : undefined} onClick={() => go('home')}>
                       Home
                     </button>
-                    <button type="button" className="nav-link" aria-current={view === 'build' && plan.kind === 'ready' ? 'page' : undefined} onClick={() => pickFromBar('plan')}>
+                    <button type="button" className="nav-link" aria-current={view === 'beginner' || (view === 'build' && plan.kind === 'ready') ? 'page' : undefined} onClick={() => pickFromBar('plan')}>
                       Plan
                     </button>
                     <button type="button" className="nav-link" aria-current={view === 'runs' ? 'page' : undefined} onClick={() => go('runs')}>
@@ -823,12 +825,20 @@ export function App() {
             onOpenDay={openOwnDay}
             onOpenProgress={() => openOwnPlan('progress')}
             onBuildPlan={startFresh}
+            onOpenBeginner={() => go('beginner')}
             onOpenRun={(id) => showRun(id)}
             onOpenRuns={() => go('runs')}
             onOpenAccount={() => go('account')}
           />
         )}
 
+
+        {view === 'beginner' && !gated && (state.kind === 'ready' || state.kind === 'signed-out' || state.kind === 'off') && (
+          <section aria-label="Your Couch to 5K programme" className="beginner-page">
+            <button type="button" className="link-button" onClick={() => go(state.kind === 'ready' ? 'home' : 'build')}>← Back</button>
+            <CouchTo5K />
+          </section>
+        )}
 
         {view === 'runs' &&
           state.kind === 'ready' &&
@@ -899,6 +909,7 @@ export function App() {
                 today={today}
                 onSubmit={buildFromWizard}
                 onCancel={plan.kind === 'ready' ? backToPlan : undefined}
+                onOpenBeginner={() => go('beginner')}
                 gate={gate}
                 intro={
                   <>

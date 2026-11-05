@@ -1,5 +1,5 @@
 import { openTrainingGuide, findPlanControl, openStrengthWorkouts, openDisclosure, openWeekDay } from '../test/user-navigation'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
@@ -105,6 +105,16 @@ describe('the home page', () => {
 
     expect(intro()).toBeNull()
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+  })
+})
+
+describe('beginner journey deep links', () => {
+  it('opens the full Couch to 5K programme without a race plan', async () => {
+    window.history.replaceState(null, '', '/?view=beginner')
+    setup()
+    expect(await screen.findByRole('heading', { name: 'Couch to 5K' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Progress' }))
+    expect(screen.getByRole('region', { name: 'Couch to 5K progress' })).toBeInTheDocument()
   })
 })
 

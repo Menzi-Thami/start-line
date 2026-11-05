@@ -81,6 +81,8 @@ interface Props {
   intro?: ReactNode
   /** Offered while changing the answers of a plan that's already built. */
   onCancel?: () => void
+  /** Open the first-class beginner journey from the race builder. */
+  onOpenBeginner?: () => void
   /** Something to finish before the questions, like signing up. While present, it's the screen shown. */
   gate?: Gate
 }
@@ -238,7 +240,7 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
   )
 }
 
-export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
+export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate, onOpenBeginner }: Props) {
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
   const [creatingPlan] = useState(() => initial === null)
   const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
@@ -387,6 +389,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   return (
     <div className="builder wizard">
       {position === 0 && intro}
+      {creatingPlan && step === 0 && !gate && <section className="panel" aria-label="Start running with Couch to 5K"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" onClick={() => onOpenBeginner?.()} disabled={!onOpenBeginner}>Open Couch to 5K</button></section>}
 
       <div className="wizard-progress">
         <p className="wizard-count">

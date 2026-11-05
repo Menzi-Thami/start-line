@@ -1,0 +1,38 @@
+/* The beginner journey follows Taperday's existing surfaces and accent tokens. */
+.beginner-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .35rem; margin: 1.25rem 0; padding: .25rem; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-sunk); }
+.beginner-tab { min-width: 0; min-height: var(--tap,44px); padding: .65rem .35rem; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink-2); cursor: pointer; font: inherit; font-weight: 650; }
+.beginner-tab.is-active { background: var(--surface); color: var(--ink); outline: 1px solid var(--line-strong); }
+.beginner-tab:focus-visible,.beginner-week-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.beginner-overview { min-width: 0; }
+.beginner-weeks { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,13.5rem),1fr)); gap: .75rem; margin-block: 1rem; }
+.beginner-week-card { display: flex; min-width: 0; min-height: 8.25rem; flex-direction: column; align-items: start; gap: .4rem; padding: 1rem; border: 1px solid var(--line-strong); border-radius: var(--radius-md); color: var(--ink); background: var(--surface); text-align: left; cursor: pointer; font: inherit; }
+.beginner-week-card[aria-current=step] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.beginner-week-number { font-size: var(--text-lg); font-weight: 750; }
+.beginner-week-dots { display: flex; gap: .35rem; margin-block: .35rem; }
+.beginner-status { display: inline-flex; place-content: center; align-items: center; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1px solid var(--line-strong); font-weight: 700; }
+.beginner-status.is-confirmed { background: var(--accent); color: var(--ink); }
+.beginner-status.is-recorded { border-style: dashed; color: var(--ink); background: var(--surface-sunk); }
+.beginner-status.is-planned { color: var(--muted); }
+.beginner-recorded { color: var(--ink-2); font-size: var(--text-sm); margin-block: .5rem; }
+.beginner-progress-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .5rem; margin-block: 1rem 1.5rem; }
+.beginner-progress-facts > div { min-width: 0; display: flex; flex-direction: column; gap: .2rem; padding: .8rem; border-radius: var(--radius-md); border: 1px solid var(--line); }
+.beginner-progress-facts strong { font-size: clamp(1.3rem,3vw,2rem); font-weight: 750; line-height: 1.1; }
+.beginner-progress-facts small { font-size: var(--text-xs); }
+.beginner-progress-facts span { font-size: var(--text-xs); color: var(--ink-2); overflow-wrap: anywhere; }
+.beginner-progress-weeks { display: grid; gap: .6rem; margin-block: 1rem; }
+.beginner-progress-week { display: grid; grid-template-columns: 2.4rem minmax(0,1fr) 2.2rem; gap: .6rem; align-items: center; }
+.beginner-progress-track { display: flex; height: .75rem; overflow: hidden; border-radius: 999px; background: var(--surface-sunk); border: 1px solid var(--line-strong); }
+.beginner-progress-track > span { display: block; height: 100%; flex: none; }
+.beginner-bar-confirmed { background: var(--accent); }
+.beginner-bar-recorded { background: repeating-linear-gradient(45deg,var(--accent),var(--accent) 3px,transparent 3px,transparent 6px); }
+@media(max-width: 24rem) { .beginner-progress-facts { grid-template-columns: 1fr 1fr; } .beginner-tab { font-size: var(--text-sm); } }
+@media(prefers-reduced-motion: no-preference) { .beginner-tab,.beginner-week-card { transition: background-color 180ms ease,border-color 180ms ease; } }
+
+/* Beginner week navigation is not the race builder's sticky footer. */
+.beginner-week-controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .7rem; margin: 1rem 0; }
+.beginner-week-controls strong { text-align: center; }
+.beginner-week-controls .button { max-width: 100%; white-space: normal; }
+@media(max-width: 30rem) { .beginner-week-controls { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .beginner-week-controls strong { grid-column: 1 / -1; grid-row: 1; }
+  .beginner-week-controls .button { min-width: 0; padding-inline: .4rem; font-size: var(--text-sm); }
+}

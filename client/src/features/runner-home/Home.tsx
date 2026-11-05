@@ -26,6 +26,7 @@ import { completionsKey, useSyncedCompletions } from '../coaching/useSyncedCompl
 import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
+import { Runner as TaperdayRunner } from '../shared/Runner'
 import '../plan/training-status.css'
 import './home-navigation.css'
 import { dayStatus } from '../plan/training-status'
@@ -342,7 +343,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
 
         <p className="home-today-title">
           {s.title}
-          {status.kind !== 'planned' && <span className={`chip training-status is-${status.kind} ${status.kind === 'complete' ? 'home-done-chip' : 'home-status-chip'}`}><span aria-hidden="true">{status.icon}</span> {status.kind === 'complete' ? 'Done' : status.label}</span>}
+          {status.kind !== 'planned' && <span className={`chip training-status is-${status.kind} ${status.kind === 'complete' ? 'home-done-chip' : 'home-status-chip'}`}><span aria-hidden="true">{status.kind === 'complete' ? <TaperdayRunner pose="victory" size={18} /> : status.icon}</span> {status.kind === 'complete' ? 'Done' : status.label}</span>}
         </p>
         {coach && !ownDone(s) && <StravaCompletion session={s} coach={coach} />}
         <dl className="home-workout-facts">

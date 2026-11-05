@@ -871,3 +871,28 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* New Strava runs are surfaced inside Taperday without requiring push permission.
+   The notice uses existing theme tokens, and remains readable in both themes. */
+.strava-arrival-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  width: min(100%, 72rem);
+  margin: 0 auto 1rem;
+  padding: 1rem clamp(1rem, 3vw, 1.5rem);
+  background: var(--accent-soft);
+  color: var(--ink);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+}
+.strava-arrival-notice strong { color: var(--ink); font-weight: 750; }
+.strava-arrival-notice p { color: var(--ink-2); margin: .35rem 0 0; }
+.strava-arrival-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
+.strava-arrival-actions .button { min-height: 44px; }
+@media (max-width: 40rem) {
+  .strava-arrival-actions { width: 100%; }
+  .strava-arrival-actions .button:first-child { flex: 1; }
+}

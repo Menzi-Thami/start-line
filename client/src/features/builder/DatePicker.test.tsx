@@ -45,6 +45,18 @@ describe('the date picker', () => {
     expect(screen.getByRole('button', { name: 'Saturday 21 November 2026' })).toBeDisabled()
   })
 
+  it('explains why early November race dates are disabled while keeping the full month visible', async () => {
+    const user = userEvent.setup()
+    render(<Field min="2026-11-19" max="2027-11-05" />)
+    await user.click(screen.getByLabelText('Start on'))
+
+    expect(screen.getByText('Earliest selectable date: Thursday 19 November 2026. Earlier dates are unavailable.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Monday 9 November 2026' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Monday 30 November 2026' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Monday 30 November 2026' }))
+    expect(screen.getByLabelText('Start on')).toHaveTextContent('Monday 30 November 2026')
+  })
+
   it('closes on Escape or a tap outside, without changing anything', async () => {
     const user = userEvent.setup()
     render(<Field />)

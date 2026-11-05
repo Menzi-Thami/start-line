@@ -1,12 +1,12 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PlanTheatre } from './PlanTheatre'
-import { SCENE_MS, TIPS } from './plan-theatre'
+import { SCENE_MS } from './plan-theatre'
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() })
 
-describe('the film during plan creation', () => {
-  it('plays the story once, then keeps running laps', async () => {
+describe('Taperday runner film during plan generation', () => {
+  it('plays the original five scenes, then keeps running', async () => {
     vi.useFakeTimers()
     const { container } = render(<PlanTheatre />)
     const seen: string[] = []
@@ -14,40 +14,28 @@ describe('the film during plan creation', () => {
       seen.push(container.querySelector('.wait-caption')!.textContent!)
       await act(() => vi.advanceTimersByTimeAsync(SCENE_MS))
     }
-    expect(seen).toEqual(['Recovery is training', 'On your marks', 'And they’re off', 'Ticking off the kilometres', 'Through the tape', 'And they’re off', 'Ticking off the kilometres'])
+    expect(seen).toEqual([
+      'Recovery is training', 'On your marks', 'And they’re off',
+      'Ticking off the kilometres', 'Through the tape',
+      'And they’re off', 'Ticking off the kilometres',
+    ])
     expect(container.querySelector('.wait-film')).toHaveAttribute('aria-hidden', 'true')
   })
 
-  it('leaves a tip in place while the film plays and advances only when asked', async () => {
-    vi.useFakeTimers()
+  it('shows a clear loading state without tips or pause controls', () => {
     render(<PlanTheatre />)
-    await act(() => vi.advanceTimersByTimeAsync(SCENE_MS * 3))
-    expect(screen.getByRole('status')).toHaveTextContent(TIPS[0]!)
-    fireEvent.click(screen.getByRole('button', { name: 'Next tip' }))
-    expect(screen.getByRole('status')).toHaveTextContent(TIPS[1]!)
+    expect(screen.getByRole('status', { name: 'Building your training plan' })).toBeInTheDocument()
+    expect(screen.getByText('Building your plan…')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Next tip' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Pause animation' })).not.toBeInTheDocument()
   })
 
-  it('can pause and resume the decorative film', async () => {
+  it('holds a static finish-line pose for reduced motion', async () => {
+    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }))
     vi.useFakeTimers()
     const { container } = render(<PlanTheatre />)
-    fireEvent.click(screen.getByRole('button', { name: 'Pause animation' }))
     await act(() => vi.advanceTimersByTimeAsync(SCENE_MS * 3))
-    expect(screen.getByText('Recovery is training')).toBeInTheDocument()
-    expect(container.querySelector('.plan-theatre')).toHaveClass('is-paused')
-    fireEvent.click(screen.getByRole('button', { name: 'Play animation' }))
-    await act(() => vi.advanceTimersByTimeAsync(SCENE_MS))
-    expect(screen.getByText('On your marks')).toBeInTheDocument()
-  })
-
-  it('keeps the scene still for reduced motion while tips remain usable', async () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: true }))
-    vi.useFakeTimers()
-    render(<PlanTheatre />)
-    await act(() => vi.advanceTimersByTimeAsync(SCENE_MS * 3))
-    expect(screen.getByText('Recovery is training')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Play animation' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Pause animation' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'Next tip' }))
-    expect(screen.getByRole('status')).toHaveTextContent(TIPS[1]!)
+    expect(container.querySelector('.wait-scene-finish')).toBeInTheDocument()
+    expect(screen.getByText('Building your plan…')).toBeInTheDocument()
   })
 })

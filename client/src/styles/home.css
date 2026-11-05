@@ -153,6 +153,9 @@
 }
 
 .home-done-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   animation: done-pop var(--dur-emphasis) var(--ease-spring) both;
 }
 

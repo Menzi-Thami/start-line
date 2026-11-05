@@ -5,7 +5,7 @@ import { runningInstalled } from './install-app'
 export type Theme = 'light' | 'dark'
 
 const THEME_KEY = 'taperday:theme'
-const PAGE: Record<Theme, string> = { light: '#e4e4e4', dark: '#0b0b0b' }
+const PAGE: Record<Theme, string> = { light: '#e8f1f7', dark: '#071018' }
 
 function stored(): Theme | null {
   try {

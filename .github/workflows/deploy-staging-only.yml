@@ -1,0 +1,33 @@
+name: deploy-staging-only
+
+# This workflow deliberately has no production job. Pushing the staging branch
+# deploys the staging API, staging database and staging Static Web Apps slot only.
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-staging-only
+  cancel-in-progress: false
+
+jobs:
+  staging:
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: staging
+      website-environment: staging
+    secrets: inherit
+
+  staging-check:
+    needs: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Smoke check staging only
+        run: scripts/smoke.sh https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net https://app-taperday-api-staging-3ghg5t.azurewebsites.net

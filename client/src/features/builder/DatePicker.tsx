@@ -155,6 +155,7 @@ export function DatePicker({ id, value, onChange, min, max, today, invalid, desc
               </button>
             </div>
 
+            {min && min > today && <p className="datepick-availability-note">Earliest selectable date: {formatDate(min, 'long')}. Earlier dates are unavailable.</p>}
             {view === 'months' ? (
               <div className="datepick-months">
                 {Array.from({ length: 12 }, (_, m) => {

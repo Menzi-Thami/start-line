@@ -78,6 +78,26 @@ public sealed class StartDayTests
     }
 
     [Fact]
+    public void Distant_race_foundation_weeks_include_selected_strength_sessions()
+    {
+        var start = new DateOnly(2026, 11, 9);
+        var plan = TrainingPlanGenerator.Generate(Marathon(startOn: start) with
+        {
+            Today = new DateOnly(2026, 11, 5),
+            RaceDate = new DateOnly(2027, 5, 30),
+            StrengthDays = [DayOfWeek.Tuesday, DayOfWeek.Thursday],
+        });
+
+        var first = plan.Weeks[0];
+        var strength = first.Sessions.Where(session => session.Type == SessionType.Strength).ToArray();
+        strength.Length.ShouldBe(2);
+        strength.Select(session => session.Date.DayOfWeek)
+            .ShouldBe([DayOfWeek.Tuesday, DayOfWeek.Thursday], ignoreOrder: true);
+        strength.ShouldAllBe(session => session.Exercises != null && session.Exercises.Count > 0);
+        plan.Weeks.Take(9).ShouldAllBe(week => week.Sessions.Count(session => session.Type == SessionType.Strength) == 2);
+    }
+
+    [Fact]
     public void An_explicit_midweek_start_on_a_distant_race_does_not_schedule_earlier_runs()
     {
         var start = new DateOnly(2026, 11, 12);

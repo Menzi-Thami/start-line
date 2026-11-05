@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { SLOW_AFTER_MS } from './wait-film'
 import { useWakeStep } from './useWakeStep'
+import { Runner } from '../shared/Runner'
 
 interface Props {
   /** The name the sign-in gave, before the account itself has answered. */
@@ -30,7 +31,7 @@ export function FindingPlan({ name, onRetry, onSignOut }: Props) {
 
   return (
     <div className="finding-plan" role="status" aria-live="polite">
-      <span className="wait-spinner" aria-hidden="true" />
+      <span className="finding-plan-runner" aria-hidden="true"><Runner pose="sprint" size={34} /></span>
       <div>
         <p>
           <strong>{name ? `Signed in as ${name}.` : 'Signed in.'}</strong> {slow ? `${STATUS[step]}…` : 'Finding your plan…'}

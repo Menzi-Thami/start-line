@@ -143,6 +143,31 @@ public sealed class GeneratePlanTests
     }
 
     [Fact]
+    public async Task A_new_plan_from_the_builder_schedules_runs_from_the_selected_november_start()
+    {
+        // Full application boundary: this is the StartOn and version payload
+        // the frontend sends, not a direct invocation of the domain generator.
+        var request = CustomRace(raceDate: new DateOnly(2027, 5, 30),
+            runDays: [DayOfWeek.Monday, DayOfWeek.Wednesday, DayOfWeek.Friday, DayOfWeek.Sunday]) with
+        {
+            LongRunDay = DayOfWeek.Sunday,
+            PlanFrom = new DateOnly(2026, 11, 5),
+            StartOn = new DateOnly(2026, 11, 9),
+            Version = TrainingPlanGenerator.LatestVersion,
+        };
+
+        Validator().Validate(request).IsValid.ShouldBeTrue();
+        var plan = await Handler().Handle(request, CancellationToken.None);
+
+        plan.StartDate.ShouldBe(new DateOnly(2026, 11, 9));
+        plan.Weeks[0].StartDate.ShouldBe(new DateOnly(2026, 11, 9));
+        plan.Weeks[0].Sessions.ShouldContain(s => s.Date == new DateOnly(2026, 11, 9));
+        plan.Weeks[1].StartDate.ShouldBe(new DateOnly(2026, 11, 16));
+        plan.Weeks[^1].Sessions[^1].Date.ShouldBe(new DateOnly(2027, 5, 30));
+        plan.Warnings.Select(w => w.Code).ShouldContain("foundation-first");
+    }
+
+    [Fact]
     public async Task Names_an_unnamed_custom_race()
     {
         var plan = await Handler().Handle(CustomRace() with { RaceName = "  " }, CancellationToken.None);

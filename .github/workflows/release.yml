@@ -1,0 +1,86 @@
+name: release
+
+# The release button: Actions → release → Run workflow (on main). Merges what's on `staging` into `main`, deploys that
+# commit to production, then smoke-checks production. Nothing happens until it's pressed. It refuses when staging hasn't
+# passed its own deploy and smoke check for that exact commit (deploy-staging-only.yml), unless the override is ticked,
+# and when staging and main conflict (merge main into staging first). A push made here doesn't start deploy.yml (GitHub
+# doesn't chain runs from its own token), so production deploys once, from this run.
+on:
+  workflow_dispatch:
+    inputs:
+      skip-staging-check:
+        description: Release even if staging hasn't passed its check for this commit
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+# Shares deploy.yml's group: one production deployment at a time, never cancelled halfway through a migration.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    outputs:
+      sha: ${{ steps.merge.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Staging passed its check for this commit
+        if: ${{ !inputs.skip-staging-check }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse origin/staging)
+          passed=$(gh api "repos/${{ github.repository }}/actions/workflows/deploy-staging-only.yml/runs?head_sha=$sha&status=success" --jq '.total_count')
+          if [ "$passed" = "0" ]; then
+            echo "::error::Staging hasn't passed its deploy and smoke check for ${sha:0:7}. Wait for it (Actions → deploy-staging-only), or run again with the override ticked."
+            exit 1
+          fi
+          echo "Staging passed for ${sha:0:7}."
+
+      - name: Merge staging into main
+        id: merge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898299+github-actions[bot]@users.noreply.github.com"
+          if git merge-base --is-ancestor origin/staging HEAD; then
+            echo "::notice::main already has everything on staging; deploying main as it is."
+          else
+            if ! git merge --no-edit -m "Release: merge staging into main" origin/staging; then
+              echo "::error::staging and main conflict. Merge main into staging, check staging again, then release."
+              exit 1
+            fi
+            git push origin HEAD:main
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "Releasing $(git rev-parse --short HEAD)."
+
+  production:
+    needs: merge
+    uses: ./.github/workflows/deploy-environment.yml
+    with:
+      environment: production
+      ref: ${{ needs.merge.outputs.sha }}
+    secrets: inherit
+
+  production-check:
+    needs: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: Smoke check production
+        run: scripts/smoke.sh https://taperday.run https://app-taperday-api-3ghg5t.azurewebsites.net

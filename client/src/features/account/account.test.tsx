@@ -490,6 +490,21 @@ describe('a signed-up runner', () => {
     expect(screen.getByText('Subscribing keeps your calendar in step with your plan.')).toBeInTheDocument()
   })
 
+  it('offers direct links to account settings without changing their existing forms', async () => {
+    accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/')
+    const user = renderWith(signedIn())
+    await user.click(await screen.findByRole('button', { name: 'Account' }))
+    const shortcuts = screen.getByRole('navigation', { name: 'Jump to account settings' })
+
+    await user.click(within(shortcuts).getByRole('button', { name: 'My profile' }))
+    expect(screen.getByText('Profile & picture').closest('details')).toHaveAttribute('open')
+    await user.click(within(shortcuts).getByRole('button', { name: 'App & calendar' }))
+    expect(screen.getByText('App & calendars').closest('details')).toHaveAttribute('open')
+    await user.click(within(shortcuts).getByRole('button', { name: 'Data & privacy' }))
+    expect(screen.getByText('Data & privacy').closest('details')).toHaveAttribute('open')
+  })
+
   it('gets a new calendar link from Account, and their plan then offers that one', async () => {
     let resets = 0
     accountApi({ runner: thandi, plans: [current] })

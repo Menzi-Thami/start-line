@@ -22,6 +22,24 @@ afterEach(() => {
   delete (Element.prototype as { scrollBy?: unknown }).scrollBy
 })
 
+
+describe('plan navigation and progress clarity', () => {
+  it('returns directly to the starting week after browsing later weeks', async () => {
+    view()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /Next week/ }))
+    expect(screen.getByRole('button', { name: 'Back to your first week' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Back to your first week' }))
+    expect(screen.queryByRole('button', { name: 'Back to your first week' })).not.toBeInTheDocument()
+  })
+
+  it('explains progress before detailed training charts', async () => {
+    view()
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Progress' }))
+    expect(screen.getByText('Your training at a glance')).toBeInTheDocument()
+  })
+})
+
 describe('the plan’s tab row on a narrow screen', () => {
   it('scrolls a chosen tab into view when it was hidden at the edge', async () => {
     const scrollBy = vi.fn()

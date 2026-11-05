@@ -180,7 +180,7 @@ const onStep = (errors: FieldErrors, step: number): FieldErrors =>
 
 const dayList = (days: DayOfWeek[]) => WEEK.filter((d) => days.includes(d)).map((d) => SHORT_DAY[d]).join(', ')
 
-/** The preferred start. The generator can start later for a distant race. */
+/** New plans begin on the chosen date, with easy foundation weeks if the race block starts later. */
 function startSummary(draft: Draft, today: string): string {
   const day = draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn : nextMonday(today)
   return day ? formatDate(day, 'long') : 'Pick a day'
@@ -208,7 +208,7 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
   return (
     <fieldset className="field" style={{ border: 0, padding: 0 }}>
       <legend className="field-label">When do you want to start?</legend>
-      <p className="field-help">This is your preferred start. For a distant race, structured training may start later; keep running easily until then. Your built plan will show the actual start date.</p>
+      <p className="field-help">Your training starts on the day you choose. For a distant race, you'll begin with easy foundation runs before the race-specific weeks.</p>
       <div className="segmented" role="radiogroup" aria-label="When to start">
         {options.map((o) => (
           <label className="segment" key={o.value}>

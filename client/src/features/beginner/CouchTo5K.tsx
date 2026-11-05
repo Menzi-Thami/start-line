@@ -157,8 +157,8 @@ export function CouchTo5K() {
           <span className="beginner-hero-kicker">START SMALL. GO FAR.</span>
           <span className="beginner-hero-weeks">9-week journey</span>
         </div>
-        <h2 id="beginner-title">Your first 5K starts here.</h2>
-        <p>Run a little. Walk a little. Get stronger every week. No pace pressure.</p>
+        <h2 id="beginner-title">Couch to 5K</h2>
+        <p>Your first 5K starts here. Run a little. Walk a little. Get stronger every week. No pace pressure.</p>
         <div className="beginner-hero-metrics" aria-live="polite">
           <div><strong>{confirmed}<span> / 27</span></strong><small>Workouts confirmed</small></div>
           <div><strong>{progress.week}<span> / 9</span></strong><small>Current week</small></div>

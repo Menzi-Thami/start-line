@@ -10,7 +10,7 @@ import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { FeedbackBox } from '../features/account/FeedbackBox'
 import { FindingPlan } from '../features/account/FindingPlan'
-import { RunnerStatus } from '../features/shared/RunnerStatus'
+import { PlanTheatre } from '../features/builder/PlanTheatre'
 import { Unsubscribe } from '../features/account/Unsubscribe'
 import { Wordmark } from './Wordmark'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
@@ -897,7 +897,7 @@ export function App() {
 
             <div aria-live="polite" aria-busy={plan.kind === 'loading'}>
               {plan.kind === 'loading' && (
-                <RunnerStatus title="Building your plan…" detail="Putting your training weeks and workouts together." />
+                <PlanTheatre />
               )}
               {plan.kind === 'error' && view === 'build' && (
                 <div className="error-panel" style={{ marginTop: 'var(--space-7)' }} role="alert">

@@ -5900,3 +5900,34 @@ button.plan-calendar-day {
     animation: none !important;
   }
 }
+
+
+/* Keep the existing Back / Continue controls visible throughout long race
+ * catalogues. Sticky at the form's end cannot help until the user scrolls there. */
+@media screen and (max-width: 47.99rem) {
+  .wizard {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+  .wizard-nav {
+    position: fixed;
+    left: max(16px, env(safe-area-inset-left));
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 35;
+    margin: 0;
+    padding: 10px 12px;
+    background: var(--bar);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    box-shadow: 0 10px 30px rgb(0 0 0 / .16);
+  }
+  .wizard-nav .button-primary {
+    flex: 1 1 auto;
+  }
+  #root:has(.tab-bar) .wizard-nav {
+    bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+  #root:has(.tab-bar) .wizard {
+    padding-bottom: calc(162px + env(safe-area-inset-bottom));
+  }
+}

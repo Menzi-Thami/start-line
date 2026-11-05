@@ -1,11 +1,11 @@
 name: deploy
 
-# Ships main in three steps, with no clicks. Every merge deploys to staging first (its own API, database and website
-# environment), then scripts/smoke.sh checks staging the way a runner first meets it: the website loads and may call its
-# API, and the API answers from its database and builds a plan. Only when that passes does production deploy the same
-# commit, and the same check runs against production afterwards (a failure there turns the run red to say so).
-# To pause production for a change that needs eyes first, add required reviewers to the production environment
-# (Settings → Environments → production). Also runnable by hand (Actions → deploy → Run workflow).
+# Ships main to production, with no clicks. Changes are tried on staging first: they land on the `staging` branch,
+# which deploy-staging-only.yml puts on the staging API, database and website and smoke-checks. Once they look right
+# there, staging is merged into main and this deploys that commit to production, then scripts/smoke.sh checks
+# production the way a runner first meets it (a failure turns the run red to say so). To pause production for a change
+# that needs eyes first, add required reviewers to the production environment (Settings → Environments → production).
+# Also runnable by hand (Actions → deploy → Run workflow).
 on:
   push:
     branches: [main]
@@ -21,24 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  staging:
-    uses: ./.github/workflows/deploy-environment.yml
-    with:
-      environment: staging
-      website-environment: staging
-    secrets: inherit
-
-  staging-check:
-    needs: staging
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - name: Smoke check staging
-        run: scripts/smoke.sh https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net https://app-taperday-api-staging-3ghg5t.azurewebsites.net
-
   production:
-    needs: staging-check
     uses: ./.github/workflows/deploy-environment.yml
     with:
       environment: production

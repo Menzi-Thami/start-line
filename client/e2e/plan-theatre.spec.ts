@@ -13,6 +13,9 @@ async function reviewPlan(page: Page) {
 
 test('plan review is calm and Build my plan opens a real loading screen @phone', async ({ page }, info) => {
   await reviewPlan(page)
+  // Playwright defaults to reduced motion for other journeys. Exercise the
+  // complete motion experience here, after the builder intro has been skipped.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
   const loading = page.getByRole('status', { name: 'Building your training plan' })
   await expect(loading).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Next tip|Pause animation|Play animation/i })).toHaveCount(0)

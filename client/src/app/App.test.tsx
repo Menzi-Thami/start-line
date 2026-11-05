@@ -99,14 +99,14 @@ describe('the home page', () => {
 })
 
 describe('building a plan', () => {
-  it('shows the film on review and opens the finished plan without waiting for a scene', async () => {
+  it('keeps review focused, then shows the branded runner on build without delaying the plan', async () => {
     const { user } = setup()
-    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+    expect(screen.queryByRole('status', { name: 'Building your training plan' })).toBeNull()
     await answerEverything(user)
-    expect(screen.getByRole('complementary', { name: 'Running tips' })).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Building your training plan' })).toBeNull()
     await buildIt(user)
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
-    expect(screen.queryByRole('complementary', { name: 'Running tips' })).toBeNull()
+    expect(screen.queryByRole('status', { name: 'Building your training plan' })).toBeNull()
   })
 
   it('advances only one question when Continue is double-clicked', async () => {

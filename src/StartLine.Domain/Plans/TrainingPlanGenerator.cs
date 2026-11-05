@@ -212,7 +212,7 @@ public static partial class TrainingPlanGenerator
                 // Foundation weeks are real training weeks: include chosen
                 // strength and mobility days, even before the race block.
                 var foundationContext = new WeekContext(weekStart, baselineKm, TrainingPhase.Base,
-                    index, 0, 0, IsCutback: false, IsFirstWeek: index == 0);
+                    index, 0, IsCutback: false, IsFirstWeek: index == 0);
                 var longDay = layout.Days.Single(day => day.Role == DayRole.Long).DayIndex;
                 sessions.AddRange(StrengthDays(parameters, foundationContext, longDay, [])
                     .Select(day => WorkoutBuilder.Strength(weekStart.AddDays(day), TrainingPhase.Base, false))

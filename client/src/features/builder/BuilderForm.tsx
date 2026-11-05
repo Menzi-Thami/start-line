@@ -53,7 +53,7 @@ const nextMonday = (today: string) => addDays(today, (8 - new Date(`${today}T00:
 // One question per screen. Each field lives on exactly one step, so an error (ours or the server's) can send the
 // runner straight back to the screen that needs fixing.
 const STEPS = [
-  { title: 'Which race?', hint: 'Choose a race or add your own.', fields: ['race', 'distance', 'date'] },
+  { title: 'Which race?', hint: 'Choose your own goal or pick an upcoming race.', fields: ['race', 'distance', 'date'] },
   { title: 'What’s your goal time?', hint: 'Your goal sets your training paces.', fields: ['goal'] },
   { title: 'When can you run?', hint: 'Choose the days that work for you.', fields: ['runDays', 'longRunDay', 'startOn'] },
   { title: 'About you', hint: 'Start at your current fitness level.', fields: ['currentKm'] },
@@ -459,6 +459,11 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               {step === 0 && (
                 <>
                   <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
+                    <label className="choice choice-other">
+                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
+                      <span className="choice-name">Another race — build for your own distance or event</span>
+                      <span className="choice-meta">First 5K, a personal best, a local race or an ultra. Choose your distance and target date.</span>
+                    </label>
                     {races.kind === 'loading' && [0, 1, 2].map((i) => <div className="skeleton" key={i} aria-hidden="true" />)}
                     {races.kind === 'loading' && <span className="visually-hidden">Loading races…</span>}
     
@@ -494,11 +499,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       </div>
                     )}
     
-                    <label className="choice choice-other">
-                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
-                      <span className="choice-name">Another race</span>
-                      <span className="choice-meta">Any distance, any date: a parkrun PB, a local half, your first ultra.</span>
-                    </label>
+
                   </div>
                   <FieldError id="race-error" message={errors.race} />
     
@@ -654,6 +655,9 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     {reviewRow('Strength', draft.strengthDays.length ? dayList(draft.strengthDays) : 'Not scheduled', LAST_STEP)}
                   </dl>
                   <p className="field-help">Your training starts on your chosen day. Distant races begin with easy foundation running before the race-specific build.</p>
+                  <p className="field-help" role="status">{draft.strengthDays.length > 0
+                    ? `Strength days: ${dayList(draft.strengthDays)}. These sessions will appear alongside your runs.`
+                    : 'You can add strength and mobility sessions before building your plan.'}</p>
                   <details className="disclosure" open={strengthOpen} onToggle={(event) => setStrengthOpen(event.currentTarget.open)}>
                     <summary>Add strength and mobility sessions</summary>
                     <DayPills

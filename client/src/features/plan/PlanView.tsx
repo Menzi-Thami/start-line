@@ -476,8 +476,12 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
               )}
               <div className="week-navigation" aria-label="Choose plan week">
                 <button type="button" className="button button-quiet" disabled={weekIndex === 0} onClick={() => { setWeekOffset(n => n - 1); setSelectedDay(null) }}>← Previous week</button>
+                <span className="week-navigation-current" aria-live="polite">Week {shown.week.number} of {plan.weeks.length}</span>
                 <button type="button" className="button button-quiet" disabled={weekIndex === plan.weeks.length - 1} onClick={() => { setWeekOffset(n => n + 1); setSelectedDay(null) }}>Next week →</button>
               </div>
+              {weekOffset !== 0 && <button type="button" className="link-button week-return-current" onClick={() => { setWeekOffset(0); setSelectedDay(null) }}>
+                {currentShown?.when === 'soon' ? 'Back to your first week' : currentShown?.when === 'past' ? 'Back to race week' : 'Back to this week'}
+              </button>}
               <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={previewDate} daySummaryId={daySummaryId} renderSelectedDay={() => preview(previewDate)} statusFor={statusOn} />
               <p className="field-help">
                 {coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Ticks are saved on this device.'}{' '}
@@ -499,6 +503,10 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </div>
 
         <div {...panel('progress')}>
+          <div className="plan-progress-intro" role="note">
+            <strong>Your training at a glance</strong>
+            <p>See how far you've come, what you've completed and what comes next. Run insights and training paces are available below when you need more detail.</p>
+          </div>
           <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
           {plan.outlook && plan.outlook.verdict !== 'AtRisk' && (
             <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />

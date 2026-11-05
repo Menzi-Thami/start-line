@@ -6,7 +6,6 @@ import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
 import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
-import { PlanTheatre } from './PlanTheatre'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 
 export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } | { kind: 'error'; message: string }
@@ -640,7 +639,6 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     />
                   </details>
                   <p className="field-help">Your plan also lives in its link, so you can share it with anyone.</p>
-                  {creatingPlan && <PlanTheatre />}
                 </>
               )}
             </section>

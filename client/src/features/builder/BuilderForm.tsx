@@ -6,7 +6,6 @@ import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
 import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
-import { PlanTheatre } from './PlanTheatre'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 
 export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } | { kind: 'error'; message: string }
@@ -237,7 +236,6 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
 
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
-  const [creatingPlan] = useState(() => initial === null)
   const [strengthOpen, setStrengthOpen] = useState(true)
   const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))
@@ -641,7 +639,6 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     />
                   </details>
                   <p className="field-help">Your plan also lives in its link, so you can share it with anyone.</p>
-                  {creatingPlan && <PlanTheatre />}
                 </>
               )}
             </section>

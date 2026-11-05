@@ -438,7 +438,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
             {gate.body}
           </section>
         ) : (
-          <form ref={formRef} className="plan-builder-flow" data-framed={frameHeight != null || undefined} style={frameHeight != null ? { height: frameHeight } : undefined} onSubmit={submit} noValidate aria-label="Build your plan">
+          <form ref={formRef} className="plan-builder-flow" data-race-step={step === 0 || undefined} data-race-selected={step === 0 && !!draft.race || undefined} data-framed={frameHeight != null || undefined} style={frameHeight != null ? { height: frameHeight } : undefined} onSubmit={submit} noValidate aria-label="Build your plan">
             <section key={step} className={`${slide} wizard-question`} aria-labelledby={`${id}-title`} tabIndex={frameHeight != null ? 0 : undefined}>
               <h2 className="wizard-title" id={`${id}-title`} ref={titleRef} tabIndex={-1}>
                 {current.title}
@@ -651,8 +651,9 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       3,
                     )}
                     {reviewRow('Run/walk', RUN_WALK.find((r) => r.value === draft.runWalk)!.title, 3)}
+                    {reviewRow('Strength', draft.strengthDays.length ? dayList(draft.strengthDays) : 'Not scheduled', LAST_STEP)}
                   </dl>
-                  <p className="field-help">For a distant race, your plan may start later than your preferred date. The built plan will confirm when structured training starts.</p>
+                  <p className="field-help">Your training starts on your chosen day. Distant races begin with easy foundation running before the race-specific build.</p>
                   <details className="disclosure" open={strengthOpen} onToggle={(event) => setStrengthOpen(event.currentTarget.open)}>
                     <summary>Add strength and mobility sessions</summary>
                     <DayPills

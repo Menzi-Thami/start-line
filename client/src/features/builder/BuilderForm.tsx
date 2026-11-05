@@ -236,7 +236,7 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
 
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate }: Props) {
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
-  const [strengthOpen, setStrengthOpen] = useState(true)
+  const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
   const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))
   const [clientErrors, setClientErrors] = useState<FieldErrors>({})
@@ -626,6 +626,11 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     {reviewRow('Run/walk', RUN_WALK.find((r) => r.value === draft.runWalk)!.title, 3)}
                   </dl>
                   <p className="field-help">For a distant race, your plan may start later than your preferred date. The built plan will confirm when structured training starts.</p>
+                  <p className="field-help" role="status">
+                    {draft.strengthDays.length > 0
+                      ? `Strength added: ${dayList(draft.strengthDays)}. These sessions will be part of your plan.`
+                      : 'Want strength or mobility workouts too? Add your days below before building.'}
+                  </p>
                   <details className="disclosure" open={strengthOpen} onToggle={(event) => setStrengthOpen(event.currentTarget.open)}>
                     <summary>Add strength and mobility sessions</summary>
                     <DayPills

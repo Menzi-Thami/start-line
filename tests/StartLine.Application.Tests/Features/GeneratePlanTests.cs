@@ -145,6 +145,7 @@ public sealed class GeneratePlanTests
     [Fact]
     public async Task A_new_plan_from_the_builder_schedules_runs_from_the_selected_november_start()
     {
+        _time.SetUtcNow(new DateTimeOffset(2026, 11, 5, 8, 0, 0, TimeSpan.Zero));
         // Full application boundary: this is the StartOn and version payload
         // the frontend sends, not a direct invocation of the domain generator.
         var request = CustomRace(raceDate: new DateOnly(2027, 5, 30),

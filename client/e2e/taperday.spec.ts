@@ -78,6 +78,23 @@ test('the plan opens on this week, and its tabs and keys move between views', as
   await expect(page.getByRole('heading', { name: 'Weekly distance' })).toBeVisible()
 })
 
+test('plan and progress remain usable across phone, tablet and desktop themes', async ({ page }, info) => {
+  for (const theme of ['dark', 'light'] as const) {
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' })
+    for (const width of [320, 390, 768, 1440, 2560]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(sharedLink())
+      await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
+      const tabs = page.getByRole('tablist', { name: 'Your plan' })
+      await expect(tabs.getByRole('tab', { name: 'This week' })).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1)
+      await page.screenshot({ path: info.outputPath(`ux-run-plan-${theme}-${width}.png`), fullPage: true })
+      await tabs.getByRole('tab', { name: 'Progress' }).click()
+      await expect(page.getByText('Your training at a glance')).toBeVisible()
+    }
+  }
+})
+
 test('a calendar can subscribe to the plan, and the feed it subscribes to works', async ({ page, request }) => {
   await page.goto(sharedLink())
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()

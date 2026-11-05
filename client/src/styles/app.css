@@ -1230,8 +1230,9 @@ select {
 }
 
 .bib-card .choice-date small {
+  color: inherit;
   font-size: inherit;
-  opacity: 0.75;
+  opacity: 0.94;
 }
 
 .bib-card .choice-name {

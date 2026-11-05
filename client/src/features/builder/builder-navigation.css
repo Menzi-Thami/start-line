@@ -95,3 +95,10 @@
 @media print {
  .plan-builder-flow[data-race-step='true'][data-race-selected='true'] > .wizard-nav { display: none; }
 }
+
+/* The race CTA must never cover a calendar sheet. On phones the fixed
+   date picker is nested within the form, so hiding the CTA also avoids a
+   competing stacking context and keeps November's final week reachable. */
+.plan-builder-flow:has(.datepick-panel) > .wizard-nav {
+  display: none;
+}

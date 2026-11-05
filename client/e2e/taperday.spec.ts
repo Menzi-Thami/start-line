@@ -33,7 +33,8 @@ test('personal goals appear before the race rack without losing the original rac
   await expect(custom).toBeVisible()
   await expect(firstBib).toBeVisible()
   expect(await custom.evaluate((element) => Boolean(element.compareDocumentPosition(document.querySelector('.race-bib')!) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true)
-  await custom.click()
+  // The decorative label is overlapped by the radio; activate its semantic input.
+  await page.getByRole('radio', { name: /Another race/ }).check({ force: true })
   await expect(page.getByRole('button', { name: 'Continue' })).toBeInViewport()
   await expect(page.getByLabel('Race date')).toBeVisible()
 })

@@ -42,3 +42,14 @@
 .plan .week-glance-figures { margin-bottom: 1rem; }
 .plan .week-master-detail { width: 100%; }
 .plan .day-detail-page .day-summary-head { position: static; }
+
+/* Faster orientation without altering the existing colour or motion identity. */
+.plan .week-navigation { align-items: center; flex-wrap: wrap; }
+.plan .week-navigation-current { font-size: var(--text-sm); color: var(--muted); font-weight: 700; text-align: center; }
+.plan .week-return-current { display: inline-flex; margin-bottom: var(--space-4); min-height: 44px; align-items: center; }
+.plan .plan-progress-intro { margin-bottom: var(--space-4); padding: var(--space-3) var(--space-4); border-inline-start: 3px solid var(--accent); background: var(--surface); border-radius: var(--radius-sm); }
+.plan .plan-progress-intro p { margin: var(--space-2) 0 0; color: var(--ink-2); max-width: 62ch; }
+@media (max-width: 480px) {
+  .plan .week-navigation-current { order: -1; flex-basis: 100%; }
+  .plan .week-navigation .button { flex: 1 1 0; }
+}

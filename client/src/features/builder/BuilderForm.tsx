@@ -50,7 +50,7 @@ const nextMonday = (today: string) => addDays(today, (8 - new Date(`${today}T00:
 // One question per screen. Each field lives on exactly one step, so an error (ours or the server's) can send the
 // runner straight back to the screen that needs fixing.
 const STEPS = [
-  { title: 'What are you training for?', hint: 'Start with your own goal, or pick an upcoming race.', fields: ['race', 'distance', 'date'] },
+  { title: 'Which race?', hint: 'Start with your own goal, or pick an upcoming race.', fields: ['race', 'distance', 'date'] },
   { title: 'What’s your goal time?', hint: 'Your goal sets your training paces.', fields: ['goal'] },
   { title: 'When can you run?', hint: 'Choose the days that work for you.', fields: ['runDays', 'longRunDay', 'startOn'] },
   { title: 'About you', hint: 'Start at your current fitness level.', fields: ['currentKm'] },
@@ -627,7 +627,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                   </dl>
                   <p className="field-help">For a distant race, your plan may start later than your preferred date. The built plan will confirm when structured training starts.</p>
                   <details className="disclosure" open={strengthOpen} onToggle={(event) => setStrengthOpen(event.currentTarget.open)}>
-                    <summary>Strength and mobility days (optional)</summary>
+                    <summary>Add strength and mobility sessions</summary>
                     <DayPills
                       legend="Strength days"
                       hint={`Up to three. ${draft.longRunDay ?? 'Your long-run day'} is reserved for your long run. Strength can share another running day.`}

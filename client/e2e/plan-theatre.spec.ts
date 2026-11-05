@@ -156,7 +156,7 @@ test('custom race date sheet exposes the final day and is not covered by Continu
   await expect(sheet.getByText(/Earliest selectable date:/)).toBeVisible()
   const continueButton = page.getByRole('button', { name: 'Continue' })
   await expect(continueButton).toBeHidden()
-  const month = sheet.getByText('November 2026')
+  const month = sheet.getByRole('button', { name: 'November 2026', exact: true })
   await expect(month).toBeVisible()
   const lastDay = sheet.getByRole('button', { name: 'Monday 30 November 2026' })
   await lastDay.scrollIntoViewIfNeeded()

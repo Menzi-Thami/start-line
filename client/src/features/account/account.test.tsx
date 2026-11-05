@@ -495,13 +495,13 @@ describe('a signed-up runner', () => {
     window.history.replaceState(null, '', '/')
     const user = renderWith(signedIn())
     await user.click(await screen.findByRole('button', { name: 'Account' }))
-    const shortcuts = screen.getByRole('navigation', { name: 'Jump to account settings' })
+    const shortcuts = await screen.findByRole('navigation', { name: 'Jump to account settings' })
 
     await user.click(within(shortcuts).getByRole('button', { name: 'My profile' }))
     expect(screen.getByText('Profile & picture').closest('details')).toHaveAttribute('open')
     await user.click(within(shortcuts).getByRole('button', { name: 'App & calendar' }))
     expect(screen.getByText('App & calendars').closest('details')).toHaveAttribute('open')
-    await user.click(within(shortcuts).getByRole('button', { name: 'Data & privacy' }))
+    await user.click(within(shortcuts).getByRole('button', { name: 'Manage privacy' }))
     expect(screen.getByText('Data & privacy').closest('details')).toHaveAttribute('open')
   })
 

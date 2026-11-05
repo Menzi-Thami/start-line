@@ -50,14 +50,17 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     const pane = page.locator('.wizard-question')
     await expect(page.getByRole('button', { name: '5 Review' })).toHaveAttribute('aria-current', 'step')
     if (width < 768) {
-      await expect(actions).toBeInViewport()
+      // Mobile builder uses natural page scrolling: the action row must follow
+      // the complete question, not float ahead of options in a nested scroller.
+      await expect(page.locator('.plan-builder-flow')).toHaveCSS('display', 'block')
       const box = (await pane.boundingBox())!
       expect((await actions.boundingBox())!.y).toBeGreaterThanOrEqual(box.y + box.height)
-      await pane.evaluate(element => { element.scrollTop = element.scrollHeight })
-      await expect(page.getByText('Your plan also lives in its link, so you can share it with anyone.')).toBeInViewport()
+      const lastHint = page.getByText('Your plan also lives in its link, so you can share it with anyone.')
+      await lastHint.scrollIntoViewIfNeeded()
+      await expect(lastHint).toBeInViewport()
+      await actions.scrollIntoViewIfNeeded()
       await expect(actions).toBeInViewport()
       await page.screenshot({ path: screenshotPath(test.info(), 'refinements', `builder-bottom-${width}.png`), fullPage: true })
-      await pane.evaluate(element => { element.scrollTop = 0 })
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await page.screenshot({ path: screenshotPath(test.info(), 'refinements', `builder-after-${width}.png`), fullPage: true })
@@ -126,6 +129,7 @@ test('a fresh Builder cannot skip unanswered steps and retains its draft after v
   await expect(page.locator('.plan-builder-flow')).not.toHaveAttribute('data-framed')
   await page.setViewportSize({ width: 375, height: 812 })
   await expect(name).toHaveValue('A summer race')
+  await page.getByRole('group', { name: 'Plan builder actions' }).scrollIntoViewIfNeeded()
   await expect(page.getByRole('group', { name: 'Plan builder actions' })).toBeInViewport()
 })
 

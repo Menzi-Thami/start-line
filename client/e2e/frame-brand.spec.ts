@@ -12,9 +12,9 @@ test('Frame colors, SVG animation accents and responsive shell @phone', async ({
       bodyFont: getComputedStyle(document.body).fontFamily,
     }
   })
-  expect(['#fff', '#ffffff']).toContain(design.paper)
-  expect(design.accent).toBe('#4f6f45')
-  expect(['#111', '#111111']).toContain(design.ink)
+  expect(design.paper).toBe('#fbfcf7')
+  expect(design.accent).toBe('#3e683d')
+  expect(design.ink).toBe('#142019')
   expect(design.bodyFont).toContain('Instrument Sans')
 
   const introAccent = await page.evaluate(() => {
@@ -25,7 +25,7 @@ test('Frame colors, SVG animation accents and responsive shell @phone', async ({
     el.remove()
     return value
   })
-  expect(introAccent).toBe('rgb(79, 111, 69)')
+  expect(introAccent).toBe('rgb(62, 104, 61)')
 
   for (const width of [320, 390, 768, 1024, 1440, 2560]) {
     await page.setViewportSize({ width, height: 900 })

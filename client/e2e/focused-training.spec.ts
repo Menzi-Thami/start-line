@@ -98,8 +98,11 @@ test('training stays focused while all detail remains reachable @phone', async (
     await page.screenshot({ path: info.outputPath(`focused-plan-${width}.png`) })
   }
   const strength = page.locator('summary').filter({ hasText: /^Strength workouts$/ })
-  await strength.focus()
-  await page.keyboard.press('Enter')
+  // Weeks with strength now open automatically. Do not toggle them closed.
+  if (!await strength.evaluate(node => (node.closest('details') as HTMLDetailsElement).open)) {
+    await strength.focus()
+    await page.keyboard.press('Enter')
+  }
   await expect(page.getByRole('button', { name: 'Change strength days', exact: true })).toBeVisible()
   await strength.click()
   await navigation.getByRole('button', { name: 'Runs', exact: true }).click()

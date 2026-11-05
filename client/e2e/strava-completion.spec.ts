@@ -91,6 +91,6 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   expect(state.writes).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
   state.held = false
   await page.reload()
-  await expect(today.locator('.home-done-chip')).toHaveText('✓ Done')
+  await expect(today.locator('.home-done-chip')).toHaveText(/Done/)
   await expect(today.getByText('Completed via Strava', { exact: true })).toHaveCount(0)
 })

@@ -388,6 +388,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
 
   return (
     <div className="builder wizard">
+      {busy && <div className="plan-build-overlay"><PlanTheatre /></div>}
       {position === 0 && intro}
       {creatingPlan && step === 0 && !gate && <section className="panel" aria-label="Start running with Couch to 5K"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" onClick={() => onOpenBeginner?.()} disabled={!onOpenBeginner}>Open Couch to 5K</button></section>}
 
@@ -662,7 +663,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     />
                   </details>
                   <p className="field-help">Your plan also lives in its link, so you can share it with anyone.</p>
-                  {creatingPlan && <PlanTheatre />}
+                  
                 </>
               )}
             </section>

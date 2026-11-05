@@ -4744,8 +4744,8 @@ select.input option {
 
 .datepick-day:disabled {
   color: var(--muted);
-  opacity: 0.32;
-  cursor: default;
+  opacity: 0.8;
+  cursor: not-allowed;
 }
 
 .datepick-months {
@@ -4789,7 +4789,7 @@ select.input option {
   .datepick-scrim {
     display: block;
     position: fixed;
-    z-index: 60;
+    z-index: 109;
     inset: 0;
     background: rgba(0, 0, 0, 0.6);
     animation: datepick-fade var(--dur-base) var(--ease-standard);
@@ -4797,13 +4797,17 @@ select.input option {
 
   .datepick-panel {
     position: fixed;
-    z-index: 61;
+    z-index: 110;
     top: auto;
     right: 0;
     bottom: 0;
     left: 0;
     width: auto;
     max-width: none;
+    max-height: calc(100dvh - env(safe-area-inset-top) - 1rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding: var(--space-3) var(--space-4) calc(var(--space-5) + env(safe-area-inset-bottom));
     border-bottom: 0;
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;

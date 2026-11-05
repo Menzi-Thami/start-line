@@ -1,28 +1,27 @@
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMediaQuery } from '../../lib/use-media-query'
 import { Runner } from '../shared/Runner'
-import { sceneAt, SCENE_MS, TIPS } from './plan-theatre'
+import { sceneAt, SCENE_MS } from './plan-theatre'
 
-/** Decoration and practical tips on the final review/build step, never an artificial loading gate. */
+/**
+ * Taperday's original five-scene running cartoon, now shown when a plan is
+ * actually being prepared. Its timing never blocks navigation or API results.
+ * There are deliberately no tips, pause controls, or extra decisions.
+ */
 export function PlanTheatre() {
   const [tick, setTick] = useState(0)
-  const [tip, setTip] = useState(0)
-  const [paused, setPaused] = useState(false)
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
-  const tipId = useId()
-  const playing = !paused && !reduced
 
   useEffect(() => {
-    if (!playing) return
+    if (reduced) return
     const timer = window.setInterval(() => setTick((t) => t + 1), SCENE_MS)
     return () => window.clearInterval(timer)
-  }, [playing])
+  }, [reduced])
 
-  const scene = sceneAt(tick)
-
+  const scene = sceneAt(reduced ? 4 : tick)
   return (
-    <aside className={`plan-theatre${playing ? '' : ' is-paused'}`} aria-label="Running tips">
-      <div key={tick} className={`wait-film wait-scene-${scene.id}`} aria-hidden="true">
+    <section className="plan-theatre plan-theatre-building" role="status" aria-label="Building your training plan" aria-live="off">
+      <div key={reduced ? 'still' : tick} className={`wait-film wait-scene-${scene.id}`} aria-hidden="true">
         <span className="wait-caption">{scene.caption}</span>
         <span className="wait-ground" />
         {scene.id === 'rest' && <span className="wait-zzz"><i>z</i><i>z</i><i>z</i></span>}
@@ -32,15 +31,9 @@ export function PlanTheatre() {
         <Runner pose={scene.pose} size={scene.pose === 'sleep' ? 28 : 46} className="wait-runner" />
       </div>
       <div className="plan-theatre-copy">
-        <p className="wait-tip-label">A little know-how for the miles ahead</p>
-        <p id={tipId} className="plan-theatre-tip" role="status" aria-live="polite" aria-atomic="true">{TIPS[tip]}</p>
-        <div className="plan-theatre-controls">
-          <button type="button" className="link-button" aria-controls={tipId} onClick={() => setTip((t) => (t + 1) % TIPS.length)}>Next tip</button>
-          {reduced
-            ? <span className="field-help">Motion reduced</span>
-            : <button type="button" className="link-button" onClick={() => setPaused((p) => !p)}>{paused ? 'Play animation' : 'Pause animation'}</button>}
-        </div>
+        <strong>Building your plan…</strong>
+        <p className="field-help">Your training weeks and workouts are coming together.</p>
       </div>
-    </aside>
+    </section>
   )
 }

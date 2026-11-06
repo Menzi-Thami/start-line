@@ -30,7 +30,7 @@ const runs = [
   { ...tempo, id: 'run-tempo', localDate: day(1), startedAt: `${day(1)}T06:30:00+00:00` },
   { ...longRun, id: 'run-long', localDate: day(4), startedAt: `${day(4)}T07:10:00+00:00` },
 ]
-const strava = { available: true, connected: true, status: 'Connected', includesPrivateRuns: false, connectedAt: '2026-10-20T08:00:00Z', lastSyncedAt: new Date().toISOString(), pending: 0, failed: 0, syncedRuns: 2 }
+const strava = { available: true, connected: true, status: 'Active', includesPrivateRuns: false, connectedAt: '2026-10-20T08:00:00Z', lastSyncedAt: new Date().toISOString(), pending: 0, failed: 0, syncedRuns: 2 }
 const weeks = (n: number) => Array.from({ length: n }, (_, i) => ({ weekStart: day((n - 1 - i) * 7), plannedKm: 20, ranKm: 14 + i, stravaKm: 10, runs: 3, unknownDistances: 0, longestKm: 8, isCurrent: i === n - 1 }))
 
 type Route = [method: string, pattern: RegExp, body: () => unknown, status?: number]

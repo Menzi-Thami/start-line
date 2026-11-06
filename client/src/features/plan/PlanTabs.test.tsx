@@ -51,7 +51,8 @@ describe('plan navigation and progress clarity', () => {
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Calendar' }))
     const session = planFixture.weeks[0]!.sessions.find(s => s.type !== 'Strength')!
     const day = document.querySelector(`.plan-calendar [data-date="${session.date}"]`)!
-    expect(day.querySelector('.calendar-what')?.textContent).toContain(session.title)
+    expect(day.getAttribute('data-what')).toContain(session.title)
+    expect(day.getAttribute('aria-label')).toContain(session.title)
   })
 
   it('explains progress before detailed training charts', async () => {

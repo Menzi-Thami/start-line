@@ -2,11 +2,8 @@ import type { dayStatus } from './training-status'
 import { useState } from 'react'
 import type { PlanWeek } from '../../lib/types'
 import { calendarDayState, moveCalendarFocus } from './calendar-day'
-import { formatDistance, type Units } from '../../lib/format'
 
 interface Props {
-  /** For the workout named in each day on wide screens. */
-  units?: Units
   statusFor?: (date: string) => ReturnType<typeof dayStatus>
   weeks: readonly PlanWeek[]
   raceDate: string
@@ -42,7 +39,7 @@ function monthsBetween(from: string, to: string): string[] {
  * The whole plan as a calendar, a month at a time: run days ringed, ticked ones in volt, today filled, race day flagged.
  * Every date opens its day summary, including rest days. It opens on today's month.
  */
-export function PlanCalendar({ units = 'km', weeks, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId, statusFor }: Props) {
+export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId, statusFor }: Props) {
   const sessions = weeks.flatMap((w) => w.sessions)
   const firstDate = [weeks[0]?.startDate ?? today, ...historyDates].sort()[0]!
   const lastDate = [raceDate, ...historyDates].sort().at(-1)!
@@ -88,13 +85,14 @@ export function PlanCalendar({ units = 'km', weeks, raceDate, today, done, addit
           const completion = calendarDayState(day, done, recorded, date, today)
           const state = isRace ? 'race' : status?.kind === 'complete' ? 'done' : status?.kind === 'partial' ? 'partial' : !status && completion === 'done' ? 'done' : runs.length > 0 ? 'run' : day.length > 0 ? 'strength' : 'rest'
           const inPlan = date >= (weeks[0]?.startDate ?? today) && date <= raceDate
-          const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace ? 'race day' : day.length ? day.map((s) => s.title).join(', ') : inPlan ? 'rest' : 'outside this plan'}${status ? `, ${status.label.toLowerCase()}` : completion === 'done' ? ', done' : completion === 'missed' ? ', no completion recorded' : ''}${recorded ? ', activity recorded' : ''}${additional ? `, ${additional} additional ${additional === 1 ? 'run' : 'runs'} logged` : ''}`
+          // On wide screens the day also shows these words (drawn by CSS from data-what); its accessible name already has them.
+          const what = isRace ? 'race day' : day.map((s) => s.title).join(', ')
+          const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace || day.length ? what : inPlan ? 'rest' : 'outside this plan'}${status ? `, ${status.label.toLowerCase()}` : completion === 'done' ? ', done' : completion === 'missed' ? ', no completion recorded' : ''}${recorded ? ', activity recorded' : ''}${additional ? `, ${additional} additional ${additional === 1 ? 'run' : 'runs'} logged` : ''}`
           const cls = `plan-calendar-day is-${state}${completion === 'missed' ? ' is-missed' : ''}${date === today ? ' is-today' : ''}${recorded ? ' has-activity' : ''}`
           return (
-            <button key={date} data-date={date} type="button" className={cls} data-status={status?.kind} aria-label={label} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
+            <button key={date} data-date={date} data-what={isRace || day.length ? what : undefined} type="button" className={cls} data-status={status?.kind} aria-label={label} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
               {Number(date.slice(8))}
               {status && <span className="calendar-status" aria-hidden="true">{status.icon}</span>}
-              {(isRace || day.length > 0) && <span className="calendar-what" aria-hidden="true">{isRace ? 'Race day' : day.map(s => s.type === 'Strength' ? 'Strength' : `${s.title}${s.distanceKm > 0 ? ` · ${formatDistance(s.distanceKm, units)}` : ''}`).join(' + ')}</span>}
             </button>
           )
         })}

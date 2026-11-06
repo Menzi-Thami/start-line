@@ -285,7 +285,8 @@ describe('building a plan', () => {
       ),
     )
     const { user } = setup()
-    await answerEverything(user, ['0', '3', '0'])
+    // A goal the builder accepts; the API (mocked) still complains, as it would about anything it rejects.
+    await answerEverything(user)
 
     await buildIt(user)
 

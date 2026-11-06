@@ -6,9 +6,10 @@ export function ScrollProgress() {
   const [canReturn, setCanReturn] = useState(false)
 
   useEffect(() => {
-    let frame = 0
+    // The pending animation frame, held on an object so the effect never reassigns a variable after render.
+    const pending = { frame: 0 }
     const update = () => {
-      frame = 0
+      pending.frame = 0
       const available = document.documentElement.scrollHeight - window.innerHeight
       const fraction = available > 0 ? Math.min(1, Math.max(0, window.scrollY / available)) : 0
       if (rail.current) {
@@ -18,7 +19,7 @@ export function ScrollProgress() {
       setCanReturn(window.scrollY > 640)
     }
     const schedule = () => {
-      if (!frame) frame = window.requestAnimationFrame(update)
+      if (!pending.frame) pending.frame = window.requestAnimationFrame(update)
     }
     schedule()
     window.addEventListener('scroll', schedule, { passive: true })
@@ -29,7 +30,7 @@ export function ScrollProgress() {
       observer?.disconnect()
       window.removeEventListener('scroll', schedule)
       window.removeEventListener('resize', schedule)
-      window.cancelAnimationFrame(frame)
+      window.cancelAnimationFrame(pending.frame)
     }
   }, [])
 

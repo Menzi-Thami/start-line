@@ -105,24 +105,34 @@ Environments → production) and the CSP in `client/public/staticwebapp.config.j
 
 ## Staging, then production
 
-Every merge to `main` deploys to **staging** first, then `scripts/smoke.sh` checks staging (website loads and may call
-its API, the API reaches its database, lists races and builds a plan, the email logo is there). Only if that passes does the
-same commit go to **production**, with no click, and the same check runs on production afterwards (`deploy.yml` calls
-`deploy-environment.yml` once per environment). Staging costs nothing extra:
+Two long-lived branches, one per environment:
+
+1. **`staging`**: open pull requests against `staging`. CI runs on the PR; each merge (or push) deploys to **staging**
+   (`deploy-staging-only.yml`), then `scripts/smoke.sh` checks it: the website loads and may call its API, the API reaches
+   its database, lists races and builds a plan, the email logo is there. Try the change on the staging site.
+2. **`main`**: when staging looks right, press **Actions → release → Run workflow** (`release.yml`, on `main`). It
+   checks staging passed its smoke check for that exact commit, merges `staging` into `main`, deploys it to
+   **production** and smoke-checks production. Nothing reaches production until it's pressed. (Merging a pull request
+   into `main` by hand still deploys too, through `deploy.yml`.)
+
+Both call `deploy-environment.yml`. Production never deploys from `staging`, and staging never deploys from `main`. Staging costs nothing extra:
 
 | Piece | Production | Staging |
 |---|---|---|
 | API | `app-taperday-api-3ghg5t` | `app-taperday-api-staging-3ghg5t`, on the same free F1 plan |
 | Database | `sqldb-taperday`, Basic, always on | `sqldb-taperday-staging`, the free serverless offer; **pauses** when its monthly allowance runs out instead of billing |
 | Website | `taperday.run` | Static Web Apps environment `staging`: `https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net` |
-| GitHub environment | `production` (main only; no reviewer, the staging check is the gate) | `staging` (main only) |
+| GitHub environment | `production` (branch `main` only; no reviewer) | `staging` (branch `staging` only) |
 
 Staging has **no Strava, email or push-test settings**, so it can never reach a real runner, send an email, or touch
 Strava's athlete limit. Its database starts empty; sign up on the staging site with a test account.
 
-To release: merge to `main`. A failed staging check stops production and turns the run red; fix forward and merge
-again. To hold production for a risky change, add yourself as a required reviewer on the production environment for
-that release and remove it after. Run the check yourself with `scripts/smoke.sh <site> <api>`.
+To release: run **release**. It refuses if staging's check hasn't passed for that commit (tick the override to go
+anyway) or if `staging` and `main` conflict (merge `main` into `staging` first). A failed production check turns the run
+red; fix forward on `staging` and release again.
+To hold production for a risky change, add yourself as a required reviewer on the production environment for that
+release and remove it after. Keep `staging` up to date with `main` (merge `main` into it) after any fix made straight on
+`main`. Run the check yourself with `scripts/smoke.sh <site> <api>`.
 
 ### One-time setup (done by the owner; permission changes can't be automated here)
 

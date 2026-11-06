@@ -16,6 +16,8 @@ interface Props {
   units: Units
   onOpen: (id: string, uploaded?: Activity) => void
   onOpenPlan?: () => void
+  /** The run open beside the list on a desktop, marked in the list. */
+  selectedId?: string
 }
 
 /** Upload runs from a Garmin watch (one, a few, or a whole account export), and every run uploaded so far, newest first. */
@@ -42,7 +44,7 @@ function inRange(runs: readonly ActivitySummary[], range: Range): readonly Activ
   return runs.filter((r) => r.localDate >= from && r.localDate <= today)
 }
 
-export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
+export function MyRuns({ units, onOpen, onOpenPlan, selectedId }: Props) {
   const auth = useAuth()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [range, setRange] = useState<Range>('all')
@@ -199,10 +201,12 @@ export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
         <ul className="weeks runs" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-4)' }}>
           {inRange(list.runs, range).map((run) => (
             <li className="run-feed-row" key={run.id}>
-              <button type="button" className="run-feed-open" onClick={() => onOpen(run.id)}><span>
+              <button type="button" className="run-feed-open" aria-current={run.id === selectedId ? 'true' : undefined} onClick={() => onOpen(run.id)}><span>
                 <span className="run-card-distance">{formatDistance(run.distanceKm, units)}</span>
                 <span className="week-name">{run.plannedTitle ?? KIND_LABEL[run.kind]}</span>
                 <span className="tag">{run.source.kind === 'Strava' ? 'From Strava' : 'Uploaded recording'}</span>
+                <br />
+                <span className="run-feed-match field-help">{run.plannedTitle ? `Matched to your plan: ${run.plannedTitle}` : 'Not matched to a planned session'}</span>
                 <br />
                 <span className="week-meta mono">
                   {formatDate(run.localDate, 'long')} · {formatDuration(run.movingSeconds)} ·{' '}

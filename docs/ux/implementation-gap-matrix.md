@@ -149,3 +149,24 @@ The plan-building film has regressed from production to staging:
 | Race catalogue | Loads, with retry (#201). The e2e test covers it. |
 | Strava auto-completion | Existing, and the tests pass. Live behaviour needs the user's Strava on staging. |
 | Mobile Continue | Fixed in #196 (`cc48ee2`). The e2e test covers it. |
+
+## Resolution (PR #203, 6 November 2026)
+
+| Audit row | Was | Now | Code | Tests |
+|---|---|---|---|---|
+| Bottom bar | Partial | Done | `app/TabBar.tsx`: Home · Plan · Runs · Progress · Account. It's a bar below 1024 px, including on tablets and for signed-out runners with a plan, and a left rail on desktops. It hides while the build film plays and while the date sheet is open. `styles/ux-redesign.css`. | `TabBar.test.tsx` (bar and rail) |
+| Home | Partial | Done | `runner-home/LatestRun.tsx` shows the latest run, its source, the matched session and the Strava sync time. On tablets and desktops the grid puts the Today card beside the week, race and latest run. | `LatestRun.test.tsx` |
+| Plan-building film | Regressed | Done | `builder/PlanTheatre.tsx` brings back the five scenes and their set pieces: zzz, start line, km markers and tape. There are still no tips or pause, and reduced motion keeps the static runner. | `PlanTheatre.test.tsx` |
+| Plan and calendar | Partial | Done | `plan/PlanView.tsx` now has one week heading and compact Previous and Next buttons. `plan/DayPreview.tsx` shows each session's pace and structure in the desktop split. | `PlanTabs.test.tsx` |
+| Day detail and completion | Existing | Done | `plan/DaySummary.tsx` shows a Done card with the victory runner, including "from Strava" and cut-short states. The animation respects reduced motion. | plan tests |
+| Runs and run detail | Partial | Done | `activities/MyRuns.tsx` shows "Matched to your plan: …" on each row. `activities/ActivityPage.tsx` shows Pacing and Splits tabs only when the run has the data. On desktops, `App.tsx` puts the journal on the left and the run on the right. | `activities.test.tsx` |
+| Progress | Missing as a screen | Done | It's a top-level bar destination. `PlanView` Progress mode hides the plan's tools and reuses the same components. | App and plan tests |
+| Account | Partial | Done | `account/AccountPage.tsx` drops the duplicate shortcut pills and puts settings in four labelled groups: You, Running, App & reminders and Your data. They sit in two columns on desktops. | `account.test.tsx` |
+| Dark theme | n/a | Done | Night Run tokens in `styles/tokens.css`, with volt buttons via `--button-bg` and `--button-ink`. | visual (`docs/ux/screenshots/after`) |
+
+### Unverified
+
+- **iOS Safari and installed PWA safe areas:** needs the user's phone on staging.
+- **Live Strava auto-tick:** the logic is unchanged and covered by tests, and needs a real run on staging.
+- **The full Playwright e2e suite:** it needs the API and runs in CI on the PR.
+- **Local timeouts:** `strength-persistence`, `RunVisibility` and one account journey time out at 5 s on this machine. They time out on clean `staging` too, and pass with a longer timeout.

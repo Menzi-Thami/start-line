@@ -37,11 +37,12 @@ interface Props {
 }
 
 /** One run, judged against what it was for: the verdict, the numbers, km by km, heart rate, and any bests worth a mention. */
+type AnalysisTab = 'Overview' | 'Pacing' | 'Coach' | 'Splits'
+
 export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAccount }: Props) {
   const auth = useAuth()
   const tabId = useId()
-  const tabs = ['Overview', 'Pacing', 'Coach', 'Splits'] as const
-  const [selectedTab, setSelectedTab] = useState<(typeof tabs)[number]>('Overview')
+  const [selectedTab, setSelectedTab] = useState<AnalysisTab>('Overview')
   const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial, checkedAt: Date.now() } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
   const [confirming, setConfirming] = useState(false)
@@ -126,6 +127,8 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
   }
 
   const run = state.activity
+  // A tab shows only when this run has the data behind it: no empty Splits or Pacing for a run recorded without them.
+  const tabs: AnalysisTab[] = ['Overview', ...(run.splits.length > 0 || run.heartRate ? ['Pacing' as const] : []), 'Coach', ...(run.splits.length > 0 ? ['Splits' as const] : [])]
   const execution = run.source.kind === 'Strava' && (!run.source.cachedUntil || !Number.isFinite(Date.parse(run.source.cachedUntil))) ? null : run.workoutExecution
   const title = run.plan?.title ?? KIND_LABEL[run.kind]
   const verdict = runVerdict(run, units)
@@ -204,13 +207,13 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
 
       {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
       </div>
-      <div role="tabpanel" id={`${tabId}-panel-Pacing`} aria-labelledby={`${tabId}-tab-Pacing`} hidden={selectedTab !== 'Pacing'} tabIndex={0}>
+      {tabs.includes('Pacing') && <div role="tabpanel" id={`${tabId}-panel-Pacing`} aria-labelledby={`${tabId}-tab-Pacing`} hidden={selectedTab !== 'Pacing'} tabIndex={0}>
         <h3>Pacing</h3>
         <PaceProfile splits={run.splits} plan={run.plan} units={units} />
         <p>{halvesSummary(run.halves, units) || 'Pacing comparison is unavailable for this run.'}</p>
         <p className="field-help">Kilometre splits describe recorded pace. They cannot confirm precise interval or recovery completion.</p>
         {run.heartRate ? <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /> : <p>Heart-rate analysis is unavailable for this run.</p>}
-      </div>
+      </div>}
       <div role="tabpanel" id={`${tabId}-panel-Coach`} aria-labelledby={`${tabId}-tab-Coach`} hidden={selectedTab !== 'Coach'} tabIndex={0}>
         <h3>Coach</h3>
         {execution && <p>There is useful evidence in this recording: {execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} prescription windows are covered when aligned from the recording start. Coverage is separate from pace or following the instructions. If you changed your session, you can explain that in your check-in.</p>}
@@ -219,9 +222,10 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         {verdict.next && <p>{verdict.next}</p>}
         <p className="field-help">Based on recorded run statistics and available plan targets. Stage evidence, when available, is aligned to the recording start and remains an estimate. This does not change your check-in.</p>
       </div>
-      <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
-        {run.splits.length > 0 ? <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /> : <p>Split data is unavailable for this run.</p>}
-      </div>
+      {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
+        <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
+      </div>}
+      {run.splits.length === 0 && <p className="field-help activity-tabs-note">{run.heartRate ? 'This recording has no kilometre splits, so there’s no Splits tab.' : 'This recording has no kilometre splits or heart rate, so there are no Pacing or Splits tabs.'}</p>}
 
       {run.source.kind === 'Strava' ? (
         <section className="section">

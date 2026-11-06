@@ -15,6 +15,9 @@ import { Wordmark } from './Wordmark'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
+import { Runner as TaperdayRunner } from '../features/shared/Runner'
+import { ProgressStory } from '../features/coaching/ProgressStory'
+import { TrainingInsights } from '../features/coaching/TrainingInsights'
 import { ThemeToggle } from './ThemeToggle'
 import { ScrollProgress } from './ScrollProgress'
 import { ScreenRecovery } from './ScreenRecovery'
@@ -890,7 +893,7 @@ export function App() {
         {view === 'runs' && state.kind === 'ready' && (
           compact ? (
             openRun ? (
-              <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} />
+              <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
             ) : (
               <MyRuns units={units} onOpen={showRun} onOpenPlan={ownPlan ? () => openOwnPlan('all') : undefined} />
             )
@@ -900,7 +903,7 @@ export function App() {
               <MyRuns key={runsVersion} units={units} onOpen={showRun} onOpenPlan={ownPlan ? () => openOwnPlan('all') : undefined} selectedId={openRun?.id} />
               <div className="runs-split-detail">
                 {openRun ? (
-                  <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} />
+                  <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
                 ) : (
                   <div className="runs-split-empty panel">
                     <p><strong>Choose a run</strong></p>
@@ -931,13 +934,22 @@ export function App() {
         )}
 
         {(view === 'home' || view === 'runs' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
-          <div className="empty">
-            <p>Sign in to see your saved plans, runs and account.</p>
-            {state.kind === 'signed-out' && (
-              <button type="button" className="button" onClick={auth.signIn} style={{ marginTop: 'var(--space-3)' }}>
-                Sign in
-              </button>
-            )}
+          <div className="empty signed-out-prompt">
+            <TaperdayRunner pose="crouch" size={40} className="signed-out-runner" />
+            <p><strong>{view === 'runs' ? 'Your runs live in your account.' : view === 'account' ? 'Your account, connections and reminders.' : 'Your Home: today’s session, your week and your race.'}</strong></p>
+            <p>Sign in to see your saved plans, runs and account. It’s free, and your plan comes with you.</p>
+            <div className="submit-row" style={{ marginTop: 'var(--space-3)' }}>
+              {state.kind === 'signed-out' && (
+                <button type="button" className="button button-primary" onClick={auth.signIn}>
+                  Sign in
+                </button>
+              )}
+              {plan.kind === 'ready' ? (
+                <button type="button" className="button button-quiet" onClick={() => pickFromBar('plan')}>Back to your plan</button>
+              ) : (
+                <button type="button" className="button button-quiet" onClick={() => go('build')}>Build a free plan</button>
+              )}
+            </div>
           </div>
         )}
 
@@ -1027,6 +1039,18 @@ export function App() {
                 plan={plan.plan}
                 reveal={revealPlan}
                 onTabChange={setPlanTab}
+                progressExtras={savedOnScreen && state.kind === 'ready' ? (
+                  <div className="progress-extras">
+                    <section className="progress-extra" aria-labelledby="progress-compare">
+                      <h3 id="progress-compare">Compared with before</h3>
+                      <ProgressStory planId={savedOnScreen} units={units} refreshKey={`${checkIns.entries.length}|${runs?.length ?? 0}`} />
+                    </section>
+                    <section className="progress-extra" aria-labelledby="progress-trends">
+                      <h3 id="progress-trends">Training trends</h3>
+                      <TrainingInsights planId={savedOnScreen} units={units} refreshKey={`${checkIns.entries.length}|${runs?.length ?? 0}`} />
+                    </section>
+                  </div>
+                ) : undefined}
                 onBack={state.kind === 'ready' ? () => go('home') : undefined}
                 units={units}
                 onUnitsChange={changeUnits}

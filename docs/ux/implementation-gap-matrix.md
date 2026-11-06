@@ -164,6 +164,20 @@ The plan-building film has regressed from production to staging:
 | Account | Partial | Done | `account/AccountPage.tsx` drops the duplicate shortcut pills and puts settings in four labelled groups: You, Running, App & reminders and Your data. They sit in two columns on desktops. | `account.test.tsx` |
 | Dark theme | n/a | Done | Night Run tokens in `styles/tokens.css`, with volt buttons via `--button-bg` and `--button-ink`. | visual (`docs/ux/screenshots/after`) |
 
+### Second pass: the complete overhaul (requested by the user, 6 November)
+
+| #202 requirement | Before this pass | Now | Code | Tests |
+|---|---|---|---|---|
+| D. Week jump; first week and race week | Previous and next only | A week picker between the arrows. Each option is named, for example "Week 1 · first week", "Week 9 · race week" or "this week". On a phone the arrows drop their words, so it all fits on one row. | `plan/PlanView.tsx` | `PlanTabs.test.tsx` |
+| D. Calendar on desktop | Dates and dots only, nothing beside them | Each day names its workout and distance from 1024 px up. The selected day, or today, sits beside the month. | `plan/PlanCalendar.tsx`, `PlanView.tsx` | `PlanTabs.test.tsx`, `PlanCalendar.test.tsx` |
+| G. Progress with date ranges and trends | Plan-only charts | The Progress screen adds "Compared with before" (4, 8 and 12 weeks, from the server's `progress` endpoint) and "Training trends" (from `insights`). They sit beside each other from 1280 px, still with one source of metrics. | `App.tsx` (`progressExtras`), `PlanView.tsx` | App and plan tests |
+| G. Milestones in British dates | ISO dates | For example "Monday 2 November 2026". | `milestones/milestones.ts` | milestone tests |
+| F. Journal filter by source | Date ranges only | All sources, Strava or Uploads. It only appears when the runner has both. | `activities/MyRuns.tsx` | `activities.test.tsx` |
+| F. From a run to its planned workout | Missing | "Open this day in your plan →" on a matched run. | `activities/ActivityPage.tsx`, `App.tsx` | |
+| B. Runner on Home | Only in the done state | The Today card carries the runner: crouched on a run day, asleep on a rest day. The extras sit under "More for today" as soft cards. | `runner-home/Home.tsx` | Home tests |
+| B. Signed-out runner taps Home, Runs or Account | Bare "Sign in" text | The runner says what the place holds, with "Sign in" plus "Back to your plan" or "Build a free plan". | `App.tsx` | e2e `taperday.spec.ts` (copy kept) |
+| I. 320, 1024 and 2560 px | Unverified | An overflow sweep of every screen in both themes found no horizontal page scroll. | `docs/ux/screenshots/capture.cjs` | Manual Playwright sweep |
+
 ### Unverified
 
 - **iOS Safari and installed PWA safe areas:** needs the user's phone on staging.

@@ -210,6 +210,9 @@ describe('signing up comes first', () => {
 
     expect(await screen.findByRole('heading', { name: 'A bit about you' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'finish signing up' })).not.toBeInTheDocument()
+    // Signing up is the only thing on screen: no landing hero, no race ticker.
+    expect(screen.queryByRole('heading', { name: /Your race.s*Your plan./ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start your free plan' })).not.toBeInTheDocument()
     const name = screen.getByLabelText('What should we call you?')
     await user.clear(name)
     await user.type(name, 'Thandi M')

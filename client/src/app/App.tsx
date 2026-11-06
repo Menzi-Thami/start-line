@@ -979,7 +979,9 @@ export function App() {
                 onCancel={plan.kind === 'ready' ? backToPlan : undefined}
                 onOpenBeginner={() => go('beginner')}
                 gate={gate}
-                intro={
+                // The landing hero sells Taperday to visitors. Someone finishing sign-up (or whose account didn't load)
+                // has already said yes, so they see only their step.
+                intro={gate?.key === 'profile' || gate?.key === 'error' ? undefined : (
                   <>
                     <Hero
                       races={races.kind === 'ready' ? races.races : []}
@@ -994,7 +996,7 @@ export function App() {
                     />
                     <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
                   </>
-                }
+                )}
               />
             )}
 

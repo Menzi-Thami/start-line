@@ -159,17 +159,22 @@ describe('when accounts are switched off', () => {
 })
 
 describe('signed out', () => {
-  it('offers sign-in in the header and on the plan', async () => {
+  it('locks a plan link until they sign in: which plan it is, never its sessions or calendar', async () => {
     const auth = signedOut()
     window.history.replaceState(null, '', `/${link}`)
     const user = renderWith(auth)
-    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    const locked = await screen.findByRole('region', { name: 'Parkrun PB' })
+    expect(locked).toHaveTextContent('Your plan is ready')
+    expect(locked).toHaveTextContent(/weeks/)
+    expect(screen.queryByRole('tablist', { name: 'Your plan' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Calendar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument()
 
-    await openDisclosure('Plan options')
-    await user.click(screen.getByRole('button', { name: 'Sign in to save this plan' }))
-
-    expect(within(screen.getByRole('navigation', { name: 'Account' })).getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
+    await user.click(within(locked).getByRole('button', { name: 'Sign in' }))
     expect(auth.signIn).toHaveBeenCalled()
+    await user.click(within(locked).getByRole('button', { name: 'Create a free account' }))
+    expect(auth.signUp).toHaveBeenCalled()
+    expect(within(screen.getByRole('navigation', { name: 'Account' })).getByRole('button', { name: 'Sign in' })).toBeInTheDocument()
   })
 })
 

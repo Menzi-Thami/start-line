@@ -54,23 +54,23 @@ export function CouchTo5K() {
   // A signed-in runner's server state is canonical. Device state remains a
   // fallback when not signed in; never overwrite the account before hydration.
   useEffect(() => {
-    let cancelled = false
+    const flags = { cancelled: false }
     const epoch = ++accountEpoch.current
     if (!account) {
       void Promise.resolve().then(() => {
-        if (!cancelled) { setServerReady(false); setProgress(read()); setProgressOwner('anonymous'); setTransferCandidate(null); setSyncError('') }
+        if (!flags.cancelled) { setServerReady(false); setProgress(read()); setProgressOwner('anonymous'); setTransferCandidate(null); setSyncError('') }
       })
-      return () => { cancelled = true }
+      return () => { flags.cancelled = true }
     }
     void Promise.resolve().then(() => {
-      if (!cancelled) { setServerReady(false); setSyncError('') }
+      if (!flags.cancelled) { setServerReady(false); setSyncError('') }
     })
     lastSaved.current = ''
     getToken().then(async token => {
       if (!token) throw new Error('Sign in to load your programme.')
       const response = await fetch(`${apiOrigin()}/api/v1/me/beginner`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' })
       if (!response.ok && response.status !== 204) throw new Error('Unable to load your saved programme.')
-      if (!cancelled && epoch === accountEpoch.current) {
+      if (!flags.cancelled && epoch === accountEpoch.current) {
         const today = todayLocal()
         const loaded = response.status === 204 ? defaultBeginnerProgress(today) : parseBeginnerProgress(JSON.stringify(await response.json()), today)
         // A new account may offer to import this device's anonymous programme.
@@ -88,8 +88,8 @@ export function CouchTo5K() {
         lastSaved.current = JSON.stringify(loaded)
         setServerReady(true)
       }
-    }).catch(() => { if (!cancelled) setSyncError('Your account progress could not be loaded. Check your connection before marking sessions complete.') })
-    return () => { cancelled = true }
+    }).catch(() => { if (!flags.cancelled) setSyncError('Your account progress could not be loaded. Check your connection before marking sessions complete.') })
+    return () => { flags.cancelled = true }
   }, [account, getToken, owner])
 
   useEffect(() => {

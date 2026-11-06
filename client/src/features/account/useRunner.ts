@@ -34,7 +34,7 @@ export function useRunner() {
   const [state, setState] = useState<RunnerState>(() => (auth.enabled ? { kind: 'loading' } : { kind: 'off' }))
 
   const fetchRunner = useCallback(() => {
-    let cancelled = false
+    const flags = { cancelled: false }
     const me = async (token: string): Promise<Runner> => {
       const started = Date.now()
       for (let attempt = 0; ; attempt++) {
@@ -43,24 +43,24 @@ export function useRunner() {
         } catch (error) {
           const pause = wakePause(attempt)
           const outOfTime = Date.now() - started + pause > WAKE_PATIENCE_MS || attempt + 1 >= WAKE_TRIES
-          if (cancelled || outOfTime || !stillWaking(error)) throw error
+          if (flags.cancelled || outOfTime || !stillWaking(error)) throw error
           await new Promise((resolve) => setTimeout(resolve, pause))
-          if (cancelled) throw error
+          if (flags.cancelled) throw error
         }
       }
     }
     auth
       .getToken()
       .then((token) => (token ? me(token) : Promise.reject(new ApiError('Not signed in', 401))))
-      .then((runner) => !cancelled && setState({ kind: 'ready', runner }))
+      .then((runner) => !flags.cancelled && setState({ kind: 'ready', runner }))
       .catch((error: unknown) => {
-        if (cancelled) return
+        if (flags.cancelled) return
         if (error instanceof ApiError && error.status === 404) setState({ kind: 'needs-sign-up' })
         else if (error instanceof ApiError && error.status === 401) setState({ kind: 'signed-out' })
         else setState({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' })
       })
     return () => {
-      cancelled = true
+      flags.cancelled = true
     }
   }, [auth])
 

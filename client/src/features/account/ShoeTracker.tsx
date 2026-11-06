@@ -84,16 +84,16 @@ export function ShoeTracker({ units }: { units: Units }) {
   const [target, setTarget] = useState<string>('')
 
   const load = useCallback(() => {
-    let cancelled = false
+    const flags = { cancelled: false }
     auth.getToken()
       .then((token) => (token ? api.me.shoes(token) : Promise.reject(new Error('Sign in to see your shoes.'))))
       .then((shoes) => {
         if (!Array.isArray(shoes)) throw new Error('Your shoes aren’t available right now.')
-        if (!cancelled) setState({ kind: 'ready', shoes })
+        if (!flags.cancelled) setState({ kind: 'ready', shoes })
       })
-      .catch((error: unknown) => !cancelled && setState({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
+      .catch((error: unknown) => !flags.cancelled && setState({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
     return () => {
-      cancelled = true
+      flags.cancelled = true
     }
   }, [auth])
 

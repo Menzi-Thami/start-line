@@ -7,6 +7,7 @@ import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
 import { PlanTheatre } from './PlanTheatre'
+import { goalProblem } from './goal-limits'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 import { useQuestionFrame } from './useQuestionFrame'
 import './builder-navigation.css'
@@ -154,7 +155,7 @@ function draftFrom(initial: PlanInputs | null, units: Units, today: string): Dra
   }
 }
 
-function validate(draft: Draft, goalSeconds: number, today: string, raceDate: string | null, savedStart?: string): FieldErrors {
+function validate(draft: Draft, goalSeconds: number, today: string, raceDate: string | null, savedStart?: string, goalLimit?: string | null): FieldErrors {
   const found: FieldErrors = {}
   if (!draft.race) found.race = 'Choose a race, or pick "another race" and tell us about it.'
   if (draft.race === OTHER) {
@@ -162,6 +163,7 @@ function validate(draft: Draft, goalSeconds: number, today: string, raceDate: st
     if (!draft.otherDate) found.date = 'Enter the race date.'
   }
   if (goalSeconds <= 0) found.goal = 'Enter a goal time. Not sure? Use the estimate below.'
+  else if (goalLimit) found.goal = goalLimit
   if (draft.runDays.length < 3) found.runDays = 'Pick at least three days. Two runs a week isn’t enough to build on.'
   if (!draft.longRunDay) found.longRunDay = 'Pick which of your days is the long run.'
   if (draft.longRunDay && draft.strengthDays.includes(draft.longRunDay)) found.strength = `Choose a strength day other than ${draft.longRunDay}. Your long-run day is reserved for running.`
@@ -288,6 +290,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const chosenRace = catalogue.find((r) => r.slug === draft.race)
   const targetKm = chosenRace?.distanceKm ?? (draft.race === OTHER && Number(draft.otherKm) > 0 ? toKilometres(Number(draft.otherKm), units) : null)
   const goalSeconds = durationSeconds(draft.goal)
+  // Checked as the wheels turn: an elite or impossible goal is flagged at once, and Continue stays on this step.
+  const goalLimit = targetKm && goalSeconds > 0 ? goalProblem(targetKm, goalSeconds, units) : null
   const errors: FieldErrors = { ...serverErrors, ...clientErrors }
   const stepErrors = Object.values(onStep(errors, step)).filter(Boolean)
 
@@ -318,7 +322,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     }
     // Compare the actual form answers, so adding strength preserves a saved plan's historical metadata too.
     const strengthOnly = initial !== null && JSON.stringify({ ...draft, strengthDays: [] }) === JSON.stringify({ ...draftFrom(initial, units, today), strengthDays: [] })
-    const found = validate(draft, goalSeconds, today, raceDate, sameRace ? initial?.startOn : undefined)
+    const found = validate(draft, goalSeconds, today, raceDate, sameRace ? initial?.startOn : undefined, goalLimit)
 
     if (step < LAST_STEP) {
       const here = onStep(found, step)
@@ -562,7 +566,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     
               {step === 1 && (
                 <>
-                  <DurationInput legend="Goal finish time" value={draft.goal} onChange={(v) => set('goal', v)} error={errors.goal} help={pacePreview} />
+                  <DurationInput legend="Goal finish time" value={draft.goal} onChange={(v) => { set('goal', v); setClientErrors(({ goal: _old, ...rest }) => rest) }} error={goalLimit ?? errors.goal} help={goalLimit ? undefined : pacePreview} />
                   <details className="disclosure">
                     <summary>Add a recent race, so the coach can tell you if your goal is realistic</summary>
                     <p className="field-help">Optional. A race or time trial from the last six weeks, at least 3 km. It never changes your plan: it lets the coach say whether {goalSeconds > 0 ? formatDuration(goalSeconds) : 'your goal'} is realistic, or whether you could aim higher.</p>

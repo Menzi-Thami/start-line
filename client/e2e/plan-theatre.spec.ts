@@ -40,7 +40,8 @@ test('plan review is calm and Build my plan opens a real loading screen @phone',
     await loading.screenshot({ path: info.outputPath(`plan-building-${width}.png`) })
   }
   release()
-  await expect(page.getByRole('heading', { name: 'Two Oceans Ultra', exact: true })).toBeVisible()
+  // The whole film plays (about 17.5 seconds from submission) before the plan opens.
+  await expect(page.getByRole('heading', { name: 'Two Oceans Ultra', exact: true })).toBeVisible({ timeout: 30_000 })
   await expect(loading).toHaveCount(0)
 })
 

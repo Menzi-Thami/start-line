@@ -1,7 +1,10 @@
+# Updates go to staging first, like every change, and reach production with the next release.
+# Dependabot reads this file from the default branch (main), so it takes effect after that release.
 version: 2
 updates:
   - package-ecosystem: nuget
     directory: /
+    target-branch: staging
     schedule:
       interval: weekly
     groups:
@@ -9,6 +12,7 @@ updates:
         update-types: [minor, patch]
   - package-ecosystem: npm
     directory: /client
+    target-branch: staging
     schedule:
       interval: weekly
     groups:
@@ -16,5 +20,6 @@ updates:
         update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
+    target-branch: staging
     schedule:
       interval: weekly

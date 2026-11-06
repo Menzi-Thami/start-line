@@ -16,6 +16,8 @@ interface Props {
   units: Units
   onOpen: (id: string, uploaded?: Activity) => void
   onOpenPlan?: () => void
+  /** The run open beside the list on a desktop, marked in the list. */
+  selectedId?: string
 }
 
 /** Upload runs from a Garmin watch (one, a few, or a whole account export), and every run uploaded so far, newest first. */
@@ -42,10 +44,22 @@ function inRange(runs: readonly ActivitySummary[], range: Range): readonly Activ
   return runs.filter((r) => r.localDate >= from && r.localDate <= today)
 }
 
-export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
+type Source = 'any' | 'Strava' | 'Upload'
+
+const SOURCES: readonly { id: Source; label: string }[] = [
+  { id: 'any', label: 'All sources' },
+  { id: 'Strava', label: 'Strava' },
+  { id: 'Upload', label: 'Uploads' },
+]
+
+const fromSource = (runs: readonly ActivitySummary[], source: Source) =>
+  source === 'any' ? runs : runs.filter((r) => (source === 'Strava' ? r.source.kind === 'Strava' : r.source.kind !== 'Strava'))
+
+export function MyRuns({ units, onOpen, onOpenPlan, selectedId }: Props) {
   const auth = useAuth()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [range, setRange] = useState<Range>('all')
+  const [source, setSource] = useState<Source>('any')
   const [bulk, setBulk] = useState<{ running: boolean; progress: BulkProgress; result: BulkResult | null; error: string | null } | null>(null)
   const [singleError, setSingleError] = useState<string | null>(null)
   const stop = useRef<AbortController | null>(null)
@@ -180,29 +194,42 @@ export function MyRuns({ units, onOpen, onOpenPlan }: Props) {
       )}
 
       {list.kind === 'ready' && list.runs.length > 0 && (
-        <div className="run-filters" role="group" aria-label="Show runs from">
-          {RANGES.map((r) => (
-            <button key={r.id} type="button" className="chip-button" aria-pressed={range === r.id} onClick={() => setRange(r.id)}>
-              {r.label}
-            </button>
-          ))}
+        <div className="run-filter-rows">
+          <div className="run-filters" role="group" aria-label="Show runs from">
+            {RANGES.map((r) => (
+              <button key={r.id} type="button" className="chip-button" aria-pressed={range === r.id} onClick={() => setRange(r.id)}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+          {list.runs.some((r) => r.source.kind === 'Strava') && list.runs.some((r) => r.source.kind !== 'Strava') && (
+            <div className="run-filters" role="group" aria-label="Show runs by source">
+              {SOURCES.map((option) => (
+                <button key={option.id} type="button" className="chip-button" aria-pressed={source === option.id} onClick={() => setSource(option.id)}>
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {list.kind === 'ready' && list.runs.length > 0 && inRange(list.runs, range).length === 0 && (
+      {list.kind === 'ready' && list.runs.length > 0 && fromSource(inRange(list.runs, range), source).length === 0 && (
         <p className="field-help" style={{ marginTop: 'var(--space-4)' }}>
-          No runs {range === 'week' ? 'this week' : 'in the last 30 days'} yet.
+          {['No runs', source === 'Strava' ? 'from Strava' : source === 'Upload' ? 'uploaded' : '', range === 'week' ? 'this week' : range === 'month' ? 'in the last 30 days' : '', 'yet.'].filter(Boolean).join(' ')}
         </p>
       )}
 
       {list.kind === 'ready' && list.runs.length > 0 && (
         <ul className="weeks runs" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-4)' }}>
-          {inRange(list.runs, range).map((run) => (
+          {fromSource(inRange(list.runs, range), source).map((run) => (
             <li className="run-feed-row" key={run.id}>
-              <button type="button" className="run-feed-open" onClick={() => onOpen(run.id)}><span>
+              <button type="button" className="run-feed-open" aria-current={run.id === selectedId ? 'true' : undefined} onClick={() => onOpen(run.id)}><span>
                 <span className="run-card-distance">{formatDistance(run.distanceKm, units)}</span>
                 <span className="week-name">{run.plannedTitle ?? KIND_LABEL[run.kind]}</span>
                 <span className="tag">{run.source.kind === 'Strava' ? 'From Strava' : 'Uploaded recording'}</span>
+                <br />
+                <span className="run-feed-match field-help">{run.plannedTitle ? `Matched to your plan: ${run.plannedTitle}` : 'Not matched to a planned session'}</span>
                 <br />
                 <span className="week-meta mono">
                   {formatDate(run.localDate, 'long')} · {formatDuration(run.movingSeconds)} ·{' '}

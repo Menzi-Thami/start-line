@@ -27,6 +27,7 @@ import { weekSoFar } from '../dashboard/dashboard-math'
 import { InstallCard } from '../install/InstallApp'
 import { SessionSteps } from '../plan/SessionSteps'
 import { Runner as TaperdayRunner } from '../shared/Runner'
+import { LatestRun } from './LatestRun'
 import '../plan/training-status.css'
 import './home-navigation.css'
 import { dayStatus } from '../plan/training-status'
@@ -291,6 +292,7 @@ function RaceLine({ plan, week, units }: { plan: TrainingPlan; week: PlanWeek | 
 function TodayCard({ plan, failed, today, units, runs, coach, onOpenPlan, onOpenDay }: { plan: TrainingPlan | null; failed: boolean; today: string; units: Units; runs: ActivitySummary[]; coach?: SessionCoach; onOpenPlan: () => void; onOpenDay?: (date: string) => void }) {
   return (
     <section className="panel home-card home-today" aria-labelledby="home-today">
+      {plan && <TaperdayRunner pose={plan.weeks.some(week => week.sessions.some(session => session.date === today && session.type !== 'Strength')) ? 'crouch' : 'sleep'} size={44} className="home-today-runner" />}
       <h2 id="home-today" className="home-card-heading">
         Today
       </h2>
@@ -560,10 +562,12 @@ export function Home({
           <span><span className="field-help">Your finish line</span><strong>{plan.race.name}</strong><RaceLine plan={plan} week={week} units={units} /></span>
           <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
         </button>}
+        <LatestRun runs={runs} strava={strava} units={units} today={today} onOpenRun={onOpenRun} onOpenRuns={onOpenRuns} />
         </div>
         {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
         {!current && <BeginnerHomeCard today={today} onOpenProgramme={onOpenBeginner ?? onBuildPlan} />}
         <TickCard plan={plan} today={today} coach={coach} />
+        <h2 className="home-heading home-more-heading">More for today</h2>
         {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} syncedFor={coach ? (s) => completedViaStrava(s, coach) : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
         <ReadinessCheckIn today={today} onReview={plan && week && progress?.kind !== 'race' ? () => { setReviewOpen(true); requestAnimationFrame(() => reviewRef.current?.scrollIntoView?.({ block: 'start' })) } : undefined} />

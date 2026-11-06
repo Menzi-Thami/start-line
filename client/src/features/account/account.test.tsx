@@ -490,18 +490,20 @@ describe('a signed-up runner', () => {
     expect(screen.getByText('Subscribing keeps your calendar in step with your plan.')).toBeInTheDocument()
   })
 
-  it('offers direct links to account settings without changing their existing forms', async () => {
+  it('groups account settings that open in place, with no duplicate shortcut buttons', async () => {
     accountApi({ runner: thandi, plans: [current] })
     window.history.replaceState(null, '', '/')
     const user = renderWith(signedIn())
     await user.click(await screen.findByRole('button', { name: 'Account' }))
-    const shortcuts = await screen.findByRole('navigation', { name: 'Jump to account settings' })
+    await screen.findByRole('region', { name: 'You' })
+    expect(screen.queryByRole('navigation', { name: 'Jump to account settings' })).toBeNull()
+    for (const group of ['You', 'Running', 'App & reminders', 'Your data']) expect(screen.getByRole('region', { name: group })).toBeInTheDocument()
 
-    await user.click(within(shortcuts).getByRole('button', { name: 'My profile' }))
+    await user.click(screen.getByText('Profile & picture'))
     expect(screen.getByText('Profile & picture').closest('details')).toHaveAttribute('open')
-    await user.click(within(shortcuts).getByRole('button', { name: 'App & calendar' }))
+    await user.click(screen.getByText('App & calendars'))
     expect(screen.getByText('App & calendars').closest('details')).toHaveAttribute('open')
-    await user.click(within(shortcuts).getByRole('button', { name: 'Manage privacy' }))
+    await user.click(screen.getByText('Data & privacy'))
     expect(screen.getByText('Data & privacy').closest('details')).toHaveAttribute('open')
   })
 

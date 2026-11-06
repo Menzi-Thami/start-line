@@ -137,6 +137,21 @@ describe('my runs', () => {
     expect(window.location.search).toBe(`?view=runs&run=${longRun.id}`)
   })
 
+  it('filters the journal by source when runs come from both Strava and uploads', async () => {
+    const fromStrava = { ...tempo, id: 'strava-tempo', source: { ...tempo.source, kind: 'Strava' } } as Activity
+    const uploaded = { ...longRun, source: { ...longRun.source, kind: 'Upload' } } as Activity
+    runsApi([uploaded, fromStrava])
+    const user = renderApp('/?view=runs')
+    const sources = await screen.findByRole('group', { name: 'Show runs by source' })
+    expect(screen.getAllByText(/Matched to your plan|Not matched to a planned session/).length).toBe(2)
+    await user.click(within(sources).getByRole('button', { name: 'Strava' }))
+    expect(screen.getAllByText('From Strava')).toHaveLength(1)
+    expect(screen.queryByText('Uploaded recording')).toBeNull()
+    await user.click(within(sources).getByRole('button', { name: 'Uploads' }))
+    expect(screen.queryByText('From Strava')).toBeNull()
+    expect(screen.getAllByText('Uploaded recording')).toHaveLength(1)
+  })
+
   it('shows what was wrong with a single file the API couldn’t read', async () => {
     runsApi([], ['Unreadable'])
     const user = renderApp('/?view=runs')

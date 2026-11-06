@@ -35,6 +35,6 @@ describe('training calendar navigation', () => {
     expect(select).toHaveBeenLastCalledWith(`2026-10-${rest.textContent!.padStart(2, '0')}`, rest)
     const workout = days.find(button => button.getAttribute('aria-label')?.includes('Easy run'))!
     await user.click(workout)
-    expect(select).toHaveBeenLastCalledWith(`2026-10-${workout.textContent!.padStart(2, '0')}`, workout)
+    expect(select).toHaveBeenLastCalledWith(workout.getAttribute('data-date'), workout)
   })
 })

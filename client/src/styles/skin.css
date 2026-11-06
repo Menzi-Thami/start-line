@@ -8,7 +8,7 @@
 html, body { background: var(--page); }
 /* The serif has one weight: never let the browser fake a bold. */
 html { font-synthesis-weight: none; }
-::selection { background: var(--sage); color: var(--ink); }
+::selection { background: var(--sage); color: var(--on-sage); }
 
 /* The frame: everything sits on one white sheet with rounded corners. */
 #root { background: var(--paper); margin: 24px; border-radius: 32px; overflow: clip; min-height: calc(100dvh - 48px); }
@@ -84,8 +84,8 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 
 /* Buttons and tabs: pills. */
 .button { border-radius: 999px; box-shadow: none; }
-.button-primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.button-primary:hover { background: var(--hover-ink); border-color: var(--hover-ink); color: var(--paper); box-shadow: none; }
+.button-primary { background: var(--button-bg); color: var(--button-ink); border-color: var(--button-bg); }
+.button-primary:hover { background: var(--button-hover); border-color: var(--button-hover); color: var(--button-ink); box-shadow: none; }
 :is(.nav-link, .tab, .calc-chip, .button) { transition-duration: var(--dur-base); }
 :is(.tab, .calc-chip) { border-radius: 999px; }
 :is(.tab, .calc-chip)[aria-selected='true'], .calc-chip[aria-pressed='true'] {

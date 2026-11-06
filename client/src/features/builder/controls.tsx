@@ -133,7 +133,8 @@ export function DurationInput({ legend, value, onChange, error, help }: Duration
         {part('s', 'Seconds', 'sec', 59)}
       </div>
       {help && <p className="goal-pace">{help}</p>}
-      <FieldError id={`${id}-error`} message={error} />
+      {/* Always present, so a message that appears as the wheels turn is announced. */}
+      <div aria-live="polite"><FieldError id={`${id}-error`} message={error} /></div>
     </fieldset>
   )
 }

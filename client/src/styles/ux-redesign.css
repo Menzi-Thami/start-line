@@ -251,3 +251,8 @@
   0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--button-bg) 55%, transparent); }
   100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--button-bg) 0%, transparent); }
 }
+
+/* ---------- A plan link opened while signed out: which plan it is, and sign in to see it ---------- */
+.plan-locked { display: grid; gap: var(--space-3); justify-items: start; max-width: 40rem; margin: var(--space-6) auto; padding: var(--space-6); }
+.plan-locked-runner { color: var(--accent); }
+.plan-locked-facts { margin: 0; color: var(--ink-2); font-weight: 600; }

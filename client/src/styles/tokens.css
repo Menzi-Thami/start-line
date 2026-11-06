@@ -48,6 +48,9 @@
   --frost-edge: rgba(255, 255, 255, 0.85);
   --bar: rgba(255, 255, 255, 0.9);
   --hover-ink: #283b2c;
+  --button-bg: var(--ink);
+  --button-ink: var(--paper);
+  --button-hover: var(--hover-ink);
 
   --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
   --font-body: 'Instrument Sans Variable', 'Segoe UI', system-ui, sans-serif;
@@ -103,48 +106,55 @@
 }
 
 /*
- * Dark Frame, when the device asks for it and no choice was made on the website, or when the website's switch says so: a near-black page, a charcoal frame, light ink, and sage as the accent
- * itself (light enough to read on charcoal). Sage fields keep dark text.
+ * Dark is Night Run (docs/design/night-run/README.md), chosen on 6 November 2026: a near-black ground, light ink, and
+ * volt as the one accent. Primary buttons and filled fields are volt with near-black text; type stays Frame's, so a
+ * page keeps its shape when the theme changes. Used when the device asks for dark and no choice was made on the
+ * website, or when the website's switch says so.
  */
 @media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
 
-    --page: #0b0b0b;
-    --paper: #161616;
-    --surface: #202020;
-    --surface-sunk: #2a2a2a;
-    --glass: rgba(28, 28, 28, 0.62);
+    --page: #050506;
+    --paper: #0a0a0b;
+    --surface: #161719;
+    --surface-sunk: #202124;
+    --glass: rgba(255, 255, 255, 0.06);
     --ink: #f2f2f2;
-    --ink-2: #c9c9c9;
-    --muted: #9c9c9c;
-    --line: #2c2c2c;
-    --line-strong: #3d3d3d;
+    --ink-2: #b9bcc3;
+    --muted: #9ea2aa;
+    --line: #26272b;
+    --line-strong: #393b40;
 
-    --accent: #b4c7a8;
-    --accent-strong: #cddbc4;
-    --accent-soft: #26301f;
-    --on-accent: #111111;
-    --violet: #9c9c9c;
+    --sage: #d7ff3e;
+    --on-sage: #0a0a0b;
+    --accent: #d7ff3e;
+    --accent-strong: #e6ff7a;
+    --accent-soft: #232b0c;
+    --on-accent: #0a0a0b;
+    --violet: #9ea2aa;
+    --button-bg: #d7ff3e;
+    --button-ink: #0a0a0b;
+    --button-hover: #e6ff7a;
 
     --warn-bg: #2b2410;
     --warn-ink: #f1d27a;
     --warn-line: #6b5520;
     --danger-ink: #ff8a80;
 
-    --effort-recovery: #3a3a3a;
-    --effort-easy: #555555;
-    --effort-long: #7f9a73;
-    --effort-tempo: #9fb592;
-    --effort-interval: var(--sage);
+    --effort-recovery: #2c2d31;
+    --effort-easy: #4f5258;
+    --effort-long: #8aa12a;
+    --effort-tempo: #b5d334;
+    --effort-interval: #d7ff3e;
     --effort-race: var(--ink);
 
-    --hero-top: #2e2e2e;
-    --hero-mid: #1f1f1f;
-    --hero-end: #171717;
+    --hero-top: #1c2209;
+    --hero-mid: #111309;
+    --hero-end: #0c0c0d;
     --frost-edge: rgba(255, 255, 255, 0.12);
-    --bar: rgba(22, 22, 22, 0.92);
-    --hover-ink: #d9d9d9;
+    --bar: rgba(10, 10, 11, 0.92);
+    --hover-ink: #ffffff;
   }
 }
 
@@ -153,41 +163,46 @@
   :root[data-theme='dark'] {
     color-scheme: dark;
 
-    --page: #0b0b0b;
-    --paper: #161616;
-    --surface: #202020;
-    --surface-sunk: #2a2a2a;
-    --glass: rgba(28, 28, 28, 0.62);
+    --page: #050506;
+    --paper: #0a0a0b;
+    --surface: #161719;
+    --surface-sunk: #202124;
+    --glass: rgba(255, 255, 255, 0.06);
     --ink: #f2f2f2;
-    --ink-2: #c9c9c9;
-    --muted: #9c9c9c;
-    --line: #2c2c2c;
-    --line-strong: #3d3d3d;
+    --ink-2: #b9bcc3;
+    --muted: #9ea2aa;
+    --line: #26272b;
+    --line-strong: #393b40;
 
-    --accent: #b4c7a8;
-    --accent-strong: #cddbc4;
-    --accent-soft: #26301f;
-    --on-accent: #111111;
-    --violet: #9c9c9c;
+    --sage: #d7ff3e;
+    --on-sage: #0a0a0b;
+    --accent: #d7ff3e;
+    --accent-strong: #e6ff7a;
+    --accent-soft: #232b0c;
+    --on-accent: #0a0a0b;
+    --violet: #9ea2aa;
+    --button-bg: #d7ff3e;
+    --button-ink: #0a0a0b;
+    --button-hover: #e6ff7a;
 
     --warn-bg: #2b2410;
     --warn-ink: #f1d27a;
     --warn-line: #6b5520;
     --danger-ink: #ff8a80;
 
-    --effort-recovery: #3a3a3a;
-    --effort-easy: #555555;
-    --effort-long: #7f9a73;
-    --effort-tempo: #9fb592;
-    --effort-interval: var(--sage);
+    --effort-recovery: #2c2d31;
+    --effort-easy: #4f5258;
+    --effort-long: #8aa12a;
+    --effort-tempo: #b5d334;
+    --effort-interval: #d7ff3e;
     --effort-race: var(--ink);
 
-    --hero-top: #2e2e2e;
-    --hero-mid: #1f1f1f;
-    --hero-end: #171717;
+    --hero-top: #1c2209;
+    --hero-mid: #111309;
+    --hero-end: #0c0c0d;
     --frost-edge: rgba(255, 255, 255, 0.12);
-    --bar: rgba(22, 22, 22, 0.92);
-    --hover-ink: #d9d9d9;
+    --bar: rgba(10, 10, 11, 0.92);
+    --hover-ink: #ffffff;
   }
 }
 

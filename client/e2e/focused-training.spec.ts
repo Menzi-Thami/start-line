@@ -40,8 +40,8 @@ test('training stays focused while all detail remains reachable @phone', async (
   await expect(page.getByRole('button', { name: 'Log this workout', exact: true })).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Log a run', exact: true })).toHaveCount(0)
   const navigation = page.getByRole('navigation', { name: 'Main', exact: true })
-  await expect(navigation.getByRole('button')).toHaveCount(4)
-  for (const name of ['Home', 'Plan', 'Runs', 'Account']) await expect(navigation.getByRole('button', { name, exact: true })).toBeVisible()
+  await expect(navigation.getByRole('button')).toHaveCount(5)
+  for (const name of ['Home', 'Plan', 'Runs', 'Progress', 'Account']) await expect(navigation.getByRole('button', { name, exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Personal bests', exact: true })).toHaveCount(0)
   for (const width of [375, 820, 1440]) {

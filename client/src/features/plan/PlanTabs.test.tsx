@@ -33,6 +33,28 @@ describe('plan navigation and progress clarity', () => {
     expect(screen.queryByRole('button', { name: 'Back to your first week' })).not.toBeInTheDocument()
   })
 
+  it('jumps to any week, with the first and race weeks named', async () => {
+    view()
+    const user = userEvent.setup()
+    const jump = screen.getByRole('combobox', { name: 'Jump to week' })
+    const last = planFixture.weeks.length - 1
+    expect(screen.getByRole('option', { name: /· first week/ })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /· race week/ })).toBeInTheDocument()
+    await user.selectOptions(jump, String(last))
+    expect(screen.getByRole('heading', { name: /Race week|Week d+ of d+/ })).toBeInTheDocument()
+    expect((jump as HTMLSelectElement).value).toBe(String(last))
+    expect(screen.getByRole('button', { name: 'Next week' })).toBeDisabled()
+  })
+
+  it('names the workout inside each calendar day for wide screens', async () => {
+    view()
+    await userEvent.setup().click(screen.getByRole('tab', { name: 'Calendar' }))
+    const session = planFixture.weeks[0]!.sessions.find(s => s.type !== 'Strength')!
+    const day = document.querySelector(`.plan-calendar [data-date="${session.date}"]`)!
+    expect(day.getAttribute('data-what')).toContain(session.title)
+    expect(day.getAttribute('aria-label')).toContain(session.title)
+  })
+
   it('explains progress before detailed training charts', async () => {
     view()
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Progress' }))

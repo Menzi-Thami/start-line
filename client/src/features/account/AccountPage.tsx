@@ -33,11 +33,7 @@ interface Props {
 export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
   const connectionsRef = useRef<HTMLDetailsElement>(null)
-  const profileRef = useRef<HTMLDetailsElement>(null)
-  const calendarRef = useRef<HTMLDetailsElement>(null)
-  const notificationsRef = useRef<HTMLDetailsElement>(null)
-  const privacyRef = useRef<HTMLDetailsElement>(null)
-  // These shortcuts expand existing settings instead of introducing duplicate forms or routes.
+  // Opens a settings group in place: no duplicate forms or routes.
   const openSettings = (ref: { current: HTMLDetailsElement | null }) => {
     const element = ref.current
     if (!element) return
@@ -102,19 +98,12 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <section className="account-overview panel" aria-label="Account overview">
         <div><h3>{runner.displayName}</h3><p>{runner.units === 'Miles' ? 'Miles' : 'Kilometres'} · {runner.timeZone}</p></div>
         <div><h3>Run connections</h3><p role="status">{stravaConnecting ? 'Connecting Strava…' : !connectionStatus ? 'Checking Strava connection…' : connectionStatus === 'error' ? 'Could not check Strava. Open connections to try again.' : !connectionStatus.available ? 'Strava is unavailable' : connectionStatus.status === 'NeedsReconnect' ? 'Strava needs reconnection' : connectionStatus.connected ? 'Strava connected' : 'Strava not connected'}</p>
-        <button type="button" className="button button-quiet" onClick={() => { setConnectionsOpen(true); requestAnimationFrame(() => { connectionsRef.current?.querySelector('summary')?.focus(); connectionsRef.current?.scrollIntoView?.({ block: 'nearest' }) }) }}>Manage run connections</button></div>
+        <button type="button" className="button button-quiet" onClick={() => { setConnectionsOpen(true); openSettings(connectionsRef) }}>Manage run connections</button></div>
       </section>
-      <nav className="account-shortcuts" aria-label="Jump to account settings">
-        <p className="account-shortcuts-title">What would you like to manage?</p>
-        <div className="account-shortcuts-actions">
-          <button type="button" className="button button-quiet" onClick={() => openSettings(profileRef)}>My profile</button>
-          <button type="button" className="button button-quiet" onClick={() => { setConnectionsOpen(true); openSettings(connectionsRef) }}>Connected apps</button>
-          <button type="button" className="button button-quiet" onClick={() => openSettings(notificationsRef)}>Manage reminders</button>
-          <button type="button" className="button button-quiet" onClick={() => openSettings(calendarRef)}>App & calendar</button>
-          <button type="button" className="button button-quiet" onClick={() => openSettings(privacyRef)}>Manage privacy</button>
-        </div>
-      </nav>
-      <details ref={profileRef} className="settings-group"><summary>Profile & picture</summary>
+      <div className="account-groups">
+      <section className="account-group" aria-labelledby="account-group-you">
+      <h3 className="account-group-title" id="account-group-you">You</h3>
+      <details className="settings-group"><summary>Profile & picture</summary>
       <div className="settings-columns">
       {onPhotoChange && (
         <div className="section">
@@ -130,6 +119,9 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
 
       </div>
       </details>
+      </section>
+      <section className="account-group" aria-labelledby="account-group-running">
+      <h3 className="account-group-title" id="account-group-running">Running</h3>
       <details ref={connectionsRef} className="settings-group" open={connectionsOpen} onToggle={event => setConnectionsOpen(event.currentTarget.open)}><summary>Connections & run sources</summary>
       <div className="settings-columns">
       <StravaSection onStatusChange={setConnectionStatus} notice={stravaNotice} connecting={stravaConnecting} />
@@ -140,7 +132,10 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <details className="settings-group" open={shoesOpen} onToggle={event => setShoesOpen(event.currentTarget.open)}><summary>Shoes</summary>
         <ShoeTracker units={runner.units === 'Miles' ? 'mi' : 'km'} />
       </details>
-      <details ref={calendarRef} className="settings-group"><summary>App & calendars</summary>
+      </section>
+      <section className="account-group" aria-labelledby="account-group-app">
+      <h3 className="account-group-title" id="account-group-app">App & reminders</h3>
+      <details className="settings-group"><summary>App & calendars</summary>
       <InstallSection />
 
 
@@ -162,8 +157,11 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
 
       </details>
       <OfflineStatus />
-      <details ref={notificationsRef} className="settings-group"><summary>Notifications</summary><RemindersSection /></details>
-      <details ref={privacyRef} className="settings-group"><summary>Data & privacy</summary>
+      <details className="settings-group"><summary>Notifications</summary><RemindersSection /></details>
+      </section>
+      <section className="account-group" aria-labelledby="account-group-data">
+      <h3 className="account-group-title" id="account-group-data">Your data</h3>
+      <details className="settings-group"><summary>Data & privacy</summary>
       <div className="section">
         <h3>Your data</h3>
         <p>
@@ -197,6 +195,8 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       </div>
 
       </details>
+      </section>
+      </div>
       <button type="button" className="button button-quiet account-sign-out" onClick={auth.signOut}>Sign out</button>
 
       {status.kind === 'error' && (

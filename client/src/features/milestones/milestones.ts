@@ -1,4 +1,5 @@
 import type { ActivitySummary } from '../../lib/types'
+import { formatDate } from '../../lib/format'
 
 export type Milestone = {
   id: string
@@ -27,7 +28,7 @@ export function milestonesFromRuns(runs: readonly ActivitySummary[]): Milestone[
   const items: Milestone[] = [{
     id: 'longest', type: 'longest', title: 'Longest run in your records',
     value: Math.round(longest.distanceKm * 10) / 10, unit: 'km',
-    detail: `Recorded on ${longest.localDate}. Based on runs currently available in Taperday.`,
+    detail: `Recorded on ${formatDate(longest.localDate, 'long')}. Based on runs currently available in Taperday.`,
     evidenceCount: valid.length,
   }]
   // Use UTC calendar arithmetic, not local time or an activity timestamp, to avoid TZ/DST week drift.
@@ -46,7 +47,7 @@ export function milestonesFromRuns(runs: readonly ActivitySummary[]): Milestone[
   if (biggest) items.push({
     id: 'weekly-distance', type: 'weekly-distance', title: 'Biggest recorded week',
     value: Math.round(biggest[1] * 10) / 10, unit: 'km',
-    detail: `Week of ${biggest[0]}; from the run records currently available.`,
+    detail: `Week of ${formatDate(biggest[0], 'long')}; from the run records currently available.`,
     evidenceCount: valid.length,
   })
   const descending = [...weeks.keys()].sort().reverse()

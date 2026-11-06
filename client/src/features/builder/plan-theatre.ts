@@ -1,6 +1,7 @@
 import type { RunnerPose } from '../shared/Runner'
 
-export const SCENE_MS = 1200
+/** Each scene holds long enough to read its caption and watch it play: five scenes make a 17.5-second film. */
+export const SCENE_MS = 3500
 export const MOVIE_MS = SCENE_MS * 5
 
 export interface Scene {

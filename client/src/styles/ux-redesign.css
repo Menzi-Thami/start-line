@@ -221,3 +221,33 @@
   .plan .week-navigation .week-nav-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .plan .week-navigation.week-navigation > .button { padding-inline: 0; width: var(--tap); font-size: 1.25rem; }
 }
+
+/* ---------- Plan-building film at reading pace (about 17.5 s): scenes settle in slowly, and the bar fills with the film ---------- */
+.plan-build-motion .wait-film { animation-duration: 0.8s; }
+.plan-build-motion .wait-marker { animation-duration: 3.2s; }
+.plan-build-motion .wait-tape { animation-duration: 1.6s; }
+.plan-build-loading h2 { transition: opacity 0.6s var(--ease-standard); }
+.plan-build-progress.is-timed > span { width: 100%; transform-origin: left center; animation: plan-build-fill var(--movie-ms, 17500ms) linear both; }
+@keyframes plan-build-fill { from { transform: scaleX(0.02); } to { transform: scaleX(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .plan-build-progress.is-timed > span { animation: none; transform: none; }
+}
+
+/* ---------- Race step: once a race is picked, Continue rises into reach in slow motion, then pulses once ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .plan-builder-flow[data-race-step='true'][data-race-selected='true'] > .wizard-nav {
+    animation: continue-rise 0.9s cubic-bezier(0.22, 1.25, 0.36, 1) both;
+  }
+  .plan-builder-flow[data-race-step='true'][data-race-selected='true'] > .wizard-nav .button-primary {
+    animation: continue-call 1.2s ease-out 0.9s 1;
+  }
+}
+@keyframes continue-rise {
+  from { transform: translate(-50%, calc(100% + 2rem)); opacity: 0; }
+  60% { opacity: 1; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes continue-call {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--button-bg) 55%, transparent); }
+  100% { box-shadow: 0 0 0 14px color-mix(in srgb, var(--button-bg) 0%, transparent); }
+}

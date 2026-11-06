@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { useMediaQuery } from '../../lib/use-media-query'
 import { Runner } from '../shared/Runner'
-import { SCENE_MS, sceneAt } from './plan-theatre'
+import { MOVIE_MS, SCENE_MS, sceneAt } from './plan-theatre'
 
-/** Rendered only while the plan request is pending. No fake delay, tips or playback controls. */
+/** The plan-building film: five scenes at reading pace (MOVIE_MS, about 17.5 s), chosen by the runner over a quick loader.
+ * The plan opens when the film ends and the plan is ready. No tips or playback controls; reduced motion skips the wait. */
 export function PlanTheatre() {
   const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const [tick, setTick] = useState(0)
@@ -37,7 +38,7 @@ export function PlanTheatre() {
           </div>
         )}
       </div>
-      <div className="plan-build-progress" aria-hidden="true"><span /></div>
+      <div className={`plan-build-progress${reduced ? '' : ' is-timed'}`} aria-hidden="true" style={{ '--movie-ms': `${MOVIE_MS}ms` } as CSSProperties}><span /></div>
       <p className="plan-build-footnote">Your plan opens when the story finishes and your training is ready.</p>
     </section>
   )

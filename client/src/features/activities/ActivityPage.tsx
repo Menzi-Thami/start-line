@@ -34,12 +34,14 @@ interface Props {
   onDeleted: () => void
   /** Opens Account, where the runner can add a max heart rate for zones. */
   onOpenAccount?: () => void
+  /** Opens the day this run matched in the runner's own plan. */
+  onOpenPlanDay?: (date: string) => void
 }
 
 /** One run, judged against what it was for: the verdict, the numbers, km by km, heart rate, and any bests worth a mention. */
 type AnalysisTab = 'Overview' | 'Pacing' | 'Coach' | 'Splits'
 
-export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAccount }: Props) {
+export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAccount, onOpenPlanDay }: Props) {
   const auth = useAuth()
   const tabId = useId()
   const [selectedTab, setSelectedTab] = useState<AnalysisTab>('Overview')
@@ -191,6 +193,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
               <span className="tag">{distanceDifference(run.plan, units)}</span>
             </p>
             <p className="field-help">From your plan “{run.plan.planName}”.</p>
+            {onOpenPlanDay && <button type="button" className="link-button" onClick={() => onOpenPlanDay(run.localDate)}>Open this day in your plan →</button>}
           </div>
         )}
         {verdict.next && <p className="verdict-next">{verdict.next}</p>}

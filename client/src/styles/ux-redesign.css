@@ -145,3 +145,80 @@
 .runs-split .runs { grid-template-columns: minmax(0, 1fr); }
 .runs-split .run-feed-open { min-height: 0; padding: var(--space-3) var(--space-4); }
 .runs-split .run-card-distance { white-space: nowrap; }
+
+/* ---------- Home: the runner on Today's card, and the extras as one quiet group ---------- */
+.panel.home-card.home-today { position: relative; }
+.home-today-runner { position: absolute; top: var(--space-4); right: var(--space-4); color: var(--on-sage); opacity: 0.85; }
+.home-more-heading { margin: var(--space-6) 0 var(--space-2); font-size: var(--text-lg); }
+.home-focus > :is(.home-review, .home-insights) , .home-focus > .readiness, .home > .home-tools {
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding-inline: var(--space-4);
+  margin-block: var(--space-2);
+}
+.home .home-section > .home-insights { border-radius: var(--radius-md); background: var(--surface); padding-inline: var(--space-4); }
+.signed-out-prompt { display: grid; justify-items: start; gap: var(--space-2); }
+.signed-out-runner { color: var(--accent); }
+
+/* ---------- Plan: jump to any week ---------- */
+.week-jump select {
+  min-height: var(--tap);
+  max-width: 100%;
+  padding: 0 var(--space-6) 0 var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+.plan .week-navigation .week-jump { flex: 1 1 auto; min-width: 0; display: flex; justify-content: center; }
+.plan .week-navigation .week-jump select { width: min(100%, 18rem); text-overflow: ellipsis; }
+
+/* ---------- Plan calendar: the workout in each day on wide screens; the day beside the month on desktops ---------- */
+.calendar-what { display: none; }
+@media (min-width: 64rem) {
+  .plan-calendar-day { display: grid; align-content: start; justify-items: center; gap: 2px; min-height: 4.75rem; }
+  .calendar-what {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: 100%;
+    padding-inline: 4px;
+    font-size: 0.68rem;
+    font-weight: 500;
+    line-height: 1.2;
+    color: var(--ink-2);
+    text-align: center;
+  }
+  .plan-calendar-day[aria-pressed='true'] .calendar-what,
+  .plan-calendar-day.is-today .calendar-what { color: inherit; }
+  .calendar-split { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+  .calendar-split > .day-preview, .calendar-split > .calendar-default-day { position: sticky; top: calc(var(--masthead-h, 4.5rem) + var(--space-4)); }
+}
+@media (max-width: 63.99rem) {
+  .calendar-default-day { display: none; }
+}
+
+/* ---------- Progress: the account's own comparisons and trends ---------- */
+.progress-extras { display: grid; gap: var(--space-5); margin-block: var(--space-5); }
+.progress-extra { display: grid; gap: var(--space-3); }
+.progress-extra > h3 { margin: 0; font-size: var(--text-lg); }
+@media (min-width: 80rem) {
+  .progress-extras { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+
+/* ---------- Runs: two filter rows ---------- */
+.run-filter-rows { display: grid; gap: var(--space-2); margin-top: var(--space-4); }
+.run-filter-rows .run-filters { margin: 0; }
+
+/* Week arrows and the picker share one row at every width; on a phone the arrows drop their words. */
+.plan .week-navigation.week-navigation { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--space-2); }
+.plan .week-navigation.week-navigation > .button { flex: 0 0 auto; min-width: var(--tap); justify-content: center; }
+@media (max-width: 47.99rem) {
+  .plan .week-navigation .week-nav-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .plan .week-navigation.week-navigation > .button { padding-inline: 0; width: var(--tap); font-size: 1.25rem; }
+}

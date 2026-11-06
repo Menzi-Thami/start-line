@@ -2,8 +2,11 @@ import type { dayStatus } from './training-status'
 import { useState } from 'react'
 import type { PlanWeek } from '../../lib/types'
 import { calendarDayState, moveCalendarFocus } from './calendar-day'
+import { formatDistance, type Units } from '../../lib/format'
 
 interface Props {
+  /** For the workout named in each day on wide screens. */
+  units?: Units
   statusFor?: (date: string) => ReturnType<typeof dayStatus>
   weeks: readonly PlanWeek[]
   raceDate: string
@@ -39,7 +42,7 @@ function monthsBetween(from: string, to: string): string[] {
  * The whole plan as a calendar, a month at a time: run days ringed, ticked ones in volt, today filled, race day flagged.
  * Every date opens its day summary, including rest days. It opens on today's month.
  */
-export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId, statusFor }: Props) {
+export function PlanCalendar({ units = 'km', weeks, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId, statusFor }: Props) {
   const sessions = weeks.flatMap((w) => w.sessions)
   const firstDate = [weeks[0]?.startDate ?? today, ...historyDates].sort()[0]!
   const lastDate = [raceDate, ...historyDates].sort().at(-1)!
@@ -91,6 +94,7 @@ export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [
             <button key={date} data-date={date} type="button" className={cls} data-status={status?.kind} aria-label={label} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
               {Number(date.slice(8))}
               {status && <span className="calendar-status" aria-hidden="true">{status.icon}</span>}
+              {(isRace || day.length > 0) && <span className="calendar-what" aria-hidden="true">{isRace ? 'Race day' : day.map(s => s.type === 'Strength' ? 'Strength' : `${s.title}${s.distanceKm > 0 ? ` · ${formatDistance(s.distanceKm, units)}` : ''}`).join(' + ')}</span>}
             </button>
           )
         })}

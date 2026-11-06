@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { SavePlanButton } from '../features/account/SavePlanButton'
+import { PlanLocked } from '../features/account/PlanLocked'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
 import { useCalendarLink } from '../features/account/useCalendarLink'
@@ -677,7 +678,12 @@ export function App() {
   }
   const builderInitial = plan.kind === 'ready' || plan.kind === 'error' ? plan.inputs : initial
   const showBuilder = view === 'build' && (editing || plan.kind === 'idle')
-  const showPlan = view === 'build' && plan.kind === 'ready' && !editing
+  // A plan is for a runner's own account: anyone not signed in (or not finished signing up) sees which plan it is and is
+  // asked to sign in, never its sessions or calendar. Accounts off (local development) shows plans as before.
+  const planLocked = view === 'build' && plan.kind === 'ready' && !editing && (state.kind === 'signed-out' || state.kind === 'needs-sign-up')
+  // While sign-in is still starting up nobody is known yet: show neither the plan nor the lock until it is.
+  const planPending = view === 'build' && plan.kind === 'ready' && !editing && state.kind === 'loading' && !auth.account
+  const showPlan = view === 'build' && plan.kind === 'ready' && !editing && !planLocked && !planPending
   // Signed in, on the builder with nothing open: wait to learn whether there's a plan to open instead.
   const opening = showBuilder && !editing && !initial && !landed && !justSignedUp && state.kind === 'ready' && currentPlan.current !== null
 
@@ -686,11 +692,10 @@ export function App() {
   const onPlan = view === 'build' && plan.kind === 'ready' && !editing
   const barCurrent: TabBarItem | null =
     view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : onPlan && planTab === 'progress' ? 'progress' : view === 'beginner' || onPlan ? 'plan' : null
-  // The bar is for runners with somewhere to go: signed in, or signed out with a plan open (never with accounts off).
-  // It steps aside while the plan-building film plays, so the film has the whole screen.
+  // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
   const showBar =
     !(plan.kind === 'loading' && showBuilder) &&
-    (state.kind === 'ready' || (state.kind === 'signed-out' && plan.kind === 'ready' && (view === 'build' || view === 'home' || view === 'runs' || view === 'account')))
+    state.kind === 'ready'
 
   const gate: Gate | undefined =
     state.kind === 'signed-out'
@@ -1026,6 +1031,16 @@ export function App() {
               )}
             </div>
 
+            {planPending && <div className="panel skeleton-stack" role="status" aria-label="Opening your plan"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
+            {planLocked && plan.kind === 'ready' && (
+              <PlanLocked
+                plan={plan.plan}
+                units={units}
+                onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
+                onSignUp={state.kind === 'signed-out' ? auth.signUp : undefined}
+                onFinishSignUp={state.kind === 'needs-sign-up' ? () => go('sign-up') : undefined}
+              />
+            )}
             {showPlan && <InstallCard />}
             {showPlan && savedOnScreen && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
 

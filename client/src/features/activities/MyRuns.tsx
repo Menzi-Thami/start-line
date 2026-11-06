@@ -67,14 +67,14 @@ export function MyRuns({ units, onOpen, onOpenPlan, selectedId }: Props) {
 
   // Only sets state when the request settles; callers set the loading state themselves.
   const fetchRuns = useCallback(() => {
-    let cancelled = false
+    const flags = { cancelled: false }
     auth
       .getToken()
       .then((token) => (token ? api.me.activities(token) : Promise.reject(new Error('Sign in to see your runs.'))))
-      .then((runs) => !cancelled && setList({ kind: 'ready', runs }))
-      .catch((error: unknown) => !cancelled && setList({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
+      .then((runs) => !flags.cancelled && setList({ kind: 'ready', runs }))
+      .catch((error: unknown) => !flags.cancelled && setList({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
     return () => {
-      cancelled = true
+      flags.cancelled = true
     }
   }, [auth])
 

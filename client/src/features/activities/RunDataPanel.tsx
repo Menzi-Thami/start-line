@@ -70,18 +70,18 @@ export function RunDataPanel({ units, refreshKey }: Props) {
   const [open, setOpen] = useState(false)
 
   const load = useCallback(() => {
-    let cancelled = false
+    const flags = { cancelled: false }
     auth
       .getToken()
       .then((token) => (token ? api.me.runData(token) : Promise.reject(new Error('Sign in to see your run data.'))))
       .then((data) => {
         // A missing or unexpected answer (an older API, a proxy page) is "not available", never a crash of the Runs page.
         if (!isRunData(data)) throw new Error('Run data isn’t available right now.')
-        if (!cancelled) setState({ kind: 'ready', data })
+        if (!flags.cancelled) setState({ kind: 'ready', data })
       })
-      .catch((error: unknown) => !cancelled && setState({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
+      .catch((error: unknown) => !flags.cancelled && setState({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
     return () => {
-      cancelled = true
+      flags.cancelled = true
     }
   }, [auth])
 

@@ -89,12 +89,12 @@ function useHomePlan(
   }, [onLoaded])
   useEffect(() => {
     if (!current) return
-    let cancelled = false
+    const flags = { cancelled: false }
     auth
       .getToken()
       .then((token) => (token ? api.me.coachPlan(token, current.id) : null))
       .then((saved) => {
-        if (cancelled) return
+        if (flags.cancelled) return
         if (!saved) { setFailure({ id: current.id, attempt }); return }
         const found = { id: current.id, plan: saved.plan }
         setFailure(null)
@@ -102,9 +102,9 @@ function useHomePlan(
         setCoaching({ id: current.id, notes: saved.coaching ?? [] })
         loaded.current?.(found)
       })
-      .catch(() => { if (!cancelled) setFailure({ id: current.id, attempt }) })
+      .catch(() => { if (!flags.cancelled) setFailure({ id: current.id, attempt }) })
     return () => {
-      cancelled = true
+      flags.cancelled = true
     }
   }, [current, auth, attempt])
   // Until this visit's plan arrives, the copy from last time (if it's the same plan) stands in for it.

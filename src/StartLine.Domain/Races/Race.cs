@@ -21,4 +21,5 @@ public sealed record Race(
     Uri? Website,
     DateStatus DateStatus = DateStatus.Confirmed,
     bool DistanceConfirmed = true,
-    IReadOnlyList<string>? Sources = null);
+    IReadOnlyList<string>? Sources = null,
+    bool Major = false);

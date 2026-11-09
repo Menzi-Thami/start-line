@@ -34,6 +34,9 @@ public sealed class RaceCatalogueOptions
 
         /// <summary>False while the official distance is still being measured.</summary>
         public bool DistanceConfirmed { get; set; } = true;
+
+        /// <summary>A headline race, shown on the race step. Everything else is found by searching.</summary>
+        public bool Major { get; set; }
     }
 }
 

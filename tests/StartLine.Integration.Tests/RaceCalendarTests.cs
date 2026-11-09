@@ -32,6 +32,9 @@ public sealed class RaceCalendarTests
         protected override void ConfigureServices(IServiceCollection services) => services.AddSingleton<IRaceSource>(feed);
     }
 
+    private static async Task<List<JsonElement>> Search(HttpClient client, string text) =>
+        [.. (await client.GetFromJsonAsync<JsonElement>(new Uri($"/api/v1/races/search?q={Uri.EscapeDataString(text)}", UriKind.Relative))).EnumerateArray()];
+
     private static async Task<List<JsonElement>> Races(HttpClient client) =>
         [.. (await client.GetFromJsonAsync<JsonElement>(new Uri("/api/v1/races", UriKind.Relative))).EnumerateArray()];
 
@@ -63,7 +66,9 @@ public sealed class RaceCalendarTests
         factory.Time.Advance(TimeSpan.FromHours(6));
         await WaitUntil(() => feed.Fetches >= 2);
 
-        await WaitUntil(async () => (await Races(client)).Any(r => r.GetProperty("slug").GetString() == "soweto-marathon-2027"));
+        // A newly announced race that isn't a headline race is found by searching, not listed on the race step.
+        await WaitUntil(async () => (await Search(client, "soweto")).Any(r => r.GetProperty("slug").GetString() == "soweto-marathon-2027"));
+        (await Races(client)).ShouldNotContain(r => r.GetProperty("slug").GetString() == "soweto-marathon-2027");
     }
 
     [Fact]

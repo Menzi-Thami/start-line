@@ -4018,6 +4018,7 @@ export interface components {
             website: null | string;
             dateStatus: components["schemas"]["DateStatus"];
             distanceConfirmed: boolean;
+            major: boolean;
         };
         RaceEstimate: {
             /** Format: date */

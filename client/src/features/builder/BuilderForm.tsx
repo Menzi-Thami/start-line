@@ -7,6 +7,8 @@ import { DatePicker } from './DatePicker'
 import { durationSeconds, toDuration, type Duration } from './duration'
 import { GoalEstimator } from './GoalEstimator'
 import { PlanTheatre } from './PlanTheatre'
+import { RaceSearch } from './RaceSearch'
+import { api } from '../../lib/api-client'
 import { goalProblem } from './goal-limits'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 import { useQuestionFrame } from './useQuestionFrame'
@@ -287,7 +289,19 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   }, [step, direction, gateKey])
 
   const catalogue = races.kind === 'ready' ? races.races : []
-  const chosenRace = catalogue.find((r) => r.slug === draft.race)
+  // Races found by searching (or a saved plan's race that isn't a headline one) sit beside the rack's.
+  const [searchedRaces, setSearchedRaces] = useState<Race[]>([])
+  const knownRaces = [...catalogue, ...searchedRaces.filter((r) => !catalogue.some((c) => c.slug === r.slug))]
+  const chosenRace = knownRaces.find((r) => r.slug === draft.race)
+  const rememberRace = (race: Race) => setSearchedRaces((current) => (current.some((r) => r.slug === race.slug) ? current : [...current, race]))
+  // A plan built for a searched-for race comes back with only its slug: look the race up so its date and distance show.
+  const lookUp = races.kind === 'ready' && draft.race !== OTHER && draft.race !== '' && !chosenRace ? draft.race : null
+  useEffect(() => {
+    if (!lookUp) return
+    const controller = new AbortController()
+    api.race(lookUp, controller.signal).then(rememberRace).catch(() => undefined)
+    return () => controller.abort()
+  }, [lookUp])
   const targetKm = chosenRace?.distanceKm ?? (draft.race === OTHER && Number(draft.otherKm) > 0 ? toKilometres(Number(draft.otherKm), units) : null)
   const goalSeconds = durationSeconds(draft.goal)
   // Checked as the wheels turn: an elite or impossible goal is flagged at once, and Continue stays on this step.
@@ -482,7 +496,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                     )}
     
                     {catalogue.length > 0 && (
-                      // The race rack: bibs hang from hooks on a rail and sway. The label stays put; only its card
+                      // The race rack (the headline races): bibs hang from hooks on a rail and sway. The label stays put; only its card
                       // swings, and the radio underneath does the work for keyboards and screen readers.
                       <div className="race-rack">
                         {catalogue.map((race, i) => (
@@ -502,8 +516,18 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                         ))}
                       </div>
                     )}
-    
 
+                    {races.kind !== 'loading' && (
+                      <RaceSearch
+                        units={units}
+                        selected={draft.race}
+                        selectedRace={searchedRaces.find((r) => r.slug === draft.race)}
+                        onPick={(race) => {
+                          rememberRace(race)
+                          set('race', race.slug)
+                        }}
+                      />
+                    )}
                   </div>
                   <FieldError id="race-error" message={errors.race} />
     

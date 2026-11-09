@@ -25,7 +25,8 @@ internal sealed class ConfiguredRaceSource : IRaceSource
             r.DateConfirmed,
             r.Location,
             r.Summary,
-            r.Website))];
+            r.Website,
+            r.Major))];
     }
 
     public string Name => "Curated list";

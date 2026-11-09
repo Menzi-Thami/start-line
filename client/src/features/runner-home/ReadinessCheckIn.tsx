@@ -78,20 +78,20 @@ export function ReadinessCheckIn({ today, onReview }: { today: string; onReview?
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null)
 
   const load = useCallback(() => {
-    let cancelled = false
+    const flags = { cancelled: false }
     auth
       .getToken()
       .then((token) => (token ? api.me.readiness(token) : Promise.reject(new Error('Sign in to keep your check-ins.'))))
       .then((data) => {
         if (!isReadinessList(data)) throw new Error('Check-ins aren’t available right now.')
-        if (!cancelled) {
+        if (!flags.cancelled) {
           setDays(data)
           setFailed(false)
         }
       })
-      .catch(() => !cancelled && setFailed(true))
+      .catch(() => !flags.cancelled && setFailed(true))
     return () => {
-      cancelled = true
+      flags.cancelled = true
     }
   }, [auth])
 

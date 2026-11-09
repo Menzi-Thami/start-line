@@ -26,6 +26,12 @@ public sealed class RaceCatalogueOptions
         /// <summary>The organiser has announced this date. Leave false for dates seen only on calendar sites.</summary>
         public bool DateConfirmed { get; set; }
 
+        /// <summary>
+        /// Where the date was checked: the organiser's own announcement when DateConfirmed is true, otherwise the
+        /// calendar site it was seen on. A record for whoever updates this list; not shown to runners.
+        /// </summary>
+        public Uri? DateSource { get; set; }
+
         /// <summary>False while the official distance is still being measured.</summary>
         public bool DistanceConfirmed { get; set; } = true;
     }

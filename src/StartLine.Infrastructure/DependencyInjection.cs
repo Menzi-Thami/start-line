@@ -47,6 +47,7 @@ public static class DependencyInjection
 
         // Race sources. Each new source (organiser feed, federation calendar) is one more line here.
         services.AddSingleton<IRaceSource, ConfiguredRaceSource>();
+        services.AddSingleton<IRaceSource, DatabaseRaceSource>();
 
         services.AddHostedService<RaceSyncWorker>();
 

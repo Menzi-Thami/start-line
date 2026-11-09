@@ -173,7 +173,13 @@ async function attempt<T>(path: string, init: RequestInit, token?: string): Prom
 
 
 export const api = {
+  /** The headline races shown on the race step. */
   races: (signal?: AbortSignal) => request<Race[]>('/api/v1/races', { signal }),
+  /** Upcoming races whose name or place matches the text (two letters or more), best first. */
+  searchRaces: (text: string, signal?: AbortSignal) =>
+    request<Race[]>(`/api/v1/races/search?q=${encodeURIComponent(text)}`, { signal }),
+  /** One race by its slug, for a plan built for a searched-for race. */
+  race: (slug: string, signal?: AbortSignal) => request<Race>(`/api/v1/races/${encodeURIComponent(slug)}`, { signal }),
 
   plan: (body: GeneratePlanRequest, signal?: AbortSignal) =>
     request<TrainingPlan>('/api/v1/plans', { method: 'POST', body: JSON.stringify(body), signal }),

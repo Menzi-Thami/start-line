@@ -5,6 +5,7 @@ namespace StartLine.Domain.Races;
 /// <summary>What one source says about one race.</summary>
 /// <param name="Priority">Higher wins when sources disagree.</param>
 /// <param name="DateConfirmedByOrganiser">The source is the organiser, or quotes the organiser's own announcement.</param>
+/// <param name="Major">One of the headline races shown on the race step; the rest are found by searching.</param>
 public sealed record RaceObservation(
     string Source,
     int Priority,
@@ -16,7 +17,8 @@ public sealed record RaceObservation(
     bool DateConfirmedByOrganiser,
     string Location,
     string Summary,
-    Uri? Website);
+    Uri? Website,
+    bool Major = false);
 
 /// <summary>
 /// Merges every source's view of the race calendar into one list, fully automatically: the highest
@@ -73,6 +75,8 @@ public static class RaceReconciler
             ranked.Select(o => o.Website).FirstOrDefault(w => w is not null),
             confirmed ? DateStatus.Confirmed : DateStatus.Provisional,
             winner.DistanceConfirmed,
-            [.. ranked.Select(o => o.Source).Distinct(StringComparer.Ordinal)]);
+            [.. ranked.Select(o => o.Source).Distinct(StringComparer.Ordinal)],
+            // Any source can promote a race to the headline list; the curated list is where that's decided.
+            ranked.Any(o => o.Major));
     }
 }

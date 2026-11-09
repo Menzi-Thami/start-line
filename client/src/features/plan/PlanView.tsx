@@ -520,48 +520,47 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </div>
 
         <div {...panel('progress')}>
-          <div className="plan-progress-intro" role="note">
-            <strong>Your training at a glance</strong>
-            <p>See how far you've come, what you've completed and what comes next. Run insights and training paces are available below when you need more detail.</p>
-          </div>
+          {/* Progress does one job: how you're tracking. A headline, the outlook and one chart; the rest waits behind "More detail". */}
           <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
-          {progressVisited && progressExtras}
           {plan.outlook && plan.outlook.verdict !== 'AtRisk' && (
             <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />
           )}
-          {runs && (
-            <details className="disclosure training-guide" aria-label="Running insights">
-              <summary>Running insights</summary>
-              <Overview showVolumeChart={false} plan={plan} units={units} today={today} currentWeek={currentWeek}
-                week={shown?.when === 'now' ? shown.week : null} runs={runs} bests={bests} strava={strava}
-                onOpenRun={onOpenRun} onOpenAccount={onOpenAccount} onOpenRuns={onOpenRuns} />
-            </details>
-          )}
-          <details className="disclosure training-guide" aria-label="Training paces">
-            <summary>Training paces</summary>
-            {latestPaced(coachNotes) ? <PacesIntro notes={coachNotes} goalSeconds={goalSeconds} /> : (
-              <p className="tab-intro">Every pace comes from your goal time, so easy days stay easy and hard days hit the right effort.</p>
-            )}
-            <ul className="zones">
-              {plan.paces.map(pace => (
-                <li className="zone" key={pace.zone}>
-                  <span className="zone-swatch" style={{ background: ZONES[pace.zone].colour }} aria-hidden="true" />
-                  <span className="zone-name">{ZONES[pace.zone].name}</span>
-                  <span className="zone-pace">{formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}</span>
-                  <span className="zone-note">{ZONES[pace.zone].note}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-          <p className="tab-intro">{FOCUS[plan.category]}</p>
-          {progressVisited && <ProgressInsights weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} runs={runs} today={today} statusFor={statusOn} bests={bests} onOpenRun={onOpenRun} onOpenDate={(date, trigger, period) => { const url = new URL(window.location.href); url.searchParams.set('progressWeeks', String(period)); window.history.replaceState(window.history.state, '', url); setSelectedDay({ planKey, date, tab, trigger }); openDay(date) }} />}
-          <PredictedTimes notes={coachNotes} goalSeconds={goalSeconds} />
-          {ran && ran.size > 0 && (
-            <>
-              <h3 className="week-totals-title">What you ran</h3>
-              <WeekTotals weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
-            </>
-          )}
+          {progressVisited && <ProgressInsights weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} runs={runs} today={today} statusFor={statusOn} bests={bests} onOpenRun={onOpenRun} onOpenDate={(date, trigger, period) => { const url = new URL(window.location.href); url.searchParams.set('progressWeeks', String(period)); window.history.replaceState(window.history.state, '', url); setSelectedDay({ planKey, date, tab, trigger }); openDay(date) }}
+            more={<>
+              {progressExtras}
+              {runs && (
+                <details className="disclosure training-guide" aria-label="Running insights">
+                  <summary>Running insights</summary>
+                  <Overview showVolumeChart={false} plan={plan} units={units} today={today} currentWeek={currentWeek}
+                    week={shown?.when === 'now' ? shown.week : null} runs={runs} bests={bests} strava={strava}
+                    onOpenRun={onOpenRun} onOpenAccount={onOpenAccount} onOpenRuns={onOpenRuns} />
+                </details>
+              )}
+              <details className="disclosure training-guide" aria-label="Training paces">
+                <summary>Training paces</summary>
+                {latestPaced(coachNotes) ? <PacesIntro notes={coachNotes} goalSeconds={goalSeconds} /> : (
+                  <p className="tab-intro">Every pace comes from your goal time, so easy days stay easy and hard days hit the right effort.</p>
+                )}
+                <ul className="zones">
+                  {plan.paces.map(pace => (
+                    <li className="zone" key={pace.zone}>
+                      <span className="zone-swatch" style={{ background: ZONES[pace.zone].colour }} aria-hidden="true" />
+                      <span className="zone-name">{ZONES[pace.zone].name}</span>
+                      <span className="zone-pace">{formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}</span>
+                      <span className="zone-note">{ZONES[pace.zone].note}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+              <p className="tab-intro">{FOCUS[plan.category]}</p>
+              <PredictedTimes notes={coachNotes} goalSeconds={goalSeconds} />
+              {ran && ran.size > 0 && (
+                <>
+                  <h3 className="week-totals-title">What you ran</h3>
+                  <WeekTotals weeks={plan.weeks} units={units} currentWeek={currentWeek} ran={ran} />
+                </>
+              )}
+            </>} />}
         </div>
       </div>
       <div className="plan-tools" hidden={tab === 'progress'}>

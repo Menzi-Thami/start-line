@@ -55,10 +55,11 @@ describe('plan navigation and progress clarity', () => {
     expect(day.getAttribute('aria-label')).toContain(session.title)
   })
 
-  it('explains progress before detailed training charts', async () => {
+  it('leads progress with one weekly chart and keeps the rest behind More detail', async () => {
     view()
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Progress' }))
-    expect(screen.getByText('Your training at a glance')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Weekly distance' })).toBeInTheDocument()
+    expect(screen.getByText('More detail', { selector: 'summary', exact: false })).toBeInTheDocument()
   })
 })
 

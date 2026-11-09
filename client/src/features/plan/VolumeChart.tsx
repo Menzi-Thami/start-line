@@ -129,7 +129,6 @@ export function VolumeChart({ weeks, units, currentWeek, ran }: Props) {
             <span className="key-now mono">{currentWeek}</span> This week
           </span>
         )}
-        <span className="chart-note">Week numbers along the bottom. Race week leaves out the race itself.</span>
       </figcaption>
 
       <table className="visually-hidden">

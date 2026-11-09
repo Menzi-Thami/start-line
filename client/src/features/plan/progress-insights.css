@@ -17,7 +17,7 @@
 
 .progress-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-block: 1rem; }
 .progress-summary > div { min-width: 0; padding: 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); }
-.progress-summary > div:last-child { grid-column: 1 / -1; }
+/* Two totals side by side: planned and ran. */
 .progress-summary dt { font-size: var(--text-sm); font-weight: 600; color: var(--ink-2); }
 .progress-summary dd { margin: .5rem 0 0; overflow-wrap: anywhere; }
 .progress-summary dd strong { display: block; font-size: clamp(1.2rem, 2vw, 1.8rem); font-variant-numeric: tabular-nums; }
@@ -27,9 +27,23 @@
 .progress-metric button { flex: 1 1 120px; min-width: 0; min-height: 44px; }
 .progress-chart[hidden] { display: none; }
 @media (min-width: 768px) {
-  .progress-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .progress-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .progress-summary > div:last-child { grid-column: auto; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .progress-metric button { transition: background-color 200ms, border-color 200ms; }
 }
+
+/* Your days: a real Monday-to-Sunday calendar, whatever the screen width. */
+.consistency-calendar { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.consistency-weekdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .25rem; margin-top: .75rem; font-size: var(--text-sm); color: var(--ink-2); text-align: center; }
+.consistency-weekdays + .consistency-calendar { margin-top: .25rem; }
+.consistency-date { min-width: 0; }
+/* More detail: title on top, a quiet line of what's inside below, as on Home and Plan. */
+.progress-more > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-3); row-gap: 2px; align-items: center; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md, 14px); color: var(--ink); font-size: var(--text-lg, 1.125rem); list-style: none; }
+.progress-more > summary::-webkit-details-marker { display: none; }
+.progress-more > summary::after { content: '+'; grid-row: 1 / span 2; grid-column: 2; color: var(--accent-strong); font-size: 1.25rem; }
+.progress-more[open] > summary::after { content: '−'; }
+.progress-more > summary .field-help { grid-column: 1; font-size: var(--text-sm); font-weight: 400; color: var(--ink-2); margin: 0; }
+.progress-more { border-top: 0; padding-top: 0; margin-top: var(--space-4); }
+.progress-more[open] > :not(summary) + :not(summary) { margin-top: var(--space-4); }

@@ -91,7 +91,7 @@ test('plan and progress remain usable across phone, tablet and desktop themes', 
       expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1)
       await page.screenshot({ path: info.outputPath(`ux-run-plan-${theme}-${width}.png`), fullPage: true })
       await tabs.getByRole('tab', { name: 'Progress' }).click()
-      await expect(page.getByText('Your training at a glance')).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Weekly distance', exact: true })).toBeVisible()
     }
   }
 })

@@ -24,6 +24,13 @@ describe('mobile navigation dock', () => {
     expect(screen.getByRole('button', { name: 'Progress' }).getAttribute('aria-current')).toBe('page')
   })
 
+  it('leaves out Plan and Progress until there is a plan', () => {
+    const { container } = render(<TabBar current="runs" hasPlan={false} onPick={() => {}} />)
+    expect(screen.getAllByRole('button').map(button => button.textContent)).toEqual(['Home', 'Runs', 'Account'])
+    expect(container.querySelector('.tab-bar')?.getAttribute('style')).toContain('--tab-count: 3')
+    expect(container.querySelector('.tab-bar')?.getAttribute('style')).toContain('--active-tab: 1')
+  })
+
   it('does not show an active highlight when no tab is selected', () => {
     const { container } = render(<TabBar current={null} onPick={() => {}} />)
     expect(container.querySelector('.tab-bar-indicator')).toBeNull()

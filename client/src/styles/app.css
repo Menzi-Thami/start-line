@@ -2376,7 +2376,8 @@ a.menu-item {
 .volume-value {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--h) + var(--space-1));
+  /* Above whichever is taller, the plan or the run, so a big week never covers its own number. */
+  bottom: calc(max(var(--h), var(--r, 0%)) + var(--space-1));
   transform: translateX(-50%);
   font-size: var(--text-xs);
   color: var(--ink-2);

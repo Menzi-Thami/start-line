@@ -986,7 +986,8 @@ export function App() {
                 gate={gate}
                 // The landing hero sells Taperday to visitors. Someone finishing sign-up (or whose account didn't load)
                 // has already said yes, so they see only their step.
-                intro={gate?.key === 'profile' || gate?.key === 'error' ? undefined : (
+                // A signed-in runner is already in: no sales pitch, just the builder.
+                intro={gate?.key === 'profile' || gate?.key === 'error' || state.kind === 'ready' ? undefined : (
                   <>
                     <Hero
                       races={races.kind === 'ready' ? races.races : []}
@@ -1145,6 +1146,8 @@ export function App() {
         <TabBar
           variant={compact ? 'bar' : 'rail'}
           current={barCurrent}
+          // Plan and Progress only mean something once there's a plan: until then the bar is Home, Runs and Account.
+          hasPlan={ownPlan !== null || onPlan}
           onPick={pickFromBar}
           account={state.kind === 'ready' ? { name: state.runner.displayName, photo } : undefined}
         />

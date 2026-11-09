@@ -45,7 +45,7 @@ for (const scheme of ['dark', 'light'] as const) for (const width of [320, 768, 
     await scan('calendar')
     await page.getByRole('tab', { name: 'Progress', exact: true }).click()
     await scan('progress-distance')
-    await page.getByRole('group', { name: 'Progress metric' }).getByRole('button', { name: 'Comparable pace', exact: true }).click()
+    await openDisclosure(page, /^More detail/)
     await scan('progress-pace')
     await page.getByRole('tab', { name: 'This week', exact: true }).click()
     await page.getByRole('button', { name: /^Tuesday 13 October 2026:/ }).click()

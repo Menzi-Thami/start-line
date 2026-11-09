@@ -50,8 +50,13 @@ public sealed class RaceSearchTests
             await db.CatalogueRaces.Where(r => r.Slug == "om-die-dam-test").ExecuteDeleteAsync();
             db.CatalogueRaces.Add(new CatalogueRace
             {
-                Slug = "om-die-dam-test", Name = "Om Dié Dam Ultra", Date = new DateOnly(2027, 3, 13), DistanceKm = 50,
-                Location = "Hartbeespoort", Summary = "A 50 km loop around the dam.", DateConfirmed = true,
+                Slug = "om-die-dam-test",
+                Name = "Om Dié Dam Ultra",
+                Date = new DateOnly(2027, 3, 13),
+                DistanceKm = 50,
+                Location = "Hartbeespoort",
+                Summary = "A 50 km loop around the dam.",
+                DateConfirmed = true,
             });
             await db.SaveChangesAsync();
         }
@@ -66,8 +71,11 @@ public sealed class RaceSearchTests
 
         var plan = await client.PostAsJsonAsync(new Uri("/api/v1/plans", UriKind.Relative), new
         {
-            raceSlug = "om-die-dam-test", goalTime = "05:30:00", runDays = new[] { "Tuesday", "Thursday", "Saturday", "Sunday" },
-            longRunDay = "Sunday", currentWeeklyKm = 30,
+            raceSlug = "om-die-dam-test",
+            goalTime = "05:30:00",
+            runDays = new[] { "Tuesday", "Thursday", "Saturday", "Sunday" },
+            longRunDay = "Sunday",
+            currentWeeklyKm = 30,
         });
         plan.StatusCode.ShouldBe(HttpStatusCode.OK);
         (await plan.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("race").GetProperty("name").GetString().ShouldBe("Om Dié Dam Ultra");

@@ -1,5 +1,5 @@
 /* Focused landing-page redesign. Existing race data and runner photo are reused. */
-.page:has(.intro.hero) { --landing-night: #121619; --landing-cream: #f2efe7; --landing-coral: #ff8973; }
+.page:has(.intro.hero) { --landing-night: #121619; --landing-cream: #f2efe7; --landing-coral: var(--sage); }
 .intro.hero {
   display: grid;
   grid-template-columns: minmax(0,1fr);
@@ -82,10 +82,10 @@
 .intro.hero .hero-actions { margin: .25rem 0 0; display: block; }
 .intro.hero .hero-actions .button-primary {
   display: block; width: 100%; min-height: 58px;
-  border-radius: 999px; background: var(--landing-coral); color: #151819;
+  border-radius: 999px; background: var(--landing-coral); color: var(--on-sage);
   border-color: var(--landing-coral); font-weight: 700; font-size: 1.05rem;
 }
-.intro.hero .hero-actions .button-primary:hover { background:#ff9c89; border-color:#ff9c89; color:#151819; }
+.intro.hero .hero-actions .button-primary:hover { background: color-mix(in srgb, var(--landing-coral) 85%, #ffffff); border-color: color-mix(in srgb, var(--landing-coral) 85%, #ffffff); color: var(--on-sage); }
 .page:has(.intro.hero) .masthead { padding-block: 12px 18px; }
 .page:has(.intro.hero) .masthead-nav > .button-quiet {
   padding: 6px 15px; border-width: 1px; font-size: .94rem; min-height: 40px;

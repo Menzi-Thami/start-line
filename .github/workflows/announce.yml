@@ -1,0 +1,73 @@
+# Starts the queued "what's new" email once production is live (docs/email.md).
+#
+# The campaign waiting to go is the single line in ops/queued-announcement (empty means none). When a production release
+# or deploy finishes successfully, this sets the production API's UpdateAnnouncement settings (campaign, release time,
+# enabled) and the app's worker sends it in batches, once per runner, only to runners who said yes to news and updates
+# and joined before the release. It runs once per campaign: if production already has the campaign switched on, it
+# leaves everything as it is, so later releases never move the release time or resend.
+#
+# It's a separate workflow (not a step in the deploy) so it runs from main as it is after the release merge, including
+# the release that first brings it to main.
+name: announce
+
+on:
+  workflow_run:
+    workflows: [release, deploy]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: announce-production
+  cancel-in-progress: false
+
+jobs:
+  queue:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Read the queued announcement
+        id: queued
+        run: |
+          campaign=$(head -n1 ops/queued-announcement 2>/dev/null | tr -d '[:space:]')
+          echo "campaign=$campaign" >> "$GITHUB_OUTPUT"
+          if [ -z "$campaign" ]; then echo "::notice::No announcement queued."; fi
+
+      - uses: azure/login@v3
+        if: steps.queued.outputs.campaign != ''
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Switch it on in production, once
+        if: steps.queued.outputs.campaign != ''
+        env:
+          CAMPAIGN: ${{ steps.queued.outputs.campaign }}
+          API_APP_NAME: ${{ vars.API_APP_NAME }}
+        run: |
+          current=$(az webapp config appsettings list -g rg-taperday -n "$API_APP_NAME" \
+            --query "[?name=='UpdateAnnouncement__Campaign'].value | [0]" -o tsv)
+          enabled=$(az webapp config appsettings list -g rg-taperday -n "$API_APP_NAME" \
+            --query "[?name=='UpdateAnnouncement__Enabled'].value | [0]" -o tsv)
+          if [ "$current" = "$CAMPAIGN" ] && [ "$enabled" = "true" ]; then
+            echo "::notice::$CAMPAIGN is already switched on in production; nothing to do."
+            exit 0
+          fi
+          released=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          az webapp config appsettings set -g rg-taperday -n "$API_APP_NAME" --output none --settings \
+            "UpdateAnnouncement__Campaign=$CAMPAIGN" \
+            "UpdateAnnouncement__AccountsCreatedBefore=$released" \
+            "UpdateAnnouncement__Enabled=true" \
+            "UpdateAnnouncement__TestTo="
+          echo "::notice::$CAMPAIGN switched on in production for accounts created before $released. It sends in batches every 30 minutes."

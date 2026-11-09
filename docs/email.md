@@ -97,19 +97,31 @@ A mailto unsubscribe lands in the maker's Gmail (via `hello@` forwarding) and ha
 
 Announcements go only to runners who said yes to **news and updates**, whose account was created before the release.
 Each runner gets one at most (`AnnouncementDeliveries` claims it). The announcement shares the daily email budget with
-the weekly recap and onboarding emails (Brevo's free plan: 300 a day), and the recap comes first. Everything is off
-until you set these App Service settings on the API:
+the weekly recap and onboarding emails (Brevo's free plan: 300 a day), and the recap comes first.
 
-1. **Preview:** set `UpdateAnnouncement__Campaign` = `redesign-2026-11` and `UpdateAnnouncement__TestTo` = your
-   address, then restart. One `[Test]` copy arrives. Check it in Gmail or Outlook on your phone, in light and dark.
-2. **Send:**
-   - Clear `UpdateAnnouncement__TestTo`.
-   - Set `UpdateAnnouncement__AccountsCreatedBefore` to the release time, for example `2026-11-10T18:00:00+02:00`.
-   - Set `UpdateAnnouncement__Enabled` = `true`.
+### Queued: it goes automatically after the production release
 
-   It sends in batches every 30 minutes (25 at a time, at most 200 a day) until everyone due it has it. The logs show
-   counts only.
-3. **Stop:** set `UpdateAnnouncement__Enabled` = `false`. Runners already sent one are never sent it again.
+`ops/queued-announcement` holds the campaign waiting to go (one line; empty means none). It currently holds
+`redesign-2026-11`.
 
-Do this on staging first, with your own test account, before production. Only send after the release is live: the email
-describes what's on taperday.run.
+When **release** (or **deploy**) finishes successfully on `main`, the **announce** workflow sets the production API's
+settings:
+- `UpdateAnnouncement__Campaign` to the queued campaign;
+- `UpdateAnnouncement__AccountsCreatedBefore` to the release time;
+- `UpdateAnnouncement__Enabled` to `true`.
+
+The app restarts, and its worker sends 25 every 30 minutes (at most 200 a day) until everyone due it has it. The logs
+show counts only. If production already has that campaign switched on, the workflow changes nothing, so later releases
+never move the release time or resend.
+
+**To queue the next announcement**, add its email and campaign name in code (`UpdateEmails` and
+`UpdateAnnouncementSender.Composers`), then put the name in `ops/queued-announcement`.
+
+### By hand (staging, or a preview)
+
+- **Preview:** set `UpdateAnnouncement__Campaign` and `UpdateAnnouncement__TestTo` (your address) on the API, then
+  restart. One `[Test]` copy arrives, carrying no runner's details.
+- **Send:** set `UpdateAnnouncement__AccountsCreatedBefore` and `UpdateAnnouncement__Enabled` = `true`.
+- **Stop:** set `UpdateAnnouncement__Enabled` = `false`. Runners already sent one are never sent it again.
+- **Manual run:** **Actions → announce → Run workflow** does the production switch-on by hand. It also does nothing if
+  the campaign is already on.

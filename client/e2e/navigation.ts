@@ -24,6 +24,9 @@ export async function openStrengthWorkouts(page: Page) {
 
 export async function openRecentRun(page: Page, date: string) {
   const summaries = page.locator('.activity-row > summary').filter({ hasText: formatDate(date) })
+  await summaries.first().waitFor({ state: 'attached' })
+  // Recent activity sits inside Home's "Coaching, insights and tools" row.
+  await summaries.first().evaluate(element => { const more = element.closest<HTMLDetailsElement>('details.home-more'); if (more && !more.open) more.querySelector<HTMLElement>(':scope > summary')!.click() })
   await summaries.first().waitFor({ state: 'visible' })
   for (const summary of await summaries.all()) if (!await summary.evaluate(element => element.closest('details')!.open)) await summary.click()
 }

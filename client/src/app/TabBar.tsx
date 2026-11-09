@@ -10,6 +10,8 @@ interface Props {
   account?: { name: string; photo: string | null }
   /** 'bar' sits along the bottom on phones and tablets; 'rail' stands down the left of a desktop screen. */
   variant?: 'bar' | 'rail'
+  /** Without a plan there's nothing for Plan or Progress to show, so the bar leaves them out. */
+  hasPlan?: boolean
 }
 
 const ICONS: Record<TabBarItem, string> = {
@@ -28,22 +30,25 @@ const ITEMS: readonly { id: TabBarItem; label: string }[] = [
   { id: 'account', label: 'Account' },
 ]
 
-const activeIndex = (current: TabBarItem | null) => ITEMS.findIndex((item) => item.id === current)
+const NEEDS_PLAN: readonly TabBarItem[] = ['plan', 'progress']
 
 /**
- * The app's own navigation: the same five places in the same order on every screen size. On a phone or tablet it's
+ * The app's own navigation: the same places in the same order on every screen size (five with a plan; Home, Runs and
+ * Account before there is one). On a phone or tablet it's
  * fixed to the bottom like an installed app's, clear of the home indicator; on a desktop it stands down the left as a
  * rail. The app decides what tapping the current page does (Plan, for instance, goes back to this week).
  */
-export function TabBar({ current, onPick, account, variant = 'bar' }: Props) {
+export function TabBar({ current, onPick, account, variant = 'bar', hasPlan = true }: Props) {
+  const items = hasPlan ? ITEMS : ITEMS.filter((item) => !NEEDS_PLAN.includes(item.id))
+  const active = items.findIndex((item) => item.id === current)
   return (
     <nav
       className={variant === 'rail' ? 'tab-bar tab-rail' : 'tab-bar'}
       aria-label="Main"
-      style={{ '--active-tab': activeIndex(current), '--tab-count': ITEMS.length } as CSSProperties}
+      style={{ '--active-tab': active, '--tab-count': items.length } as CSSProperties}
     >
-      {current && <span className="tab-bar-indicator" aria-hidden="true" />}
-      {ITEMS.map((item) => (
+      {active >= 0 && <span className="tab-bar-indicator" aria-hidden="true" />}
+      {items.map((item) => (
         <button
           key={item.id}
           type="button"

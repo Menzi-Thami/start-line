@@ -1,8 +1,8 @@
+import { openDisclosure } from './navigation'
 import { screenshotPath } from './screenshots'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 
-const summaryPlan = JSON.parse(readFileSync(new URL('../src/test/fixtures/plan-5k.json', import.meta.url), 'utf8'))
 
 // Also run through the repository-wide suite, whose default URL serves the production build.
 test.use({ baseURL: 'http://127.0.0.1:5176', colorScheme: 'dark' })
@@ -81,8 +81,9 @@ test('actual App preserves day URLs across plan fetch and refresh, then drills d
   await day.getByRole('button', { name: /Back to plan/ }).click()
   await expect(page.getByRole('tab', { name: 'Calendar', exact: true })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('tab', { name: 'Progress', exact: true }).click()
-  await expect(page.getByRole('region', { name: 'Training progress evidence' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Training progress' })).toBeVisible()
   await page.getByRole('group', { name: 'Progress period' }).getByRole('button', { name: '12 weeks' }).click()
+  await openDisclosure(page, /^More detail/)
   await page.getByRole('group', { name: 'Training dates' }).getByRole('button', { name: /^Tuesday 13 October 2026:/ }).click()
   await expect(day).toBeVisible()
   await page.goBack()
@@ -94,10 +95,10 @@ for (const width of [320, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await page.goto('/e2e/fixtures/redesign.html?progress=1&stages=1')
     await page.getByRole('tab', { name: 'Progress', exact: true }).click()
-    const progress = page.getByRole('region', { name: 'Training progress evidence' })
+    const progress = page.getByRole('region', { name: 'Training progress' })
     await page.evaluate(() => scrollTo(0, 0))
     await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `progress-distance-after-${width}.png`), fullPage: true })
-    await progress.getByRole('group', { name: 'Progress metric' }).getByRole('button', { name: 'Comparable pace', exact: true }).click()
+    await openDisclosure(page, /^More detail/)
     await expect(progress.getByRole('slider', { name: /Recorded pace across 3 comparable runs/ })).toBeVisible()
     await progress.getByLabel('Inspect a run').selectOption('2')
     await expect(progress.getByRole('status')).toContainText('5:50/km')
@@ -159,43 +160,29 @@ for (const width of [320, 768, 1440]) {
 }
 
 for (const width of [320, 768, 1440]) {
-  test(`Progress metric, period and keyboard date survive navigation at ${width}px`, async ({ page }) => {
+  test(`Progress period and keyboard date survive navigation at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     await page.goto('/e2e/fixtures/redesign.html?progress=1&stages=1')
     await page.getByRole('tab', { name: 'Progress', exact: true }).click()
-    const progress = page.getByRole('region', { name: 'Training progress evidence' })
-    const metric = progress.getByRole('group', { name: 'Progress metric' })
-    await expect(progress.getByRole('definition').filter({ hasText: 'Days with every planned session' })).toContainText('0')
+    const progress = page.getByRole('region', { name: 'Training progress' })
     await expect(progress.getByRole('heading', { name: 'Weekly distance', exact: true })).toBeVisible()
-    const pace = metric.getByRole('button', { name: 'Comparable pace', exact: true })
-    await pace.focus()
-    await page.keyboard.press('Space')
-    await expect(pace).toHaveAttribute('aria-pressed', 'true')
-    await expect(progress.getByRole('heading', { name: 'Weekly distance', exact: true })).toBeHidden()
+    await expect(progress.getByRole('group', { name: 'Training dates' })).toBeHidden()
+    await openDisclosure(page, /^More detail/)
     await progress.getByLabel('Inspect a run').selectOption('2')
-    await metric.getByRole('button', { name: 'Weekly distance', exact: true }).click()
-    await pace.click()
-    await expect(progress.getByLabel('Inspect a run')).toHaveValue('2')
-    await progress.getByLabel('Find a training date').fill('2026-09-01')
+    await expect(progress.getByRole('status')).toContainText('5:50/km')
     const dates = progress.getByRole('group', { name: 'Training dates' })
+    await dates.locator('[data-date="2026-09-01"]').focus()
     await expect(dates.locator('[tabindex="0"]')).toHaveAttribute('data-date', '2026-09-01')
     await progress.getByRole('group', { name: 'Progress period' }).getByRole('button', { name: '4 weeks', exact: true }).click()
     await expect(dates.locator('[tabindex="0"]')).toHaveAttribute('data-date', '2026-10-14')
-    await expect(progress.getByLabel('Find a training date')).toHaveValue('2026-10-14')
-    await expect(page).toHaveURL(/progressMetric=pace/)
     await expect(page).toHaveURL(/progressWeeks=4/)
     await page.reload()
-    await expect(pace).toHaveAttribute('aria-pressed', 'true')
     await expect(progress.getByRole('group', { name: 'Progress period' }).getByRole('button', { name: '4 weeks', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await openDisclosure(page, /^More detail/)
     await dates.locator('[data-date="2026-10-13"]').click()
     await page.getByRole('button', { name: /Back to plan/ }).click()
-    await expect(pace).toHaveAttribute('aria-pressed', 'true')
-    await page.evaluate(({ key, session }) => localStorage.setItem(key, JSON.stringify([session])), {
-      key: `startline:done:${summaryPlan.race.name}|${summaryPlan.race.date}|${summaryPlan.startDate}`,
-      session: '2026-10-13|Hills',
-    })
-    await page.reload()
-    await expect(progress.getByRole('definition').filter({ hasText: 'Days with every planned session' })).toContainText('1')
+    // Back from a day, the row it was opened from is still open.
+    await expect(dates).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
   })
 }

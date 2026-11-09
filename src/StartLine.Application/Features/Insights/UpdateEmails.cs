@@ -20,60 +20,63 @@ public static class UpdateEmails
 
     private static readonly (string Title, string Detail)[] RedesignChanges =
     [
-        ("Everything in one tap", "Home, Plan, Runs, Progress and Account sit along the bottom of your phone, or down the side on a laptop."),
-        ("Today comes first", "Home opens on your next session, your week, your race countdown and your latest run."),
-        ("A clearer plan", "Jump to any week, see every workout on the calendar, and open a day for its warm-up, main set and cool-down."),
-        ("Progress has its own page", "Compare your last 4, 8 or 12 weeks, with your consistency and milestones in one place."),
-        ("Find your race", "Search races by name or town, as well as the big ones on the race rack."),
-        ("Night Run dark mode", "Set your phone to dark and Taperday follows, in near-black and volt."),
+        ("Five tabs, zero hunting", "Home, Plan, Runs, Progress and Account live along the bottom of your phone, or down the side on a laptop. One tap and you're there."),
+        ("Today, front and centre", "Open Taperday and your next run is right there, with your week, your race countdown and your latest run."),
+        ("A plan you can read at a glance", "Jump to any week, see every workout on the calendar, and tap a day for its warm-up, main set and cool-down."),
+        ("Progress gets its own lane", "Compare your last 4, 8 or 12 weeks and watch your consistency stack up."),
+        ("Your race, found", "Search any race by name or town. The big ones still hang on the race rack."),
+        ("Night Run mode", "Switch your phone to dark and Taperday goes near-black and volt. Made for those 5am starts."),
     ];
+
+    private const string RedesignOpening = "We've been doing some training of our own. Taperday is simpler, quicker, and a lot easier on the eyes. Same coach, new kit.";
+    private const string RedesignClosing = "Your plan, your runs and your Strava connection are exactly where you left them. Nothing to set up. Just lace up.";
+    private const string RedesignSubject = "Fresh legs, fresh look: meet the new Taperday";
 
     /// <summary>The redesign announcement's campaign name, kept in each runner's delivery record.</summary>
     public const string RedesignCampaign = "redesign-2026-11";
 
     /// <summary>
-    /// The November 2026 redesign: the new navigation and screens, and that the runner's plan and runs are where they left
-    /// them. With <paramref name="unsubscribe"/> (a runner's copy) the footer and headers offer a way out of updates; a
-    /// preview to the maker has none.
+    /// The November 2026 redesign, told with a bit of fun: a simpler, fresher Taperday, what's new, and that the runner's
+    /// plan and runs are where they left them. With <paramref name="unsubscribe"/> (a runner's copy) the footer and headers
+    /// offer a way out of updates; a preview to the maker has none.
     /// </summary>
     public static EmailMessage TaperdayRedesign(string to, string? name = null, bool test = false, UnsubscribeLinks? unsubscribe = null)
     {
         var greeting = string.IsNullOrWhiteSpace(name) ? "Hi there," : $"Hi {name.Trim()},";
         var body = new StringBuilder();
         body.Append(EmailLayout.Paragraph(greeting));
-        body.Append(EmailLayout.Paragraph("Taperday has a fresh look, and it's quicker to get around."));
+        body.Append(EmailLayout.Paragraph(RedesignOpening));
         body.Append(EmailLayout.Heading("What's new"));
         foreach (var (title, detail) in RedesignChanges)
         {
             body.Append(EmailLayout.Item(title, detail));
         }
 
-        body.Append(EmailLayout.Paragraph("Your plan, your runs and your Strava connection are exactly where you left them."));
-        body.Append(EmailLayout.Paragraph("Signing in keeps it that way: plans now open only for their own runner.", muted: true));
+        body.Append(EmailLayout.Paragraph(RedesignClosing));
 
         var html = EmailLayout.Wrap(
-            preheader: "Five tabs, a clearer week, and a dark mode made for night runs.",
-            kicker: "What's new · A whole new Taperday",
-            title: "Same training. A whole new Taperday.",
+            preheader: "Simpler, quicker, and it now runs in the dark.",
+            kicker: "What's new · A brand-new look",
+            title: "Fresh legs. Fresh look.",
             body: body.ToString(),
-            buttonText: "See what's new",
+            buttonText: "Take it for a spin",
             buttonUrl: EmailLayout.Site + "/?view=home",
             footer: "You're getting this because you said yes to Taperday news and updates. Your weekly recap isn't affected.",
             unsubscribeUrl: unsubscribe?.Page.AbsoluteUri);
 
-        var text = new StringBuilder(greeting).Append("\n\nTaperday has a fresh look, and it's quicker to get around.\n\n");
+        var text = new StringBuilder("Fresh legs. Fresh look.\n\n").Append(greeting).Append("\n\n").Append(RedesignOpening).Append("\n\n");
         foreach (var (title, detail) in RedesignChanges)
         {
             text.Append("- ").Append(title).Append(": ").Append(detail).Append('\n');
         }
 
-        text.Append("\nYour plan, your runs and your Strava connection are exactly where you left them.\n\nSee what's new: https://taperday.run/?view=home\n");
+        text.Append('\n').Append(RedesignClosing).Append("\n\nTake it for a spin: https://taperday.run/?view=home\n");
         if (unsubscribe is not null)
         {
             text.Append("\nUnsubscribe from Taperday news and updates (your weekly recap isn't affected): ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
         }
 
-        return new EmailMessage(to, (test ? "[Test] " : "") + "Same training. A whole new Taperday.", html, text.ToString(), unsubscribe);
+        return new EmailMessage(to, (test ? "[Test] " : "") + RedesignSubject, html, text.ToString(), unsubscribe);
     }
 
     /// <summary>

@@ -40,7 +40,7 @@ const renderHome = (props: Partial<Parameters<typeof Home>[0]> = {}, { signIn = 
   const home = <Home runner={thandi} units="km" today="2026-10-23" current={null} runs={[]} {...handlers} {...props} />
   render(signIn ? <AuthContext.Provider value={signedIn}>{home}</AuthContext.Provider> : home)
   const user = userEvent.setup()
-  return { ...handlers, user, openTab: async (name: 'Today' | 'Tools') => { const summary = screen.getByText(/^Running tools/, { selector: 'summary' }); if ((summary.closest('details')?.open ?? false) !== (name === 'Tools')) await user.click(summary) } }
+  return { ...handlers, user, openTab: async (name: 'Today' | 'Tools') => { const more = screen.getByText(/^Coaching, insights and tools/, { selector: 'summary' }); if (name === 'Tools' && !more.closest('details')?.open) await user.click(more); const summary = screen.getByText(/^Running tools/, { selector: 'summary' }); if ((summary.closest('details')?.open ?? false) !== (name === 'Tools')) await user.click(summary) } }
 }
 
 const current = { id: 'plan-1', name: 'Spring 5K', inputs: {} as CurrentPlan['inputs'] }
@@ -227,6 +227,7 @@ describe('Home', () => {
 
   it('retains focus on the tools summary when closed', async () => {
     const { user } = renderHome()
+    await user.click(screen.getByText(/^Coaching, insights and tools/, { selector: 'summary' }))
     const tools = screen.getByText(/^Running tools/, { selector: 'summary' })
     await user.click(tools)
     expect(await screen.findByRole('region', { name: 'Calculators' })).toBeVisible()
@@ -396,12 +397,12 @@ it('acknowledges an unplanned Strava run and opens confirmation on its actual da
   const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-19', 10, 'Strava')] }, { signIn: true })
   const running = screen.getByRole('region', { name: 'Your running' })
   await openDisclosure(/^\d+ synced /)
-  expect(await within(running).findByText(/Your Strava run has synced/)).toBeVisible()
+  expect(await screen.findByText(/Your Strava run has synced/)).toBeVisible()
   expect(within(running).queryByText(/Your first run starts/)).not.toBeInTheDocument()
-  await user.click(await within(running).findByRole('button', { name: 'Log this run' }))
-  expect(within(running).getByLabelText('Run date')).toHaveValue('2026-10-19')
-  expect(within(running).getByLabelText('How does this fit your plan?')).toHaveValue('additional')
-  expect(within(running).getByLabelText('Run details')).toHaveValue('2026-10-19')
+  await user.click(await screen.findByRole('button', { name: 'Log this run' }))
+  expect(screen.getByLabelText('Run date')).toHaveValue('2026-10-19')
+  expect(screen.getByLabelText('How does this fit your plan?')).toHaveValue('additional')
+  expect(screen.getByLabelText('Run details')).toHaveValue('2026-10-19')
 })
 
 it('counts a saved time-only run while keeping its distance unreported', async () => {
@@ -420,8 +421,8 @@ it('does not hide a second Strava run just because another run was logged on tha
   const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: [run('2026-10-19', 10, 'Strava')] }, { signIn: true })
   const running = screen.getByRole('region', { name: 'Your running' })
   await within(running).findByRole('article', { name: 'Additional run on Monday 19 October 2026' })
-  await user.click(within(running).getByRole('button', { name: 'Log this run' }))
-  expect(within(running).getByLabelText('Run details')).toHaveValue('2026-10-19')
+  await user.click(screen.getByRole('button', { name: 'Log this run' }))
+  expect(screen.getByLabelText('Run details')).toHaveValue('2026-10-19')
 })
 
 it('does not claim an unconfirmed Strava run completed today’s workout while saved runs load', () => {

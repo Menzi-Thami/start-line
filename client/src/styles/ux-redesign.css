@@ -264,3 +264,13 @@
 .race-search-result { display: grid; gap: 2px; }
 .race-search-result .choice-meta { font-size: var(--text-sm); color: var(--ink-2); }
 .race-search .choice.race-search-result { grid-template-columns: minmax(0, 1fr); align-items: start; }
+
+/* Simplify: Home and Plan keep their extras behind one row. Title on top, a quiet line of what's inside below. */
+.home-more > summary, .plan-toolbox > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--space-3); row-gap: 2px; align-items: center; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md, 14px); background: var(--surface, transparent); color: var(--ink); font-size: var(--text-lg, 1.125rem); }
+.home-more > summary::after, .plan-toolbox > summary::after { content: '+'; grid-row: 1 / span 2; grid-column: 2; color: var(--accent-strong); font-size: 1.25rem; }
+.home-more[open] > summary::after, .plan-toolbox[open] > summary::after { content: '−'; }
+.home-more > summary .field-help, .plan-toolbox > summary .field-help { grid-column: 1; font-size: var(--text-sm); font-weight: 400; color: var(--ink-2); margin: 0; }
+.home-more, .plan-toolbox { border-top: 0; padding-top: 0; margin-top: var(--space-4); }
+.home-more > summary::-webkit-details-marker, .plan-toolbox > summary::-webkit-details-marker { display: none; }
+.home-more > summary { list-style: none; }
+.plan-toolbox > summary { list-style: none; }

@@ -1,3 +1,4 @@
+import { openDisclosure, openHomeMore } from './navigation'
 import { screenshotPath } from './screenshots'
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
@@ -40,7 +41,7 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     expect(state.progressRequests).toBe(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await page.screenshot({ path: screenshotPath(test.info(), 'refinements', `home-after-${width}.png`), fullPage: true })
-    await page.locator('.home-insights > summary').click()
+    await openDisclosure(page, /^Running insights/)
     await expect(page.getByRole('heading', { name: 'Personal bests', exact: true })).toBeVisible()
     await expect(page.getByRole('region', { name: 'Your progress', exact: true }).getByText('Your progress isn’t available right now.')).toBeVisible()
     expect(state.progressRequests).toBe(1)
@@ -100,6 +101,7 @@ for (const mode of ['no-plan', 'race-week', 'expired', 'error', 'long-name']) {
     else if (mode === 'error') await expect(page.getByRole('button', { name: 'Retry plan' })).toBeVisible()
     else await expect(page.getByRole('button', { name: "Open today's workout" })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await openHomeMore(page)
     await expect(page.getByRole('button', { name: 'View all runs →' })).toBeVisible()
   })
 }

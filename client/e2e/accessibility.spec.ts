@@ -1,3 +1,4 @@
+import { openDisclosure } from './navigation'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
@@ -32,7 +33,7 @@ for (const scheme of ['dark', 'light'] as const) for (const width of [320, 768, 
       if (screen === 'account') await page.getByRole('button', { name: 'Manage run connections' }).click()
       await scan(screen)
       if (screen === 'home') {
-        await page.locator('.home-insights > summary').click()
+        await openDisclosure(page, /^Running insights/)
         await scan('home-history')
       }
     }

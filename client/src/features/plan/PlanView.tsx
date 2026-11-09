@@ -118,6 +118,8 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const preparationQuery = new URLSearchParams(window.location.search)
   const preparationMode = preparation?.mode ?? preparationQuery.get('prepare')
   const [preparationOpen, setPreparationOpen] = useState(preparationMode === 'race' || preparationMode === 'long')
+  // "Plan tools" opens by itself for a link straight to race-day or long-run preparation.
+  const [toolboxOpen, setToolboxOpen] = useState(preparationMode === 'race' || preparationMode === 'long')
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -506,7 +508,6 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
             </>
           )}
           <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts" open={!!shown?.week.sessions.some(session => session.type === 'Strength')}><summary>Strength workouts</summary><StrengthTab plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={onEditStrength} /></details>
-          {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
         </div>
 
         <div {...panel('all')}>
@@ -564,13 +565,17 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </div>
       </div>
       <div className="plan-tools" hidden={tab === 'progress'}>
+      <RaceWeek plan={plan} today={today} />
+      {/* The plan is the page; everything you might change or take away waits behind one row. */}
+      <details className="disclosure plan-toolbox" open={toolboxOpen} onToggle={event => setToolboxOpen(event.currentTarget.open)}>
+      <summary>Plan tools <span className="field-help">Adjust training, race-day checklist, life happens, export, share and plan options</span></summary>
+      {coach?.adjustments && <details className="disclosure"><summary>Review and adjust training</summary><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></details>}
       <details ref={preparationRef} className="disclosure preparation-card" open={preparationOpen} onToggle={event => setPreparationOpen(event.currentTarget.open)}>
         <summary>{preparationMode === 'long' ? 'Long-run preparation' : 'Race-day checklist & pacing'}</summary>
         <PreparationGuide plan={plan} units={units} mode={preparationMode} date={preparation?.date ?? preparationQuery.get('date')} />
       </details>
       <LifeHappens plan={plan} today={today} units={units} actions={coach?.adjustments?.life} />
       <WorkoutExport plan={plan} units={units} />
-      <RaceWeek plan={plan} today={today} />
       <details className="disclosure plan-options"><summary>Plan options</summary>
         <div className="plan-actions">
           {toolbarExtra}
@@ -634,6 +639,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </div>
 
         {replan}
+      </details>
       </details>
       </div>
 

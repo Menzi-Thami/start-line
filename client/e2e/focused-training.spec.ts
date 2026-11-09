@@ -1,3 +1,4 @@
+import { openHomeMore } from './navigation'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import type { CheckIn } from '../src/lib/types'
@@ -51,12 +52,14 @@ test('training stays focused while all detail remains reachable @phone', async (
     await page.screenshot({ path: info.outputPath(`focused-home-${width}.png`) })
   }
   const tools = page.locator('summary').filter({ hasText: /^Running tools/ })
+  await openHomeMore(page)
   await page.getByRole('button', { name: 'View training progress →', exact: true }).click()
   await expect(page.getByRole('tab', { name: 'Progress', exact: true })).toHaveAttribute('aria-selected', 'true')
   await expect(page).toHaveURL(/planTab=progress/)
   await page.reload()
   await expect(page.getByRole('tab', { name: 'Progress', exact: true })).toHaveAttribute('aria-selected', 'true')
   await navigation.getByRole('button', { name: 'Home', exact: true }).click()
+  await openHomeMore(page)
   await tools.focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()

@@ -77,7 +77,7 @@ public static class TickPrompts
     }
 
     /// <summary>
-    /// What the push says. With run data allowed (<paramref name="ranKm"/> given): "Strava says you ran 10.2 km this
+    /// What the push says. With run data allowed (<paramref name="ranKm"/> given): "You ran 10.2 km this
     /// morning. Tick Tuesday’s Tempo as done?". Without, nothing from the run itself.
     /// </summary>
     /// <param name="localStart">When the run started, in the runner's own time.</param>
@@ -86,8 +86,8 @@ public static class TickPrompts
     {
         ArgumentNullException.ThrowIfNull(session);
         return ranKm is { } km
-            ? $"Strava says you ran {Reminders.Distance(km, units)} {When(localStart, localToday)}. Tick {SessionName(session)} as done?"
-            : "A run from Strava matches it. Tick it as done and it counts towards your running totals.";
+            ? $"You ran {Reminders.Distance(km, units)} {When(localStart, localToday)}. Tick {SessionName(session)} as done?"
+            : "You went for a run. Tick it as done and it counts towards your running totals.";
     }
 
     /// <summary>"this morning", "yesterday evening", "on Sunday".</summary>

@@ -92,3 +92,36 @@ A mailto unsubscribe lands in the maker's Gmail (via `hello@` forwarding) and ha
 - Make it one-off and safe across restarts: record what was sent to whom (a marker per runner and email, saved before sending) so an App Service restart can never send it twice.
 - Mind Brevo's free plan: **300 emails a day**. A broadcast bigger than that has to be spread over days.
 - Send a test to `hello@` first: the preview, without unsubscribe links, as it's for the maker.
+
+## Sending a "what's new" announcement
+
+Announcements go only to runners who said yes to **news and updates**, whose account was created before the release.
+Each runner gets one at most (`AnnouncementDeliveries` claims it). The announcement shares the daily email budget with
+the weekly recap and onboarding emails (Brevo's free plan: 300 a day), and the recap comes first.
+
+### Queued: it goes automatically after the production release
+
+`ops/queued-announcement` holds the campaign waiting to go (one line; empty means none). It currently holds
+`redesign-2026-11`.
+
+When **release** (or **deploy**) finishes successfully on `main`, the **announce** workflow sets the production API's
+settings:
+- `UpdateAnnouncement__Campaign` to the queued campaign;
+- `UpdateAnnouncement__AccountsCreatedBefore` to the release time;
+- `UpdateAnnouncement__Enabled` to `true`.
+
+The app restarts, and its worker sends 25 every 30 minutes (at most 200 a day) until everyone due it has it. The logs
+show counts only. If production already has that campaign switched on, the workflow changes nothing, so later releases
+never move the release time or resend.
+
+**To queue the next announcement**, add its email and campaign name in code (`UpdateEmails` and
+`UpdateAnnouncementSender.Composers`), then put the name in `ops/queued-announcement`.
+
+### By hand (staging, or a preview)
+
+- **Preview:** set `UpdateAnnouncement__Campaign` and `UpdateAnnouncement__TestTo` (your address) on the API, then
+  restart. One `[Test]` copy arrives, carrying no runner's details.
+- **Send:** set `UpdateAnnouncement__AccountsCreatedBefore` and `UpdateAnnouncement__Enabled` = `true`.
+- **Stop:** set `UpdateAnnouncement__Enabled` = `false`. Runners already sent one are never sent it again.
+- **Manual run:** **Actions → announce → Run workflow** does the production switch-on by hand. It also does nothing if
+  the campaign is already on.

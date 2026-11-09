@@ -109,8 +109,8 @@ internal sealed partial class NotificationDeliverer(IApplicationDbContext db, IP
                 && a.RunnerId == device.RunnerId && a.Source == ActivitySource.Strava, cancellationToken);
             if (run is null || time.GetUtcNow() - run.StartedAt > TickPrompts.MaxRunAge) return null;
             var units = await db.Runners.Where(r => r.Id == device.RunnerId).Select(r => r.Units).SingleAsync(cancellationToken);
-            var body = settings.IncludeRunData ? $"Your {Reminders.Distance(run.DistanceKm, units)} run has arrived from Strava." : "Your run has arrived from Strava.";
-            return new("Nice work — run finished!", $"{body} Open it to review your run and log how it fits your plan.", RunCelebrator.OpensAt(run.Id), tag);
+            var body = settings.IncludeRunData ? $"{Reminders.Distance(run.DistanceKm, units)} in the bag. " : "";
+            return new("Nice work — run finished!", $"{body}Open it to see how it went.", RunCelebrator.OpensAt(run.Id), tag);
         }
 
         if (delivery.Kind == NotificationKind.ConnectionAlert)

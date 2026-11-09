@@ -83,7 +83,7 @@ public sealed class TickPromptTests
         var body = TickPrompts.Body(Tuesday, 10.24, new DateTime(2026, 10, 20, 6, 15, 0), new DateOnly(2026, 10, 20), Units.Kilometres);
 
         TickPrompts.Title(Tuesday).ShouldBe("Ran Tuesday’s Tempo?");
-        body.ShouldBe("Strava says you ran 10.2 km this morning. Tick Tuesday’s Tempo as done?");
+        body.ShouldBe("You ran 10.2 km this morning. Tick Tuesday’s Tempo as done?");
     }
 
     [Fact]

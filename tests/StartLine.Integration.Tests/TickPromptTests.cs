@@ -173,7 +173,7 @@ public sealed class TickPromptTests
 
         await RunOnStrava(factory, runner, SundayMorningRun);
 
-        factory.Push.To(endpoint).ShouldHaveSingleItem().Body.ShouldStartWith("Your 12 km run has arrived from Strava.");
+        factory.Push.To(endpoint).ShouldHaveSingleItem().Body.ShouldStartWith("12 km in the bag.");
     }
 
     [Fact]

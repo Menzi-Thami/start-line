@@ -153,7 +153,7 @@
     --hero-mid: #111309;
     --hero-end: #0c0c0d;
     --frost-edge: rgba(255, 255, 255, 0.12);
-    --bar: rgba(10, 10, 11, 0.92);
+    --bar: #0a0a0b;
     --hover-ink: #ffffff;
   }
 }
@@ -201,7 +201,7 @@
     --hero-mid: #111309;
     --hero-end: #0c0c0d;
     --frost-edge: rgba(255, 255, 255, 0.12);
-    --bar: rgba(10, 10, 11, 0.92);
+    --bar: #0a0a0b;
     --hover-ink: #ffffff;
   }
 }

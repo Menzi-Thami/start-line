@@ -34,6 +34,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<OnboardingDelivery> OnboardingDeliveries => Set<OnboardingDelivery>();
 
+    public DbSet<AnnouncementDelivery> AnnouncementDeliveries => Set<AnnouncementDelivery>();
+
     public DbSet<CoachingDecisionLog> CoachingDecisions => Set<CoachingDecisionLog>();
 
     public DbSet<DailyReadiness> Readiness => Set<DailyReadiness>();

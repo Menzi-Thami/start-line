@@ -162,8 +162,11 @@ internal sealed partial class OnboardingReminderSender(
         var recaps = await db.WeeklyRecapDeliveries.CountAsync(
             d => (d.Status == RecapDeliveryStatus.Sent && d.SentAt > since && d.SentAt <= now) || (d.Status == RecapDeliveryStatus.Sending && d.ClaimedAt > since && d.ClaimedAt <= now),
             cancellationToken);
+        var announcements = await db.AnnouncementDeliveries.CountAsync(
+            d => (d.Status == AnnouncementDeliveryStatus.Sent && d.SentAt > since && d.SentAt <= now) || (d.Status == AnnouncementDeliveryStatus.Sending && d.ClaimedAt > since && d.ClaimedAt <= now),
+            cancellationToken);
         var reserve = await db.Runners.CountAsync(r => r.WeeklyEmails && r.Email != null && r.Email != "", cancellationToken);
-        return budget.Allowance(onboarding, recaps, reserve);
+        return budget.Allowance(onboarding, recaps + announcements, reserve);
     }
 
     // Whether the runner's email may be tried now: allowed by what's gone before, and its own row (if any) open for a retry.

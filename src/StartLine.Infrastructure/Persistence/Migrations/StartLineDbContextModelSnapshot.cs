@@ -769,6 +769,41 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("SavedPlans", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Runners.AnnouncementDelivery", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Campaign")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTimeOffset>("ClaimedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("SentAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId", "Campaign")
+                        .IsUnique();
+
+                    b.ToTable("AnnouncementDeliveries", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Runners.Feedback", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1360,6 +1395,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Runners.AnnouncementDelivery", b =>
                 {
                     b.HasOne("StartLine.Domain.Runners.Runner", null)
                         .WithMany()

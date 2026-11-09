@@ -47,7 +47,7 @@ public sealed class UpdateAnnouncementTests
         await Send(factory, release);
 
         var mail = factory.Mail.To(yes.Email).ShouldHaveSingleItem();
-        mail.Subject.ShouldBe("Same training. A whole new Taperday.");
+        mail.Subject.ShouldBe("Fresh legs, fresh look: meet the new Taperday");
         mail.Text.ShouldContain("Hi Naledi,");
         mail.Unsubscribe.ShouldNotBeNull();
         factory.Mail.To(no.Email).ShouldBeEmpty();

@@ -11,10 +11,10 @@ public sealed class UpdateAnnouncementEmailTests
     {
         var mail = UpdateEmails.TaperdayRedesign("runner@example.test", "Thandi <b>", unsubscribe: Links);
 
-        mail.Subject.ShouldBe("Same training. A whole new Taperday.");
+        mail.Subject.ShouldBe("Fresh legs, fresh look: meet the new Taperday");
         mail.Html.ShouldContain("Hi Thandi &lt;b&gt;,");
         mail.Html.ShouldNotContain("<b>,");
-        foreach (var what in new[] { "Everything in one tap", "A clearer plan", "Progress has its own page", "Find your race", "Night Run dark mode" })
+        foreach (var what in new[] { "Five tabs, zero hunting", "Today, front and centre", "A plan you can read at a glance", "Progress gets its own lane", "Your race, found", "Night Run mode" })
         {
             mail.Html.ShouldContain(what);
             mail.Text.ShouldContain(what);

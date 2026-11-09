@@ -48,6 +48,9 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<Feedback> Feedback => Set<Feedback>();
 
+    /// <summary>The searchable race catalogue (read by the race sync only).</summary>
+    public DbSet<Races.CatalogueRace> CatalogueRaces => Set<Races.CatalogueRace>();
+
     /// <summary>The Data Protection key ring that encrypts Strava tokens. Wrapped by Key Vault in Azure.</summary>
     public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 

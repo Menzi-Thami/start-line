@@ -37,6 +37,10 @@ type Route = [method: string, pattern: RegExp, body: () => unknown, status?: num
 const routes: Route[] = [
   ['GET', /\/health\//, () => 'Healthy'],
   ['GET', /\/api\/v1\/races$/, () => races],
+  ['GET', /\/api\/v1\/races\/search$/, () => [
+    { slug: 'knysna-forest-marathon-2027', name: 'Knysna Forest Marathon', date: '2027-07-03', distanceKm: 42.195, location: 'Knysna', summary: '', website: null, dateStatus: 'Confirmed', distanceConfirmed: true, major: false },
+    { slug: 'loskop-marathon-2027', name: 'Loskop Marathon', date: '2027-04-24', distanceKm: 50, location: 'Loskop Dam', summary: '', website: null, dateStatus: 'Provisional', distanceConfirmed: true, major: false },
+  ]],
   ['GET', /\/api\/v1\/me$/, () => runner],
   ['GET', /\/api\/v1\/me\/plans$/, () => (noPlan ? [] : [summary])],
   ['POST', /\/api\/v1\/me\/plans\/[^/]+\/coach$/, () => saved],

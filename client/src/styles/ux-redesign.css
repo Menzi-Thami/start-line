@@ -256,3 +256,11 @@
 .plan-locked { display: grid; gap: var(--space-3); justify-items: start; max-width: 40rem; margin: var(--space-6) auto; padding: var(--space-6); }
 .plan-locked-runner { color: var(--accent); }
 .plan-locked-facts { margin: 0; color: var(--ink-2); font-weight: 600; }
+
+/* ---------- Race step: search every other race below the headline rack ---------- */
+.race-search { display: grid; gap: var(--space-2); margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.race-search .input { min-height: var(--tap); }
+.race-search-results { display: grid; gap: var(--space-2); }
+.race-search-result { display: grid; gap: 2px; }
+.race-search-result .choice-meta { font-size: var(--text-sm); color: var(--ink-2); }
+.race-search .choice.race-search-result { grid-template-columns: minmax(0, 1fr); align-items: start; }

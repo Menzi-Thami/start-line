@@ -39,6 +39,8 @@ export async function openWeekDay(date: string) {
 
 export async function openRecentRun(date: string) {
   const summaries = await screen.findAllByText(formatDate(date), { selector: '.activity-row > summary > span:first-child' })
+  const more = summaries[0]?.closest('.home-more') as HTMLDetailsElement | null
+  if (more && !more.open) await userEvent.setup().click(more.querySelector<HTMLElement>(':scope > summary')!)
   for (const summary of summaries) if (!summary.closest('details')?.open) await userEvent.setup().click(summary.closest('summary')!)
 }
 

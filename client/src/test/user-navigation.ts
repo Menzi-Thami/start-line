@@ -5,6 +5,10 @@ import userEvent from '@testing-library/user-event'
 /** Follow the same disclosure controls a runner uses, rather than querying hidden actions. */
 export async function openDisclosure(label: string | RegExp) {
   const summary = await screen.findByText(label, { selector: 'summary', exact: true }, { timeout: 10000 })
+  // Home and Plan keep their extras behind one row ("Coaching, insights and tools", "Plan tools"): open those first.
+  const closed: HTMLDetailsElement[] = []
+  for (let details = summary.parentElement?.parentElement?.closest('details'); details; details = details.parentElement?.closest('details')) if (!details.open) closed.unshift(details)
+  for (const details of closed) await userEvent.setup().click(details.querySelector<HTMLElement>(':scope > summary')!)
   if (!summary.closest('details')?.open) await userEvent.setup().click(summary)
   return summary.closest('details')!
 }
@@ -35,6 +39,8 @@ export async function openWeekDay(date: string) {
 
 export async function openRecentRun(date: string) {
   const summaries = await screen.findAllByText(formatDate(date), { selector: '.activity-row > summary > span:first-child' })
+  const more = summaries[0]?.closest('.home-more') as HTMLDetailsElement | null
+  if (more && !more.open) await userEvent.setup().click(more.querySelector<HTMLElement>(':scope > summary')!)
   for (const summary of summaries) if (!summary.closest('details')?.open) await userEvent.setup().click(summary.closest('summary')!)
 }
 

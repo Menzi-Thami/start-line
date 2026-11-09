@@ -146,7 +146,7 @@ test('distances switch to miles', async ({ page }) => {
   await page.goto(sharedLink())
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
 
-  await page.getByText('Plan options', { exact: true }).click()
+  await openPlanOptions(page)
   await page.getByRole('radio', { name: 'Miles' }).check()
   // A 10K is 6.2 miles.
   await expect(page.getByText('6.2 mi', { exact: true })).toBeVisible()

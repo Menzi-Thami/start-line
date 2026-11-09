@@ -1,3 +1,4 @@
+import { openDisclosure } from './navigation'
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 
@@ -35,7 +36,7 @@ async function mockApi(page: Page) {
 test('the progress story compares spans, switches between 4, 8 and 12 weeks and fits every width @phone', async ({ page }, info) => {
   await mockApi(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-14&km=10')
-  await page.locator('details.home-insights > summary').click()
+  await openDisclosure(page, /^Running insights/)
 
   const progress = page.locator('section.home-progress')
   await expect(progress.getByRole('table', { name: 'The last 4 weeks against the 4 weeks before' })).toBeVisible()

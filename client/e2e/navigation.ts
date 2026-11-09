@@ -3,12 +3,20 @@ import { formatDate } from '../src/lib/format'
 
 export async function openDisclosure(page: Page, label: string | RegExp) {
   const summary = page.locator('summary').filter({ hasText: typeof label === 'string' ? new RegExp(`^${label}$`) : label })
+  await summary.waitFor({ state: 'attached' })
+  // Home and Plan keep their extras behind one row ("Coaching, insights and tools", "Plan tools"): open those first.
+  await summary.evaluate(element => {
+    const closed: HTMLDetailsElement[] = []
+    for (let details = element.parentElement?.parentElement?.closest('details'); details; details = details.parentElement?.closest('details')) if (!details.open) closed.unshift(details)
+    for (const details of closed) details.querySelector<HTMLElement>(':scope > summary')!.click()
+  })
   await summary.waitFor({ state: 'visible' })
   if (!await summary.evaluate(element => element.closest('details')!.open)) await summary.click()
   return summary.locator('..')
 }
 
 export const openPlanOptions = (page: Page) => openDisclosure(page, 'Plan options')
+export const openHomeMore = (page: Page) => openDisclosure(page, /^Coaching, insights and tools/)
 export async function openStrengthWorkouts(page: Page) {
   await page.getByRole('tab', { name: 'This week', exact: true }).click()
   return openDisclosure(page, 'Strength workouts')
@@ -16,6 +24,9 @@ export async function openStrengthWorkouts(page: Page) {
 
 export async function openRecentRun(page: Page, date: string) {
   const summaries = page.locator('.activity-row > summary').filter({ hasText: formatDate(date) })
+  await summaries.first().waitFor({ state: 'attached' })
+  // Recent activity sits inside Home's "Coaching, insights and tools" row.
+  await summaries.first().evaluate(element => { const more = element.closest<HTMLDetailsElement>('details.home-more'); if (more && !more.open) more.querySelector<HTMLElement>(':scope > summary')!.click() })
   await summaries.first().waitFor({ state: 'visible' })
   for (const summary of await summaries.all()) if (!await summary.evaluate(element => element.closest('details')!.open)) await summary.click()
 }

@@ -439,6 +439,8 @@ export function Home({
   const reviewRef = useRef<HTMLDetailsElement>(null)
   const [toolsOpen, setToolsOpen] = useState(() => tabFromUrl() === 'tools')
   const [toolsOpened, setToolsOpened] = useState(toolsOpen)
+  // The "Coaching, insights and tools" row opens by itself for a link straight to the review or the tools.
+  const [moreOpen, setMoreOpen] = useState(() => reviewOpen || toolsOpen)
   const [insightsVisited, setInsightsVisited] = useState(false)
   const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
@@ -567,21 +569,24 @@ export function Home({
         {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
         {!current && <BeginnerHomeCard today={today} onOpenProgramme={onOpenBeginner ?? onBuildPlan} />}
         <TickCard plan={plan} today={today} coach={coach} />
-        <h2 className="home-heading home-more-heading">More for today</h2>
-        {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} syncedFor={coach ? (s) => completedViaStrava(s, coach) : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
+        {current && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
+        {pendingSyncedRuns.length > 0 && <details className="disclosure home-sync"><summary>{pendingSyncedRuns.length} synced {pendingSyncedRuns.length === 1 ? 'run' : 'runs'} · Add training feedback</summary><p>Your Strava run has synced and counts automatically in your running totals. Log it to say how it fits your plan.</p>
+          <ul>{pendingSyncedRuns.map(run => <li key={run.id}>{formatDate(run.localDate)} · {formatDistance(run.distanceKm, units)} from Strava{' '}
+            {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}
+          </li>)}</ul><p className="field-help">Logging adds your effort and feedback to the plan. You do not need to enter the distance again for it to count here.</p></details>}
+        {requestedRun && plan && coach && <RunLog key={requestedRun.id} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} />}
+
+        {/* Home does one job: today. Everything else waits behind one row. */}
+        <details className="disclosure home-more" open={moreOpen} onToggle={event => setMoreOpen(event.currentTarget.open)}>
+        <summary>Coaching, insights and tools <span className="field-help">Weekly review, how you feel, your totals and running calculators</span></summary>
+        {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} syncedFor={coach ? (s) => completedViaStrava(s, coach) : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
         <ReadinessCheckIn today={today} onReview={plan && week && progress?.kind !== 'race' ? () => { setReviewOpen(true); requestAnimationFrame(() => reviewRef.current?.scrollIntoView?.({ block: 'start' })) } : undefined} />
 
         <section className="section home-section" aria-labelledby="home-training">
           <h2 id="home-training" className="home-heading">
             Your running
           </h2>
-          {current && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
-          {pendingSyncedRuns.length > 0 && <details className="disclosure home-sync"><summary>{pendingSyncedRuns.length} synced {pendingSyncedRuns.length === 1 ? 'run' : 'runs'} · Add training feedback</summary><p>Your Strava run has synced and counts automatically in your running totals. Log it to say how it fits your plan.</p>
-            <ul>{pendingSyncedRuns.map(run => <li key={run.id}>{formatDate(run.localDate)} · {formatDistance(run.distanceKm, units)} from Strava{' '}
-              {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}
-            </li>)}</ul><p className="field-help">Logging adds your effort and feedback to the plan. You do not need to enter the distance again for it to count here.</p></details>}
-          {requestedRun && plan && coach && <RunLog key={requestedRun.id} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} />}
           {coach && recentEntries.length > 0 && <section className="home-recent" aria-label="Recently logged runs">
             <h3>Recent activity</h3>
             {recentEntries.map(entry => <details className="activity-row" key={entry.id ?? `${entry.date}|${entry.sessionType}`}>
@@ -688,7 +693,6 @@ export function Home({
           </>}
           </details>
         </section>
-      </div>
 
       <details className="disclosure home-tools" open={toolsOpen} onToggle={event => {
         const open = event.currentTarget.open
@@ -708,6 +712,8 @@ export function Home({
           </ScreenRecovery>
         )}
       </details>
+        </details>
+      </div>
       <InstallCard />
     </div>
   )

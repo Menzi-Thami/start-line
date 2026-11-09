@@ -75,10 +75,9 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
   text('TAPER', 126, 170, 54, ink, 'Instrument Serif, serif', '400')
   const wordWidth = ctx.measureText('TAPER').width
   text('DAY', 126 + wordWidth, 170, 54, lime, 'Instrument Serif, serif', '400')
-  text('THE WORK. LOGGED.', 128, 248, 28, lime)
   const title = run.title.length > 38 ? `${run.title.slice(0, 35)}…` : run.title
-  text(title, 128, 334, 42)
-  text(formatDate(run.date, 'long').replace(/^\w+,? /, ''), 128, 387, 26, muted)
+  text(title, 128, 280, 42)
+  text(formatDate(run.date, 'long').replace(/^\w+,? /, ''), 128, 333, 26, muted)
   text(distance ? 'DISTANCE' : 'RUN TIME', 128, 500, 25, muted)
   const hero = distance ? distance.split(' ')[0]! : (time ?? 'COMPLETED')
   let heroSize = 176
@@ -104,7 +103,7 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
     ctx.lineTo(114 + i * 34, 1068)
     ctx.fill()
   }
-  text('taperday.run', 128, 1152, 27, muted)
+  text('taperday.run', 128, 1152, 40, ink)
   ctx.textAlign = 'right'
   text(run.source === 'Strava' ? 'Powered by Strava' : run.source === 'Manual' ? 'Manually logged' : 'Recorded run', 952, 1152, 24, muted)
   return pngOf(canvas)
@@ -174,9 +173,6 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
   ctx.font = `800 54px ${display}`
   const logoWidth = ctx.measureText('TAPER').width
   text('DAY', left + logoWidth, 148, 54, 300, lime, display, 800)
-  ctx.textAlign = 'right'
-  text('THE WORK. LOGGED.', right, 148, 27, 650, lime)
-  ctx.textAlign = 'left'
   text(run.title, left, transparent ? 226 : 258, transparent ? 40 : 52, right - left, ink, display, 800)
 
   const labelY = transparent ? 320 : 386
@@ -206,7 +202,7 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
     460,
     muted,
   )
-  text('taperday.run', right, footerY, 27, 460, muted)
+  text('taperday.run', right, footerY, 40, 460, ink)
   ctx.textAlign = 'left'
   ctx.fillStyle = lime
   if (transparent) {

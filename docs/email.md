@@ -92,3 +92,24 @@ A mailto unsubscribe lands in the maker's Gmail (via `hello@` forwarding) and ha
 - Make it one-off and safe across restarts: record what was sent to whom (a marker per runner and email, saved before sending) so an App Service restart can never send it twice.
 - Mind Brevo's free plan: **300 emails a day**. A broadcast bigger than that has to be spread over days.
 - Send a test to `hello@` first: the preview, without unsubscribe links, as it's for the maker.
+
+## Sending a "what's new" announcement
+
+Announcements go only to runners who said yes to **news and updates**, whose account was created before the release.
+Each runner gets one at most (`AnnouncementDeliveries` claims it). The announcement shares the daily email budget with
+the weekly recap and onboarding emails (Brevo's free plan: 300 a day), and the recap comes first. Everything is off
+until you set these App Service settings on the API:
+
+1. **Preview:** set `UpdateAnnouncement__Campaign` = `redesign-2026-11` and `UpdateAnnouncement__TestTo` = your
+   address, then restart. One `[Test]` copy arrives. Check it in Gmail or Outlook on your phone, in light and dark.
+2. **Send:**
+   - Clear `UpdateAnnouncement__TestTo`.
+   - Set `UpdateAnnouncement__AccountsCreatedBefore` to the release time, for example `2026-11-10T18:00:00+02:00`.
+   - Set `UpdateAnnouncement__Enabled` = `true`.
+
+   It sends in batches every 30 minutes (25 at a time, at most 200 a day) until everyone due it has it. The logs show
+   counts only.
+3. **Stop:** set `UpdateAnnouncement__Enabled` = `false`. Runners already sent one are never sent it again.
+
+Do this on staging first, with your own test account, before production. Only send after the release is live: the email
+describes what's on taperday.run.

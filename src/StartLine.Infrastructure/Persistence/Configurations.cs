@@ -455,6 +455,23 @@ internal sealed class OnboardingDeliveryConfiguration : IEntityTypeConfiguration
     }
 }
 
+internal sealed class AnnouncementDeliveryConfiguration : IEntityTypeConfiguration<AnnouncementDelivery>
+{
+    public void Configure(EntityTypeBuilder<AnnouncementDelivery> builder)
+    {
+        builder.ToTable("AnnouncementDeliveries");
+        builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
+        builder.Property(d => d.Campaign).HasMaxLength(AnnouncementDelivery.MaxCampaignLength);
+        builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Ignore(d => d.CanRetry);
+
+        // The claim: one announcement per runner and campaign, whichever instance gets there first. The runner going takes theirs.
+        builder.HasIndex(d => new { d.RunnerId, d.Campaign }).IsUnique();
+        builder.HasOne<Runner>().WithMany().HasForeignKey(d => d.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class DailyReadinessConfiguration : IEntityTypeConfiguration<DailyReadiness>
 {
     public void Configure(EntityTypeBuilder<DailyReadiness> builder)

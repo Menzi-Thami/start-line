@@ -49,6 +49,9 @@ public sealed class RaceCalendarTests
         comrades.GetProperty("dateStatus").GetString().ShouldBe("Confirmed");
         comrades.GetProperty("distanceConfirmed").GetBoolean().ShouldBeFalse();
         races.Single(r => r.GetProperty("slug").GetString() == "cape-town-marathon-2027")
+            .GetProperty("dateStatus").GetString().ShouldBe("Confirmed");
+        // Cape100's date has only been seen on a calendar site, not announced by its organiser.
+        races.Single(r => r.GetProperty("slug").GetString() == "cape100-2027")
             .GetProperty("dateStatus").GetString().ShouldBe("Provisional");
     }
 

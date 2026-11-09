@@ -37,7 +37,7 @@ export function useCheckIns(planId: string | null) {
 
   useEffect(() => {
     if (!planId) return
-    let cancelled = false
+    const flags = { cancelled: false }
     const version = mutations.current.get(planId) ?? 0
     auth
       .getToken()
@@ -46,14 +46,14 @@ export function useCheckIns(planId: string | null) {
         return api.me.checkIns(token, planId)
       })
       .then((list) => {
-        if (cancelled || version !== (mutations.current.get(planId) ?? 0)) return
+        if (flags.cancelled || version !== (mutations.current.get(planId) ?? 0)) return
         setLoaded({ planId, checkIns: new Map(list.map((c) => [c.isAdditional ? c.id! : key(c.date, c.sessionType), c])) })
         setFailedPlanId(null)
       })
       // A failed request is not an empty history. Keep any loaded entries and offer a retry.
-      .catch(() => !cancelled && setFailedPlanId(planId))
+      .catch(() => !flags.cancelled && setFailedPlanId(planId))
     return () => {
-      cancelled = true
+      flags.cancelled = true
     }
   }, [planId, auth, attempt])
   const retry = useCallback(() => { setFailedPlanId(null); setAttempt(value => value + 1) }, [])

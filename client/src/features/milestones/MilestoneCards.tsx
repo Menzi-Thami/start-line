@@ -19,18 +19,18 @@ export function MilestoneCards({ runs }: { runs: readonly ActivitySummary[] }) {
 
   useEffect(() => {
     if (!selected) return
-    let cancelled = false
+    const flags = { cancelled: false }
     let url: string | null = null
     import('./render-milestone').then(({ renderMilestoneCard }) =>
       renderMilestoneCard(selected, { displayName: includeName ? name : undefined, showBrand })
     ).then(blob => {
-      if (cancelled) return
+      if (flags.cancelled) return
       url = URL.createObjectURL(blob)
       setPrepared({ key: cardKey, url, file: new File([blob], `taperday-${selected.id}.png`, { type: 'image/png' }) })
       setError('')
-    }).catch(() => { if (!cancelled) setError('Could not prepare your card. Please try another browser.') })
+    }).catch(() => { if (!flags.cancelled) setError('Could not prepare your card. Please try another browser.') })
     return () => {
-      cancelled = true
+      flags.cancelled = true
       if (url) URL.revokeObjectURL(url)
       setPrepared(null)
     }

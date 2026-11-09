@@ -21,21 +21,21 @@ export function RunSticker({ run, units }: { run: StickerRun; units: Units }) {
   }, [open])
   useEffect(() => {
     if (!open) return
-    let cancelled = false
+    const flags = { cancelled: false }
     let url: string | null = null
     const details = JSON.parse(key)[0] as StickerRun
     import('./run-sticker')
       .then(({ renderRunSticker }) => renderRunSticker(details, units, layout))
       .then((blob) => {
-        if (cancelled) return
+        if (flags.cancelled) return
         url = URL.createObjectURL(blob)
         setPrepared({ key, file: new File([blob], `taperday-run-${details.date}-${layout}.png`, { type: 'image/png' }), url })
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not create your sticker. Try again.')
+        if (!flags.cancelled) setError(e instanceof Error ? e.message : 'Could not create your sticker. Try again.')
       })
     return () => {
-      cancelled = true
+      flags.cancelled = true
       if (url) URL.revokeObjectURL(url)
     }
   }, [open, key, units, layout])

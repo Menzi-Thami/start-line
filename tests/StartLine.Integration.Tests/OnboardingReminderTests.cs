@@ -476,7 +476,7 @@ public sealed class OnboardingReminderTests
         var previews = await Eventually(() => factory.Mail.To("maker@example.com") is { Count: 4 } all ? all : null);
         previews.Select(p => p.Subject).ShouldBe(new[] { "[Test] Your starting line is waiting", "[Test] Your first run is waiting", "[Test] Ready when you are", "[Test] Welcome to Taperday" }, ignoreOrder: true);
         previews.ShouldAllBe(p => p.Unsubscribe == null && p.Html.Contains("Hi Sample.", StringComparison.Ordinal));
-        factory.Mail.Sent.Count.ShouldBe(3);
+        factory.Mail.Sent.Count.ShouldBe(4);
     }
 
     private static async Task<T> Eventually<T>(Func<T?> read, Action? tick = null)

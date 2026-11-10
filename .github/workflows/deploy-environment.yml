@@ -1,7 +1,8 @@
-name: deploy-environment
+name: Shared - Deploy one environment
 
 # One deployment of the whole app to one GitHub environment: build, migrate its database, deploy its API and website,
-# then wait for health. Called by deploy.yml, first for staging and then, once approved, for production. Each
+# then wait for health. Never run by itself: "2 - Deploy staging", "3 - Release to production" and "Ops - Redeploy
+# production" call it (deploy-staging-only.yml, release.yml and deploy.yml). Each
 # environment holds its own variables and secrets, and Azure trusts each one separately (see docs/deploy.md).
 on:
   workflow_call:

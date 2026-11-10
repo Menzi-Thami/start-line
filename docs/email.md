@@ -123,5 +123,5 @@ never move the release time or resend.
   restart. One `[Test]` copy arrives, carrying no runner's details.
 - **Send:** set `UpdateAnnouncement__AccountsCreatedBefore` and `UpdateAnnouncement__Enabled` = `true`.
 - **Stop:** set `UpdateAnnouncement__Enabled` = `false`. Runners already sent one are never sent it again.
-- **Manual run:** **Actions → announce → Run workflow** does the production switch-on by hand. It also does nothing if
+- **Manual run:** **Actions → Ops - Release email → Run workflow** does the production switch-on by hand. It also does nothing if
   the campaign is already on.

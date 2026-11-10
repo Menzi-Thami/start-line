@@ -1,4 +1,4 @@
-name: Wake the API for the weekly recap
+name: Ops - Wake API for weekly recap
 
 # The free (F1) API may sleep after idle time. Keep it awake through the 07:00–08:00
 # Monday morning send window across runner time zones (UTC+14 through UTC-12).

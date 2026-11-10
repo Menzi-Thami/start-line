@@ -1,4 +1,4 @@
-name: Two-hour PWA push test
+name: Ops - Two-hour PWA push test
 
 on:
   workflow_dispatch:

@@ -20,6 +20,20 @@ public sealed class OnboardingEligibilityTests
     private static DateOnly Day(DateTimeOffset at) => DateOnly.FromDateTime(at.UtcDateTime);
 
     [Fact]
+    public void A_new_account_is_welcomed_once_in_its_first_two_days_whatever_it_has_done()
+    {
+        Classify(Joined(Now.AddMinutes(-5)) with { Welcomes = true }).ShouldBe(OnboardingCampaign.Welcome);
+        Classify(Joined(Now.AddMinutes(-5))).ShouldBeNull();
+        Classify(WithPlan(Now.AddHours(-1), Now.AddMinutes(-30)) with { Welcomes = true }).ShouldBe(OnboardingCampaign.Welcome);
+        Classify(Joined(Now.AddDays(-2)) with { Welcomes = true }).ShouldBe(OnboardingCampaign.StartPlan);
+        Classify(Joined(Now.AddMinutes(-5)) with { Welcomes = true, AcceptsUpdates = false }).ShouldBeNull();
+        Classify(Joined(Now.AddMinutes(-5)) with { Welcomes = true, HasEmail = false }).ShouldBeNull();
+
+        // Once welcomed, the next email waits its usual gap.
+        OnboardingEligibility.Allowed(new(OnboardingCampaign.StartPlan), [new(OnboardingCampaign.Welcome, "", Now.AddDays(-2), MayHaveGone: true)], Now).ShouldBeFalse();
+    }
+
+    [Fact]
     public void A_runner_without_a_plan_is_invited_at_48_hours_and_not_a_minute_before()
     {
         Classify(Joined(Now.AddHours(-48).AddMinutes(1))).ShouldBeNull();

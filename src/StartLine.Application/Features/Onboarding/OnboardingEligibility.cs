@@ -16,6 +16,7 @@ namespace StartLine.Application.Features.Onboarding;
 /// <param name="AcceptsUpdates">News and updates are on (<see cref="Runner.UpdateEmails"/>).</param>
 /// <param name="HasSyncedRunsNow">Strava runs in the cache right now: running Taperday can see but doesn't keep.</param>
 /// <param name="SyncSourceUnavailable">A Strava connection needing reconnecting: runs may be happening that Taperday can't see.</param>
+/// <param name="Welcomes">The welcome email is switched on (the live worker turns it on; see OnboardingReminderOptions.Welcome).</param>
 public sealed record OnboardingFacts(
     DateTimeOffset RegisteredAt,
     DateTimeOffset? FirstPlanAt,
@@ -24,7 +25,8 @@ public sealed record OnboardingFacts(
     bool HasEmail,
     bool AcceptsUpdates,
     bool HasSyncedRunsNow = false,
-    bool SyncSourceUnavailable = false);
+    bool SyncSourceUnavailable = false,
+    bool Welcomes = false);
 
 /// <summary>The email a runner is due: its campaign and episode, which together with the runner are its delivery key.</summary>
 public sealed record OnboardingDecision(OnboardingCampaign Campaign, string Episode = "");
@@ -41,6 +43,9 @@ public static class OnboardingEligibility
 {
     /// <summary>Signup to the first email: long enough to have built a plan on their own if they were going to.</summary>
     public static readonly TimeSpan SignupWait = TimeSpan.FromHours(48);
+
+    /// <summary>A new account hears "Welcome to Taperday" within this long of signing up, and never after.</summary>
+    public static readonly TimeSpan WelcomeWindow = TimeSpan.FromDays(2);
 
     /// <summary>First plan to "your first run is waiting".</summary>
     public static readonly TimeSpan FirstRunWait = TimeSpan.FromDays(7);
@@ -60,6 +65,12 @@ public static class OnboardingEligibility
         if (!facts.HasEmail || !facts.AcceptsUpdates || facts.RegisteredAt > now)
         {
             return null;
+        }
+
+        // 0. Just signed up: a welcome, whatever they have or haven't done yet. Sent once (the delivery is its key).
+        if (facts.Welcomes && now - facts.RegisteredAt < WelcomeWindow)
+        {
+            return new(OnboardingCampaign.Welcome);
         }
 
         // 1. Never saved a plan (archived ones count as saved). Whatever else they've done, the next step is a plan.

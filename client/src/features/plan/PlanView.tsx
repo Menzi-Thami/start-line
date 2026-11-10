@@ -43,6 +43,10 @@ const DaySummary = lazy(() => import('./DaySummary'))
 interface Props {
   preparation?: { mode: 'long' | 'race'; date: string | null } | null
   onEditStrength?: () => void
+  /** Change the answers behind this plan: race, goal, days. Its own button at the top, never buried in a menu. */
+  onEditPlan?: () => void
+  /** The app's bar already has Progress: then Plan's own tabs are just This week and Calendar. */
+  progressInBar?: boolean
   plan: TrainingPlan
   /** Just built: the race, the plan's shape and its weeks appear in turn, once, rather than all at once. */
   reveal?: boolean
@@ -112,7 +116,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, canCompleteRuns = true, onTabChange, progressExtras }: Props) {
+export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, progressExtras }: Props) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const preparationRef = useRef<HTMLDetailsElement>(null)
   const preparationQuery = new URLSearchParams(window.location.search)
@@ -213,6 +217,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   for (const session of plan.weeks.flatMap((w) => w.sessions)) if (completedViaStrava(session, coach)) effectiveDone.add(sessionKey(session))
   const additionalDates = entries.filter((c) => c.isAdditional && c.status !== 'Skipped').map((c) => c.date)
   const activityDates = [...runs?.filter(run => run.kind !== 'Other').map(run => run.localDate) ?? [], ...entries.filter(entry => entry.status !== 'Skipped').map(entry => entry.date)]
+  const notes = plan.warnings.filter((w) => !(today >= plan.startDate && (w.code === 'foundation-first' || w.code === 'starts-later')))
   const byDate = runs ? runsByDate(runs) : undefined
   const ran = runs || coach ? ranKmByWeek(plan.weeks, runs ?? [], today, entries) : undefined
 
@@ -373,7 +378,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const panel = (id: TabId) => ({
     id: `plan-panel-${id}`,
     role: 'tabpanel',
-    'aria-labelledby': `plan-tab-${id}`,
+    ...(progressInBar && id === 'progress' ? { 'aria-label': 'Progress' } : { 'aria-labelledby': `plan-tab-${id}` }),
     hidden: tab !== id,
     className: `tab-panel${tab === id && direction ? ` slide-${direction}` : ''}`,
   })
@@ -411,21 +416,23 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </li>
       </ul>
 
+      {onEditPlan && <button type="button" className="button button-quiet plan-edit-button" onClick={onEditPlan}>Edit plan</button>}
       {coach && <div ref={runLogRef} hidden={selectedDate !== null}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
       {coach && earlierEntries.length > 0 && <section aria-label="Earlier logged runs"><details className="disclosure"><summary>Earlier logged runs · {earlierEntries.length}</summary>{earlierEntries.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}</details></section>}
 
       {plan.outlook?.verdict === 'AtRisk' && <OutlookCard outlook={plan.outlook} onUseGoal={plan.replan && plan.suggestedGoal ? undefined : onUseGoal} />}
-      {plan.warnings.length > 0 && (
+      {/* Notes about how the plan starts matter only until it has: once it's under way they're old news. */}
+      {notes.length > 0 && (
         <div className="callout plan-notes" role="note">
           <ul>
-            {plan.warnings.map((w) => (
+            {notes.map((w) => (
               <li key={w.code}>{w.message}</li>
             ))}
           </ul>
         </div>
       )}
 
-      <div className="tabs tabs-frame">
+      <div className="tabs tabs-frame" hidden={progressInBar && tab === 'progress'}>
         <div ref={tabListRef} className="tabs-scroll" data-fade={tabsFade} role="tablist" aria-label="Your plan" onKeyDown={onTabKey} onScroll={syncTabsFade}>
           {tabs.map((t, i) => (
             <button
@@ -438,6 +445,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
               id={`plan-tab-${t.id}`}
               className="tab"
               aria-selected={tab === t.id}
+              hidden={progressInBar && t.id === 'progress'}
               aria-controls={`plan-panel-${t.id}`}
               tabIndex={tab === t.id ? 0 : -1}
               onClick={() => showTab(i)}
@@ -489,7 +497,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
                 <label className="week-jump">
                   <span className="visually-hidden">Jump to week</span>
                   <select value={weekIndex} onChange={event => { const target = Number(event.target.value); const base = plan.weeks.findIndex(week => week.number === currentShown?.week.number); setWeekOffset(target - Math.max(0, base)); setSelectedDay(null) }}>
-                    {plan.weeks.map((week, i) => <option key={week.number} value={i}>{`Week ${week.number} of ${plan.weeks.length}${i === 0 ? ' · first week' : ''}${i === plan.weeks.length - 1 ? ' · race week' : ''}${week.number === currentWeek ? ' · this week' : ''}`}</option>)}
+                    {plan.weeks.map((week, i) => <option key={week.number} value={i}>{`Week ${week.number}${i === plan.weeks.length - 1 ? ' · race week' : ''}${week.number === currentWeek ? ' · this week' : ''}`}</option>)}
                   </select>
                 </label>
                 <span className="visually-hidden" aria-live="polite">Showing week {shown.week.number} of {plan.weeks.length}</span>
@@ -499,12 +507,6 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
                 {currentShown?.when === 'soon' ? 'Back to your first week' : currentShown?.when === 'past' ? 'Back to race week' : 'Back to this week'}
               </button>}
               <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={previewDate} daySummaryId={daySummaryId} renderSelectedDay={() => preview(previewDate)} statusFor={statusOn} />
-              <p className="field-help">
-                {coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Ticks are saved on this device.'}{' '}
-                <button type="button" className="link-button" onClick={() => showTab(tabs.findIndex((t) => t.id === 'all'))}>
-                  Open calendar
-                </button>
-              </p>
             </>
           )}
           <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts" open={!!shown?.week.sessions.some(session => session.type === 'Strength')}><summary>Strength workouts</summary><StrengthTab plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={onEditStrength} /></details>
@@ -515,7 +517,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
           <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} historyDates={entries.map(entry => entry.date)} statusFor={statusOn} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} />
           {selectedDay?.tab === 'all' && selectedDate ? preview(selectedDate) : tab === 'all' && <div className="calendar-default-day"><DayPreview id={`${daySummaryId}-calendar`} date={calendarDefault} sessions={sessionsOn(calendarDefault)} status={statusOn(calendarDefault)} units={units} paces={plan.paces} onOpen={() => openDay(calendarDefault)} /></div>}
           </div>
-          <p className="tab-intro">{coach ? 'Run logs are saved to your account. Strength ticks stay on this device.' : 'Tick sessions off as you go. Ticks are saved on this device only.'}</p>
+          {!coach && <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>}
           <details className="disclosure training-guide"><summary>Full training schedule</summary><WeekList weeks={plan.weeks} paces={plan.paces} units={units} currentWeek={currentWeek} done={effectiveDone} onDoneChange={updateDone} runs={byDate} onOpenRun={onOpenRun} onLogRun={logImportedRun} coach={coach} today={today} canCompleteRuns={canCompleteRuns} /></details>
         </div>
 

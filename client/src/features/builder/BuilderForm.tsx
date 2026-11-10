@@ -259,6 +259,13 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const [seenServerErrors, setSeenServerErrors] = useState(serverErrors)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))
+  // A different race from the saved plan's starts fresh: a start day already in the past (the old plan's) moves to today,
+  // so the runner is never stopped by a date they didn't choose for this race.
+  const pickRace = (race: string) => setDraft((d) => ({
+    ...d,
+    race,
+    ...(initial && race !== (initial.raceSlug ?? OTHER) && d.start === 'day' && d.startOn < today ? { start: 'today' as const, startOn: '' } : {}),
+  }))
 
   // The server turned the plan down: go back to the first screen it complained about.
   if (serverErrors !== seenServerErrors) {
@@ -418,7 +425,9 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
         <p className="wizard-count">
           Step {position + 1} of {totalSteps}
         </p>
-        {/* The taper again: the bars step down towards the last step, which is a race-day dot. */}
+        {/* The taper again: the bars step down towards the last step, which is a race-day dot. Only while signing up, when
+            the numbered steps below aren't shown: one progress marker at a time. */}
+        {gate && (
         <ol className="wizard-bar" aria-hidden="true">
           {Array.from({ length: totalSteps }, (_, i) => (
             <li
@@ -428,6 +437,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
             />
           ))}
         </ol>
+        )}
         {onCancel && !gate && (
           <button type="button" className="link-button wizard-cancel" onClick={onCancel}>
             Back to your plan
@@ -479,7 +489,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                 <>
                   <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
                     <label className="choice choice-other">
-                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
+                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => pickRace(OTHER)} />
                       <span className="choice-name">Another race — build for your own distance or event</span>
                       <span className="choice-meta">First 5K, a personal best, a local race or an ultra. Choose your distance and target date.</span>
                     </label>
@@ -502,7 +512,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       <div className="race-rack">
                         {catalogue.map((race, i) => (
                           <label className="race-bib" key={race.slug}>
-                            <input type="radio" name="race" value={race.slug} checked={draft.race === race.slug} onChange={() => set('race', race.slug)} />
+                            <input type="radio" name="race" value={race.slug} checked={draft.race === race.slug} onChange={() => pickRace(race.slug)} />
                             <span className={`bib-card bib-colour-${i % 4}`} style={{ animationDelay: `-${(i * 1.1).toFixed(1)}s` }}>
                               <span className="choice-date mono">
                                 {formatDate(race.date, 'dayMonth')} <small>{formatDate(race.date, 'year')}</small>
@@ -525,7 +535,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                         selectedRace={searchedRaces.find((r) => r.slug === draft.race)}
                         onPick={(race) => {
                           rememberRace(race)
-                          set('race', race.slug)
+                          pickRace(race.slug)
                         }}
                       />
                     )}

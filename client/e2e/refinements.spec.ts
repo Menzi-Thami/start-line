@@ -102,7 +102,7 @@ for (const mode of ['no-plan', 'race-week', 'expired', 'error', 'long-name']) {
     else await expect(page.getByRole('button', { name: "Open today's workout" })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await openHomeMore(page)
-    await expect(page.getByRole('button', { name: 'View all runs →' })).toBeVisible()
+    await expect(page.locator('summary').filter({ hasText: /^Running insights/ })).toBeVisible()
   })
 }
 

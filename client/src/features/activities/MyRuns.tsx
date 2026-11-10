@@ -15,7 +15,6 @@ type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] 
 interface Props {
   units: Units
   onOpen: (id: string, uploaded?: Activity) => void
-  onOpenPlan?: () => void
   /** The run open beside the list on a desktop, marked in the list. */
   selectedId?: string
 }
@@ -55,7 +54,8 @@ const SOURCES: readonly { id: Source; label: string }[] = [
 const fromSource = (runs: readonly ActivitySummary[], source: Source) =>
   source === 'any' ? runs : runs.filter((r) => (source === 'Strava' ? r.source.kind === 'Strava' : r.source.kind !== 'Strava'))
 
-export function MyRuns({ units, onOpen, onOpenPlan, selectedId }: Props) {
+export function MyRuns({ units, onOpen, selectedId }: Props) {
+  const uploadRef = useRef<HTMLDetailsElement>(null)
   const auth = useAuth()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [range, setRange] = useState<Range>('all')
@@ -127,9 +127,8 @@ export function MyRuns({ units, onOpen, onOpenPlan, selectedId }: Props) {
         Runs
       </h2>
 
-      {onOpenPlan && <button type="button" className="link-button" onClick={onOpenPlan}>Your training log →</button>}
 
-      <details className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
+      <details ref={uploadRef} className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
         <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Runs you add this way stay on Taperday for good. How to get the file:</p>
         <ExportGuide />
         <label className={running ? 'button button-primary is-busy' : 'button button-primary'}>
@@ -189,7 +188,8 @@ export function MyRuns({ units, onOpen, onOpenPlan, selectedId }: Props) {
 
       {list.kind === 'ready' && list.runs.length === 0 && (
         <div className="empty" style={{ marginTop: 'var(--space-5)' }}>
-          <p>No imported runs yet. Upload a file to see splits, best efforts and how it matched your plan.</p>
+          <p><strong>No runs yet.</strong> Connect Strava in Account, or add a run from your watch.</p>
+          <button type="button" className="button button-primary" style={{ marginTop: 'var(--space-3)' }} onClick={() => { const upload = uploadRef.current; if (!upload) return; upload.open = true; upload.scrollIntoView?.({ block: 'start' }); upload.querySelector('summary')?.focus() }}>Add a run</button>
         </div>
       )}
 

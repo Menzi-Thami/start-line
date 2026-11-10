@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
+import { ReplacePlanBar } from '../features/account/ReplacePlanBar'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { PlanLocked } from '../features/account/PlanLocked'
 import { SignUpPitch } from '../features/account/SignUpPitch'
@@ -1043,6 +1044,17 @@ export function App() {
                 onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                 onSignUp={state.kind === 'signed-out' ? auth.signUp : undefined}
                 onFinishSignUp={state.kind === 'needs-sign-up' ? () => go('sign-up') : undefined}
+              />
+            )}
+            {/* A plan that isn't the runner's saved one (a new race, a new goal) is never saved or lost silently. */}
+            {showPlan && state.kind === 'ready' && currentPlan.current && !savedOnScreen && (
+              <ReplacePlanBar
+                key={toSearchParams(plan.inputs).toString()}
+                request={toRequest(plan.inputs)}
+                raceName={plan.plan.race.name}
+                saved={currentPlan.current}
+                onReplaced={currentPlan.refresh}
+                onKeep={() => openOwnPlan()}
               />
             )}
             {showPlan && <InstallCard />}

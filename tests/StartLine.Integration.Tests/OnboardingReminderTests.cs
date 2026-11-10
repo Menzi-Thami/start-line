@@ -460,10 +460,10 @@ public sealed class OnboardingReminderTests
         factory.Time.SetUtcNow(new DateTimeOffset(2030, 1, 7, 9, 0, 0, TimeSpan.Zero));
         var runner = await Runner(factory);
 
-        factory.Time.Advance(TimeSpan.FromDays(2));
+        // A new account: the worker's first email to it is the welcome.
         // Each check moves the clock on by one of the worker's waits, so its next run comes round whenever it started waiting.
         var mail = await Eventually(() => factory.Mail.To(runner.Email).SingleOrDefault(), () => factory.Time.Advance(TimeSpan.FromMinutes(30)));
-        mail.Subject.ShouldBe("Your starting line is waiting");
+        mail.Subject.ShouldBe("Welcome to Taperday");
     }
 
     [Fact]
@@ -473,8 +473,8 @@ public sealed class OnboardingReminderTests
         factory.Time.SetUtcNow(new DateTimeOffset(2027, 11, 1, 9, 0, 0, TimeSpan.Zero));
         factory.CreateClient().Dispose();
 
-        var previews = await Eventually(() => factory.Mail.To("maker@example.com") is { Count: 3 } all ? all : null);
-        previews.Select(p => p.Subject).ShouldBe(new[] { "[Test] Your starting line is waiting", "[Test] Your first run is waiting", "[Test] Ready when you are" }, ignoreOrder: true);
+        var previews = await Eventually(() => factory.Mail.To("maker@example.com") is { Count: 4 } all ? all : null);
+        previews.Select(p => p.Subject).ShouldBe(new[] { "[Test] Your starting line is waiting", "[Test] Your first run is waiting", "[Test] Ready when you are", "[Test] Welcome to Taperday" }, ignoreOrder: true);
         previews.ShouldAllBe(p => p.Unsubscribe == null && p.Html.Contains("Hi Sample.", StringComparison.Ordinal));
         factory.Mail.Sent.Count.ShouldBe(3);
     }

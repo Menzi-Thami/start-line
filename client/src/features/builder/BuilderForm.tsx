@@ -10,6 +10,7 @@ import { PlanTheatre } from './PlanTheatre'
 import { RaceSearch } from './RaceSearch'
 import { api } from '../../lib/api-client'
 import { goalProblem } from './goal-limits'
+import { suggestedGoals } from './goal-suggestions'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 import { useQuestionFrame } from './useQuestionFrame'
 import './builder-navigation.css'
@@ -164,7 +165,7 @@ function validate(draft: Draft, goalSeconds: number, today: string, raceDate: st
     if (decimal(draft.otherKm) === null || Number(draft.otherKm) <= 0) found.distance = 'Enter a distance greater than 0, using digits and a decimal point.'
     if (!draft.otherDate) found.date = 'Enter the race date.'
   }
-  if (goalSeconds <= 0) found.goal = 'Enter a goal time. Not sure? Use the estimate below.'
+  if (goalSeconds <= 0) found.goal = 'Enter a goal time, or pick one of the starting points below.'
   else if (goalLimit) found.goal = goalLimit
   if (draft.runDays.length < 3) found.runDays = 'Pick at least three days. Two runs a week isn’t enough to build on.'
   if (!draft.longRunDay) found.longRunDay = 'Pick which of your days is the long run.'
@@ -591,6 +592,23 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               {step === 1 && (
                 <>
                   <DurationInput legend="Goal finish time" value={draft.goal} onChange={(v) => { set('goal', v); setClientErrors(({ goal: _old, ...rest }) => rest) }} error={goalLimit ?? errors.goal} help={goalLimit ? undefined : pacePreview} />
+                  {/* Nobody should have to pick a time cold: three everyday starting points, one tap each. */}
+                  {targetKm && (
+                    <div className="goal-suggestions" role="group" aria-label="Suggested goal times">
+                      <p className="field-label">Not sure? Start from one of these</p>
+                      <div className="goal-suggestion-row">
+                        {suggestedGoals(targetKm).map((goal) => (
+                          <button key={goal.id} type="button" className="chip-button goal-suggestion" aria-pressed={goalSeconds === goal.seconds}
+                            onClick={() => { set('goal', toDuration(goal.seconds)); setClientErrors(({ goal: _old, ...rest }) => rest) }}>
+                            <span className="goal-suggestion-label">{goal.label}</span>
+                            <strong className="mono">{formatDuration(goal.seconds)}</strong>
+                            <span className="goal-suggestion-pace">{formatPace(goal.seconds / targetKm, units)}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="field-help">You can change it any time. Your plan’s paces follow your goal.</p>
+                    </div>
+                  )}
                   <details className="disclosure">
                     <summary>Add a recent race, so the coach can tell you if your goal is realistic</summary>
                     <p className="field-help">Optional. A race or time trial from the last six weeks, at least 3 km. It never changes your plan: it lets the coach say whether {goalSeconds > 0 ? formatDuration(goalSeconds) : 'your goal'} is realistic, or whether you could aim higher.</p>

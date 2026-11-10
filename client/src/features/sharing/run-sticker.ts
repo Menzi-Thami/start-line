@@ -103,7 +103,8 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
     ctx.lineTo(114 + i * 34, 1068)
     ctx.fill()
   }
-  text('taperday.run', 128, 1152, 40, ink)
+  // The web address is the advert: big and white, so it reads on a phone-sized Story.
+  text('taperday.run', 126, 1156, 60, ink)
   ctx.textAlign = 'right'
   text(run.source === 'Strava' ? 'Powered by Strava' : run.source === 'Manual' ? 'Manually logged' : 'Recorded run', 952, 1152, 24, muted)
   return pngOf(canvas)
@@ -202,7 +203,7 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
     460,
     muted,
   )
-  text('taperday.run', right, footerY, 40, 460, ink)
+  text('taperday.run', right, footerY + 4, 60, 620, ink)
   ctx.textAlign = 'left'
   ctx.fillStyle = lime
   if (transparent) {

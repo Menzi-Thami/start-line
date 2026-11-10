@@ -295,7 +295,7 @@ describe('a signed-up runner', () => {
     expect(await findPlanControl('Delete plan')).toBeInTheDocument()
     expect(db.saved).toHaveLength(1)
 
-    await user.click(await findPlanControl('Change answers'))
+    await user.click(await screen.findByRole('button', { name: 'Edit plan' }))
     await user.click(screen.getByText('Add strength and mobility sessions'))
     await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
@@ -353,7 +353,7 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
-    await user.click(await findPlanControl('Change answers'))
+    await user.click(await screen.findByRole('button', { name: 'Edit plan' }))
     expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Taperday' }))
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' }, { timeout: 3000 })).toBeInTheDocument()
@@ -407,12 +407,12 @@ describe('a signed-up runner', () => {
     expect(new URLSearchParams(window.location.search).get('day')).toBe('2026-10-13')
     await user.click(within(day).getByRole('button', { name: /Back to plan/ }))
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'View training progress →' }))
-    expect(await screen.findByRole('tab', { name: 'Progress' }, { timeout: 10000 })).toHaveAttribute('aria-selected', 'true')
+    await user.click(screen.getByRole('button', { name: 'Progress' }))
+    expect(screen.getByRole('button', { name: 'Progress' })).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByRole('region', { name: 'Training progress' })).toBeVisible()
     expect(new URLSearchParams(window.location.search).get('planTab')).toBe('progress')
     await user.click(screen.getByRole('button', { name: 'Home' }))
-    await user.click(await screen.findByRole('button', { name: 'Open your plan' }))
+    await user.click(await screen.findByRole('button', { name: 'Plan' }))
     expect(await screen.findByRole('tab', { name: 'This week' }, { timeout: 10000 })).toHaveAttribute('aria-selected', 'true')
   })
 

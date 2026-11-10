@@ -53,7 +53,6 @@ interface Props {
   /** Race week: straight to the race-day checklist and pacing in the plan. */
   onOpenRacePrep?: () => void
   onOpenDay?: (date: string) => void
-  onOpenProgress?: () => void
   onBuildPlan: () => void
   onOpenBeginner?: () => void
   onOpenRun: (id: string) => void
@@ -305,10 +304,11 @@ function TodayCard({ plan, failed, today, units, runs, coach, onOpenPlan, onOpen
         Today
       </h2>
       {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : failed ? <p>Today’s session will appear when your plan loads.</p> : <div className="skeleton-stack" role="status" aria-label="Loading today's session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
-      {plan && onOpenDay && <button type="button" className="button button-primary" onClick={() => onOpenDay(today)}>Open today's workout</button>}
+      {/* One main action on the card (logging, inside the session above); the rest are plain links. */}
+      {plan && onOpenDay ? <button type="button" className="link-button home-plan-link" onClick={() => onOpenDay(today)}>Open today's workout</button> : (
       <button type="button" className="link-button home-plan-link" onClick={onOpenPlan}>
         Open your plan
-      </button>
+      </button>)}
     </section>
   )
 }
@@ -433,7 +433,6 @@ export function Home({
   onOpenPlan,
   onOpenRacePrep,
   onOpenDay,
-  onOpenProgress,
   onBuildPlan,
   onOpenBeginner,
   onOpenRun,
@@ -623,10 +622,6 @@ export function Home({
             </details>)}
             <button type="button" className="link-button" onClick={onOpenPlan}>View runs in your plan →</button>
           </section>}
-          <div className="home-history-actions">
-            <button type="button" className="link-button" onClick={onOpenRuns}>View all runs →</button>
-            {current && onOpenProgress && <button type="button" className="button button-quiet" onClick={onOpenProgress}>View training progress →</button>}
-          </div>
           <details className="disclosure home-insights" onToggle={event => { if (event.currentTarget.open) setInsightsVisited(true) }}><summary>Running insights <span className="field-help">Totals, trends & personal bests</span></summary>
           {logFailed ? (
             <div className="home-data-state" role="alert">

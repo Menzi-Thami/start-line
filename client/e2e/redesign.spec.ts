@@ -148,9 +148,9 @@ for (const width of [320, 768, 1440]) {
       }
       if (screen === 'runs') await expect(page.getByRole('button', { name: /Run analysis/ })).toBeVisible()
       if (screen === 'account') {
-        await expect(page.getByRole('region', { name: 'Account overview' })).toContainText('Strava not connected')
-        await page.getByRole('button', { name: 'Manage run connections' }).click()
-        await expect(page.getByText('Connections & run sources', { exact: true })).toBeFocused()
+        await expect(page.getByRole('region', { name: 'Account overview' })).toBeVisible()
+        const connections = await openDisclosure(page, 'Connections & run sources')
+        await expect(connections).toHaveAttribute('open', '')
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
       await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `${screen}-after-${width}.png`), fullPage: true })

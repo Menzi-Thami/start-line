@@ -1,9 +1,8 @@
 import './account-layout.css'
-import { OfflineStatus } from './OfflineStatus'
 import { useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
-import type { Runner, StravaStatus } from '../../lib/types'
+import type { Runner } from '../../lib/types'
 import { InstallSection } from '../install/InstallApp'
 import { RemindersSection } from '../reminders/Reminders'
 import { StravaSection } from '../sync/StravaSection'
@@ -33,17 +32,7 @@ interface Props {
 export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
   const connectionsRef = useRef<HTMLDetailsElement>(null)
-  // Opens a settings group in place: no duplicate forms or routes.
-  const openSettings = (ref: { current: HTMLDetailsElement | null }) => {
-    const element = ref.current
-    if (!element) return
-    element.open = true
-    requestAnimationFrame(() => {
-      element.querySelector('summary')?.focus({ preventScroll: true })
-      element.scrollIntoView?.({ block: 'start', behavior: 'auto' })
-    })
-  }
-  const [connectionStatus, setConnectionStatus] = useState<StravaStatus | 'error' | null>(null)
+
   // A shoe reminder links straight here (?settings=shoes).
   const [shoesOpen, setShoesOpen] = useState(new URLSearchParams(window.location.search).get('settings') === 'shoes')
   const [connectionsOpen, setConnectionsOpen] = useState(!!stravaNotice || stravaConnecting || new URLSearchParams(window.location.search).get('settings') === 'connections')
@@ -93,12 +82,9 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         Account
       </h2>
       <p className="plan-focus">Signed in as {runner.email ?? runner.displayName}.</p>
-      <p className="account-intro-note">Your running profile, connected apps and preferences in one place.</p>
 
       <section className="account-overview panel" aria-label="Account overview">
         <div><h3>{runner.displayName}</h3><p>{runner.units === 'Miles' ? 'Miles' : 'Kilometres'} · {runner.timeZone}</p></div>
-        <div><h3>Run connections</h3><p role="status">{stravaConnecting ? 'Connecting Strava…' : !connectionStatus ? 'Checking Strava connection…' : connectionStatus === 'error' ? 'Could not check Strava. Open connections to try again.' : !connectionStatus.available ? 'Strava is unavailable' : connectionStatus.status === 'NeedsReconnect' ? 'Strava needs reconnection' : connectionStatus.connected ? 'Strava connected' : 'Strava not connected'}</p>
-        <button type="button" className="button button-quiet" onClick={() => { setConnectionsOpen(true); openSettings(connectionsRef) }}>Manage run connections</button></div>
       </section>
       <div className="account-groups">
       <section className="account-group" aria-labelledby="account-group-you">
@@ -124,7 +110,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <h3 className="account-group-title" id="account-group-running">Running</h3>
       <details ref={connectionsRef} className="settings-group" open={connectionsOpen} onToggle={event => setConnectionsOpen(event.currentTarget.open)}><summary>Connections & run sources</summary>
       <div className="settings-columns">
-      <StravaSection onStatusChange={setConnectionStatus} notice={stravaNotice} connecting={stravaConnecting} />
+      <StravaSection notice={stravaNotice} connecting={stravaConnecting} />
 
       <RunSources onOpenRuns={onOpenRuns} />
       </div>
@@ -156,7 +142,6 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       </div>
 
       </details>
-      <OfflineStatus />
       <details className="settings-group"><summary>Notifications</summary><RemindersSection /></details>
       </section>
       <section className="account-group" aria-labelledby="account-group-data">

@@ -141,7 +141,7 @@ describe('checking in on a run', () => {
     const { user, save } = setup({ completion: true })
     await user.click(screen.getByRole('checkbox', { name: 'Complete' }))
     await formSettled()
-    await user.click(screen.getByRole('button', { name: 'Complete without details' }))
+    await user.click(screen.getByRole('button', { name: 'Done, as planned' }))
     expect(save).toHaveBeenCalledWith(hills, { status: 'Done', effort: null, distanceUnreported: false })
   })
 

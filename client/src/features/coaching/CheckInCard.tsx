@@ -192,8 +192,15 @@ export function CheckInCard({
           <h3>{additional ? 'Log an additional run' : 'Log your run'}</h3>
           {!additional && (
             <p className="field-help">
-              Planned: {session.title} · {formatDistance(session.distanceKm, coach.units)}. Your original workout stays visible.
+              Planned: {session.title} · {formatDistance(session.distanceKm, coach.units)}.
             </p>
+          )}
+          {/* Ran it as planned? One tap. Everything below is optional detail. */}
+          {!additional && !existing && (
+            <div className="check-in-quick">
+              <button type="button" className="button button-primary" onClick={completeWithoutDetails} disabled={busy}>Done, as planned</button>
+              <span className="field-help">Or add how it went below.</span>
+            </div>
           )}
           <div className="field">
             <label className="field-label" htmlFor={`${id}-source`}>
@@ -382,17 +389,12 @@ export function CheckInCard({
             </p>
           )}
           <p className="field-help">
-            Logging updates your completed running. To change upcoming training, review “Replan from here” in your plan.
+            Logging doesn’t change your upcoming training by itself.
           </p>
           <div className="submit-row">
             <button type="submit" className="button" disabled={busy || !ready}>
               {busy ? 'Saving…' : 'Save check-in'}
             </button>
-            {!additional && !existing && (
-              <button type="button" className="button button-quiet" onClick={completeWithoutDetails} disabled={busy}>
-                Complete without details
-              </button>
-            )}
             <button type="button" className="button button-quiet" onClick={close} disabled={busy}>
               Cancel
             </button>

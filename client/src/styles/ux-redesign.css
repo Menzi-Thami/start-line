@@ -291,3 +291,22 @@
 .goal-suggestion.chip-button { display: grid; justify-items: center; gap: 2px; min-height: var(--tap); height: auto; padding: var(--space-3) var(--space-2); border-radius: var(--radius-md, 14px); white-space: normal; text-align: center; }
 .goal-suggestion strong { font-size: var(--text-lg, 1.125rem); }
 .goal-suggestion-label, .goal-suggestion-pace { font-size: var(--text-xs); font-weight: 500; opacity: .8; }
+
+/* Logging a run: a one-tap "Done, as planned" at the top; the details below are optional. */
+.check-in-quick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-block: var(--space-2) var(--space-4); }
+
+/* Inside Home's "Coaching, insights and tools": every row looks the same. A plain line, the title, then + or −. */
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) {
+  margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none;
+}
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) > summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-height: var(--tap);
+  padding-block: var(--space-3); cursor: pointer; list-style: none; font-weight: 700; color: var(--ink);
+}
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) > summary::-webkit-details-marker { display: none; }
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) > summary::after { content: '+'; margin-inline-start: auto; color: var(--accent-strong, var(--accent)); }
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools)[open] > summary::after { content: '−'; }
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) > summary .field-help { flex-basis: 100%; order: 2; margin: 0; font-weight: 400; }
+.home-more .home-section { margin-top: var(--space-2); }
+.home-more .home-section > .home-heading { margin-block: var(--space-4) var(--space-1); }
+.home-more .readiness > summary .readiness-today { flex-basis: auto; order: 0; }

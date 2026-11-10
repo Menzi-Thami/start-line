@@ -229,11 +229,11 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       </div>}
       <div role="tabpanel" id={`${tabId}-panel-Coach`} aria-labelledby={`${tabId}-tab-Coach`} hidden={selectedTab !== 'Coach'} tabIndex={0}>
         <h3>Coach</h3>
-        {execution && <p>There is useful evidence in this recording: {execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} prescription windows are covered when aligned from the recording start. Coverage is separate from pace or following the instructions. If you changed your session, you can explain that in your check-in.</p>}
+        {execution && <p>{execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} parts of the workout done. Changed the session on purpose? Say so in your check-in.</p>}
         <p>{verdict.headline}</p>
         {verdict.details.map(line => <p key={line}>{line}</p>)}
         {verdict.next && <p>{verdict.next}</p>}
-        <p className="field-help">Based on recorded run statistics and available plan targets. Stage evidence, when available, is aligned to the recording start and remains an estimate. This does not change your check-in.</p>
+        <p className="field-help">Based on what your run recorded and your plan’s targets. It’s a guide: your check-in is what counts.</p>
       </div>
       {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
         <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />

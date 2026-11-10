@@ -1,8 +1,8 @@
-name: ci
+name: 1 - Checks
 
-# Run by hand (Actions → ci → Run workflow), or by Deps doctor on its branches. This launch-QA branch also runs the
-# suite on push so its SQL-backed persistence tests can use the runner's disposable database. Other branches retain
-# manual validation to conserve Actions minutes.
+# Step 1 of shipping (docs/how-we-ship.md): every pull request, and every push to staging and main, gets the backend
+# tests, the client lint, typecheck and tests, and the Playwright end-to-end suite. Also run by hand, or by the
+# dependency doctor on its branches.
 on:
   workflow_dispatch:
   pull_request:

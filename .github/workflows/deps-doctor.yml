@@ -9,7 +9,7 @@
 #
 # PR runs started by GITHUB_TOKEN pushes wait for approval ("action_required"), so both jobs approve their own held
 # runs, and also start CI directly (workflow_dispatch) in case approval isn't allowed.
-name: Deps doctor
+name: Ops - Dependency doctor
 
 on:
   schedule:

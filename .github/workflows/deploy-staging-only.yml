@@ -1,6 +1,6 @@
-name: deploy-staging-only
+name: 2 - Deploy staging
 
-# This workflow deliberately has no production job. Pushing the staging branch
+# Step 2 of shipping (docs/how-we-ship.md). This workflow deliberately has no production job. Pushing the staging branch
 # deploys the staging API, staging database and staging Static Web Apps slot only.
 on:
   push:

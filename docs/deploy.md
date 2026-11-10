@@ -73,16 +73,18 @@ Both files are safe to run again.
 
 ## Automatic deploys
 
-Every change is checked in full **before it's merged**, on the developer's machine: `scripts/check.sh` from the repo
-root runs the backend format, build, all .NET tests (LocalDB) and the migrations check, then the client's lint,
-typecheck, tests, build and audit, then the Playwright end-to-end suite. GitHub Actions doesn't repeat that on pull
-requests: the private repo's free 2,000 Actions minutes a month ran out on 25 Oct 2026, so they're kept for deploys.
-`ci.yml` still exists to run by hand (Actions → ci → Run workflow); `secret-scan` still runs on every pull request
-and on `main`.
+The pipeline on one page, with every workflow's name and job: [how-we-ship.md](how-we-ship.md).
 
-Every push to `main` then deploys itself (`.github/workflows/deploy.yml`, about 4 minutes): it builds the API and the
-website (any build error or warning stops it before production is touched), applies any new migrations, deploys the
-API, deploys the website, then waits for `/health/ready`. It can also be run by hand: Actions → deploy → Run workflow.
+Every change is checked in full **before it's merged**, by GitHub Actions on its pull request (**1 - Checks**, `ci.yml`):
+the backend format, build and all .NET tests, then the client's lint, typecheck, tests and build, then the Playwright
+end-to-end suite. **1 - Secret scan** runs beside it. The repository is public, so those minutes are free.
+`scripts/check.sh` runs the same checks on a developer's machine, for when you want them before pushing.
+
+A deploy (`deploy-environment.yml`, about 4 minutes) builds the API and the website (any build error or warning stops
+it before the environment is touched), applies any new migrations, deploys the API, deploys the website, then waits
+for `/health/ready`. Staging gets one on every push to `staging`; production gets one only from the release button.
+A push to `main` by itself deploys nothing: to deploy `main` again by hand, run Actions → **Ops - Redeploy
+production** (`deploy.yml`).
 
 How it signs in, with no password stored anywhere:
 
@@ -110,12 +112,12 @@ Two long-lived branches, one per environment:
 1. **`staging`**: open pull requests against `staging`. CI runs on the PR; each merge (or push) deploys to **staging**
    (`deploy-staging-only.yml`), then `scripts/smoke.sh` checks it: the website loads and may call its API, the API reaches
    its database, lists races and builds a plan, the email logo is there. Try the change on the staging site.
-2. **`main`**: when staging looks right, press **Actions → release → Run workflow** (`release.yml`, on `main`). It
+2. **`main`**: when staging looks right, press **Actions → 3 - Release to production → Run workflow** (`release.yml`, on `main`). It
    checks staging passed its smoke check for that exact commit, merges `staging` into `main`, deploys it to
    **production** and smoke-checks production. Nothing reaches production until it's pressed. (Merging a pull request
-   into `main` by hand still deploys too, through `deploy.yml`.)
+   into `main` by hand deploys nothing; run **Ops - Redeploy production**, `deploy.yml`, if that is what you want.)
 
-Both call `deploy-environment.yml`. Production never deploys from `staging`, and staging never deploys from `main`. Staging costs nothing extra:
+All three call `deploy-environment.yml`. Production never deploys from `staging`, and staging never deploys from `main`. Staging costs nothing extra:
 
 | Piece | Production | Staging |
 |---|---|---|
@@ -166,7 +168,7 @@ release and remove it after. Keep `staging` up to date with `main` (merge `main`
 
 ## Investigating a failed deploy
 
-Open **Actions → deploy → latest failed run**, expand the red step, and copy its name and error message.
+Open the latest failed run under **Actions → 3 - Release to production** (or **2 - Deploy staging**), expand the red step, and copy its name and error message.
 Check the commit shown on the run: rerunning an old run uses its old workflow, even after a fix has merged.
 Use **Run workflow → main** to test the current workflow after resolving the cause.
 

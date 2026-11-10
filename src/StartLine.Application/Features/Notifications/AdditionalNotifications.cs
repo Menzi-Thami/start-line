@@ -84,10 +84,15 @@ internal sealed class AdditionalNotifications(IApplicationDbContext db, Notifica
             }
 
             var saved = plans.SingleOrDefault(p => p.RunnerId == runner.Id);
-            if (saved is null || !(device.TrainingReviews || device.LongRunPreparation || device.RacePreparation)) continue;
+            if (saved is null) continue;
             TrainingPlan plan;
             try { plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), await CoachCalls.ForAsync(db, saved.Id, cancellationToken), saved.Adjustments); }
             catch (Exception e) when (e is NotFoundException or Domain.Common.DomainException) { continue; }
+
+            // The evening before a new plan's first run, every device that allows notifications hears about it, once.
+            var firstRun = Reminders.FirstRun(plan);
+            var awaitsFirstRun = firstRun is not null && firstRun.Date > today;
+            if (!(awaitsFirstRun || device.TrainingReviews || device.LongRunPreparation || device.RacePreparation)) continue;
 
             if (device.TrainingReviews && today >= plan.StartDate && today <= plan.RaceDate)
             {
@@ -114,6 +119,7 @@ internal sealed class AdditionalNotifications(IApplicationDbContext db, Notifica
             {
                 var sessions = plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date == date.AddDays(1)).ToList();
                 var kind = device.RacePreparation && sessions.Any(s => s.Type == SessionType.Race) ? NotificationKind.RacePreparation
+                    : awaitsFirstRun && firstRun!.Date == date.AddDays(1) && !sessions.Any(s => s.Type == SessionType.Race) ? NotificationKind.FirstRun
                     : device.LongRunPreparation && sessions.Any(s => s.Type is SessionType.LongRun or SessionType.LongRunFastFinish or SessionType.LongRunRacePace)
                         ? NotificationKind.LongRunPreparation : (NotificationKind?)null;
                 if (kind is null) continue;

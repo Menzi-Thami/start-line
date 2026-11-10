@@ -12,6 +12,9 @@ public enum NotificationKind
 
     /// <summary>A pair of shoes reached the distance its runner set. Opted into per pair, not per device.</summary>
     ShoeMileage,
+
+    /// <summary>The evening before the plan's first run. Once per plan, to every device that allows notifications.</summary>
+    FirstRun,
 }
 
 /// <summary>A per-device event and delivery claim. Payloads and provider secrets are never stored here.</summary>

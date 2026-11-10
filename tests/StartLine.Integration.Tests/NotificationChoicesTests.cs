@@ -131,6 +131,25 @@ public sealed class NotificationChoicesTests
     }
 
     [Fact]
+    public async Task The_first_run_gets_one_heads_up_the_evening_before_with_every_choice_off()
+    {
+        await using var factory = new RemindersFactory();
+        var device = await Device(factory, Choices(congratulations: false));
+        var saved = await ReminderSendingTests.SavePlan(device.Client);
+        var first = saved.Runs.Min(r => r.Date);
+        factory.Time.SetUtcNow(At(first.AddDays(-1), 17, 59));
+        await ReminderSendingTests.RunDue(factory);
+        factory.Push.To(device.Endpoint).ShouldBeEmpty();
+        factory.Time.SetUtcNow(At(first.AddDays(-1), 18));
+        await ReminderSendingTests.RunDue(factory);
+        await ReminderSendingTests.RunDue(factory);
+        var message = factory.Push.To(device.Endpoint).Single();
+        message.Title.ShouldBe("Your first run is tomorrow");
+        message.Body.ShouldEndWith("This is where your plan begins.");
+        message.Url.ShouldBe("/?view=home");
+    }
+
+    [Fact]
     public async Task Quiet_congratulations_are_deferred_per_device_and_an_awake_device_gets_its_own_push()
     {
         await using var factory = new RemindersFactory();

@@ -1,0 +1,36 @@
+/* Each part of the workout, as a picture: totals, a strip of every part, then one row per part. */
+.workout-stage-totals { display: flex; flex-wrap: wrap; gap: var(--space-5); margin-block: var(--space-2) var(--space-3); }
+.workout-stage-totals p { display: grid; margin: 0; }
+.workout-stage-totals strong { font-size: var(--text-xl, 1.5rem); line-height: 1.1; }
+.workout-stage-totals span { font-size: var(--text-sm); color: var(--ink-2); }
+
+.workout-strip { display: flex; gap: 2px; height: 14px; margin: 0 0 var(--space-4); padding: 0; list-style: none; border-radius: 7px; overflow: hidden; }
+.workout-strip li { flex-basis: 0; min-width: 4px; background: var(--accent); }
+.workout-strip .strip-Recover, .workout-strip .strip-WarmUp, .workout-strip .strip-CoolDown { background: color-mix(in srgb, var(--accent) 40%, transparent); }
+.workout-strip .strip-part { background-image: linear-gradient(90deg, transparent 50%, var(--paper) 50%); }
+.workout-strip .strip-missed { background: repeating-linear-gradient(135deg, var(--line) 0 4px, transparent 4px 8px); }
+
+.workout-stage-rows { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.workout-stage-rows .workout-stage { display: grid; grid-template-columns: 22px minmax(0, 7.5rem) minmax(0, 1fr) 4.75rem; align-items: center; gap: var(--space-3); padding-block: var(--space-2); border-bottom: 1px solid var(--line); }
+.workout-stage-name { display: grid; line-height: 1.25; }
+.workout-stage-pace { text-align: right; font-size: var(--text-sm); }
+.workout-stage.is-missed { opacity: .55; }
+
+.workout-stage-mark { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--accent); }
+.is-done .workout-stage-mark { background: var(--accent); }
+.is-part .workout-stage-mark { background: linear-gradient(90deg, var(--accent) 50%, transparent 50%); }
+.is-missed .workout-stage-mark { border-color: var(--line-strong, var(--line)); }
+
+.pace-gauge { position: relative; height: 10px; border-radius: 5px; background: var(--line); }
+.pace-gauge-band { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.pace-gauge-dot { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--ink); border: 2px solid var(--paper); }
+.pace-gauge.is-on .pace-gauge-dot { background: var(--accent-strong, var(--accent)); }
+
+.workout-stage-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--space-2); }
+.workout-stage-key .key-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--ink); }
+.workout-stage-key .key-band { display: inline-block; width: 18px; height: 8px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+
+@media (max-width: 30rem) {
+  .workout-stage-rows .workout-stage { grid-template-columns: 22px minmax(0, 1fr) 4.5rem; }
+  .workout-stage-rows .pace-gauge { grid-column: 2 / -1; grid-row: 2; }
+}

@@ -105,6 +105,12 @@ public sealed class OnboardingReminderTests
     private static Task Synced(OnboardingFactory factory, Guid runner, DateOnly day, DateTimeOffset fetchedAt) =>
         Run(factory, runner, day, ActivityOrigin.Strava(Random.Shared.NextInt64(1, long.MaxValue), fetchedAt, recordedOnGarmin: false));
 
+    private static async Task<OnboardingOutcome> SendTo(OnboardingFactory factory, Guid runner, bool welcome)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<IOnboardingReminders>().SendToAsync(runner, factory.Time.GetUtcNow(), CancellationToken.None, welcome);
+    }
+
     private static async Task<OnboardingOutcome> SendTo(OnboardingFactory factory, Guid runner)
     {
         await using var scope = factory.Services.CreateAsyncScope();
@@ -121,6 +127,25 @@ public sealed class OnboardingReminderTests
     {
         await using var scope = factory.Services.CreateAsyncScope();
         return await scope.ServiceProvider.GetRequiredService<StartLineDbContext>().OnboardingDeliveries.AsNoTracking().Where(d => d.RunnerId == runner).ToListAsync();
+    }
+
+    [Fact]
+    public async Task A_new_account_is_welcomed_once_soon_after_signing_up_and_only_when_welcomes_are_on()
+    {
+        await using var factory = new OnboardingFactory();
+        factory.Time.SetUtcNow(new DateTimeOffset(2027, 1, 11, 9, 0, 0, TimeSpan.Zero));
+        var runner = await Runner(factory, weekly: true);
+
+        factory.Time.Advance(TimeSpan.FromMinutes(30));
+        (await SendTo(factory, runner.Id)).ShouldBe(OnboardingOutcome.NotDue);
+        (await SendTo(factory, runner.Id, welcome: true)).ShouldBe(OnboardingOutcome.Sent);
+        (await SendTo(factory, runner.Id, welcome: true)).ShouldBe(OnboardingOutcome.AlreadyHandled);
+
+        var mail = factory.Mail.To(runner.Email).ShouldHaveSingleItem();
+        mail.Subject.ShouldBe("Welcome to Taperday");
+        mail.Html.ShouldContain("Hi Naledi.");
+        mail.Text.ShouldContain("Open Taperday: https://taperday.run/?view=home");
+        (await Deliveries(factory, runner.Id)).ShouldHaveSingleItem().Campaign.ShouldBe(OnboardingCampaign.Welcome);
     }
 
     [Fact]

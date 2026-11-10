@@ -74,6 +74,7 @@ Brevo's free plan allows **300 emails a day**, shared by everything Taperday sen
 | Setting | Default | |
 |---|---|---|
 | `OnboardingReminder__Enabled` | `false` | Sends to runners who are due one |
+| `OnboardingReminder__Welcome` | `true` | With the above on, also sends "Welcome to Taperday" to each new account in its first two days, once |
 | `OnboardingReminder__TestTo` | empty | Sends one made-up preview of each of the three emails to this address at startup. **Clear it after**, or every restart sends three more |
 | `OnboardingReminder__Every` | `00:30:00` | How often the worker runs |
 | `OnboardingReminder__MaxPerRun` | `5` | Per run |

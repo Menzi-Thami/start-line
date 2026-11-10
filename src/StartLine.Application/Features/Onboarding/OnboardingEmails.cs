@@ -53,6 +53,19 @@ public static class OnboardingEmail
             "Pick up my plan",
             "/?view=home",
             "You're getting this because you have a Taperday account with news and updates on. We won't send another unless you run again and then go quiet for a while."),
+        OnboardingCampaign.Welcome => new(
+            "Welcome to Taperday",
+            "Welcome · Taperday",
+            "Welcome to Taperday.",
+            "A plan built around your race and your week, that keeps up with how you run.",
+            [
+                "Thanks for joining. Taperday builds a training plan around your race and the days you can run, then adjusts the weeks ahead as you go.",
+                "Three things make it work best: connect Strava or upload runs from your watch, turn on reminders, and add Taperday to your home screen so it opens like an app.",
+                "No plan yet? Pick a race, or just a distance and a date, and you'll have one in two minutes.",
+            ],
+            "Open Taperday",
+            "/?view=home",
+            "You're getting this because you've just made a Taperday account. It's a one-off: we won't send it again."),
         _ => throw new ArgumentOutOfRangeException(nameof(campaign)),
     };
 

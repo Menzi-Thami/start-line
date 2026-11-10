@@ -35,10 +35,10 @@ public sealed record OnboardingRun(int Allowance, int Sent, int Failed);
 public interface IOnboardingReminders
 {
     /// <summary>Sends up to <paramref name="budget"/>'s allowance of due emails, newest signups first.</summary>
-    Task<OnboardingRun> SendDueAsync(DateTimeOffset now, OnboardingBudget budget, CancellationToken cancellationToken);
+    Task<OnboardingRun> SendDueAsync(DateTimeOffset now, OnboardingBudget budget, CancellationToken cancellationToken, bool welcome = false);
 
     /// <summary>Decides, claims, re-checks and sends for one runner: the unit of work <see cref="SendDueAsync"/> repeats.</summary>
-    Task<OnboardingOutcome> SendToAsync(Guid runnerId, DateTimeOffset now, CancellationToken cancellationToken);
+    Task<OnboardingOutcome> SendToAsync(Guid runnerId, DateTimeOffset now, CancellationToken cancellationToken, bool welcome = false);
 }
 
 /// <summary>
@@ -56,7 +56,7 @@ internal sealed partial class OnboardingReminderSender(
 {
     private static readonly TimeSpan Day = TimeSpan.FromDays(1);
 
-    public async Task<OnboardingRun> SendDueAsync(DateTimeOffset now, OnboardingBudget budget, CancellationToken cancellationToken)
+    public async Task<OnboardingRun> SendDueAsync(DateTimeOffset now, OnboardingBudget budget, CancellationToken cancellationToken, bool welcome = false)
     {
         ArgumentNullException.ThrowIfNull(budget);
         var allowance = await AllowanceAsync(budget, now, cancellationToken);
@@ -65,8 +65,8 @@ internal sealed partial class OnboardingReminderSender(
             return new(0, 0, 0);
         }
 
-        var signedUpBy = now - OnboardingEligibility.SignupWait;
-        var rows = await Facts(db.Runners.Where(r => r.CreatedAt <= signedUpBy && r.Email != null && r.Email != "" && r.UpdateEmailsOffAt == null), now)
+
+        var rows = await Facts(db.Runners.Where(r => r.CreatedAt <= now && r.Email != null && r.Email != "" && r.UpdateEmailsOffAt == null), now, welcome)
             .ToListAsync(cancellationToken);
         var due = rows
             .Select(r => (Row: r, Decision: OnboardingEligibility.Classify(r.Facts, now)))
@@ -91,7 +91,7 @@ internal sealed partial class OnboardingReminderSender(
             }
 
             cancellationToken.ThrowIfCancellationRequested();
-            switch (await SendToAsync(runnerId, now, cancellationToken))
+            switch (await SendToAsync(runnerId, now, cancellationToken, welcome))
             {
                 case OnboardingOutcome.Sent:
                     sent++;
@@ -105,9 +105,9 @@ internal sealed partial class OnboardingReminderSender(
         return new(allowance, sent, failed);
     }
 
-    public async Task<OnboardingOutcome> SendToAsync(Guid runnerId, DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task<OnboardingOutcome> SendToAsync(Guid runnerId, DateTimeOffset now, CancellationToken cancellationToken, bool welcome = false)
     {
-        var row = await FactsAsync(runnerId, now, cancellationToken);
+        var row = await FactsAsync(runnerId, now, welcome, cancellationToken);
         if (row is null || OnboardingEligibility.Classify(row.Facts, now) is not { } decision)
         {
             return OnboardingOutcome.NotDue;
@@ -126,7 +126,7 @@ internal sealed partial class OnboardingReminderSender(
 
         // Read again, immediately before sending: a plan built, a run recorded, updates turned off or the account deleted
         // since the first read means no email. A run Strava has in its cache right now holds it back too.
-        var fresh = await FactsAsync(runnerId, now, cancellationToken);
+        var fresh = await FactsAsync(runnerId, now, welcome, cancellationToken);
         if (fresh is null || OnboardingEligibility.Classify(fresh.Facts, now) != decision)
         {
             await LetGoAsync(claim, cancellationToken);
@@ -229,14 +229,14 @@ internal sealed partial class OnboardingReminderSender(
             .Where(d => d.Id == claim.Id && d.Status == OnboardingDeliveryStatus.Sending)
             .ExecuteUpdateAsync(s => s.SetProperty(d => d.Status, OnboardingDeliveryStatus.Failed).SetProperty(d => d.Attempts, claim.Attempts - 1), cancellationToken);
 
-    private async Task<FactsRow?> FactsAsync(Guid runnerId, DateTimeOffset now, CancellationToken cancellationToken) =>
-        await Facts(db.Runners.Where(r => r.Id == runnerId), now).SingleOrDefaultAsync(cancellationToken);
+    private async Task<FactsRow?> FactsAsync(Guid runnerId, DateTimeOffset now, bool welcome, CancellationToken cancellationToken) =>
+        await Facts(db.Runners.Where(r => r.Id == runnerId), now, welcome).SingleOrDefaultAsync(cancellationToken);
 
     /// <summary>
     /// Everything the rules need, in one query per batch. Running evidence is check-ins that aren't skips (on any of the
     /// runner's plans, archived included) and uploads; Strava runs only count while the cache holds them.
     /// </summary>
-    private IQueryable<FactsRow> Facts(IQueryable<Runner> runners, DateTimeOffset now) =>
+    private IQueryable<FactsRow> Facts(IQueryable<Runner> runners, DateTimeOffset now, bool welcome) =>
         runners.AsNoTracking().Select(r => new FactsRow(
             r.Id,
             r.Email,
@@ -251,7 +251,8 @@ internal sealed partial class OnboardingReminderSender(
                 r.Email != null && r.Email != "",
                 r.UpdateEmailsOffAt == null,
                 db.Activities.Any(a => a.RunnerId == r.Id && a.Source == ActivitySource.Strava && a.CachedUntil > now),
-                db.ProviderConnections.Any(c => c.RunnerId == r.Id && c.Status == ConnectionStatus.NeedsReconnect))));
+                db.ProviderConnections.Any(c => c.RunnerId == r.Id && c.Status == ConnectionStatus.NeedsReconnect),
+                welcome)));
 
     private static DateOnly? MaxDay(DateOnly? a, DateOnly? b) => a is null ? b : b is null ? a : a > b ? a : b;
 

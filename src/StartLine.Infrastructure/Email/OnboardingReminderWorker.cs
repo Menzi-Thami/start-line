@@ -19,6 +19,9 @@ internal sealed class OnboardingReminderOptions
     /// <summary>Sends the onboarding emails to runners who are due one. Off until a preview has been checked.</summary>
     public bool Enabled { get; set; }
 
+    /// <summary>"Welcome to Taperday" to each new account in its first two days. On with the rest; turn it off on its own here.</summary>
+    public bool Welcome { get; set; } = true;
+
     /// <summary>Set it, and the app sends one made-up preview of each email there when it starts; clear it again after.</summary>
     public string TestTo { get; set; } = "";
 
@@ -82,7 +85,7 @@ internal sealed partial class OnboardingReminderWorker(
         try
         {
             await using var scope = scopes.CreateAsyncScope();
-            var run = await scope.ServiceProvider.GetRequiredService<IOnboardingReminders>().SendDueAsync(time.GetUtcNow(), options.Value.Budget, cancellationToken);
+            var run = await scope.ServiceProvider.GetRequiredService<IOnboardingReminders>().SendDueAsync(time.GetUtcNow(), options.Value.Budget, cancellationToken, options.Value.Welcome);
             if (run.Sent > 0 || run.Failed > 0)
             {
                 LogRun(logger, run.Sent, run.Failed, run.Allowance);

@@ -115,3 +115,16 @@ export function todayInPlan(plan: TrainingPlan, today: string): TodayInPlan {
     next: sessions.find((s) => s.date > today && s.type !== 'Strength') ?? null,
   }
 }
+
+/**
+ * Weeks in a row with at least one run, counting back from this week. A week that has only just started doesn't break
+ * the streak: until its first run, the count runs from last week.
+ */
+export function weekStreak(bars: readonly WeekBar[]): number {
+  let streak = 0
+  for (let i = bars.length - 1; i >= 0; i--) {
+    if (bars[i]!.km > 0) streak++
+    else if (i < bars.length - 1) break
+  }
+  return streak
+}

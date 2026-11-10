@@ -877,6 +877,7 @@ export function App() {
             initialPlan={copy?.plan}
             onPlanLoaded={savePlan}
             onOpenPlan={() => openOwnPlan()}
+            onOpenRacePrep={() => { setPreparationRequest({ mode: 'race', date: null }); openOwnPlan() }}
             onOpenDay={openOwnDay}
             onOpenProgress={() => openOwnPlan('progress')}
             onBuildPlan={startFresh}

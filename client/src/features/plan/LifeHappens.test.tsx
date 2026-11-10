@@ -52,6 +52,29 @@ describe('Life happens', () => {
     expect(actions.restore).toHaveBeenCalledExactlyOnceWith([longRun(1)])
   })
 
+  it('moves any run this week from its day, and warns when it lands next to another hard day', async () => {
+    const week = planFixture.weeks[1]!.sessions
+    const hard = week.find((s) => !['Easy', 'Recovery', 'EasyWithStrides', 'Shakeout', 'Strength', 'Race'].includes(s.type))!
+    const next = longRun(Math.round((Date.parse(`${hard.date}T12:00:00Z`) - Date.parse(`${today}T12:00:00Z`)) / 86400000) + 1)
+    const run = week.find((s) => s.date !== hard.date && s.type !== 'Strength' && s.type !== 'Race')!
+    const move: SessionRevision = { appliedOn: today, date: next, originalType: 'Tempo', originalTitle: 'Tempo run', originalKm: 8, easyKm: 8, movedFrom: run.date }
+    const actions = {
+      preview: vi.fn(async (change: { moveTo?: string | null }) => (change.moveTo ? proposal([{ ...move, date: run.date, easyKm: null, movedFrom: undefined }, move], [next]) : proposal([], [next]))),
+      apply: vi.fn().mockResolvedValue(undefined),
+      restore: vi.fn().mockResolvedValue(undefined),
+    }
+    render(<LifeHappens plan={planFixture} today={today} units="km" actions={actions} moveDate={run.date} />)
+    const user = userEvent.setup()
+    expect(screen.getByRole('button', { name: 'Move a run' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByLabelText('Which run?')).toHaveValue(run.date)
+    await user.click(screen.getByRole('button', { name: 'Show what changes' }))
+    expect(await screen.findByText('Choose a free day this week:')).toBeVisible()
+    await user.click(within(screen.getByRole('group', { name: 'Move to' })).getByRole('button'))
+    expect(await screen.findByText('Two hard days in a row.')).toBeVisible()
+    await user.click(screen.getByRole('button', { name: 'Apply these changes' }))
+    expect(actions.apply).toHaveBeenCalledExactlyOnceWith({ situation: 'MoveRun', date: run.date, moveTo: next, canRun: true }, 'T'.repeat(64))
+  })
+
   it('offers nothing to change on a plan that isn’t saved', () => {
     render(<LifeHappens plan={planFixture} today={today} units="km" />)
     expect(screen.getByText(/Save this plan to move, shorten or rest sessions/)).toBeInTheDocument()

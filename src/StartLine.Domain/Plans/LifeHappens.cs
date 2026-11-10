@@ -4,7 +4,7 @@ using StartLine.Domain.Running;
 
 namespace StartLine.Domain.Plans;
 
-public enum LifeSituation { MissedRun, ShortOnTime, Travelling, Unwell, MoveLongRun }
+public enum LifeSituation { MissedRun, ShortOnTime, Travelling, Unwell, MoveLongRun, MoveRun }
 
 /// <summary>
 /// What the runner says happened. <paramref name="Date"/> is the missed run, the short day, or the first travel day;
@@ -101,6 +101,15 @@ public static class LifeHappens
                     return Moved(longRun, SafeDays(plan, runs, today, longRun, ignore: longRun.Date), change.MoveTo, today, restSource: true);
                 }
 
+            case LifeSituation.MoveRun:
+                {
+                    // Any run left this week (not done, not the race) to any free day this week. The runner decides: hard days
+                    // side by side are allowed here, and the app warns about them, where Move my long run only offers safe days.
+                    var run = open.FirstOrDefault(s => s.Date == change.Date && s.Date < WeekStart(plan, today).AddDays(7))
+                        ?? throw new DomainException("Choose a run from today to the end of this week that isn't done yet.");
+                    return Moved(run, FreeDays(plan, runs, today, run), change.MoveTo, today, restSource: true);
+                }
+
             default:
                 throw new DomainException("Choose what happened.");
         }
@@ -115,7 +124,7 @@ public static class LifeHappens
 
         if (!targets.Contains(to))
         {
-            throw new DomainException("Choose one of the days offered: they keep an easy day either side of a hard one.");
+            throw new DomainException("Choose one of the days offered.");
         }
 
         List<SessionRevision> changes = [new(today, to, session.Type, session.Title, session.DistanceKm, session.DistanceKm, MovedFrom: session.Date)];
@@ -138,6 +147,14 @@ public static class LifeHappens
         return [.. Enumerable.Range(0, end.DayNumber - today.DayNumber + 1).Select(today.AddDays)
             .Where(day => day != ignore && day != session.Date && !runs.Any(r => r.Date == day))
             .Where(day => !HardOn(day.AddDays(-1)) && !HardOn(day.AddDays(1)) && day.AddDays(1) != plan.RaceDate && day < plan.RaceDate)];
+    }
+
+    /// <summary>Free days left this week, from today: no run planned, before the race and not the day before it.</summary>
+    private static List<DateOnly> FreeDays(TrainingPlan plan, IReadOnlyList<PlannedSession> runs, DateOnly today, PlannedSession session)
+    {
+        var end = WeekStart(plan, today).AddDays(6);
+        return [.. Enumerable.Range(0, end.DayNumber - today.DayNumber + 1).Select(today.AddDays)
+            .Where(day => day != session.Date && !runs.Any(r => r.Date == day) && day < plan.RaceDate && day.AddDays(1) != plan.RaceDate)];
     }
 
     private static DateOnly WeekStart(TrainingPlan plan, DateOnly today) =>

@@ -310,3 +310,6 @@
 .home-more .home-section { margin-top: var(--space-2); }
 .home-more .home-section > .home-heading { margin-block: var(--space-4) var(--space-1); }
 .home-more .readiness > summary .readiness-today { flex-basis: auto; order: 0; }
+
+/* Life happens: a move that puts two hard days side by side is allowed, and said plainly. */
+.life-happens-warning { margin-block: var(--space-3); padding: var(--space-3); border-left: 4px solid light-dark(#b45309, #f5bf72); background: light-dark(#fff7ed, #2a1d0b); border-radius: var(--radius-sm, 8px); }

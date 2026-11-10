@@ -274,3 +274,14 @@
 .home-more > summary::-webkit-details-marker, .plan-toolbox > summary::-webkit-details-marker { display: none; }
 .home-more > summary { list-style: none; }
 .plan-toolbox > summary { list-style: none; }
+
+/* Home: the week closing, the streak, and race week. */
+.home-week-body.is-done .home-ring-fill { stroke: var(--accent-strong, var(--accent)); }
+.home-week-done { margin: 0; color: var(--accent-strong, var(--accent)); }
+.home-streak { margin: var(--space-1) 0 0; font-size: var(--text-sm); font-weight: 600; color: var(--ink); }
+.home-race-week { border: 2px solid var(--accent); margin-bottom: var(--space-4); }
+.home-race-week .button { margin-top: var(--space-2); }
+
+/* Run screen: a run from the last two days leads with its share prompt. */
+.activity-share-prompt { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-3) 0 var(--space-5); border: 2px solid var(--accent); }
+.activity-share-prompt p { margin: 0; }

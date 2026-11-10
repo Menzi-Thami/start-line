@@ -4,7 +4,7 @@ import { STICKER_LAYOUTS, type StickerLayout } from './sticker-layouts'
 import type { StickerRun } from './run-sticker'
 
 /** Prepare the PNG before the tap so Safari keeps the user gesture for file sharing and clipboard access. */
-export function RunSticker({ run, units }: { run: StickerRun; units: Units }) {
+export function RunSticker({ run, units, prominent = false }: { run: StickerRun; units: Units; /** A full button, for a run just finished. */ prominent?: boolean }) {
   const titleId = useId()
   const closeRef = useRef<HTMLButtonElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -70,7 +70,7 @@ export function RunSticker({ run, units }: { run: StickerRun; units: Units }) {
   }
   return (
     <div className="run-sticker">
-      <button ref={triggerRef} type="button" className="link-button" onClick={() => setOpen(true)}>
+      <button ref={triggerRef} type="button" className={prominent ? 'button button-primary' : 'link-button'} onClick={() => setOpen(true)}>
         Share run sticker
       </button>
       {open && (

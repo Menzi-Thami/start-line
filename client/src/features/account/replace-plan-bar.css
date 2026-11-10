@@ -1,0 +1,4 @@
+/* Above a plan that isn't the runner's saved one: say so, and offer the two ways out. */
+.replace-plan-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); border: 2px solid var(--accent); }
+.replace-plan-bar p { margin: 0; }
+.replace-plan-bar .submit-row { margin: 0; }

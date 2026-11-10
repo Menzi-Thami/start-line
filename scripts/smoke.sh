@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # A quick check that a deployed Taperday works end to end, the way a runner would first meet it: the website loads and
-# may call its API, and the API answers from its database and builds a plan. deploy.yml runs it on staging before
+# may call its API, and the API answers from its database and builds a plan. The deploys run it on staging before
 # production goes, and on production after. Anonymous only: it signs nobody in and saves nothing.
 # Usage: scripts/smoke.sh <website url> <api url>
 set -euo pipefail

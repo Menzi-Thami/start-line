@@ -33,7 +33,8 @@ import './home-navigation.css'
 import { dayStatus } from '../plan/training-status'
 import { sessionKey } from '../plan/plan-math'
 import { FirstWeek } from './FirstWeek'
-import { change, todayInPlan, trainingTotals, weeklyBars, type Change } from './home-math'
+import { change, todayInPlan, trainingTotals, weeklyBars, weekStreak, type Change } from './home-math'
+import { completedTasks, raceChecklistKey, RACE_TASKS } from '../race-week/checklist'
 import { YourWeek } from './YourWeek'
 import { WeeklyChart } from './WeeklyChart'
 
@@ -49,8 +50,9 @@ interface Props {
   bests?: PersonalBest[]
   strava?: StravaStatus
   onOpenPlan: () => void
+  /** Race week: straight to the race-day checklist and pacing in the plan. */
+  onOpenRacePrep?: () => void
   onOpenDay?: (date: string) => void
-  onOpenProgress?: () => void
   onBuildPlan: () => void
   onOpenBeginner?: () => void
   onOpenRun: (id: string) => void
@@ -268,6 +270,11 @@ function WeekRing({ ran, planned }: { ran: number; planned: number }) {
   )
 }
 
+/** How many race-week checklist items are ticked on this device. */
+function readRaceTasks(plan: TrainingPlan): number {
+  try { return completedTasks(localStorage.getItem(raceChecklistKey(plan.race.date, plan.race.name))).length } catch { return 0 }
+}
+
 const PHASES: Record<PlanWeek['phase'], string> = { Base: 'Base', Build: 'Build', Peak: 'Peak', Taper: 'Taper', RaceWeek: 'Race week' }
 
 /** The race at a glance under the greeting: when, how far, and where the runner is in the plan. */
@@ -297,10 +304,11 @@ function TodayCard({ plan, failed, today, units, runs, coach, onOpenPlan, onOpen
         Today
       </h2>
       {plan ? <TodaysRuns plan={plan} today={today} units={units} runs={runs} coach={coach} /> : failed ? <p>Today’s session will appear when your plan loads.</p> : <div className="skeleton-stack" role="status" aria-label="Loading today's session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
-      {plan && onOpenDay && <button type="button" className="button button-primary" onClick={() => onOpenDay(today)}>Open today's workout</button>}
+      {/* One main action on the card (logging, inside the session above); the rest are plain links. */}
+      {plan && onOpenDay ? <button type="button" className="link-button home-plan-link" onClick={() => onOpenDay(today)}>Open today's workout</button> : (
       <button type="button" className="link-button home-plan-link" onClick={onOpenPlan}>
         Open your plan
-      </button>
+      </button>)}
     </section>
   )
 }
@@ -423,8 +431,8 @@ export function Home({
   bests,
   strava,
   onOpenPlan,
+  onOpenRacePrep,
   onOpenDay,
-  onOpenProgress,
   onBuildPlan,
   onOpenBeginner,
   onOpenRun,
@@ -483,6 +491,8 @@ export function Home({
   const allTime = useAllTime(runner.id)
   const totals = trainingTotals(log ?? [], today)
   const bars = weeklyBars(log ?? [], today, plan)
+  // Weeks in a row with a run, from the kept log. Shown from two weeks up, so it reads as a streak.
+  const streak = log === null ? 0 : weekStreak(bars)
   const week = plan?.weeks.find((w) => w.startDate <= today && today <= weekEnd(w)) ?? null
   const additionalIds = new Set(checkIns.entries.filter((c) => c.isAdditional && c.activityId).map((c) => c.activityId))
   const plannedActivityRuns = runs.filter((r) => !additionalIds.has(r.id))
@@ -493,6 +503,9 @@ export function Home({
     soFar.doneRuns = week.sessions.filter((s) => s.type !== 'Race' && s.type !== 'Strength' && (checkIns.get(s) ? checkIns.get(s)!.status !== 'Skipped' : completedActivityRuns.some((r) => r.localDate === s.date) || completedViaStrava(s, coach))).length
   }
   const progress = plan ? planProgress(plan, today) : null
+  // The week closes when every planned run is done; the ring fills and Home says so.
+  const weekDone = !!soFar && soFar.plannedRuns > 0 && soFar.doneRuns >= soFar.plannedRuns
+  const raceTasksDone = plan ? readRaceTasks(plan) : 0
   const headline = (bests ?? []).filter((b) => HEADLINE_BESTS.some((d) => Math.abs(d - b.distanceMetres) < 0.5))
   const goalSeconds = plan ? parseTimeSpan(plan.goalTime) : null
   const pendingSyncedRuns = runs.filter(r => r.source.kind === 'Strava' && r.localDate <= today && !checkIns.entries.some(c => c.activityId === r.id))
@@ -515,6 +528,18 @@ export function Home({
 
       <div className="home-panel home-focus" id="home-panel-today">
         {current && planFailed && <div className="home-data-state" role="alert"><p>{plan ? 'Your plan couldn’t refresh. Showing the last plan loaded on this device.' : 'Your plan couldn’t load. You can try again.'}</p><button type="button" className="button" onClick={retryPlan}>Retry plan</button></div>}
+        {/* Race week: the countdown and the checklist come first; everything else can wait. */}
+        {plan && progress && progress.daysToGo >= 0 && progress.daysToGo <= 7 && (
+          <section className="panel home-card home-race-week" aria-labelledby="home-race-week">
+            <p className="plan-kicker">Race week</p>
+            <h2 id="home-race-week" className="home-card-heading">
+              {progress.daysToGo === 0 ? `Race day: ${plan.race.name}` : `${progress.daysToGo} ${progress.daysToGo === 1 ? 'day' : 'days'} to ${plan.race.name}`}
+            </h2>
+            <p>{progress.daysToGo === 0 ? 'Start easy, trust your training and enjoy it.' : 'The work is done. Keep the runs easy, sleep well and get your kit ready.'}</p>
+            <p className="field-help">Checklist: {raceTasksDone} of {RACE_TASKS.length} ready</p>
+            {onOpenRacePrep && <button type="button" className="button button-primary" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
+          </section>
+        )}
         <div className="home-top">
           {current ? (
             <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={onOpenDay} />
@@ -537,15 +562,17 @@ export function Home({
               This week
             </h2>
             {soFar ? (
-              <div className="home-week-body">
-                <WeekRing ran={soFar.ranKm} planned={soFar.plannedKm} />
+              <div className={`home-week-body${weekDone ? ' is-done' : ''}`}>
+                <WeekRing ran={weekDone ? Math.max(soFar.ranKm, soFar.plannedKm) : soFar.ranKm} planned={soFar.plannedKm} />
                 <div>
                   <p className="home-tile-value">
                     <span className="mono">{formatDistance(soFar.ranKm, units)}</span>
                   </p>
+                  {weekDone && <p className="home-week-done"><strong>Week done.</strong> All {soFar.plannedRuns} runs in the bag.</p>}
                   <p className="field-help">
                     of {formatDistance(soFar.plannedKm, units)} planned · {soFar.doneRuns} of {soFar.plannedRuns} runs
                   </p>
+                  {streak >= 2 && <p className="home-streak"><span className="mono">{streak}{streak >= bars.length ? '+' : ''}</span> weeks in a row</p>}
                   {soFar.plannedKm > 0 && soFar.ranKm > soFar.plannedKm && (
                     <p className="field-help">{formatDistance(soFar.ranKm - soFar.plannedKm, units)} past the plan this week</p>
                   )}
@@ -595,10 +622,6 @@ export function Home({
             </details>)}
             <button type="button" className="link-button" onClick={onOpenPlan}>View runs in your plan →</button>
           </section>}
-          <div className="home-history-actions">
-            <button type="button" className="link-button" onClick={onOpenRuns}>View all runs →</button>
-            {current && onOpenProgress && <button type="button" className="button button-quiet" onClick={onOpenProgress}>View training progress →</button>}
-          </div>
           <details className="disclosure home-insights" onToggle={event => { if (event.currentTarget.open) setInsightsVisited(true) }}><summary>Running insights <span className="field-help">Totals, trends & personal bests</span></summary>
           {logFailed ? (
             <div className="home-data-state" role="alert">

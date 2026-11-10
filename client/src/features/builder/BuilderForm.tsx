@@ -10,6 +10,7 @@ import { PlanTheatre } from './PlanTheatre'
 import { RaceSearch } from './RaceSearch'
 import { api } from '../../lib/api-client'
 import { goalProblem } from './goal-limits'
+import { suggestedGoals } from './goal-suggestions'
 import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 import { useQuestionFrame } from './useQuestionFrame'
 import './builder-navigation.css'
@@ -164,7 +165,7 @@ function validate(draft: Draft, goalSeconds: number, today: string, raceDate: st
     if (decimal(draft.otherKm) === null || Number(draft.otherKm) <= 0) found.distance = 'Enter a distance greater than 0, using digits and a decimal point.'
     if (!draft.otherDate) found.date = 'Enter the race date.'
   }
-  if (goalSeconds <= 0) found.goal = 'Enter a goal time. Not sure? Use the estimate below.'
+  if (goalSeconds <= 0) found.goal = 'Enter a goal time, or pick one of the starting points below.'
   else if (goalLimit) found.goal = goalLimit
   if (draft.runDays.length < 3) found.runDays = 'Pick at least three days. Two runs a week isn’t enough to build on.'
   if (!draft.longRunDay) found.longRunDay = 'Pick which of your days is the long run.'
@@ -258,6 +259,13 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const [seenServerErrors, setSeenServerErrors] = useState(serverErrors)
   const titleRef = useRef<HTMLHeadingElement>(null)
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))
+  // A different race from the saved plan's starts fresh: a start day already in the past (the old plan's) moves to today,
+  // so the runner is never stopped by a date they didn't choose for this race.
+  const pickRace = (race: string) => setDraft((d) => ({
+    ...d,
+    race,
+    ...(initial && race !== (initial.raceSlug ?? OTHER) && d.start === 'day' && d.startOn < today ? { start: 'today' as const, startOn: '' } : {}),
+  }))
 
   // The server turned the plan down: go back to the first screen it complained about.
   if (serverErrors !== seenServerErrors) {
@@ -417,7 +425,9 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
         <p className="wizard-count">
           Step {position + 1} of {totalSteps}
         </p>
-        {/* The taper again: the bars step down towards the last step, which is a race-day dot. */}
+        {/* The taper again: the bars step down towards the last step, which is a race-day dot. Only while signing up, when
+            the numbered steps below aren't shown: one progress marker at a time. */}
+        {gate && (
         <ol className="wizard-bar" aria-hidden="true">
           {Array.from({ length: totalSteps }, (_, i) => (
             <li
@@ -427,6 +437,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
             />
           ))}
         </ol>
+        )}
         {onCancel && !gate && (
           <button type="button" className="link-button wizard-cancel" onClick={onCancel}>
             Back to your plan
@@ -478,7 +489,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                 <>
                   <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
                     <label className="choice choice-other">
-                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => set('race', OTHER)} />
+                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => pickRace(OTHER)} />
                       <span className="choice-name">Another race — build for your own distance or event</span>
                       <span className="choice-meta">First 5K, a personal best, a local race or an ultra. Choose your distance and target date.</span>
                     </label>
@@ -501,7 +512,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       <div className="race-rack">
                         {catalogue.map((race, i) => (
                           <label className="race-bib" key={race.slug}>
-                            <input type="radio" name="race" value={race.slug} checked={draft.race === race.slug} onChange={() => set('race', race.slug)} />
+                            <input type="radio" name="race" value={race.slug} checked={draft.race === race.slug} onChange={() => pickRace(race.slug)} />
                             <span className={`bib-card bib-colour-${i % 4}`} style={{ animationDelay: `-${(i * 1.1).toFixed(1)}s` }}>
                               <span className="choice-date mono">
                                 {formatDate(race.date, 'dayMonth')} <small>{formatDate(race.date, 'year')}</small>
@@ -524,7 +535,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                         selectedRace={searchedRaces.find((r) => r.slug === draft.race)}
                         onPick={(race) => {
                           rememberRace(race)
-                          set('race', race.slug)
+                          pickRace(race.slug)
                         }}
                       />
                     )}
@@ -591,6 +602,23 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               {step === 1 && (
                 <>
                   <DurationInput legend="Goal finish time" value={draft.goal} onChange={(v) => { set('goal', v); setClientErrors(({ goal: _old, ...rest }) => rest) }} error={goalLimit ?? errors.goal} help={goalLimit ? undefined : pacePreview} />
+                  {/* Nobody should have to pick a time cold: three everyday starting points, one tap each. */}
+                  {targetKm && (
+                    <div className="goal-suggestions" role="group" aria-label="Suggested goal times">
+                      <p className="field-label">Not sure? Start from one of these</p>
+                      <div className="goal-suggestion-row">
+                        {suggestedGoals(targetKm).map((goal) => (
+                          <button key={goal.id} type="button" className="chip-button goal-suggestion" aria-pressed={goalSeconds === goal.seconds}
+                            onClick={() => { set('goal', toDuration(goal.seconds)); setClientErrors(({ goal: _old, ...rest }) => rest) }}>
+                            <span className="goal-suggestion-label">{goal.label}</span>
+                            <strong className="mono">{formatDuration(goal.seconds)}</strong>
+                            <span className="goal-suggestion-pace">{formatPace(goal.seconds / targetKm, units)}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="field-help">You can change it any time. Your plan’s paces follow your goal.</p>
+                    </div>
+                  )}
                   <details className="disclosure">
                     <summary>Add a recent race, so the coach can tell you if your goal is realistic</summary>
                     <p className="field-help">Optional. A race or time trial from the last six weeks, at least 3 km. It never changes your plan: it lets the coach say whether {goalSeconds > 0 ? formatDuration(goalSeconds) : 'your goal'} is realistic, or whether you could aim higher.</p>

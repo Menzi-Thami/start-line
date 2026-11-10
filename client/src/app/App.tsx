@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
+import { ReplacePlanBar } from '../features/account/ReplacePlanBar'
 import { SavePlanButton } from '../features/account/SavePlanButton'
 import { PlanLocked } from '../features/account/PlanLocked'
 import { SignUpPitch } from '../features/account/SignUpPitch'
@@ -691,7 +692,7 @@ export function App() {
   // Strength is part of Plan, so training always has one navigation destination.
   const onPlan = view === 'build' && plan.kind === 'ready' && !editing
   const barCurrent: TabBarItem | null =
-    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : onPlan && planTab === 'progress' ? 'progress' : view === 'beginner' || onPlan ? 'plan' : null
+    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : onPlan && planTab === 'progress' ? 'progress' : view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
   const showBar =
     !(plan.kind === 'loading' && showBuilder) &&
@@ -877,8 +878,8 @@ export function App() {
             initialPlan={copy?.plan}
             onPlanLoaded={savePlan}
             onOpenPlan={() => openOwnPlan()}
+            onOpenRacePrep={() => { setPreparationRequest({ mode: 'race', date: null }); openOwnPlan() }}
             onOpenDay={openOwnDay}
-            onOpenProgress={() => openOwnPlan('progress')}
             onBuildPlan={startFresh}
             onOpenBeginner={() => go('beginner')}
             onOpenRun={(id) => showRun(id)}
@@ -900,12 +901,12 @@ export function App() {
             openRun ? (
               <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
             ) : (
-              <MyRuns units={units} onOpen={showRun} onOpenPlan={ownPlan ? () => openOwnPlan('all') : undefined} />
+              <MyRuns units={units} onOpen={showRun} />
             )
           ) : (
             // On a desktop the journal stays on the left and the open run fills the right.
             <div className="runs-split">
-              <MyRuns key={runsVersion} units={units} onOpen={showRun} onOpenPlan={ownPlan ? () => openOwnPlan('all') : undefined} selectedId={openRun?.id} />
+              <MyRuns key={runsVersion} units={units} onOpen={showRun} selectedId={openRun?.id} />
               <div className="runs-split-detail">
                 {openRun ? (
                   <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
@@ -1044,6 +1045,17 @@ export function App() {
                 onFinishSignUp={state.kind === 'needs-sign-up' ? () => go('sign-up') : undefined}
               />
             )}
+            {/* A plan that isn't the runner's saved one (a new race, a new goal) is never saved or lost silently. */}
+            {showPlan && state.kind === 'ready' && currentPlan.current && !savedOnScreen && (
+              <ReplacePlanBar
+                key={toSearchParams(plan.inputs).toString()}
+                request={toRequest(plan.inputs)}
+                raceName={plan.plan.race.name}
+                saved={currentPlan.current}
+                onReplaced={currentPlan.refresh}
+                onKeep={() => openOwnPlan()}
+              />
+            )}
             {showPlan && <InstallCard />}
             {showPlan && savedOnScreen && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
 
@@ -1053,6 +1065,8 @@ export function App() {
               <PlanView
                 preparation={preparationRequest}
                 onEditStrength={changeAnswers}
+                onEditPlan={changeAnswers}
+                progressInBar={showBar}
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
                 reveal={revealPlan}
@@ -1069,7 +1083,8 @@ export function App() {
                     </section>
                   </div>
                 ) : undefined}
-                onBack={state.kind === 'ready' ? () => go('home') : undefined}
+                // The bar's Home does this job wherever the bar is shown.
+                onBack={state.kind === 'ready' && !showBar ? () => go('home') : undefined}
                 units={units}
                 onUnitsChange={changeUnits}
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
@@ -1117,9 +1132,6 @@ export function App() {
                 }
                 toolbarExtra={
                   <>
-                    <button type="button" className="button button-quiet" onClick={changeAnswers}>
-                      Change answers
-                    </button>
                     <SavePlanButton
                       key={toSearchParams(plan.inputs).toString()}
                       runner={state}

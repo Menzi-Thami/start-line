@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { StravaStatus } from '../../lib/types'
+import { useInstallWay } from '../../lib/install-app'
+import { AddButton } from '../install/InstallApp'
 
 const DISMISSED = 'taperday:first-week-dismissed'
 
@@ -44,10 +46,12 @@ export function FirstWeek({ hasRuns, strava, onOpenRuns, onOpenAccount }: Props)
     }
   }, [auth])
 
+  const install = useInstallWay()
   const steps = [
     { id: 'runs', done: hasRuns || !!strava?.connected, title: 'Bring in your runs', why: 'Connect Strava or upload from your watch, so the coach adjusts to what you actually ran.', action: 'Add runs', onClick: onOpenRuns },
     { id: 'reminders', done: reminders === true, title: 'Turn on reminders', why: 'A nudge on run days and a heads-up before long runs.', action: 'Turn on', onClick: onOpenAccount },
-    { id: 'home', done: isStandalone(), title: 'Add Taperday to your home screen', why: 'It opens like an app, straight on your plan.', action: 'Show me', onClick: onOpenAccount },
+    // One tap where the browser can install it (Android, desktop Chrome and Edge); the two Share-menu steps on an iPhone.
+    { id: 'home', done: isStandalone() || install.kind === 'installed', title: 'Add Taperday to your home screen', why: 'It opens like an app, straight on your plan.', action: 'Add to home screen', onClick: onOpenAccount },
   ]
   const left = steps.filter((s) => !s.done).length
   if (hidden || left === 0 || reminders === null) return null
@@ -84,7 +88,7 @@ export function FirstWeek({ hasRuns, strava, onOpenRuns, onOpenAccount }: Props)
               </p>
               {!s.done && <p className="field-help">{s.why}</p>}
             </div>
-            {!s.done && (
+            {!s.done && s.id === 'home' ? <AddButton way={install} quiet /> : !s.done && (
               <button type="button" className="button button-quiet" onClick={s.onClick}>
                 {s.action}
               </button>

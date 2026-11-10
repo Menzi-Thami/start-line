@@ -278,4 +278,17 @@ public sealed class ReminderTests
         Should.Throw<DomainException>(() => PushSubscription.Start(Guid.NewGuid(), "short", address, Seven, false, At(11, 1, 9)));
         Should.Throw<DomainException>(() => PushSubscription.Start(Guid.NewGuid(), new string('a', 64), address with { Auth = "" }, Seven, false, At(11, 1, 9)));
     }
+
+    [Fact]
+    public void The_first_run_gets_a_heads_up_that_names_it()
+    {
+        var first = Reminders.FirstRun(Plan);
+
+        first.ShouldNotBeNull();
+        first.Date.ShouldBe(new DateOnly(2026, 11, 3));
+        var headsUp = Reminders.FirstRunHeadsUp(first, Plan, Units.Kilometres);
+        headsUp.Title.ShouldBe("Your first run is tomorrow");
+        headsUp.Body.ShouldStartWith("Easy run: 6 km at ");
+        headsUp.Body.ShouldEndWith("Lay out your kit tonight and start easy. This is where your plan begins.");
+    }
 }

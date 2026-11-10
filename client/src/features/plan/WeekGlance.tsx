@@ -82,7 +82,7 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
       {renderSelectedDay?.()}
       </div>
       </div>
-      <p className="field-help calendar-day-key">Select a date to preview it, then open day details.</p>
+      <p className="field-help calendar-day-key">• Run · ○ Rest · ✓ Done. Tap a day to see it.</p>
       <section className="coming-up" aria-label="Upcoming workouts"><h3>Coming up</h3><ul>{week.sessions.filter(session => session.date > today).slice(0, 3).map(session => <li key={`${session.date}-${session.type}`}><span>{formatDate(session.date, 'dayMonth')}</span> <strong>{session.title}</strong>{session.distanceKm > 0 && <span>{formatDistance(session.distanceKm, units)}</span>}</li>)}</ul>{!week.sessions.some(session => session.date > today) && <p className="field-help">No upcoming sessions in this week.</p>}</section>
     </section>
   )

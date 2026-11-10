@@ -274,3 +274,42 @@
 .home-more > summary::-webkit-details-marker, .plan-toolbox > summary::-webkit-details-marker { display: none; }
 .home-more > summary { list-style: none; }
 .plan-toolbox > summary { list-style: none; }
+
+/* Home: the week closing, the streak, and race week. */
+.home-week-body.is-done .home-ring-fill { stroke: var(--accent-strong, var(--accent)); }
+.home-week-done { margin: 0; color: var(--accent-strong, var(--accent)); }
+.home-streak { margin: var(--space-1) 0 0; font-size: var(--text-sm); font-weight: 600; color: var(--ink); }
+.home-race-week { border: 2px solid var(--accent); margin-bottom: var(--space-4); }
+.home-race-week .button { margin-top: var(--space-2); }
+
+/* Run screen: a run from the last two days leads with its share prompt. */
+.activity-share-prompt { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: var(--space-3) 0 var(--space-5); border: 2px solid var(--accent); }
+.activity-share-prompt p { margin: 0; }
+/* Goal step: three one-tap starting points under the wheels. */
+.goal-suggestions { margin-block: var(--space-4); }
+.goal-suggestion-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-block: var(--space-2); }
+.goal-suggestion.chip-button { display: grid; justify-items: center; gap: 2px; min-height: var(--tap); height: auto; padding: var(--space-3) var(--space-2); border-radius: var(--radius-md, 14px); white-space: normal; text-align: center; }
+.goal-suggestion strong { font-size: var(--text-lg, 1.125rem); }
+.goal-suggestion-label, .goal-suggestion-pace { font-size: var(--text-xs); font-weight: 500; opacity: .8; }
+
+/* Logging a run: a one-tap "Done, as planned" at the top; the details below are optional. */
+.check-in-quick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-block: var(--space-2) var(--space-4); }
+
+/* Inside Home's "Coaching, insights and tools": every row looks the same. A plain line, the title, then + or −. */
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) {
+  margin: 0; padding: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none;
+}
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) > summary {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); min-height: var(--tap);
+  padding-block: var(--space-3); cursor: pointer; list-style: none; font-weight: 700; color: var(--ink);
+}
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) > summary::-webkit-details-marker { display: none; }
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) > summary::after { content: '+'; margin-inline-start: auto; color: var(--accent-strong, var(--accent)); }
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools)[open] > summary::after { content: '−'; }
+.home-more :is(.home-review, .readiness, .home-insights, .home-tools) > summary .field-help { flex-basis: 100%; order: 2; margin: 0; font-weight: 400; }
+.home-more .home-section { margin-top: var(--space-2); }
+.home-more .home-section > .home-heading { margin-block: var(--space-4) var(--space-1); }
+.home-more .readiness > summary .readiness-today { flex-basis: auto; order: 0; }
+
+/* Life happens: a move that puts two hard days side by side is allowed, and said plainly. */
+.life-happens-warning { margin-block: var(--space-3); padding: var(--space-3); border-left: 4px solid light-dark(#b45309, #f5bf72); background: light-dark(#fff7ed, #2a1d0b); border-radius: var(--radius-sm, 8px); }

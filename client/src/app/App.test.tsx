@@ -1,4 +1,4 @@
-import { openTrainingGuide, findPlanControl, openStrengthWorkouts, openDisclosure, openWeekDay } from '../test/user-navigation'
+import { openTrainingGuide, openStrengthWorkouts, openDisclosure, openWeekDay } from '../test/user-navigation'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -417,7 +417,7 @@ describe('building a plan', () => {
     await buildIt(user)
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await user.click(await findPlanControl('Change answers'))
+    await user.click(await screen.findByRole('button', { name: 'Edit plan' }))
 
     onStep(5)
     expect(screen.getByText(/Comrades Marathon, Sunday 13 June 2027/)).toBeInTheDocument()

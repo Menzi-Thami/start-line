@@ -47,6 +47,8 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
   const [selectedTab, setSelectedTab] = useState<AnalysisTab>('Overview')
   const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial, checkedAt: Date.now() } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
+  // When the page opened: a run from the last two days gets its share prompt up front.
+  const [openedAt] = useState(() => Date.now())
   const [confirming, setConfirming] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -134,6 +136,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
   const execution = run.source.kind === 'Strava' && (!run.source.cachedUntil || !Number.isFinite(Date.parse(run.source.cachedUntil))) ? null : run.workoutExecution
   const title = run.plan?.title ?? KIND_LABEL[run.kind]
   const verdict = runVerdict(run, units)
+  const fresh = openedAt - Date.parse(run.startedAt) < 48 * 3600 * 1000
 
   return (
     <article className="activity" aria-labelledby="activity-title">
@@ -144,7 +147,14 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       <h2 className="plan-title" id="activity-title">
         {title}
       </h2>
-      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
+      {fresh ? (
+        <section className="panel activity-share-prompt" aria-label="Share this run">
+          <p><strong>Nice run.</strong> Share it while it’s fresh.</p>
+          <RunSticker prominent units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} />
+        </section>
+      ) : (
+        <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
+      )}
       {run.source.kind === 'Strava' && (
         <p className="activity-source">
           <span>From Strava{run.source.recordedOnGarmin ? ' · recorded on Garmin' : ''}</span>
@@ -219,11 +229,11 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       </div>}
       <div role="tabpanel" id={`${tabId}-panel-Coach`} aria-labelledby={`${tabId}-tab-Coach`} hidden={selectedTab !== 'Coach'} tabIndex={0}>
         <h3>Coach</h3>
-        {execution && <p>There is useful evidence in this recording: {execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} prescription windows are covered when aligned from the recording start. Coverage is separate from pace or following the instructions. If you changed your session, you can explain that in your check-in.</p>}
+        {execution && <p>{execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} parts of the workout done. Changed the session on purpose? Say so in your check-in.</p>}
         <p>{verdict.headline}</p>
         {verdict.details.map(line => <p key={line}>{line}</p>)}
         {verdict.next && <p>{verdict.next}</p>}
-        <p className="field-help">Based on recorded run statistics and available plan targets. Stage evidence, when available, is aligned to the recording start and remains an estimate. This does not change your check-in.</p>
+        <p className="field-help">Based on what your run recorded and your plan’s targets. It’s a guide: your check-in is what counts.</p>
       </div>
       {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
         <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />

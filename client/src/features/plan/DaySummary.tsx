@@ -32,10 +32,12 @@ interface Props {
   canCompleteRuns: boolean
   onOpenRun?: (id: string) => void
   onClose: () => void
+  /** Move one of this day's runs to another day this week (Life happens), when the runner can. */
+  onMove?: (date: string) => void
 }
 
 /** One date, with prescription and history kept separate. Opening it never changes completion. */
-export default function DaySummary({ dedicated = false, id: panelId, trigger, date, today, plan, units, done, onDoneChange, runs, coach, canCompleteRuns, onOpenRun, onClose }: Props) {
+export default function DaySummary({ dedicated = false, id: panelId, trigger, date, today, plan, units, done, onDoneChange, runs, coach, canCompleteRuns, onOpenRun, onClose, onMove }: Props) {
   const id = useId()
   const panelRef = useRef<HTMLElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -55,6 +57,11 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
   const completedStrength = sessions.filter(session => session.type === 'Strength' && done.has(sessionKey(session)))
   const inPlan = date >= plan.startDate && date <= plan.race.date
   const future = date > today
+  // A run can move from today to the end of this week (Monday to Sunday), as Life happens allows.
+  const thisMonday = new Date(`${today}T12:00:00Z`)
+  thisMonday.setUTCDate(thisMonday.getUTCDate() - ((thisMonday.getUTCDay() + 6) % 7))
+  const nextMonday = new Date(thisMonday.getTime() + 7 * 86_400_000).toISOString().slice(0, 10)
+  const movable = date >= today && date < nextMonday
   const historyReady = canCompleteRuns
 
   const close = () => {
@@ -122,6 +129,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
                 <p className="day-summary-status">{!historyReady ? 'Completion history unavailable' : entry?.status === 'Skipped' ? 'Skipped' : entry?.status === 'CutShort' ? 'Cut short' : viaStrava ? 'Activity recorded via Strava · provisional' : complete ? 'Completed' : future ? 'Upcoming' : date === today ? 'Scheduled today' : 'No completion recorded'}</p>
                 <details className="session-more" open={dedicated || undefined}><summary>How to run it</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
                 {historyReady && coach && <StravaCompletion session={session} coach={coach} />}
+                {onMove && movable && historyReady && !entry && !complete && session.type !== 'Race' && <button type="button" className="link-button day-move" onClick={() => onMove(session.date)}>Move this run</button>}
                 {historyReady && coach && (!entry || entry.status === 'Skipped') && session.type !== 'Race' && <CheckInCard session={session} coach={coach} runs={dayRuns} completion compactActions done={complete && !viaStrava} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}
                 {historyReady && !coach && session.type !== 'Race' && !future && <label className="session-done"><input type="checkbox" checked={complete} onChange={event => onDoneChange(current => withSessionDone(current, session, event.target.checked))} /> Complete on this device</label>}
               </>}

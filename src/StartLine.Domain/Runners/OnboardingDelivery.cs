@@ -14,6 +14,9 @@ public enum OnboardingCampaign
 
     /// <summary>Recorded runs before, none for at least 21 days: one gentle "ready when you are" per quiet spell.</summary>
     ReturnToRunning,
+
+    /// <summary>Signed up in the last two days: one "Welcome to Taperday", sent once, soon after the account is made.</summary>
+    Welcome,
 }
 
 public enum OnboardingDeliveryStatus { Sending, Sent, Failed }

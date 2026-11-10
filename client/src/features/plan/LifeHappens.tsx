@@ -9,6 +9,7 @@ export interface LifeHappensActions {
 }
 
 const SITUATIONS: readonly { value: LifeSituation; label: string }[] = [
+  { value: 'MoveRun', label: 'Move a run' },
   { value: 'MissedRun', label: 'Missed a run' },
   { value: 'ShortOnTime', label: 'Short on time' },
   { value: 'Travelling', label: 'Travelling' },
@@ -22,6 +23,24 @@ function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T12:00:00Z`)
   d.setUTCDate(d.getUTCDate() + days)
   return d.toISOString().slice(0, 10)
+}
+
+/** Easy running and strength; everything else is a hard day, as the server's rules have it (LifeHappens.IsHard). */
+const GENTLE = new Set(['Easy', 'Recovery', 'EasyWithStrides', 'Shakeout', 'Strength'])
+
+/**
+ * A moved hard session that lands next to another hard one: the days, so the runner can be told before they apply it.
+ * The move is still theirs to make.
+ */
+function backToBack(result: LifeProposal): { moved: string; neighbour: string; title: string } | null {
+  const move = result.changes.find((c) => c.movedFrom)
+  if (!move || GENTLE.has(move.originalType)) return null
+  const all = result.proposed.weeks.flatMap((w) => w.sessions)
+  for (const day of [addDays(move.date, -1), addDays(move.date, 1)]) {
+    const hard = all.find((s) => s.date === day && !GENTLE.has(s.type) && s.type !== 'Race')
+    if (hard) return { moved: move.date, neighbour: day, title: hard.title }
+  }
+  return null
 }
 
 function weekStart(iso: string): string {
@@ -41,10 +60,10 @@ function describe(r: SessionRevision, units: Units): string {
  * upcoming sessions. The runner previews them, applies them, and can put any day back as the plan first wrote it. Hard
  * sessions keep an easy day either side; missed kilometres are never made up; past days and the race never change.
  */
-export function LifeHappens({ plan, today, units, actions }: { plan: TrainingPlan; today: string; units: Units; actions?: LifeHappensActions }) {
+export function LifeHappens({ plan, today, units, actions, moveDate = null }: { plan: TrainingPlan; today: string; units: Units; actions?: LifeHappensActions; /** A run to move, chosen from its day: opens straight on Move a run. */ moveDate?: string | null }) {
   const ids = { session: useId(), minutes: useId(), from: useId(), until: useId(), days: useId(), canRun: useId() }
-  const [situation, setSituation] = useState<LifeSituation | null>(null)
-  const [date, setDate] = useState('')
+  const [situation, setSituation] = useState<LifeSituation | null>(moveDate ? 'MoveRun' : null)
+  const [date, setDate] = useState(moveDate ?? '')
   const [until, setUntil] = useState('')
   const [minutes, setMinutes] = useState<number>(30)
   const [days, setDays] = useState(2)
@@ -56,6 +75,7 @@ export function LifeHappens({ plan, today, units, actions }: { plan: TrainingPla
   const sessions = plan.weeks.flatMap((w) => w.sessions).filter((s) => s.type !== 'Strength' && s.type !== 'Race')
   const thisWeek = weekStart(today)
   const missedChoices = sessions.filter((s) => s.date < today && s.date >= thisWeek)
+  const thisWeekRuns = sessions.filter((s) => s.date >= today && s.date < addDays(thisWeek, 7))
   const upcoming = sessions.filter((s) => s.date >= today && s.date < addDays(today, HORIZON_DAYS))
   const changed = (plan.adjustments ?? []).filter((r) => r.date >= today)
 
@@ -72,7 +92,7 @@ export function LifeHappens({ plan, today, units, actions }: { plan: TrainingPla
     setSituation(next)
     setProposal(null)
     setMessage(null)
-    setDate(next === 'MissedRun' ? (missedChoices.at(-1)?.date ?? '') : next === 'ShortOnTime' ? (upcoming[0]?.date ?? '') : next === 'Travelling' ? today : '')
+    setDate(next === 'MoveRun' ? (thisWeekRuns[0]?.date ?? '') : next === 'MissedRun' ? (missedChoices.at(-1)?.date ?? '') : next === 'ShortOnTime' ? (upcoming[0]?.date ?? '') : next === 'Travelling' ? today : '')
     setUntil(next === 'Travelling' ? addDays(today, 2) : '')
   }
 
@@ -83,6 +103,7 @@ export function LifeHappens({ plan, today, units, actions }: { plan: TrainingPla
       case 'Travelling': return date && until ? { situation, date, until, canRun } : null
       case 'Unwell': return { situation, days, canRun: true }
       case 'MoveLongRun': return { situation, moveTo: moveTo ?? null, canRun: true }
+      case 'MoveRun': return date ? { situation, date, moveTo: moveTo ?? null, canRun: true } : null
       default: return null
     }
   }
@@ -128,7 +149,7 @@ export function LifeHappens({ plan, today, units, actions }: { plan: TrainingPla
   const result = proposal?.result
   const needsDay = result && result.changes.length === 0 && result.moveTargets.length > 0
   return (
-    <details className="disclosure life-happens">
+    <details className="disclosure life-happens" open={moveDate ? true : undefined}>
       <summary>Life happens · change of plans?</summary>
       <p className="field-help">Say what happened. You’ll see exactly what changes before anything does, and you can put it back.</p>
       <div className="pills" role="group" aria-label="What happened">
@@ -196,6 +217,16 @@ export function LifeHappens({ plan, today, units, actions }: { plan: TrainingPla
             </>
           )}
           {situation === 'MoveLongRun' && <p className="field-help">Taperday offers the days this week where it fits, with an easy day either side of hard sessions.</p>}
+          {situation === 'MoveRun' && (
+            thisWeekRuns.length === 0 ? <p className="field-help">No runs left this week to move.</p> : (
+              <div className="field">
+                <label className="field-label" htmlFor={ids.session}>Which run?</label>
+                <select id={ids.session} className="input" value={date} onChange={(e) => { setDate(e.target.value); setProposal(null) }}>
+                  {thisWeekRuns.map((s) => <option key={s.date} value={s.date}>{formatDate(s.date)} · {s.title}</option>)}
+                </select>
+              </div>
+            )
+          )}
 
           <button type="button" className="button button-quiet" disabled={busy || !changeFor()} onClick={() => preview()}>
             {busy && !proposal ? 'Working it out…' : 'Show what changes'}
@@ -207,7 +238,7 @@ export function LifeHappens({ plan, today, units, actions }: { plan: TrainingPla
         <div className="callout life-happens-preview">
           {needsDay ? (
             <>
-              <p>Choose a day for it. Each keeps an easy day either side of a hard session:</p>
+              <p>{situation === 'MoveRun' ? 'Choose a free day this week:' : 'Choose a day for it. Each keeps an easy day either side of a hard session:'}</p>
               <div className="pills" role="group" aria-label="Move to">
                 {result.moveTargets.map((d) => (
                   <button key={d} type="button" className="button button-quiet" disabled={busy} onClick={() => preview(d)}>
@@ -230,6 +261,7 @@ export function LifeHappens({ plan, today, units, actions }: { plan: TrainingPla
                   <li key={`${c.date}|${c.movedFrom ?? ''}`}>{describe(c, units)}</li>
                 ))}
               </ul>
+              {(() => { const clash = backToBack(result); return clash && <p className="callout-warning life-happens-warning" role="note"><strong>Two hard days in a row.</strong> {result.changes.find((c) => c.movedFrom)?.originalTitle} on {formatDate(clash.moved)} sits next to {clash.title} on {formatDate(clash.neighbour)}. Hard days back to back raise the risk of injury: if you keep it, run the other one easy.</p> })()}
               <p className="field-help">This is a preview. Your plan hasn’t changed.</p>
               <div className="submit-row">
                 <button type="button" className="button" disabled={busy} onClick={apply}>{busy ? 'Applying…' : 'Apply these changes'}</button>

@@ -1,14 +1,11 @@
-name: deploy
+name: Ops - Redeploy production
 
-# Ships main to production, with no clicks. Changes are tried on staging first: they land on the `staging` branch,
-# which deploy-staging-only.yml puts on the staging API, database and website and smoke-checks. Once they look right
-# there, staging is merged into main and this deploys that commit to production, then scripts/smoke.sh checks
-# production the way a runner first meets it (a failure turns the run red to say so). To pause production for a change
-# that needs eyes first, add required reviewers to the production environment (Settings → Environments → production).
-# Also runnable by hand (Actions → deploy → Run workflow).
+# Not a step of shipping (docs/how-we-ship.md): production is released with "3 - Release to production" (release.yml).
+# This deploys `main` as it is, again, by hand: Actions → "Ops - Redeploy production" → Run workflow. Use it after an
+# urgent fix was merged straight into `main`, or to repeat a deploy that failed halfway. It never runs by itself, so a
+# push to `main` alone changes nothing on taperday.run. After deploying, scripts/smoke.sh checks production the way a
+# runner first meets it (a failure turns the run red to say so).
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

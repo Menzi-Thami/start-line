@@ -1,4 +1,4 @@
-import { openPlanOptions, openStrengthWorkouts, openDisclosure } from './navigation'
+import { openStrengthWorkouts, openDisclosure } from './navigation'
 import { expect, test } from '@playwright/test'
 import type { CheckIn, CheckInRequest, GeneratePlanRequest, TrainingPlan } from '../src/lib/types'
 
@@ -66,12 +66,11 @@ for (const mode of ['manual', 'time-only', 'tick', 'strava']) {
     if (mode === 'strava') await day.getByLabel('Run details').selectOption('source-run')
     if (mode === 'manual') await day.getByLabel('Distance (km)', { exact: true }).fill('10')
     if (mode === 'manual' || mode === 'time-only') await day.getByLabel('Minutes', { exact: true }).fill('45')
-    if (mode === 'tick') await day.getByRole('button', { name: /without details/i }).click()
+    if (mode === 'tick') await day.getByRole('button', { name: 'Done, as planned' }).click()
     else await day.getByRole('button', { name: 'Save check-in', exact: true }).click()
     expect(entries).toHaveLength(1)
     await day.getByRole('button', { name: 'Close day', exact: true }).click()
-    await openPlanOptions(page)
-    await page.getByRole('button', { name: 'Change answers', exact: true }).click()
+    await page.getByRole('button', { name: 'Edit plan', exact: true }).click()
     await page.getByRole('button', { name: /Change days/ }).click()
     const days = page.getByRole('group', { name: 'Which days can you run?', exact: true })
     await days.getByRole('checkbox', { name: 'Wednesday', exact: true }).uncheck()
@@ -105,8 +104,7 @@ for (const mode of ['manual', 'time-only', 'tick', 'strava']) {
     await page.getByRole('button', { name: /Open day details/ }).click()
     await expect(day.getByRole('region', { name: 'Recorded', exact: true }).locator('.run-result')).toHaveCount(1)
     await page.keyboard.press('Escape')
-    await openPlanOptions(page)
-    await page.getByRole('button', { name: 'Change answers', exact: true }).click()
+    await page.getByRole('button', { name: 'Edit plan', exact: true }).click()
     await page.getByRole('button', { name: 'Change goal', exact: true }).click()
     const goalMinutes = page.getByRole('group', { name: 'Goal finish time', exact: true }).getByLabel('Minutes', { exact: true })
     await expect(goalMinutes).toHaveValue('52')

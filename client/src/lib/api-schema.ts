@@ -3767,7 +3767,7 @@ export interface components {
             proposed: components["schemas"]["TrainingPlanDto"];
         };
         /** @enum {unknown} */
-        LifeSituation: "MissedRun" | "ShortOnTime" | "Travelling" | "Unwell" | "MoveLongRun";
+        LifeSituation: "MissedRun" | "ShortOnTime" | "Travelling" | "Unwell" | "MoveLongRun" | "MoveRun";
         /** @enum {unknown} */
         LoadSignal: "NotEnoughHistory" | "Lower" | "Steady" | "Rising" | "RisingFast";
         LoadTrend: {

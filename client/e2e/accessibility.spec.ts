@@ -30,7 +30,7 @@ for (const scheme of ['dark', 'light'] as const) for (const width of [320, 768, 
     for (const screen of ['home', 'builder', 'runs', 'account']) {
       await page.goto(`/e2e/fixtures/redesign-screens.html?screen=${screen}`)
       await page.getByRole('heading').first().waitFor()
-      if (screen === 'account') await page.getByRole('button', { name: 'Manage run connections' }).click()
+      if (screen === 'account') await openDisclosure(page, 'Connections & run sources')
       await scan(screen)
       if (screen === 'home') {
         await openDisclosure(page, /^Running insights/)

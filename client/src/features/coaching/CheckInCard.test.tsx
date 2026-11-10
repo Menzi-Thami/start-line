@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api-client'
@@ -6,6 +6,12 @@ import type { ActivitySummary, CheckIn, Session } from '../../lib/types'
 import { planFixture } from '../../test/server'
 import { CheckInCard } from './CheckInCard'
 import type { SessionCoach } from './useCheckIns'
+
+/**
+ * Opening the form moves focus to its first field one frame later. Typing before that frame can lose a keystroke to the
+ * focus jump (it did, now and then, in CI), so the tests wait for it the way a runner's hands do.
+ */
+const formSettled = () => act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
 
 // Tuesday 13 October's hill repeats, checked in on the Wednesday.
 const hills = planFixture.weeks[0]!.sessions.find((s) => s.type === 'Hills') as Session
@@ -122,6 +128,7 @@ describe('checking in on a run', () => {
   it('opens quick logging from Complete without saving until confirmed, and accepts time alone', async () => {
     const { user, save, onDone } = setup({ completion: true })
     await user.click(screen.getByRole('checkbox', { name: 'Complete' }))
+    await formSettled()
     expect(save).not.toHaveBeenCalled()
     await user.type(screen.getByLabelText('Minutes'), '42')
     await user.type(screen.getByLabelText('Seconds'), '10')
@@ -133,7 +140,8 @@ describe('checking in on a run', () => {
   it('can complete without inventing a finish time', async () => {
     const { user, save } = setup({ completion: true })
     await user.click(screen.getByRole('checkbox', { name: 'Complete' }))
-    await user.click(screen.getByRole('button', { name: 'Complete without details' }))
+    await formSettled()
+    await user.click(screen.getByRole('button', { name: 'Done, as planned' }))
     expect(save).toHaveBeenCalledWith(hills, { status: 'Done', effort: null, distanceUnreported: false })
   })
 
@@ -160,6 +168,7 @@ describe('checking in on a run', () => {
     const { user, save, onDone } = setup({ completion: true })
     save.mockRejectedValueOnce(new Error('Try again'))
     await user.click(screen.getByRole('checkbox', { name: 'Complete' }))
+    await formSettled()
     await user.type(screen.getByLabelText('Minutes'), '42')
     await user.click(saveButton())
     expect(await screen.findByRole('alert')).toHaveTextContent('Try again')

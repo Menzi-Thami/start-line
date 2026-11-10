@@ -8,11 +8,12 @@
 #
 # It's a separate workflow (not a step in the deploy) so it runs from main as it is after the release merge, including
 # the release that first brings it to main.
-name: announce
+name: Ops - Release email
 
 on:
   workflow_run:
-    workflows: [release, deploy]
+    # By the names shown in Actions. The old names stay listed so the release that brings the new names to main still counts.
+    workflows: ["3 - Release to production", "Ops - Redeploy production", release, deploy]
     types: [completed]
     branches: [main]
   workflow_dispatch:

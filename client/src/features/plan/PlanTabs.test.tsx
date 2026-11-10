@@ -33,12 +33,12 @@ describe('plan navigation and progress clarity', () => {
     expect(screen.queryByRole('button', { name: 'Back to your first week' })).not.toBeInTheDocument()
   })
 
-  it('jumps to any week, with the first and race weeks named', async () => {
+  it('jumps to any week, with race week named', async () => {
     view()
     const user = userEvent.setup()
     const jump = screen.getByRole('combobox', { name: 'Jump to week' })
     const last = planFixture.weeks.length - 1
-    expect(screen.getByRole('option', { name: /· first week/ })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /^Week 1$/ })).toBeInTheDocument()
     expect(screen.getByRole('option', { name: /· race week/ })).toBeInTheDocument()
     await user.selectOptions(jump, String(last))
     expect(screen.getByRole('heading', { name: /Race week|Week d+ of d+/ })).toBeInTheDocument()

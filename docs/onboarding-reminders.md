@@ -74,7 +74,8 @@ Brevo's free plan allows **300 emails a day**, shared by everything Taperday sen
 | Setting | Default | |
 |---|---|---|
 | `OnboardingReminder__Enabled` | `false` | Sends to runners who are due one |
-| `OnboardingReminder__TestTo` | empty | Sends one made-up preview of each of the three emails to this address at startup. **Clear it after**, or every restart sends three more |
+| `OnboardingReminder__Welcome` | `true` | With the above on, also sends "Welcome to Taperday" to each new account in its first two days, once |
+| `OnboardingReminder__TestTo` | empty | Sends one made-up preview of each of the four emails to this address at startup. **Clear it after**, or every restart sends three more |
 | `OnboardingReminder__Every` | `00:30:00` | How often the worker runs |
 | `OnboardingReminder__MaxPerRun` | `5` | Per run |
 | `OnboardingReminder__DailyLimit` | `40` | Onboarding emails in any 24 hours |
@@ -98,7 +99,7 @@ Logs carry **counts and ids only, never personal data**: no names, addresses or 
 ## Rolling it out
 
 1. **Merge and deploy.** The migration creates the empty table. Nothing is sent: `Enabled` is off.
-2. **Preview.** Set `OnboardingReminder__TestTo` (this restarts the app and sends three `[Test]` emails). Check them in Gmail, Outlook and on a phone, light and dark, then **clear the setting**.
+2. **Preview.** Set `OnboardingReminder__TestTo` (this restarts the app and sends four `[Test]` emails). Check them in Gmail, Outlook and on a phone, light and dark, then **clear the setting**.
 3. **Check the quota.** Count runners with the weekly recap on, and confirm today's sends leave room. Lower `DailyLimit` for a gentler start if needed.
 4. **Switch it on.** This is the manual enable step: set `OnboardingReminder__Enabled=true`. The first run sends at most 5; older signups follow at up to 40 a day.
 5. **Watch** the log lines above and the `OnboardingDeliveries` table for the first few days. To stop at once, set `Enabled=false`. The claims stay, so turning it back on never repeats an email.

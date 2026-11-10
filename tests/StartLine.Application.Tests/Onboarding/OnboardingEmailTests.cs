@@ -13,6 +13,7 @@ public sealed class OnboardingEmailTests
     [InlineData(OnboardingCampaign.StartPlan, "Your starting line is waiting", "https://taperday.run/?view=build", "Build my training plan")]
     [InlineData(OnboardingCampaign.FirstRun, "Your first run is waiting", "https://taperday.run/?view=home", "Open my plan")]
     [InlineData(OnboardingCampaign.ReturnToRunning, "Ready when you are", "https://taperday.run/?view=home", "Pick up my plan")]
+    [InlineData(OnboardingCampaign.Welcome, "Welcome to Taperday", "https://taperday.run/?view=home", "Open Taperday")]
     public void Each_email_greets_by_first_name_links_to_the_app_and_unsubscribes_from_updates_only(OnboardingCampaign campaign, string subject, string link, string button)
     {
         var mail = OnboardingEmail.Compose("naledi@example.com", campaign, "Naledi Dlamini", Links);

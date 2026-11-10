@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { LoggedRun, TrainingPlan } from '../../lib/types'
 import { fuelling, heartRateZones, splits } from './calculator-math'
-import { change, todayInPlan, trainingTotals, weeklyBars } from './home-math'
+import { change, todayInPlan, trainingTotals, weeklyBars, weekStreak } from './home-math'
 
 // Current display rows are resolved and deduplicated by the server; Strava contributions remain temporary.
 const run = (date: string, distanceKm: number, source: LoggedRun['source'] = 'Uploaded'): LoggedRun => ({ date, distanceKm, source })
@@ -143,5 +143,18 @@ describe('the calculators', () => {
     expect(half.gels).toEqual([2, 5])
 
     expect(fuelling(4.5 * 3600).perHour).toEqual([60, 90])
+  })
+})
+
+describe('week streak', () => {
+  const bars = (...km: number[]) => km.map((value, i) => ({ weekStart: `w${i}`, km: value, plannedKm: null }))
+
+  it('counts weeks in a row with a run, and a week only just started does not break it', () => {
+    expect(weekStreak(bars(0, 5, 8, 6))).toBe(3)
+    // Monday morning: nothing run yet this week, so the streak still stands at last week's count.
+    expect(weekStreak(bars(4, 0, 5, 8, 0))).toBe(2)
+    expect(weekStreak(bars(5, 0, 0))).toBe(0)
+    expect(weekStreak(bars(3, 3, 3))).toBe(3)
+    expect(weekStreak([])).toBe(0)
   })
 })

@@ -125,7 +125,7 @@ describe('my runs', () => {
     const db = runsApi()
     const user = renderApp()
     await user.click(await screen.findByRole('button', { name: 'Runs' }))
-    expect(await screen.findByText(/No imported runs yet/)).toBeInTheDocument()
+    expect(await screen.findByText(/Connect Strava in Account, or add a run from your watch/)).toBeInTheDocument()
 
     await openDisclosure('Add runs from a file')
     await user.upload(screen.getByLabelText('Upload runs'), fitFile())
@@ -339,7 +339,7 @@ describe('a run', () => {
     await user.click(await screen.findByRole('button', { name: 'Delete run' }))
     await user.click(screen.getByRole('button', { name: 'Yes, delete this run' }))
 
-    expect(await screen.findByText(/No imported runs yet/)).toBeInTheDocument()
+    expect(await screen.findByText(/Connect Strava in Account, or add a run from your watch/)).toBeInTheDocument()
     expect(db.runs).toHaveLength(0)
   })
 

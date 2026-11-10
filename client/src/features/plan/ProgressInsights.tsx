@@ -54,7 +54,7 @@ export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, 
   return <section className="progress-insights" aria-label="Training progress">
     <div className="progress-period" role="group" aria-label="Progress period">{[4, 8, 12].map(value => <button type="button" className="chip-button" key={value} aria-pressed={period === value} onClick={() => choosePeriod(value)}>{value} weeks</button>)}</div>
     <dl className="progress-summary" aria-label="Progress summary">
-      <div><dt>Planned</dt><dd><strong>{formatDistance(totals.plannedKm, units)}</strong><span>{upcoming ? 'Your plan hasn’t started yet.' : `In these ${period} weeks of your plan.`}</span></dd></div>
+      <div><dt>Planned</dt><dd><strong>{formatDistance(totals.plannedKm, units)}</strong><span>{upcoming ? 'Your plan hasn’t started yet.' : visibleWeeks.length === 1 ? 'In the first week of your plan.' : `In these ${visibleWeeks.length} weeks of your plan.`}</span></dd></div>
       <div><dt>You ran</dt><dd><strong>{totals.recordedKm === null ? '—' : formatDistance(totals.recordedKm, units)}</strong><span>{totals.recordedKm === null ? 'Log or sync a run and it shows here.' : `Across ${totals.recordedWeeks} of ${totals.elapsedWeeks} weeks so far.`}</span></dd></div>
     </dl>
     <section id={`${id}-distance`} className="panel progress-chart" aria-labelledby={`${id}-distance-heading`}>

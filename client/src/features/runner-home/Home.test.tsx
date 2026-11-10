@@ -597,3 +597,17 @@ describe('Completed via Strava', () => {
     expect(todayCard.querySelector('.home-done-chip')).toBeNull()
   })
 })
+
+it('leads with race week in the last seven days, with a way straight to the checklist', async () => {
+  const onOpenRacePrep = vi.fn()
+  const { user } = renderHome({ ...withPlan, today: '2026-12-09', onOpenRacePrep })
+  const raceWeek = screen.getByRole('region', { name: /4 days to Parkrun PB/ })
+  expect(within(raceWeek).getByText(/Checklist: 0 of 6 ready/)).toBeInTheDocument()
+  await user.click(within(raceWeek).getByRole('button', { name: 'Race-day checklist and pacing' }))
+  expect(onOpenRacePrep).toHaveBeenCalled()
+})
+
+it('keeps race week off Home until the last seven days', () => {
+  renderHome({ ...withPlan, today: '2026-10-20' })
+  expect(screen.queryByText('Race week')).not.toBeInTheDocument()
+})

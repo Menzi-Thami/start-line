@@ -15,7 +15,7 @@ flowchart LR
 
 | Step | What you do | What runs (name in the Actions tab) | How long |
 |---|---|---|---|
-| 1 | Open a pull request into `staging` | **1 - Checks** and **1 - Secret scan** | Up to 40 minutes; Playwright is the slow part |
+| 1 | Open a pull request into `staging` | **1 - Checks** and **1 - Secret scan** | About 10–15 minutes; Playwright runs in four parts side by side |
 | 2 | Merge the pull request once the checks are green | **2 - Deploy staging** deploys the staging site and smoke-checks it | About 5 minutes |
 | 3 | Try it on staging, then press the release button | **3 - Release to production** merges `staging` into `main`, deploys and smoke-checks taperday.run | About 5 minutes |
 
@@ -26,7 +26,7 @@ flowchart LR
 ## Rules
 
 1. **Pull requests go to `staging`, never to `main`.**
-2. **Merge only when all four checks are green:** `backend`, `frontend`, `end-to-end (Playwright)` and `gitleaks`.
+2. **Merge only when every check is green:** `backend`, `frontend`, the four `end-to-end (Playwright n/4)` parts and `gitleaks`.
 3. **Production changes only through the release button.** A push to `main` deploys nothing.
 4. **Keep database migrations additive.** They run before the new API starts: add columns and tables now, drop old ones in a later release.
 
@@ -64,6 +64,5 @@ The file names are older than the names shown in Actions. They stay as they are 
 ## Not set up yet
 
 - **Branch protection.** `main` and `staging` accept direct pushes today. Protecting them (Settings → Branches) would enforce rules 1 to 3 and let GitHub merge a pull request by itself when its checks pass.
-- **Faster checks.** Playwright runs on one machine. Splitting it across several would bring step 1 down to about 10 minutes.
 
 More detail on accounts, settings and Azure: [deploy.md](deploy.md). Tests: [testing.md](testing.md).

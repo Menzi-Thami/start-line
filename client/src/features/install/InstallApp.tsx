@@ -89,7 +89,7 @@ function Guide({ ios, onClose }: { ios: boolean; onClose: () => void }) {
  * One button wherever Taperday isn't on the home screen yet: it installs straight away where the browser allows (Android,
  * desktop Chrome and Edge), and opens the two-tap guide everywhere else.
  */
-function AddButton({ way, onInstalled, big = false }: { way: InstallWay; onInstalled?: () => void; big?: boolean }) {
+export function AddButton({ way, onInstalled, big = false, quiet = false }: { way: InstallWay; onInstalled?: () => void; big?: boolean; quiet?: boolean }) {
   const [busy, setBusy] = useState(false)
   const [guide, setGuide] = useState(false)
   if (way.kind === 'installed') return <p className="field-help">It’s on your home screen.</p>
@@ -106,7 +106,7 @@ function AddButton({ way, onInstalled, big = false }: { way: InstallWay; onInsta
   }
   return (
     <>
-      <button type="button" className={big ? 'button install-button' : 'button'} disabled={busy} onClick={add}>
+      <button type="button" className={big ? 'button install-button' : quiet ? 'button button-quiet' : 'button'} disabled={busy} onClick={add}>
         Add to home screen
       </button>
       {guide && <Guide ios={way.kind === 'ios'} onClose={() => setGuide(false)} />}

@@ -19,6 +19,25 @@ public sealed class LifeHappensTests
         []);
 
     [Fact]
+    public void Any_run_this_week_moves_to_any_free_day_this_week_even_next_to_a_hard_one()
+    {
+        var today = Monday;
+        // Tuesday's intervals: Wed, Fri and Sat are free, and Wed is next to nothing hard once Tuesday moves.
+        var offered = LifeHappens.Propose(Plan(), today, new(LifeSituation.MoveRun, Date: Monday.AddDays(1)), []);
+        offered.MoveTargets.ShouldBe([Monday.AddDays(2), Monday.AddDays(4), Monday.AddDays(5)]);
+
+        // Saturday sits beside Sunday's long run: allowed here (the app warns), unlike Move my long run.
+        var moved = LifeHappens.Propose(Plan(), today, new(LifeSituation.MoveRun, Date: Monday.AddDays(1), MoveTo: Monday.AddDays(5)), []);
+        var sessions = RemainingWeek.Apply(Plan(), moved.Changes).Weeks[0].Sessions;
+        sessions.ShouldContain(s => s.Date == Monday.AddDays(5) && s.Type == SessionType.Intervals && s.DistanceKm == 9);
+        sessions.ShouldNotContain(s => s.Date == Monday.AddDays(1));
+
+        Should.Throw<DomainException>(() => LifeHappens.Propose(Plan(), today, new(LifeSituation.MoveRun, Date: Monday.AddDays(1), MoveTo: Monday.AddDays(3)), []));
+        Should.Throw<DomainException>(() => LifeHappens.Propose(Plan(), today, new(LifeSituation.MoveRun, Date: Monday.AddDays(2)), []));
+        Should.Throw<DomainException>(() => LifeHappens.Propose(Plan(), Monday.AddDays(3), new(LifeSituation.MoveRun, Date: Monday.AddDays(1)), []));
+    }
+
+    [Fact]
     public void A_long_run_moves_only_to_a_free_day_with_no_hard_run_either_side_and_rests_its_old_day()
     {
         var today = Monday;

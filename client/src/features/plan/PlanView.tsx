@@ -124,6 +124,8 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const [preparationOpen, setPreparationOpen] = useState(preparationMode === 'race' || preparationMode === 'long')
   // "Plan tools" opens by itself for a link straight to race-day or long-run preparation.
   const [toolboxOpen, setToolboxOpen] = useState(preparationMode === 'race' || preparationMode === 'long')
+  // A run picked to move from its day: Plan tools opens on Life happens › Move a run, with that run chosen.
+  const [moveRequest, setMoveRequest] = useState<string | null>(null)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -392,7 +394,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
 
   return (
     <section className={`plan plan-on-${tab}${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
-      {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} /></Suspense>}
+      {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} onMove={coach?.adjustments?.life ? (moveDate) => { setMoveRequest(moveDate); setToolboxOpen(true); closeDay(); requestAnimationFrame(() => document.querySelector('.life-happens')?.scrollIntoView?.({ block: 'start' })) } : undefined} /></Suspense>}
       <div hidden={detailDate !== null}>
       {onBack && (
         <button type="button" className="plan-back" aria-label="Back to Home" onClick={onBack}>
@@ -575,7 +577,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         <summary>{preparationMode === 'long' ? 'Long-run preparation' : 'Race-day checklist & pacing'}</summary>
         <PreparationGuide plan={plan} units={units} mode={preparationMode} date={preparation?.date ?? preparationQuery.get('date')} />
       </details>
-      <LifeHappens plan={plan} today={today} units={units} actions={coach?.adjustments?.life} />
+      <LifeHappens key={moveRequest ?? 'life'} plan={plan} today={today} units={units} actions={coach?.adjustments?.life} moveDate={moveRequest} />
       <WorkoutExport plan={plan} units={units} />
       <details className="disclosure plan-options"><summary>Plan options</summary>
         <div className="plan-actions">

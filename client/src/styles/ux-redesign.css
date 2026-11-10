@@ -274,3 +274,10 @@
 .home-more > summary::-webkit-details-marker, .plan-toolbox > summary::-webkit-details-marker { display: none; }
 .home-more > summary { list-style: none; }
 .plan-toolbox > summary { list-style: none; }
+
+/* Goal step: three one-tap starting points under the wheels. */
+.goal-suggestions { margin-block: var(--space-4); }
+.goal-suggestion-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-block: var(--space-2); }
+.goal-suggestion.chip-button { display: grid; justify-items: center; gap: 2px; min-height: var(--tap); height: auto; padding: var(--space-3) var(--space-2); border-radius: var(--radius-md, 14px); white-space: normal; text-align: center; }
+.goal-suggestion strong { font-size: var(--text-lg, 1.125rem); }
+.goal-suggestion-label, .goal-suggestion-pace { font-size: var(--text-xs); font-weight: 500; opacity: .8; }

@@ -145,6 +145,15 @@ internal sealed partial class NotificationDeliverer(IApplicationDbContext db, IP
         try
         {
             var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), await CoachCalls.ForAsync(db, saved.Id, cancellationToken), saved.Adjustments);
+            if (delivery.Kind == NotificationKind.FirstRun)
+            {
+                // Still the plan's first run, and still tomorrow: a plan edited since it was queued says nothing stale.
+                if (Reminders.FirstRun(plan) is not { } first || first.Date != target) return null;
+                var units = await db.Runners.Where(r => r.Id == device.RunnerId).Select(r => r.Units).SingleAsync(cancellationToken);
+                var headsUp = Reminders.FirstRunHeadsUp(first, plan, units);
+                return new(headsUp.Title, headsUp.Body, ReminderRunner.OpensAt, tag);
+            }
+
             var sessions = plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date == target).ToList();
             if (delivery.Kind == NotificationKind.RacePreparation ? !sessions.Any(s => s.Type == SessionType.Race)
                 : !sessions.Any(s => s.Type is SessionType.LongRun or SessionType.LongRunFastFinish or SessionType.LongRunRacePace)) return null;

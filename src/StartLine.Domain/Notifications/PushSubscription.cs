@@ -177,6 +177,8 @@ public sealed class PushSubscription
         NotificationKind.ConnectionAlert => ConnectionAlerts,
         // The runner asked for this on the shoes themselves; every device they have allowed notifications on gets it.
         NotificationKind.ShoeMileage => true,
+        // One welcome, the evening before a new plan's first run: a device that allows notifications gets it.
+        NotificationKind.FirstRun => true,
         _ => false,
     };
 

@@ -117,6 +117,22 @@ public static class Reminders
             : new(day, "Recovery day", "No run scheduled today. Rest is part of your training. Let your body recover; there is no need to make up missed kilometres.");
     }
 
+    /// <summary>The plan's first run (strength alone is not a run), or null for a plan with none.</summary>
+    public static PlannedSession? FirstRun(TrainingPlan plan)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Type != SessionType.Strength).OrderBy(s => s.Date).FirstOrDefault();
+    }
+
+    /// <summary>The evening before the plan's first run: what it is, and that tonight is for getting ready.</summary>
+    public static Reminder FirstRunHeadsUp(PlannedSession first, TrainingPlan plan, Units units)
+    {
+        ArgumentNullException.ThrowIfNull(first);
+        ArgumentNullException.ThrowIfNull(plan);
+        return new Reminder(first.Date, "Your first run is tomorrow",
+            $"{first.Title}: {Measure(first, plan, units)}. Lay out your kit tonight and start easy. This is where your plan begins.");
+    }
+
     private static List<PlannedSession> RunsOn(TrainingPlan plan, DateOnly day) =>
         [.. plan.Weeks.SelectMany(w => w.Sessions).Where(s => s.Date == day && s.Type != SessionType.Strength)];
 

@@ -140,7 +140,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
     <article className="activity" aria-labelledby="activity-title">
       {back}
       <p className="plan-kicker" style={{ marginTop: 'var(--space-4)' }}>
-        {formatDate(run.localDate, 'long')} · {KIND_LABEL[run.kind]}
+        Run analysis · {formatDate(run.localDate, 'long')} · {KIND_LABEL[run.kind]}
       </p>
       <h2 className="plan-title" id="activity-title">
         {title}

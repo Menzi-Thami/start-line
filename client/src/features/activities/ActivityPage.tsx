@@ -46,6 +46,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
   const auth = useAuth()
   const tabId = useId()
   const [selectedTab, setSelectedTab] = useState<AnalysisTab>('Overview')
+  useEffect(() => setSelectedTab('Overview'), [id])
   const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial, checkedAt: Date.now() } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
   const [confirming, setConfirming] = useState(false)
@@ -167,7 +168,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       <div role="tabpanel" id={`${tabId}-panel-Overview`} aria-labelledby={`${tabId}-tab-Overview`} hidden={selectedTab !== 'Overview'} tabIndex={0}>
       <div className="ra-overview-grid"><div className="ra-overview-main">
       <RunSummaryHero run={run} units={units} />
-      {run.splits.length > 0 && <PaceSplitsVisual splits={run.splits} units={units} compact onViewAll={() => setSelectedTab('Splits')} />}
+      {run.splits.length > 0 && <PaceSplitsVisual splits={run.splits} units={units} compact onViewAll={() => { setSelectedTab('Splits'); document.getElementById(`${tabId}-tab-Splits`)?.focus() }} />}
       </div><div className="ra-overview-side">
       <PlanExecutionCard run={run} units={units} onOpenPlanDay={onOpenPlanDay} />
       {!run.plan && <section className="ra-card ra-unplanned"><h3>{verdict.headline}</h3>{verdict.details.map(line => <p key={line}>{line}</p>)}</section>}

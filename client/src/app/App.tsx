@@ -173,6 +173,7 @@ export function App() {
   // A landing visitor and a returning signed-in runner each get the full brand story once per tab.
   // A replay can be requested deliberately without resetting the runner's session.
   const [replayIntro, setReplayIntro] = useState(false)
+  const finishIntroReplay = useCallback(() => setReplayIntro(false), [])
   // Who just made the start list, while their celebration plays.
   const [celebrating, setCelebrating] = useState<string | null>(null)
   const finishCelebrating = useCallback(() => setCelebrating(null), [])
@@ -740,7 +741,7 @@ export function App() {
     <div className="page">
       <a className="skip-main" href="#main-content">Skip to main content</a>
       {introEligible && introAudience && (
-        <BrandIntroGate key={`${introAudience}:${replayIntro}`} audience={introAudience} forceReplay={replayIntro} onFinished={() => setReplayIntro(false)} />
+        <BrandIntroGate key={`${introAudience}:${replayIntro}`} audience={introAudience} forceReplay={replayIntro} onFinished={finishIntroReplay} />
       )}
       {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">

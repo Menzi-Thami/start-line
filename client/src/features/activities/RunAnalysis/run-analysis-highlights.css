@@ -31,3 +31,22 @@
 .ra-view-all{display:block;margin:1rem 0 0 auto;background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;min-height:44px}
 @media(max-width:480px){.ra-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.ra-plan-grid{grid-template-columns:1fr}.ra-coaching{border-left:0;border-top:1px solid var(--line-strong);padding:1rem 0 0}.ra-split-fill{font-size:.72rem}}
 @media(prefers-reduced-motion:reduce){.ra-split-fill{transition:none}}
+
+/* The approved Taperday stick-figure runner keeps its own existing sprint animation. */
+.ra-hero-runner{color:var(--accent);position:relative;z-index:1;display:flex;align-items:center;justify-content:center;width:8rem;height:7rem;filter:drop-shadow(0 0 14px var(--accent-soft))}
+.ra-hero-runner svg{max-width:100%;height:auto}
+.ra-overview-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:1rem;align-items:start}
+.ra-overview-main,.ra-overview-side{min-width:0}
+.ra-overview-grid .ra-hero,.ra-overview-grid .ra-card{margin-block:0 1rem}
+.ra-overview-grid .ra-hero{min-height:14rem}
+.activity .ra-splits{max-width:none}
+.activity .ra-plan{margin-block:0 1rem}
+@media(min-width:1024px){
+  .ra-overview-grid{grid-template-columns:minmax(0,1.55fr) minmax(19rem,1fr);gap:1.5rem}
+  .ra-overview-grid .ra-hero{min-height:20rem}
+}
+@media(max-width:479px){
+  .ra-hero-runner{width:5.8rem;height:5.8rem}
+  .ra-distance{font-size:clamp(2.6rem,12vw,4rem)}
+  .ra-metrics dd{font-size:1.15rem}
+}

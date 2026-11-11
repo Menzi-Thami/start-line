@@ -23,7 +23,7 @@ for (const scheme of ['dark', 'light'] as const) {
         await expect(page.getByRole('tabpanel', { name: tab })).toBeVisible()
         expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${tab} overflow in ${scheme} at ${width}px`).toBeLessThanOrEqual(1)
         await page.screenshot({
-          path: testInfo.outputPath(`run-analysis-${scheme}-${width}-${tab.toLowerCase()}.png`),
+          path: testInfo.outputPath(`analysis-run-${scheme}-${width}-${tab.toLowerCase()}.png`),
           fullPage: true,
           animations: 'disabled',
         })

@@ -738,7 +738,7 @@ export function App() {
     <div className="page">
       <a className="skip-main" href="#main-content">Skip to main content</a>
       {introEligible && introAudience && (
-        <BrandIntroGate key={introAudience} audience={introAudience} />
+        <BrandIntroGate key={introAudience} audience={introAudience} onFinished={() => {}} />
       )}
       {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">

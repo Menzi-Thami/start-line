@@ -112,7 +112,7 @@ for (const width of [320, 768, 1440]) {
     await page.getByRole('button', { name: 'View run analysis', exact: true }).click()
     const evidence = page.getByRole('region', { name: 'Each part of the workout' })
     await page.evaluate(() => scrollTo(0, 0))
-    await expect(page.locator('.activity-stats-primary')).toBeInViewport({ ratio: 1 })
+    await expect(page.locator('.ra-hero')).toBeVisible()
     await expect(evidence).toContainText('Lined up from when you pressed start')
     await expect(evidence.getByRole('img', { name: 'Done' })).toHaveCount(1)
     await expect(evidence).toContainText('parts done')

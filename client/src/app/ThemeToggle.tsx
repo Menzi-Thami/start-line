@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { chooseTheme, currentTheme, themeChoosable, type Theme } from '../lib/theme'
+import { chooseTheme, currentTheme, type Theme } from '../lib/theme'
 
-/** The website's light/dark switch. The installed app has none: it follows the phone. */
+/** Light/dark switch for both website and installed app. */
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(currentTheme)
-  if (!themeChoosable()) return null
   const dark = theme === 'dark'
 
   const toggle = () => {

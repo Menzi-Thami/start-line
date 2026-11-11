@@ -170,10 +170,7 @@ export function App() {
   // A plan that has just arrived from the API reveals its parts in turn; one opened from the device's copy is simply there.
   const [revealPlan, setRevealPlan] = useState(false)
   const [freshBuild, setFreshBuild] = useState(false)
-  // A landing visitor and a returning signed-in runner each get the full brand story once per tab.
-  // A replay can be requested deliberately without resetting the runner's session.
-  const [replayIntro, setReplayIntro] = useState(false)
-  const finishIntroReplay = useCallback(() => setReplayIntro(false), [])
+  // A landing visitor and a returning signed-in runner get the brand story on their first entry.
   // Who just made the start list, while their celebration plays.
   const [celebrating, setCelebrating] = useState<string | null>(null)
   const finishCelebrating = useCallback(() => setCelebrating(null), [])
@@ -741,7 +738,7 @@ export function App() {
     <div className="page">
       <a className="skip-main" href="#main-content">Skip to main content</a>
       {introEligible && introAudience && (
-        <BrandIntroGate key={`${introAudience}:${replayIntro}`} audience={introAudience} forceReplay={replayIntro} onFinished={finishIntroReplay} />
+        <BrandIntroGate key={introAudience} audience={introAudience} onFinished={() => {}} />
       )}
       {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">
@@ -779,11 +776,7 @@ export function App() {
             )}
           </nav>
         )}
-        {view === 'home' && introAudience === 'member' && (
-          <button type="button" className="button button-quiet brand-replay-header" onClick={() => setReplayIntro(true)} aria-label="Replay the starting-line film">
-            <span aria-hidden="true">↻</span><span className="brand-replay-label"> Replay intro</span>
-          </button>
-        )}
+
         <ThemeToggle />
       </header>
 
@@ -1010,7 +1003,7 @@ export function App() {
                       }
                       onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                     />
-                    <button type="button" className="button button-quiet race-intro-replay" onClick={() => setReplayIntro(true)}>↻ Replay the starting-line film</button>
+                    
                     <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
                   </>
                 )}

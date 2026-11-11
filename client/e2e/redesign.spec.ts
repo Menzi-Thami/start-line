@@ -43,7 +43,7 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     await page.keyboard.press('ArrowRight')
     const pacing = page.getByRole('tabpanel', { name: 'Splits' })
     await expect(pacing).toBeVisible()
-    await pacing.getByRole('button', { name: /Kilometre 2, pace/ }).click()
+    await pacing.getByRole('button', { name: /Kilometre 2.*pace/ }).click()
     await expect(pacing).toContainText('moving')
     await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `pacing-after-${width}.png`), fullPage: true })
     await page.getByRole('tab', { name: 'Splits', exact: true }).focus()

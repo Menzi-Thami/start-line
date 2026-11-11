@@ -46,7 +46,6 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
   const auth = useAuth()
   const tabId = useId()
   const [selectedTab, setSelectedTab] = useState<AnalysisTab>('Overview')
-  useEffect(() => setSelectedTab('Overview'), [id])
   const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial, checkedAt: Date.now() } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
   const [confirming, setConfirming] = useState(false)

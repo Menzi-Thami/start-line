@@ -63,6 +63,8 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
   const nextMonday = new Date(thisMonday.getTime() + 7 * 86_400_000).toISOString().slice(0, 10)
   const movable = date >= today && date < nextMonday
   const historyReady = canCompleteRuns
+  const hasRecordedRun = !future && dayRuns.length > 0
+  const primaryRun = hasRecordedRun && dayRuns.length === 1 ? dayRuns[0] : undefined
 
   const close = () => {
     onClose()
@@ -102,12 +104,17 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
   }
 
   return (
-    <section id={panelId} ref={panelRef} className={`day-summary${dedicated ? ' day-detail-page' : ''}`} aria-labelledby={`${id}-title`}>
+    <section id={panelId} ref={panelRef} className={`day-summary${dedicated ? ' day-detail-page' : ''}${hasRecordedRun ? ' day-has-recording' : ''}`} aria-labelledby={`${id}-title`}>
       {dedicated && <button type="button" className="button button-quiet" onClick={close}>← Back to plan</button>}
       <div className="day-summary-head">
         <h3 id={`${id}-title`} ref={headingRef} tabIndex={-1} aria-label={formatDate(date, 'long')}>{formatDate(date, 'weekday')} · {formatDate(date, 'dayMonth')}</h3>
         <button type="button" className="day-summary-close" aria-label="Close day" onClick={() => close()}>×</button>
       </div>
+      {dedicated && primaryRun && onOpenRun && <div className="day-run-analysis-first">
+        <p className="wait-tip-label">Your recorded run</p>
+        <p className="mono">{formatDistance(primaryRun.distanceKm, units)} · {formatDuration(primaryRun.movingSeconds)}{primaryRun.distanceKm > 0 && primaryRun.movingSeconds > 0 ? ` · ${formatPace(primaryRun.movingSeconds / primaryRun.distanceKm, units)}` : ''}</p>
+        <button type="button" className="button button-primary" onClick={() => openRun(primaryRun.id)}>View run analysis →</button>
+      </div>}
       <div className="day-summary-columns">
         <section aria-labelledby={`${id}-planned`} className="day-summary-section">
           <h4 id={`${id}-planned`}>Planned</h4>
@@ -127,7 +134,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
                 <p className="mono">{formatDistance(session.distanceKm, units)}{pace ? ` · ${formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}` : ''}</p>
                 <RunWalkChip runWalk={session.runWalk} />
                 <p className="day-summary-status">{!historyReady ? 'Completion history unavailable' : entry?.status === 'Skipped' ? 'Skipped' : entry?.status === 'CutShort' ? 'Cut short' : viaStrava ? 'Activity recorded via Strava · provisional' : complete ? 'Completed' : future ? 'Upcoming' : date === today ? 'Scheduled today' : 'No completion recorded'}</p>
-                <details className="session-more" open={dedicated || undefined}><summary>How to run it</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
+                <details className="session-more" key={`${sessionKey(session)}:${complete || viaStrava || !!entry ? 'finished' : 'pending'}`} open={dedicated && !hasRecordedRun && !complete && !viaStrava && !entry ? true : undefined}><summary>{complete || viaStrava || hasRecordedRun || (entry && entry.status !== 'Skipped') ? 'Review planned workout' : 'How to run it'}</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
                 {historyReady && coach && <StravaCompletion session={session} coach={coach} />}
                 {onMove && movable && historyReady && !entry && !complete && session.type !== 'Race' && <button type="button" className="link-button day-move" onClick={() => onMove(session.date)}>Move this run</button>}
                 {historyReady && coach && (!entry || entry.status === 'Skipped') && session.type !== 'Race' && <CheckInCard session={session} coach={coach} runs={dayRuns} completion compactActions done={complete && !viaStrava} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}

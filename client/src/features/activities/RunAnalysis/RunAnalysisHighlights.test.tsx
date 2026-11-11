@@ -39,13 +39,13 @@ describe('post-run analysis highlights', () => {
       { ...run.splits[0]!, number: 3, distanceKm: 0.35, movingSeconds: 80, paceSecondsPerKm: 228 },
     ] satisfies Split[]
     render(<PaceSplitsVisual splits={splits} units="km" />)
-    const fast = screen.getByRole('button', { name: /Kilometre 2, pace/ })
+    const fast = screen.getByRole('button', { name: /Kilometre 2.*pace/ })
     expect(fast.className).toContain('ra-split-best')
     expect(screen.getByText(/Fastest: KM 2/)).toBeInTheDocument()
     await user.click(fast)
     expect(fast).toHaveAttribute('aria-expanded', 'true')
     expect(within(screen.getByRole('region', { name: 'Your pace splits' })).getByText(/1\.00 km/)).toBeInTheDocument()
-    const partial = screen.getByRole('button', { name: /Kilometre 3, pace.*partial split/ })
+    const partial = screen.getByRole('button', { name: /Kilometre 0\\.35.*pace.*partial split/ })
     expect(partial.className).not.toContain('ra-split-best')
   })
 

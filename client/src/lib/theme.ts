@@ -1,7 +1,5 @@
-import { runningInstalled } from './install-app'
-
-// Light or dark. On the website a runner can choose, and the choice is remembered on this device; the installed app
-// always follows the phone's own setting. With no choice made, the site follows the device too (tokens.css).
+// Light or dark. Both the website and installed PWA respect the runner's saved choice;
+// without a choice, follow the device (tokens.css).
 export type Theme = 'light' | 'dark'
 
 const THEME_KEY = 'taperday:theme'
@@ -20,14 +18,9 @@ function deviceTheme(): Theme {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-/** Whether this page offers the light/dark switch: the website does; the installed app follows the phone. */
-export function themeChoosable(): boolean {
-  return !runningInstalled()
-}
-
 /** The theme the page shows now. */
 export function currentTheme(): Theme {
-  return (themeChoosable() && stored()) || deviceTheme()
+  return stored() || deviceTheme()
 }
 
 function apply(theme: Theme | null) {
@@ -40,9 +33,9 @@ function apply(theme: Theme | null) {
   }
 }
 
-/** Applies the remembered choice before the first paint; the installed app ignores it. */
+/** Applies the remembered choice before the first paint on both web and PWA. */
 export function applyStoredTheme(): void {
-  apply(themeChoosable() ? stored() : null)
+  apply(stored())
 }
 
 /** Remembers the runner's choice on this device and shows it. */

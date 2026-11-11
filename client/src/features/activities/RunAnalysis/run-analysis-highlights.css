@@ -41,7 +41,8 @@
 .ra-overview-grid .ra-hero{min-height:14rem}
 .activity .ra-splits{max-width:none}
 .activity .ra-plan{margin-block:0 1rem}
-@media(min-width:1024px){
+/* Respond to the run pane width, not the browser width: Runs can embed this beside the journal. */
+@container (min-width:48rem){
   .ra-overview-grid{grid-template-columns:minmax(0,1.55fr) minmax(19rem,1fr);gap:1.5rem}
   .ra-overview-grid .ra-hero{min-height:20rem}
 }

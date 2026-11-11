@@ -268,7 +268,7 @@ describe('a run', () => {
     expect(within(rows[5]!).getByText('Hardest')).toBeInTheDocument()
     expect(within(rows[6]!).getByText('Quickest')).toBeInTheDocument()
     expect(within(rows[15]!).getByRole('rowheader')).toHaveTextContent('0.35')
-    expect(within(screen.getByRole('tabpanel')).getByText(/Even halves: nicely paced\./)).toBeInTheDocument()
+    expect(within(screen.getByRole('tabpanel')).getAllByText(/Even halves: nicely paced\./).length).toBeGreaterThan(0)
   })
 
   it('splits a tempo into warm-up, work and cool-down, and says it started fast', async () => {

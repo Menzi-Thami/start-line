@@ -50,3 +50,10 @@
   .ra-distance{font-size:clamp(2.6rem,12vw,4rem)}
   .ra-metrics dd{font-size:1.15rem}
 }
+
+/* Once-only, nonblocking motion; the existing runner-sprint remains the brand animation. */
+@keyframes ra-rise{from{opacity:.65;transform:translateY(.4rem)}to{opacity:1;transform:translateY(0)}}
+@keyframes ra-split-reveal{from{transform:scaleX(.15)}to{transform:scaleX(1)}}
+.ra-hero{animation:ra-rise var(--dur-page) var(--ease-out) both}
+.ra-split-fill{transform-origin:left center;animation:ra-split-reveal var(--dur-fill) var(--ease-fill) both}
+@media(prefers-reduced-motion:reduce){.ra-hero,.ra-split-fill{animation:none!important;transition:none!important}}

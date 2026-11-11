@@ -238,6 +238,36 @@
   .plan-builder-flow :is(.choice, .race-search-result) { border-radius: var(--radius-sm); }
 }
 
+/* Sign-in and public welcome: preserve their existing art and content,
+   but share the same card edges, rhythm and touch targets. */
+.sign-in-landing-card {
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  border-color: var(--line);
+  padding: clamp(1.2rem, 3.5vw, 2.25rem);
+}
+.sign-in-landing :is(.sign-in-eyebrow, .sign-in-lede) {
+  line-height: 1.5;
+}
+.sign-in-landing .sign-in-actions {
+  gap: var(--space-3);
+}
+.sign-in-landing .sign-in-actions .button { min-height: 48px; }
+.intro.hero { gap: clamp(1rem, 3vw, 2rem); }
+.intro.hero .hero-copy h1 {
+  text-wrap: balance;
+}
+.intro.hero .hero-actions .button-primary { min-height: 54px; }
+.intro.hero .landing-benefits { min-width: 0; }
+
+/* A workout day is still part of the polished runner journey. */
+.day-summary.day-detail-page :is(.day-summary-columns, .day-summary-head) {
+  min-width: 0;
+}
+.day-summary.day-detail-page :is(.panel, .section) {
+  border-radius: var(--studio-card-radius, var(--radius-md));
+}
+
 /* 7. Product navigation: keep the approved five destinations and their
    interaction state. This changes only polish, not placement or identity. */
 @media (max-width: 63.99rem) {

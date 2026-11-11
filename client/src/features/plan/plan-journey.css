@@ -53,3 +53,11 @@
   .plan .week-navigation-current { order: -1; flex-basis: 100%; }
   .plan .week-navigation .button { flex: 1 1 0; }
 }
+
+/* Recorded work takes priority over the prescription on the dedicated day screen. */
+.plan .day-run-analysis-first { margin-block: 1rem; padding: clamp(1rem, 2vw, 1.5rem); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.plan .day-run-analysis-first .mono { margin-block: .5rem 1rem; }
+.plan .day-run-analysis-first .button { min-height: 44px; }
+@media (max-width: 767px) {
+  .plan .day-detail-page.day-has-recording .day-summary-section:nth-child(2) { order: -1; }
+}

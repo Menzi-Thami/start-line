@@ -239,6 +239,9 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
         <PaceSplitsVisual splits={run.splits} units={units} />
         <p className="field-help">{halvesSummary(run.halves, units)}</p>
+        <details className="ra-evidence"><summary>Detailed zone and split evidence</summary>
+          <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
+        </details>
       </div>}
       {run.splits.length === 0 && <p className="field-help activity-tabs-note">{run.heartRate ? 'This recording has no kilometre splits, so there’s no Splits tab.' : 'This recording has no kilometre splits or heart rate, so there are no Charts or Splits tabs.'}</p>}
 

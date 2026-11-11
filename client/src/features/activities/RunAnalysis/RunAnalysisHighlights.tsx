@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Runner } from '../../shared/Runner'
 import { formatDistance, formatDuration, formatPace, type Units } from '../../../lib/format'
 import type { Activity, Split } from '../../../lib/types'
 import { actualLine, distanceDifference, plannedLine, runVerdict } from '../activity-copy'
@@ -10,7 +11,7 @@ export function RunSummaryHero({ run, units }: { run: Activity; units: Units }) 
     <section className="ra-hero" aria-label="Run summary">
       <div className="ra-hero-top">
         <span className="ra-completed">✓ Run recorded</span>
-        <span className="ra-hero-mark" aria-hidden="true">↗</span>
+        <div className="ra-hero-runner"><Runner pose="sprint" size={104} /></div>
       </div>
       <div className="ra-distance">{formatDistance(run.distanceKm, units)}</div>
       <dl className="ra-metrics">
@@ -76,7 +77,7 @@ export function PaceSplitsVisual({ splits, units, compact = false, onViewAll }: 
       <div className="ra-splits-label" aria-hidden="true"><span>KM</span><span>Pace ({units === 'mi' ? '/mi' : '/km'})</span></div>
       <div className="ra-split-list">
         {visible.map(split => {
-          const fastestFull = fastest?.number === split.number
+          const fastestFull = fastest === split
           const width = Math.max(18, Math.min(100, (1 / split.paceSecondsPerKm) / maxSpeed * 100))
           const partial = split.distanceKm < 0.995
           return (

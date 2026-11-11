@@ -225,7 +225,6 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
           {run.elevationGainMetres != null && <Stat label="Elevation gain" value={run.elevationGainMetres + ' m'} />}
           <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />
         </dl>
-        <details className="disclosure"><summary>Detailed split evidence</summary><Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /></details>
         {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
         {execution && <p>{execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} parts of the workout done. Changed the session on purpose? Say so in your check-in.</p>}
         <p className="field-help">Based on what your run recorded and your plan’s targets. It’s a guide: your check-in is what counts.</p>

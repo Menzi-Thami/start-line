@@ -275,6 +275,7 @@ describe('a run', () => {
     runsApi([tempo])
     renderApp(`/?view=runs&run=${tempo.id}`)
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     expect(await screen.findByRole('heading', { name: 'Tempo run started 14 s/km fast, then settled into range.' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Splits' }))
     await userEvent.click(screen.getByText('Detailed zone and split evidence'))

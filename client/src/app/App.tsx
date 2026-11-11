@@ -33,7 +33,7 @@ import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../fe
 import { MOVIE_MS } from '../features/builder/plan-theatre'
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { SignInLanding } from '../features/home/SignInLanding'
-import { RaceStartIntro } from '../features/home/RaceStartIntro'
+import { BrandIntroGate } from '../features/home/BrandIntroGate'
 import { PlanView } from '../features/plan/PlanView'
 import { Replan } from '../features/plan/Replan'
 import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
@@ -43,7 +43,7 @@ import { calendarLinks, personalCalendarLinks } from '../lib/calendar-links'
 import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/home-snapshot'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
-import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
+import { prefersMotion, type IntroAudience } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
 import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
@@ -170,9 +170,9 @@ export function App() {
   // A plan that has just arrived from the API reveals its parts in turn; one opened from the device's copy is simply there.
   const [revealPlan, setRevealPlan] = useState(false)
   const [freshBuild, setFreshBuild] = useState(false)
-  // The starting-gun intro: once per visit, only when landing on the builder, never for reduced motion.
-  const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen())
-  const finishIntro = useCallback(() => setPlayIntro(false), [])
+  // A landing visitor and a returning signed-in runner each get the full brand story once per tab.
+  // A replay can be requested deliberately without resetting the runner's session.
+  const [replayIntro, setReplayIntro] = useState(false)
   // Who just made the start list, while their celebration plays.
   const [celebrating, setCelebrating] = useState<string | null>(null)
   const finishCelebrating = useCallback(() => setCelebrating(null), [])
@@ -282,10 +282,6 @@ export function App() {
     setEditing(false)
     window.scrollTo?.({ top: 0 })
   }
-
-  useEffect(() => {
-    if (playIntro) markIntroSeen()
-  }, [playIntro])
 
   // The runner's runs (uploaded and synced), bests and Strava status, shown inside the plan. Loaded when the plan
   // view opens, so a new upload or a run that just arrived from Strava appears.
@@ -735,10 +731,17 @@ export function App() {
   // (to download or delete instead) stay open.
   const gated = state.kind === 'ready' && state.runner.needsPrivacyConsent && view !== 'privacy' && view !== 'account' && view !== 'unsubscribe'
 
+  const introAudience: IntroAudience | null = auth.enabled && auth.loading ? null : auth.account ? 'member' : 'public'
+  // Do not block explicit deep links to plans, account, policy or a run. The sign-in journey
+  // reaches Home after authentication and then receives its own member-specific intro.
+  const introEligible = !initial && (introAudience === 'member' ? (view === 'home' || view === 'build') : view === 'build')
+
   return (
     <div className="page">
       <a className="skip-main" href="#main-content">Skip to main content</a>
-      {playIntro && <RaceStartIntro onDone={finishIntro} />}
+      {introEligible && introAudience && (
+        <BrandIntroGate key={`${introAudience}:${replayIntro}`} audience={introAudience} forceReplay={replayIntro} onFinished={() => setReplayIntro(false)} />
+      )}
       {celebrating !== null && <StartListCelebration name={celebrating} onDone={finishCelebrating} />}
       <header className="masthead">
         <button type="button" className="wordmark wordmark-button" onClick={goHome}>
@@ -774,6 +777,11 @@ export function App() {
               </button>
             )}
           </nav>
+        )}
+        {view === 'home' && introAudience === 'member' && (
+          <button type="button" className="button button-quiet brand-replay-header" onClick={() => setReplayIntro(true)} aria-label="Replay the starting-line film">
+            <span aria-hidden="true">↻</span><span className="brand-replay-label"> Replay intro</span>
+          </button>
         )}
         <ThemeToggle />
       </header>
@@ -1001,7 +1009,7 @@ export function App() {
                       }
                       onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                     />
-                    <button type="button" className="button button-quiet race-intro-replay" onClick={() => setPlayIntro(true)}>↻ Replay the starting-line film</button>
+                    <button type="button" className="button button-quiet race-intro-replay" onClick={() => setReplayIntro(true)}>↻ Replay the starting-line film</button>
                     <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
                   </>
                 )}

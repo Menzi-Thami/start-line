@@ -52,7 +52,7 @@ for (const scheme of ['dark', 'light'] as const) for (const width of [320, 768, 
     await page.getByRole('button', { name: /Open day details/ }).click()
     await scan('day')
     await page.getByRole('button', { name: 'View run analysis', exact: true }).click()
-    for (const name of ['Overview', 'Pacing', 'Coach', 'Splits']) {
+    for (const name of ['Overview', 'Splits', 'Charts', 'Details']) {
       await page.getByRole('tab', { name, exact: true }).click()
       await scan(`run-${name.toLowerCase()}`)
     }

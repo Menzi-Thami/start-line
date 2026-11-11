@@ -170,6 +170,24 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       {run.splits.length > 0 && <PaceSplitsVisual splits={run.splits} units={units} compact onViewAll={() => setSelectedTab('Splits')} />}
       </div><div className="ra-overview-side">
       <PlanExecutionCard run={run} units={units} onOpenPlanDay={onOpenPlanDay} />
+      {!run.plan && <section className="ra-card ra-unplanned"><h3>{verdict.headline}</h3>{verdict.details.map(line => <p key={line}>{line}</p>)}</section>}
+
+
+      <WorkoutStages execution={execution} units={units} />
+      </div></div>
+      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
+
+
+      </div>
+      {tabs.includes('Charts') && <div role="tabpanel" id={`${tabId}-panel-Charts`} aria-labelledby={`${tabId}-tab-Charts`} hidden={selectedTab !== 'Charts'} tabIndex={0}>
+        <h3>Charts and pacing</h3>
+        <PaceProfile splits={run.splits} plan={run.plan} units={units} />
+        <p>{halvesSummary(run.halves, units) || 'Pacing comparison is unavailable for this run.'}</p>
+        <p className="field-help">Kilometre splits describe recorded pace. They cannot confirm precise interval or recovery completion.</p>
+        {run.heartRate ? <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /> : <p>Heart-rate analysis is unavailable for this run.</p>}
+      </div>}
+      <div role="tabpanel" id={`${tabId}-panel-Details`} aria-labelledby={`${tabId}-tab-Details`} hidden={selectedTab !== 'Details'} tabIndex={0}>
+        <h3>Details and coaching</h3>
       <section className="panel verdict" aria-labelledby="verdict-title" data-pace={run.plan?.pace ?? 'Unplanned'}>
         <h3 id="verdict-title" className="verdict-headline">
           {verdict.headline}
@@ -194,29 +212,6 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         )}
         {verdict.next && <p className="verdict-next">{verdict.next}</p>}
       </section>
-
-      <WorkoutStages execution={execution} units={units} />
-      </div></div>
-      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
-      <details className="activity-more-stats"><summary>More run statistics</summary><dl className="activity-stats activity-stats-secondary">
-        {run.elevationGainMetres != null && <Stat label="Elevation gain" value={`${run.elevationGainMetres} m`} />}
-        {run.averageHeartRate != null && <Stat label="Avg heart rate" value={`${run.averageHeartRate} bpm`} />}
-        {run.maxHeartRate != null && <Stat label="Max heart rate" value={`${run.maxHeartRate} bpm`} />}
-        {run.calories != null && <Stat label="Calories" value={`${run.calories}`} />}
-        {run.elapsedSeconds - run.movingSeconds >= 60 && <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />}
-      </dl></details>
-
-      {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
-      </div>
-      {tabs.includes('Charts') && <div role="tabpanel" id={`${tabId}-panel-Charts`} aria-labelledby={`${tabId}-tab-Charts`} hidden={selectedTab !== 'Charts'} tabIndex={0}>
-        <h3>Charts and pacing</h3>
-        <PaceProfile splits={run.splits} plan={run.plan} units={units} />
-        <p>{halvesSummary(run.halves, units) || 'Pacing comparison is unavailable for this run.'}</p>
-        <p className="field-help">Kilometre splits describe recorded pace. They cannot confirm precise interval or recovery completion.</p>
-        {run.heartRate ? <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /> : <p>Heart-rate analysis is unavailable for this run.</p>}
-      </div>}
-      <div role="tabpanel" id={`${tabId}-panel-Details`} aria-labelledby={`${tabId}-tab-Details`} hidden={selectedTab !== 'Details'} tabIndex={0}>
-        <h3>Coaching and details</h3>
         <ShoePicker run={run} />
         <RunProvenance run={run} />
         <dl className="activity-stats activity-stats-secondary">
@@ -230,6 +225,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
           <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />
         </dl>
         <details className="disclosure"><summary>Detailed split evidence</summary><Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /></details>
+        {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
         {execution && <p>{execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} parts of the workout done. Changed the session on purpose? Say so in your check-in.</p>}
         <p>{verdict.headline}</p>
         {verdict.details.map(line => <p key={line}>{line}</p>)}

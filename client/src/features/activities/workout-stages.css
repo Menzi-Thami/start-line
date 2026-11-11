@@ -34,3 +34,30 @@
   .workout-stage-rows .workout-stage { grid-template-columns: 22px minmax(0, 1fr) 4.5rem; }
   .workout-stage-rows .pace-gauge { grid-column: 2 / -1; grid-row: 2; }
 }
+
+/* The whole session's verdict, then a one-word verdict on every part: hit, a warning, or missed. */
+.workout-verdict { display: flex; align-items: flex-start; gap: var(--space-3); margin: var(--space-2) 0 var(--space-3); padding: var(--space-3); border-radius: var(--radius-md, 12px); border: 1px solid var(--line); }
+.workout-verdict strong { display: block; font-size: var(--text-lg, 1.125rem); }
+.workout-verdict-mark { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; font-weight: 800; color: var(--paper); }
+.workout-verdict.is-good { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.workout-verdict.is-good .workout-verdict-mark { background: var(--accent-strong, var(--accent)); }
+.workout-verdict.is-warn { border-color: light-dark(#b45309, #f5bf72); background: light-dark(#fff7ed, #2a1d0b); }
+.workout-verdict.is-warn .workout-verdict-mark { background: light-dark(#b45309, #f5bf72); }
+.workout-verdict.is-miss { border-color: light-dark(#b91c1c, #f87171); background: light-dark(#fef2f2, #2a1010); }
+.workout-verdict.is-miss .workout-verdict-mark { background: light-dark(#b91c1c, #f87171); }
+
+.workout-stage-rows .workout-stage { grid-template-columns: 22px minmax(0, 7rem) minmax(0, 1fr) 4.75rem 10.5rem; }
+.workout-stage-verdict { justify-self: end; padding: 2px var(--space-2); border-radius: 999px; font-size: var(--text-xs); font-weight: 700; white-space: nowrap; }
+.workout-stage-verdict.is-good { color: var(--on-accent, var(--paper)); background: var(--accent-strong, var(--accent)); }
+.workout-stage-verdict.is-warn { color: light-dark(#7c2d12, #2a1d0b); background: light-dark(#fed7aa, #f5bf72); }
+.workout-stage-verdict.is-miss { color: light-dark(#7f1d1d, #2a1010); background: light-dark(#fecaca, #f87171); }
+.workout-stage-verdict.is-plain { color: var(--ink-2); background: var(--line); }
+
+@media (max-width: 30rem) {
+  .workout-stage-rows .workout-stage { grid-template-columns: 22px minmax(0, 1fr) auto; }
+  .workout-stage-rows .workout-stage-pace { grid-column: 3; grid-row: 1; }
+  .workout-stage-rows .pace-gauge { grid-column: 2 / 3; grid-row: 2; }
+  .workout-stage-rows .workout-stage-verdict { grid-column: 3; grid-row: 2; }
+}
+.pace-gauge-none { display: block; }
+@media (max-width: 30rem) { .workout-stage-rows .pace-gauge-none { grid-column: 2 / 3; grid-row: 2; } }

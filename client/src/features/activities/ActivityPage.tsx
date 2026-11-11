@@ -228,20 +228,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         <details className="disclosure"><summary>Detailed split evidence</summary><Splits splits={run.splits} summary={halvesSummary(run.halves, units)} /></details>
         {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
         {execution && <p>{execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} parts of the workout done. Changed the session on purpose? Say so in your check-in.</p>}
-        <p>{verdict.headline}</p>
-        {verdict.details.map(line => <p key={line}>{line}</p>)}
-        {verdict.next && <p>{verdict.next}</p>}
         <p className="field-help">Based on what your run recorded and your plan’s targets. It’s a guide: your check-in is what counts.</p>
-      </div>
-      {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
-        <PaceSplitsVisual splits={run.splits} units={units} />
-        <p className="field-help">{halvesSummary(run.halves, units)}</p>
-        <details className="ra-evidence"><summary>Detailed zone and split evidence</summary>
-          <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
-        </details>
-      </div>}
-      {run.splits.length === 0 && <p className="field-help activity-tabs-note">{run.heartRate ? 'This recording has no kilometre splits, so there’s no Splits tab.' : 'This recording has no kilometre splits or heart rate, so there are no Charts or Splits tabs.'}</p>}
-
       {run.source.kind === 'Strava' ? (
         <section className="section">
           <h3>Removing this run</h3>
@@ -275,6 +262,17 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
           )}
         </section>
       )}
+      </div>
+      {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
+        <PaceSplitsVisual splits={run.splits} units={units} />
+        <p className="field-help">{halvesSummary(run.halves, units)}</p>
+        <details className="ra-evidence"><summary>Detailed zone and split evidence</summary>
+          <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
+        </details>
+      </div>}
+      {run.splits.length === 0 && <p className="field-help activity-tabs-note">{run.heartRate ? 'This recording has no kilometre splits, so there’s no Splits tab.' : 'This recording has no kilometre splits or heart rate, so there are no Charts or Splits tabs.'}</p>}
+
+
     </article>
   )
 }

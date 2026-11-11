@@ -30,12 +30,20 @@ describe('the dark mode switch', () => {
     expect(document.documentElement.dataset.theme).toBe('light')
   })
 
-  it('is not offered in the installed app, which follows the phone and ignores a choice made on the website', () => {
+  it('is offered in the installed app and remembers the chosen theme across starts', async () => {
     installed(true)
-    window.localStorage.setItem('taperday:theme', 'dark')
-    render(<ThemeToggle />)
-    expect(screen.queryByRole('button', { name: 'Dark mode' })).not.toBeInTheDocument()
+    const user = userEvent.setup()
+    const { unmount } = render(<ThemeToggle />)
+    const toggle = screen.getByRole('button', { name: 'Dark mode' })
+    await user.click(toggle)
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    unmount()
+    delete document.documentElement.dataset.theme
     applyStoredTheme()
-    expect(document.documentElement.dataset.theme).toBeUndefined()
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    render(<ThemeToggle />)
+    expect(screen.getByRole('button', { name: 'Dark mode' })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(screen.getByRole('button', { name: 'Dark mode' }))
+    expect(window.localStorage.getItem('taperday:theme')).toBe('light')
   })
 })

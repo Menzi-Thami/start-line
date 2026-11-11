@@ -209,10 +209,16 @@ describe('a run', () => {
     renderApp(`/?view=runs&run=${longRun.id}`)
 
     await screen.findByRole('heading', { name: 'Long run', level: 2 })
-    const term = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent
-    expect(screen.getByRole('region', { name: 'Run summary' })).toHaveTextContent('15.4 km')
+    const summary = screen.getByRole('region', { name: 'Run summary' })
+    expect(summary).toHaveTextContent('15.4 km')
+    expect(summary).toHaveTextContent('1:42:12')
+    expect(summary).toHaveTextContent('6:40/km')
+    await userEvent.click(screen.getByRole('tab', { name: 'Details' }))
+    const details = screen.getByRole('tabpanel', { name: 'Details' })
+    const term = (label: string) => within(details).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent
+    expect(term('Distance')).toBe('15.4 km')
     expect(term('Moving time')).toBe('1:42:12')
-    expect(screen.getByRole('region', { name: 'Run summary' })).toHaveTextContent('6:40/km')
+    expect(term('Pace')).toBe('6:40/km')
     expect(term('Elevation gain')).toBe('55 m')
     expect(term('Avg heart rate')).toBe('151 bpm')
     expect(term('Max heart rate')).toBe('163 bpm')
@@ -224,6 +230,7 @@ describe('a run', () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     const verdict = (await screen.findByRole('heading', { name: 'Long run, but quicker than long-run pace.' })).closest('section')!
     expect(within(verdict).getByText('14 km at 7:21–8:10/km')).toBeInTheDocument()
     expect(within(verdict).getByText('15.4 km at 6:40/km')).toBeInTheDocument()
@@ -303,6 +310,7 @@ describe('a run', () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     const section = (await screen.findByRole('heading', { name: 'Best efforts' })).closest('section')!
     const upFront = section.querySelector<HTMLElement>(':scope > .efforts')!
     expect(within(upFront).getAllByRole('listitem')).toHaveLength(7)
@@ -323,6 +331,7 @@ describe('a run', () => {
     ])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     expect(await screen.findByText(/Your first run at these distances, so there’s nothing to beat yet\./)).toBeInTheDocument()
   })
 

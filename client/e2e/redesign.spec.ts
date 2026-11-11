@@ -24,7 +24,7 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     await expect(page).toHaveURL(/day=2026-10-13/)
     const day = page.getByRole('region', { name: 'Tuesday 13 October 2026', exact: true })
     await expect(day).toContainText('Hill repeats')
-    await expect(day.getByText('How to run it')).toBeVisible()
+    await expect(day.getByText('Review planned workout')).toBeVisible()
     await expect(page.getByRole('tab', { name: 'Calendar' })).toBeHidden()
     expect(await overflow()).toBeLessThanOrEqual(1)
     await page.screenshot({ path: screenshotPath(test.info(), 'redesign', `day-after-${width}.png`), fullPage: true })

@@ -56,6 +56,18 @@ describe('the plan beside what was run', () => {
     expect(sunday.map(card => card.getAttribute('aria-label'))).toEqual(['Recorded run: 6.2 km', 'Recorded run: 2 km'])
   })
 
+  it('prioritises run analysis over the expanded prescription for a recorded day', async () => {
+    const onOpenRun = vi.fn()
+    show({ today: '2026-10-18', runs, onOpenRun })
+    const day = await openWeekDay('2026-10-13')
+    const top = within(day).getByText('Your recorded run').closest('.day-run-analysis-first')
+    expect(top).not.toBeNull()
+    const instructions = within(day).getByText('Review planned workout').closest('details')
+    expect(instructions).not.toHaveAttribute('open')
+    await userEvent.click(within(top as HTMLElement).getByRole('button', { name: /View run analysis/ }))
+    expect(onOpenRun).toHaveBeenCalledWith('hills')
+  })
+
   it('shows running on rest and strength days without completing their prescriptions', async () => {
     show({ today: '2026-10-18', runs, onOpenRun: () => {} })
     let day = await openWeekDay('2026-10-14')

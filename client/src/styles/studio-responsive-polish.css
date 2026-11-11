@@ -317,7 +317,7 @@
   .home .home-focus .home-top,
   .plan .week-master-detail,
   .account-groups { gap: 1rem; }
-  .runs:not(.runs-split .runs) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .runs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (min-width: 1024px) {
   .home .home-focus .home-top,

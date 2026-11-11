@@ -5,7 +5,7 @@ import './activity-tabs.css'
 import { useEffect, useId, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
-import { formatDate, formatDuration, formatPace, type Units } from '../../lib/format'
+import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
 import type { Activity, BestEffort, HeartRate, Split } from '../../lib/types'
 import { RunSticker } from '../sharing/RunSticker'
 import { RunProvenance } from './RunProvenance'
@@ -215,7 +215,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         <ShoePicker run={run} />
         <RunProvenance run={run} />
         <dl className="activity-stats activity-stats-secondary">
-          <Stat label="Distance" value={String(run.distanceKm) + ' km'} />
+          <Stat label="Distance" value={formatDistance(run.distanceKm, units)} />
           <Stat label="Moving time" value={formatDuration(run.movingSeconds)} />
           <Stat label="Pace" value={formatPace(run.paceSecondsPerKm, units)} />
           {run.averageHeartRate != null && <Stat label="Avg heart rate" value={run.averageHeartRate + ' bpm'} />}

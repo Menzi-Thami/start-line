@@ -25,7 +25,7 @@ for (const scheme of ['light', 'dark'] as const) {
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)
         expect(overflow, `${view} at ${width}px (${scheme}) should not overflow horizontally`).toBeLessThanOrEqual(1)
         await page.screenshot({
-          path: testInfo.outputPath(`run-studio-${scheme}-${width}-${view}.png`),
+          path: testInfo.outputPath(`studio-run-${scheme}-${width}-${view}.png`),
           fullPage: true,
           animations: 'disabled',
         })

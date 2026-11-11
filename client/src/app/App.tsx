@@ -1003,7 +1003,7 @@ export function App() {
                       }
                       onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                     />
-                    <button type="button" className="button button-quiet race-intro-replay" onClick={() => setReplayIntro(true)}>↻ Replay the starting-line film</button>
+                    
                     <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
                   </>
                 )}

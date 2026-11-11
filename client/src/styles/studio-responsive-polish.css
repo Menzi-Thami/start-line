@@ -204,6 +204,40 @@
 }
 .account-settings .settings-columns { gap: var(--studio-card-gap); }
 
+/* Plan builder and race selection: apply the same typography and card clarity.
+   Leave sticky Continue buttons, the original film and step logic untouched. */
+.plan-builder-flow {
+  min-width: 0;
+}
+.plan-builder-flow :is(.wizard-question, .review) {
+  min-width: 0;
+}
+.plan-builder-flow :is(.wizard-question h2, .wizard-question h3, .review h2) {
+  text-wrap: balance;
+  letter-spacing: -.025em;
+  line-height: 1.14;
+}
+.plan-builder-flow :is(.choice, .race-search-result) {
+  border-radius: var(--radius-md);
+  min-height: 44px;
+}
+.plan-builder-flow .choice:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.plan-builder-flow .choice-meta {
+  color: var(--muted);
+  line-height: 1.45;
+}
+.plan-builder-flow :is(input, select, textarea) { max-width: 100%; }
+.plan-builder-flow .race-search-results {
+  gap: .7rem;
+}
+@media (max-width: 479px) {
+  .plan-builder-flow :is(.wizard-question, .review) { min-width: 0; }
+  .plan-builder-flow :is(.choice, .race-search-result) { border-radius: var(--radius-sm); }
+}
+
 /* 7. Product navigation: keep the approved five destinations and their
    interaction state. This changes only polish, not placement or identity. */
 @media (max-width: 63.99rem) {

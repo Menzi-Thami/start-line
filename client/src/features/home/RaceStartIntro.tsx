@@ -15,13 +15,13 @@ const LETTERS = [
 
 /**
  * The opening: a runner on their marks, the starter's pistol, GO, a sprint across the screen with the wordmark
- * landing in their wake, then the curtain lifts. About 3.5 s, decorative only (hidden from screen readers), and a
+ * landing in their wake, then the curtain lifts. About 6 s, decorative only (hidden from screen readers), and a
  * tap or key press anywhere skips it. The caller decides whether it plays at all (once per visit, never for
  * reduced motion).
  */
 export function RaceStartIntro({ onDone }: Props) {
   useEffect(() => {
-    const timer = window.setTimeout(onDone, 3600)
+    const timer = window.setTimeout(onDone, 6100)
     document.addEventListener('pointerdown', onDone)
     document.addEventListener('keydown', onDone)
     return () => {
@@ -38,11 +38,11 @@ export function RaceStartIntro({ onDone }: Props) {
 
       <div className="race-intro-word">
         {LETTERS.map((l, i) => (
-          <span key={l.ch} className={`race-intro-letter ${l.className}`} style={{ animationDelay: `${1720 + i * 110}ms` }}>
+          <span key={l.ch} className={`race-intro-letter ${l.className}`} style={{ animationDelay: `${3350 + i * 135}ms` }}>
             {l.ch}
           </span>
         ))}
-        <span className="race-intro-letter wordmark-accent" style={{ animationDelay: '2300ms' }}>
+        <span className="race-intro-letter wordmark-accent" style={{ animationDelay: '4120ms' }}>
           day
         </span>
       </div>

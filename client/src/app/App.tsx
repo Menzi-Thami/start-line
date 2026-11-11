@@ -43,7 +43,7 @@ import { calendarLinks, personalCalendarLinks } from '../lib/calendar-links'
 import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/home-snapshot'
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
-import { introFitsStartup, introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
+import { introSeen, markIntroSeen, prefersMotion } from '../lib/motion'
 import { loadUnits, saveUnits } from '../lib/storage'
 import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
@@ -171,7 +171,7 @@ export function App() {
   const [revealPlan, setRevealPlan] = useState(false)
   const [freshBuild, setFreshBuild] = useState(false)
   // The starting-gun intro: once per visit, only when landing on the builder, never for reduced motion.
-  const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen() && introFitsStartup(window.performance.now()))
+  const [playIntro, setPlayIntro] = useState(() => !initial && prefersMotion() && !introSeen())
   const finishIntro = useCallback(() => setPlayIntro(false), [])
   // Who just made the start list, while their celebration plays.
   const [celebrating, setCelebrating] = useState<string | null>(null)
@@ -1001,6 +1001,7 @@ export function App() {
                       }
                       onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                     />
+                    <button type="button" className="button button-quiet race-intro-replay" onClick={() => setPlayIntro(true)}>↻ Replay the starting-line film</button>
                     <RaceTicker races={races.kind === 'ready' ? races.races : []} units={units} />
                   </>
                 )}

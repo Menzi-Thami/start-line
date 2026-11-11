@@ -169,12 +169,7 @@ test.describe('with motion', () => {
     await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
     await expect(intro).toHaveCount(0)
 
-    // An intentional replay shows the complete opening sequence without resetting the session.
-    await page.getByRole('button', { name: /Replay the starting-line film/ }).click()
-    await expect(intro).toBeVisible()
-    await page.waitForTimeout(3800)
-    await expect(intro).toBeVisible()
-    await expect(intro).toHaveCount(0, { timeout: 5000 })
+    await expect(page.getByRole('button', { name: /Replay the starting-line film/ })).toHaveCount(0)
   })
 })
 

@@ -689,6 +689,19 @@ select {
   }
 }
 
+/* Optional encore: people can watch the full brand sequence again without reloading. */
+.race-intro-replay {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-block: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .race-intro-replay { display: none; }
+}
+
 /* ---------- Builder: one question per screen ---------- */
 .wizard-progress {
   display: flex;

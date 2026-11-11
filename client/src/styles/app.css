@@ -702,6 +702,16 @@ select {
   .race-intro-replay { display: none; }
 }
 
+/* Signed-in runners can replay the brand's race-day film without leaving Home. */
+.brand-replay-header { min-height:44px; gap:.3rem; margin-left:auto; font-size:var(--text-xs); white-space:nowrap; }
+.brand-replay-header > span:first-child { font-size:1.35rem; line-height:1; }
+@media (max-width:47.99rem) {
+  .brand-replay-header { width:44px; min-width:44px; padding:0; justify-content:center; }
+  .brand-replay-header .brand-replay-label { display:none; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .brand-replay-header { display:none; }
+}
 /* ---------- Builder: one question per screen ---------- */
 .wizard-progress {
   display: flex;

@@ -28,5 +28,8 @@ describe('the intro', () => {
     expect(introSeen()).toBe(false)
     markIntroSeen()
     expect(introSeen()).toBe(true)
+    expect(introSeen('member')).toBe(false)
+    markIntroSeen('member')
+    expect(introSeen('member')).toBe(true)
   })
 })

@@ -348,6 +348,7 @@ describe('a run', () => {
     const db = runsApi([longRun])
     const user = renderApp(`/?view=runs&run=${longRun.id}`)
 
+    await user.click(await screen.findByRole('tab', { name: 'Details' }))
     await user.click(await screen.findByRole('button', { name: 'Delete run' }))
     await user.click(screen.getByRole('button', { name: 'Yes, delete this run' }))
 

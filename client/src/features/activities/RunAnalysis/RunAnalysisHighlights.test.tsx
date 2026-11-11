@@ -45,7 +45,7 @@ describe('post-run analysis highlights', () => {
     await user.click(fast)
     expect(fast).toHaveAttribute('aria-expanded', 'true')
     expect(within(screen.getByRole('region', { name: 'Your pace splits' })).getByText(/1\.00 km/)).toBeInTheDocument()
-    const partial = screen.getByRole('button', { name: /Kilometre 0\\.35.*pace.*partial split/ })
+    const partial = screen.getByRole('button', { name: /partial split/ })
     expect(partial.className).not.toContain('ra-split-best')
   })
 

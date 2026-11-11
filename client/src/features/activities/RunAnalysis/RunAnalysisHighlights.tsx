@@ -85,9 +85,9 @@ export function PaceSplitsVisual({ splits, units, compact = false, onViewAll }: 
               <button type="button" className={'ra-split-row' + (fastestFull ? ' ra-split-best' : '')}
                 onClick={() => setSelected(s => s === split.number ? null : split.number)}
                 aria-expanded={selected === split.number}
-                aria-label={'Kilometre ' + split.number + ', pace ' + formatPace(split.paceSecondsPerKm, units) + (partial ? ', partial split' : '')}>
-                <span className="ra-split-number">{partial ? split.distanceKm.toFixed(2) : split.number}</span>
-                <span className="ra-split-track"><span className="ra-split-fill" style={{ width: width + '%' }}><span>{formatPace(split.paceSecondsPerKm, units)}</span></span></span>
+                >
+                <span className="ra-split-number"><span className="visually-hidden">Kilometre </span>{partial ? split.distanceKm.toFixed(2) : split.number}</span>
+                <span className="ra-split-track"><span className="ra-split-fill" style={{ width: width + '%' }}><span><span className="visually-hidden"> pace </span>{formatPace(split.paceSecondsPerKm, units)}{partial && <span className="visually-hidden"> partial split</span>}</span></span></span>
               </button>
               {selected === split.number && <div className="ra-split-detail">
                 {split.distanceKm.toFixed(2)} km · {formatDuration(split.movingSeconds)} moving · {split.averageHeartRate != null ? split.averageHeartRate + ' bpm' : 'Heart rate unavailable'}

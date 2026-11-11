@@ -209,7 +209,13 @@ describe('a run', () => {
     renderApp(`/?view=runs&run=${longRun.id}`)
 
     await screen.findByRole('heading', { name: 'Long run', level: 2 })
-    const term = (label: string) => screen.getByText(label, { selector: 'dt' }).nextElementSibling?.textContent
+    const summary = screen.getByRole('region', { name: 'Run summary' })
+    expect(summary).toHaveTextContent('15.4 km')
+    expect(summary).toHaveTextContent('1:42:12')
+    expect(summary).toHaveTextContent('6:40/km')
+    await userEvent.click(screen.getByRole('tab', { name: 'Details' }))
+    const details = screen.getByRole('tabpanel', { name: 'Details' })
+    const term = (label: string) => within(details).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent
     expect(term('Distance')).toBe('15.4 km')
     expect(term('Moving time')).toBe('1:42:12')
     expect(term('Pace')).toBe('6:40/km')
@@ -217,13 +223,14 @@ describe('a run', () => {
     expect(term('Avg heart rate')).toBe('151 bpm')
     expect(term('Max heart rate')).toBe('163 bpm')
     expect(term('Calories')).toBe('1074')
-    expect(screen.queryByText('Elapsed time')).not.toBeInTheDocument()
+    expect(term('Elapsed time')).toBe('1:42:12')
   })
 
   it('leads with a verdict on what the run was for, the plan beside it, and the next session', async () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     const verdict = (await screen.findByRole('heading', { name: 'Long run, but quicker than long-run pace.' })).closest('section')!
     expect(within(verdict).getByText('14 km at 7:21–8:10/km')).toBeInTheDocument()
     expect(within(verdict).getByText('15.4 km at 6:40/km')).toBeInTheDocument()
@@ -239,12 +246,12 @@ describe('a run', () => {
     const overview = await screen.findByRole('tab', { name: 'Overview' }, { timeout: 10000 })
     overview.focus()
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Pacing' })).toHaveFocus()
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Pacing')
+    expect(screen.getByRole('tab', { name: 'Splits' })).toHaveFocus()
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Splits')
     await user.keyboard('{End}')
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Splits')
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Details')
     await user.keyboard('{Home}{ArrowLeft}')
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Splits')
+    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Details')
   })
 
   it('checks every km against its zone and marks the quickest and hardest', async () => {
@@ -252,6 +259,7 @@ describe('a run', () => {
     renderApp(`/?view=runs&run=${longRun.id}`)
 
     await userEvent.click(await screen.findByRole('tab', { name: 'Splits' }))
+    await userEvent.click(screen.getByText('Detailed zone and split evidence'))
     const table = await screen.findByRole('table')
     const rows = within(table).getAllByRole('row').slice(1)
     expect(rows).toHaveLength(16)
@@ -260,15 +268,17 @@ describe('a run', () => {
     expect(within(rows[5]!).getByText('Hardest')).toBeInTheDocument()
     expect(within(rows[6]!).getByText('Quickest')).toBeInTheDocument()
     expect(within(rows[15]!).getByRole('rowheader')).toHaveTextContent('0.35')
-    expect(within(screen.getByRole('tabpanel')).getByText(/Even halves: nicely paced\./)).toBeInTheDocument()
+    expect(within(screen.getByRole('tabpanel')).getAllByText(/Even halves: nicely paced\./).length).toBeGreaterThan(0)
   })
 
   it('splits a tempo into warm-up, work and cool-down, and says it started fast', async () => {
     runsApi([tempo])
     renderApp(`/?view=runs&run=${tempo.id}`)
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     expect(await screen.findByRole('heading', { name: 'Tempo run started 14 s/km fast, then settled into range.' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'Splits' }))
+    await userEvent.click(screen.getByText('Detailed zone and split evidence'))
     const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
     expect(within(rows[0]!).getByText('Warm-up')).toBeInTheDocument()
     expect(within(rows[2]!).getByText('Work')).toBeInTheDocument()
@@ -279,7 +289,7 @@ describe('a run', () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Pacing' }))
+    await userEvent.click(await screen.findByRole('tab', { name: 'Charts' }))
     const section = (await screen.findByRole('heading', { name: 'Heart rate' })).closest('section')!
     expect(within(section).getByText(/Heart rate rose 6\.3% against pace/)).toBeInTheDocument()
     expect(within(section).getAllByRole('listitem')).toHaveLength(5)
@@ -290,7 +300,7 @@ describe('a run', () => {
     runsApi([{ ...longRun, heartRate: { maxHeartRateSetting: null, zones: null } }])
     const user = renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Pacing' }))
+    await userEvent.click(await screen.findByRole('tab', { name: 'Charts' }))
     const section = (await screen.findByRole('heading', { name: 'Heart rate' })).closest('section')!
     expect(within(section).getByText(/to see time in heart-rate zones\. We don’t guess it\./)).toBeInTheDocument()
     await user.click(within(section).getByRole('button', { name: 'in Account' }))
@@ -301,6 +311,7 @@ describe('a run', () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     const section = (await screen.findByRole('heading', { name: 'Best efforts' })).closest('section')!
     const upFront = section.querySelector<HTMLElement>(':scope > .efforts')!
     expect(within(upFront).getAllByRole('listitem')).toHaveLength(7)
@@ -321,6 +332,7 @@ describe('a run', () => {
     ])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     expect(await screen.findByText(/Your first run at these distances, so there’s nothing to beat yet\./)).toBeInTheDocument()
   })
 
@@ -336,6 +348,7 @@ describe('a run', () => {
     const db = runsApi([longRun])
     const user = renderApp(`/?view=runs&run=${longRun.id}`)
 
+    await user.click(await screen.findByRole('tab', { name: 'Details' }))
     await user.click(await screen.findByRole('button', { name: 'Delete run' }))
     await user.click(screen.getByRole('button', { name: 'Yes, delete this run' }))
 

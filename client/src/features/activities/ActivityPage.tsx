@@ -1,5 +1,6 @@
 import { WorkoutStages } from './WorkoutStages'
 import { PaceProfile } from './PaceProfile'
+import { RunSummaryHero, PlanExecutionCard, PaceSplitsVisual } from './RunAnalysis/RunAnalysisHighlights'
 import './activity-tabs.css'
 import { useEffect, useId, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
@@ -39,7 +40,7 @@ interface Props {
 }
 
 /** One run, judged against what it was for: the verdict, the numbers, km by km, heart rate, and any bests worth a mention. */
-type AnalysisTab = 'Overview' | 'Pacing' | 'Coach' | 'Splits'
+type AnalysisTab = 'Overview' | 'Splits' | 'Charts' | 'Details'
 
 export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAccount, onOpenPlanDay }: Props) {
   const auth = useAuth()
@@ -47,8 +48,6 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
   const [selectedTab, setSelectedTab] = useState<AnalysisTab>('Overview')
   const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial, checkedAt: Date.now() } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
-  // When the page opened: a run from the last two days gets its share prompt up front.
-  const [openedAt] = useState(() => Date.now())
   const [confirming, setConfirming] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -132,29 +131,20 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
 
   const run = state.activity
   // A tab shows only when this run has the data behind it: no empty Splits or Pacing for a run recorded without them.
-  const tabs: AnalysisTab[] = ['Overview', ...(run.splits.length > 0 || run.heartRate ? ['Pacing' as const] : []), 'Coach', ...(run.splits.length > 0 ? ['Splits' as const] : [])]
+  const tabs: AnalysisTab[] = ['Overview', ...(run.splits.length > 0 ? ['Splits' as const] : []), ...(run.splits.length > 0 || run.heartRate ? ['Charts' as const] : []), 'Details']
   const execution = run.source.kind === 'Strava' && (!run.source.cachedUntil || !Number.isFinite(Date.parse(run.source.cachedUntil))) ? null : run.workoutExecution
   const title = run.plan?.title ?? KIND_LABEL[run.kind]
   const verdict = runVerdict(run, units)
-  const fresh = openedAt - Date.parse(run.startedAt) < 48 * 3600 * 1000
 
   return (
     <article className="activity" aria-labelledby="activity-title">
       {back}
       <p className="plan-kicker" style={{ marginTop: 'var(--space-4)' }}>
-        {formatDate(run.localDate, 'long')} · {KIND_LABEL[run.kind]}
+        Run analysis · {formatDate(run.localDate, 'long')} · {KIND_LABEL[run.kind]}
       </p>
       <h2 className="plan-title" id="activity-title">
         {title}
       </h2>
-      {fresh ? (
-        <section className="panel activity-share-prompt" aria-label="Share this run">
-          <p><strong>Nice run.</strong> Share it while it’s fresh.</p>
-          <RunSticker prominent units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} />
-        </section>
-      ) : (
-        <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
-      )}
       {run.source.kind === 'Strava' && (
         <p className="activity-source">
           <span>From Strava{run.source.recordedOnGarmin ? ' · recorded on Garmin' : ''}</span>
@@ -162,15 +152,6 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
           <PoweredByStrava />
         </p>
       )}
-      <ShoePicker run={run} />
-      <RunProvenance run={run} />
-
-      <dl className="activity-stats activity-stats-primary">
-        <Stat label="Distance" value={formatDistance(run.distanceKm, units)} lead />
-        <Stat label="Moving time" value={formatDuration(run.movingSeconds)} lead />
-        <Stat label="Pace" value={formatPace(run.paceSecondsPerKm, units)} lead />
-      </dl>
-
       <div role="tablist" aria-label="Run analysis" className="activity-tabs" onKeyDown={event => {
         const current = tabs.indexOf(selectedTab)
         const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
@@ -184,6 +165,29 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         {tabs.map(tab => <button type="button" role="tab" key={tab} id={`${tabId}-tab-${tab}`} aria-controls={`${tabId}-panel-${tab}`} aria-selected={selectedTab === tab} tabIndex={selectedTab === tab ? 0 : -1} className="button button-quiet" onClick={() => setSelectedTab(tab)}>{tab}</button>)}
       </div>
       <div role="tabpanel" id={`${tabId}-panel-Overview`} aria-labelledby={`${tabId}-tab-Overview`} hidden={selectedTab !== 'Overview'} tabIndex={0}>
+      <div className="ra-overview-grid"><div className="ra-overview-main">
+      <RunSummaryHero run={run} units={units} />
+      {run.splits.length > 0 && <PaceSplitsVisual splits={run.splits} units={units} compact onViewAll={() => { setSelectedTab('Splits'); document.getElementById(`${tabId}-tab-Splits`)?.focus() }} />}
+      </div><div className="ra-overview-side">
+      <PlanExecutionCard run={run} units={units} onOpenPlanDay={onOpenPlanDay} />
+      {!run.plan && <section className="ra-card ra-unplanned"><h3>{verdict.headline}</h3>{verdict.details.map(line => <p key={line}>{line}</p>)}</section>}
+
+
+      <WorkoutStages execution={execution} units={units} />
+      </div></div>
+      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
+
+
+      </div>
+      {tabs.includes('Charts') && <div role="tabpanel" id={`${tabId}-panel-Charts`} aria-labelledby={`${tabId}-tab-Charts`} hidden={selectedTab !== 'Charts'} tabIndex={0}>
+        <h3>Charts and pacing</h3>
+        <PaceProfile splits={run.splits} plan={run.plan} units={units} />
+        <p>{halvesSummary(run.halves, units) || 'Pacing comparison is unavailable for this run.'}</p>
+        <p className="field-help">Kilometre splits describe recorded pace. They cannot confirm precise interval or recovery completion.</p>
+        {run.heartRate ? <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /> : <p>Heart-rate analysis is unavailable for this run.</p>}
+      </div>}
+      <div role="tabpanel" id={`${tabId}-panel-Details`} aria-labelledby={`${tabId}-tab-Details`} hidden={selectedTab !== 'Details'} tabIndex={0}>
+        <h3>Details and coaching</h3>
       <section className="panel verdict" aria-labelledby="verdict-title" data-pace={run.plan?.pace ?? 'Unplanned'}>
         <h3 id="verdict-title" className="verdict-headline">
           {verdict.headline}
@@ -208,38 +212,21 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         )}
         {verdict.next && <p className="verdict-next">{verdict.next}</p>}
       </section>
-
-      <WorkoutStages execution={execution} units={units} />
-      <details className="activity-more-stats"><summary>More run statistics</summary><dl className="activity-stats activity-stats-secondary">
-        {run.elevationGainMetres != null && <Stat label="Elevation gain" value={`${run.elevationGainMetres} m`} />}
-        {run.averageHeartRate != null && <Stat label="Avg heart rate" value={`${run.averageHeartRate} bpm`} />}
-        {run.maxHeartRate != null && <Stat label="Max heart rate" value={`${run.maxHeartRate} bpm`} />}
-        {run.calories != null && <Stat label="Calories" value={`${run.calories}`} />}
-        {run.elapsedSeconds - run.movingSeconds >= 60 && <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />}
-      </dl></details>
-
-      {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
-      </div>
-      {tabs.includes('Pacing') && <div role="tabpanel" id={`${tabId}-panel-Pacing`} aria-labelledby={`${tabId}-tab-Pacing`} hidden={selectedTab !== 'Pacing'} tabIndex={0}>
-        <h3>Pacing</h3>
-        <PaceProfile splits={run.splits} plan={run.plan} units={units} />
-        <p>{halvesSummary(run.halves, units) || 'Pacing comparison is unavailable for this run.'}</p>
-        <p className="field-help">Kilometre splits describe recorded pace. They cannot confirm precise interval or recovery completion.</p>
-        {run.heartRate ? <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /> : <p>Heart-rate analysis is unavailable for this run.</p>}
-      </div>}
-      <div role="tabpanel" id={`${tabId}-panel-Coach`} aria-labelledby={`${tabId}-tab-Coach`} hidden={selectedTab !== 'Coach'} tabIndex={0}>
-        <h3>Coach</h3>
+        <ShoePicker run={run} />
+        <RunProvenance run={run} />
+        <dl className="activity-stats activity-stats-secondary">
+          <Stat label="Distance" value={formatDistance(run.distanceKm, units)} />
+          <Stat label="Moving time" value={formatDuration(run.movingSeconds)} />
+          <Stat label="Pace" value={formatPace(run.paceSecondsPerKm, units)} />
+          {run.averageHeartRate != null && <Stat label="Avg heart rate" value={run.averageHeartRate + ' bpm'} />}
+          {run.maxHeartRate != null && <Stat label="Max heart rate" value={run.maxHeartRate + ' bpm'} />}
+          {run.calories != null && <Stat label="Calories" value={String(run.calories)} />}
+          {run.elevationGainMetres != null && <Stat label="Elevation gain" value={run.elevationGainMetres + ' m'} />}
+          <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />
+        </dl>
+        {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
         {execution && <p>{execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} parts of the workout done. Changed the session on purpose? Say so in your check-in.</p>}
-        <p>{verdict.headline}</p>
-        {verdict.details.map(line => <p key={line}>{line}</p>)}
-        {verdict.next && <p>{verdict.next}</p>}
         <p className="field-help">Based on what your run recorded and your plan’s targets. It’s a guide: your check-in is what counts.</p>
-      </div>
-      {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
-        <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
-      </div>}
-      {run.splits.length === 0 && <p className="field-help activity-tabs-note">{run.heartRate ? 'This recording has no kilometre splits, so there’s no Splits tab.' : 'This recording has no kilometre splits or heart rate, so there are no Pacing or Splits tabs.'}</p>}
-
       {run.source.kind === 'Strava' ? (
         <section className="section">
           <h3>Removing this run</h3>
@@ -273,6 +260,17 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
           )}
         </section>
       )}
+      </div>
+      {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
+        <PaceSplitsVisual splits={run.splits} units={units} />
+        <p className="field-help">{halvesSummary(run.halves, units)}</p>
+        <details className="ra-evidence"><summary>Detailed zone and split evidence</summary>
+          <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
+        </details>
+      </div>}
+      {run.splits.length === 0 && <p className="field-help activity-tabs-note">{run.heartRate ? 'This recording has no kilometre splits, so there’s no Splits tab.' : 'This recording has no kilometre splits or heart rate, so there are no Charts or Splits tabs.'}</p>}
+
+
     </article>
   )
 }

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 import { formatDate } from '../lib/format'
 import { lastPlanRequest, planFixture, server } from '../test/server'
 import { App } from './App'
+import { AuthContext, accountsOff } from './auth-context'
 
 // The plan fixture was built from 8 October 2026, so "today" is pinned there.
 beforeEach(() => {
@@ -79,6 +80,18 @@ describe('the home page', () => {
 
     setup()
     expect(intro()).toBeNull()
+  })
+
+  it('shows the full brand film when a returning runner logs into Home on desktop, even after the visitor intro', () => {
+    withMotion()
+    window.sessionStorage.setItem('taperday:intro-seen', '1')
+    window.history.replaceState(null, '', '/?view=home')
+    const signedIn = { ...accountsOff, enabled: true, account: { name: 'QA runner', email: 'qa@example.test' }, getToken: () => Promise.resolve('qa-token') }
+    render(<AuthContext.Provider value={signedIn}><App /></AuthContext.Provider>)
+
+    expect(intro()).not.toBeNull()
+    expect(document.querySelector('.race-intro-sprinter')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Replay the starting-line film' })).toBeInTheDocument()
   })
 
   it('leaves the intro out for anyone who has asked for less motion', () => {

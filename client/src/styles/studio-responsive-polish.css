@@ -1,0 +1,342 @@
+/*
+ * AI Studio-inspired visual refinement across Taperday.
+ *
+ * Composition, spacing, rhythm and contrast are borrowed; the app's approved
+ * Frame/Night Run tokens, Instrument typography, nav and cartoon runner remain.
+ * All selectors are scoped to existing product pages and controls. No Tailwind,
+ * no new dependencies, no data or route changes.
+ */
+
+/* 1. Shared surface language: quiet borders, consistent corners, deliberate whitespace. */
+:is(.home, .plan, .runs, .activity, .account-settings) {
+  --studio-card-radius: var(--radius-md);
+  --studio-card-padding: clamp(1rem, 2.15vw, 1.6rem);
+  --studio-card-gap: clamp(.75rem, 1.8vw, 1.25rem);
+}
+:is(.home, .plan, .runs, .activity, .account-settings) :is(.panel, .home-card, .day-preview, .run-feed-row, .settings-group, .progress-summary > div) {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+:is(.home, .plan, .account-settings, .activity) :is(h2, h3) {
+  text-wrap: balance;
+}
+:is(.home, .plan, .runs, .activity, .account-settings) :is(.panel, .home-card) {
+  border-radius: var(--studio-card-radius);
+}
+:is(.home, .plan, .runs, .activity, .account-settings) :is(.plan-title, .home-title) {
+  letter-spacing: -.03em;
+  line-height: 1.12;
+  max-width: 24ch;
+}
+:is(.home, .plan, .runs, .activity, .account-settings) :is(.plan-kicker, .plan-eyebrow, .account-group-title) {
+  letter-spacing: .085em;
+  line-height: 1.45;
+}
+
+/* 2. Home: one prominent next action, breathable supporting cards.
+   Never cover or replace the Taperday runner illustration. */
+.home .home-focus .home-top {
+  gap: var(--studio-card-gap);
+  align-items: stretch;
+}
+.home .home-focus .home-top > * {
+  min-width: 0;
+  border-radius: var(--studio-card-radius);
+}
+.home .home-focus .home-top > .home-today {
+  padding: clamp(1.15rem, 3vw, 2rem);
+  isolation: isolate;
+}
+.home .home-focus .home-top > .home-today :is(.home-today-title, .home-today-meta) {
+  max-width: 34ch;
+}
+.home .home-focus .home-top > :is(.home-latest, .home-race-brief) {
+  padding: var(--studio-card-padding);
+}
+.home .home-latest-figures {
+  gap: .45rem .85rem;
+  font-variant-numeric: tabular-nums;
+}
+.home :is(.home-tiles, .your-week-grid) {
+  gap: var(--studio-card-gap);
+}
+.home :is(.home-tile, .home-best, .home-week-run) {
+  min-width: 0;
+  border-radius: var(--radius-sm);
+}
+.home .home-tile-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em;
+}
+.home :is(.home-more-heading, .home-heading) {
+  margin-top: clamp(1.25rem, 3vw, 2rem);
+}
+
+/* 3. Plan: scan the week quickly, with the selected day obvious on every device. */
+.plan .week-master-detail { gap: var(--studio-card-gap); }
+.plan .day-preview {
+  border-radius: var(--studio-card-radius);
+  padding: var(--studio-card-padding);
+}
+.plan .week-agenda .week-day-button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  transition: background-color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
+}
+.plan .week-agenda .week-day-button[data-selected='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.plan .week-agenda .week-day-button:not([data-selected='true']):hover {
+  border-color: var(--line-strong);
+}
+.plan .week-day-name { color: var(--muted); font-weight: 650; }
+.plan .week-agenda .week-day-button[data-selected='true'] .week-day-name { color: var(--ink); }
+.plan .plan-progress-intro { border-radius: var(--studio-card-radius); }
+.plan :is(.week-glance-figures, .plan-facts) {
+  font-variant-numeric: tabular-nums;
+}
+.plan .day-summary.day-detail-page {
+  border-radius: var(--studio-card-radius);
+}
+
+/* 4. Runs: editorial cards with the distance as the visual anchor.
+   Both row list and split-view modes keep existing click targets. */
+.runs { gap: var(--studio-card-gap); }
+.run-feed-row {
+  border: 1px solid var(--line);
+  border-radius: var(--studio-card-radius);
+  background: var(--surface);
+  transition: border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-out);
+}
+.run-feed-open {
+  gap: var(--space-4);
+  padding: var(--studio-card-padding);
+  min-height: 98px;
+}
+.run-feed-open :is(.run-card-distance, .week-meta) {
+  font-variant-numeric: tabular-nums;
+}
+.run-card-distance {
+  font-size: clamp(1.5rem, 3.4vw, 2.2rem);
+  font-weight: 780;
+  letter-spacing: -.045em;
+  line-height: 1.12;
+}
+.run-feed-open:hover { background: var(--surface-sunk); }
+.run-feed-row:has(.run-feed-open:focus-visible) {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.run-card-action { font-weight: 700; letter-spacing: .01em; }
+
+/* 5. Progress: dashboard-grade metric hierarchy, equal card rhythm and
+   large legible charts without truncating evidence. */
+.progress-insights { min-width: 0; }
+.progress-summary,
+.progress-evidence-grid,
+.progress-milestones { gap: var(--studio-card-gap); }
+.progress-summary > div {
+  padding: var(--studio-card-padding);
+  border: 1px solid var(--line);
+  border-radius: var(--studio-card-radius);
+  background: var(--surface);
+}
+.progress-summary dt {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.progress-summary dd {
+  font-variant-numeric: tabular-nums;
+}
+.progress-summary dd strong {
+  font-family: var(--font-body);
+  font-size: clamp(1.4rem, 3.6vw, 2.1rem);
+  letter-spacing: -.045em;
+  line-height: 1.1;
+}
+.progress-primary-chart,
+.progress-evidence-grid > *,
+.progress-chart { min-width: 0; max-width: 100%; }
+.progress-more > summary {
+  background: var(--surface);
+  border-radius: var(--studio-card-radius);
+}
+.progress-personal-bests li {
+  padding: var(--studio-card-padding);
+  border-radius: var(--studio-card-radius);
+  background: var(--surface);
+}
+.consistency-date { border-radius: .65rem; }
+
+/* 6. Account: editorial profile and comfortably tappable grouped settings. */
+.account-overview.panel {
+  padding: clamp(1.2rem, 3vw, 1.9rem);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--studio-card-radius);
+}
+.account-overview h3 { font-size: clamp(1.35rem, 3vw, 1.9rem); letter-spacing: -.035em; }
+.account-groups { gap: clamp(1rem, 2.8vw, 1.75rem); }
+.account-group { min-width: 0; gap: .7rem; }
+.account-group-title { padding-inline: var(--space-2); }
+.account-settings .settings-group {
+  border: 1px solid var(--line);
+  border-radius: var(--studio-card-radius);
+  background: var(--surface);
+  min-width: 0;
+}
+.account-settings .settings-group > summary {
+  min-height: 54px;
+  padding: .85rem var(--studio-card-padding);
+  border-radius: inherit;
+  font-weight: 650;
+  color: var(--ink);
+}
+.account-settings .settings-group[open] > summary {
+  border-bottom: 1px solid var(--line);
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+.account-settings .settings-columns { gap: var(--studio-card-gap); }
+
+/* Plan builder and race selection: apply the same typography and card clarity.
+   Leave sticky Continue buttons, the original film and step logic untouched. */
+.plan-builder-flow {
+  min-width: 0;
+}
+.plan-builder-flow :is(.wizard-question, .review) {
+  min-width: 0;
+}
+.plan-builder-flow :is(.wizard-question h2, .wizard-question h3, .review h2) {
+  text-wrap: balance;
+  letter-spacing: -.025em;
+  line-height: 1.14;
+}
+.plan-builder-flow :is(.choice, .race-search-result) {
+  border-radius: var(--radius-md);
+  min-height: 44px;
+}
+.plan-builder-flow .choice:focus-within {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.plan-builder-flow .choice-meta {
+  color: var(--muted);
+  line-height: 1.45;
+}
+.plan-builder-flow :is(input, select, textarea) { max-width: 100%; }
+.plan-builder-flow .race-search-results {
+  gap: .7rem;
+}
+@media (max-width: 479px) {
+  .plan-builder-flow :is(.wizard-question, .review) { min-width: 0; }
+  .plan-builder-flow :is(.choice, .race-search-result) { border-radius: var(--radius-sm); }
+}
+
+/* Sign-in and public welcome: preserve their existing art and content,
+   but share the same card edges, rhythm and touch targets. */
+.sign-in-landing-card {
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  border-color: var(--line);
+  padding: clamp(1.2rem, 3.5vw, 2.25rem);
+}
+.sign-in-landing :is(.sign-in-eyebrow, .sign-in-lede) {
+  line-height: 1.5;
+}
+.sign-in-landing .sign-in-actions {
+  gap: var(--space-3);
+}
+.sign-in-landing .sign-in-actions .button { min-height: 48px; }
+.intro.hero { gap: clamp(1rem, 3vw, 2rem); }
+.intro.hero .hero-copy h1 {
+  text-wrap: balance;
+}
+.intro.hero .hero-actions .button-primary { min-height: 54px; }
+.intro.hero .landing-benefits { min-width: 0; }
+
+/* A workout day is still part of the polished runner journey. */
+.day-summary.day-detail-page :is(.day-summary-columns, .day-summary-head) {
+  min-width: 0;
+}
+.day-summary.day-detail-page :is(.panel, .section) {
+  border-radius: var(--studio-card-radius, var(--radius-md));
+}
+
+/* 7. Product navigation: keep the approved five destinations and their
+   interaction state. This changes only polish, not placement or identity. */
+@media (max-width: 63.99rem) {
+  .tab-bar:not(.tab-rail) .tab-bar-item {
+    min-height: 50px;
+    border-radius: var(--radius-sm);
+  }
+  .tab-bar:not(.tab-rail) .tab-bar-item[aria-current='page'] {
+    color: var(--accent-strong);
+    font-weight: 800;
+  }
+}
+@media (min-width: 64rem) {
+  .tab-rail .tab-bar-item {
+    border-radius: var(--radius-sm);
+    min-height: 50px;
+    padding-inline: var(--space-4);
+  }
+  .tab-rail .tab-bar-item[aria-current='page'] {
+    border: 1px solid var(--line-strong);
+  }
+}
+
+/* 8. Phones: polish remains full fidelity, not a scaled-down desktop. */
+@media (max-width: 479px) {
+  .home .home-focus .home-top { gap: .8rem; }
+  .home .home-focus .home-top > .home-today {
+    padding: 1.15rem;
+  }
+  .plan .week-master-detail { gap: .8rem; }
+  .plan .week-agenda .week-day-button {
+    min-height: 80px;
+    padding: .45rem .1rem;
+    border-radius: .7rem;
+  }
+  .plan .week-agenda .week-day-name { font-size: .68rem; }
+  .run-feed-open {
+    gap: .65rem;
+    padding: 1rem;
+  }
+  .progress-summary { gap: .65rem; }
+  .progress-summary > div { padding: .9rem; }
+  .progress-summary dd strong { font-size: clamp(1.2rem, 5.4vw, 1.6rem); }
+  .account-settings .settings-group > summary { padding: .85rem 1rem; }
+}
+@media (min-width: 480px) and (max-width: 1023px) {
+  .home .home-focus .home-top,
+  .plan .week-master-detail,
+  .account-groups { gap: 1rem; }
+  .runs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .home .home-focus .home-top,
+  .plan .week-master-detail { gap: clamp(1.2rem, 2vw, 1.8rem); }
+  .account-groups { align-items: start; }
+  .runs-split .runs { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* 9. Accessibility, low motion and print. */
+:is(.home, .plan, .runs, .activity, .account-settings)
+  :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .run-feed-row, .plan .week-agenda .week-day-button { transition: none; }
+}
+@media print {
+  .run-feed-row,
+  .account-settings .settings-group,
+  .progress-summary > div { background: white; box-shadow: none; }
+}

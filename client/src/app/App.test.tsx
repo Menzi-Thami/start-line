@@ -91,7 +91,7 @@ describe('the home page', () => {
 
     expect(intro()).not.toBeNull()
     expect(document.querySelector('.race-intro-sprinter')).not.toBeNull()
-    expect(screen.getByRole('button', { name: 'Replay the starting-line film' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Replay the starting-line film' })).not.toBeInTheDocument()
   })
 
   it('leaves the intro out for anyone who has asked for less motion', () => {

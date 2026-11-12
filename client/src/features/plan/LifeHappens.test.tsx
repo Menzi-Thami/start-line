@@ -68,7 +68,7 @@ describe('Life happens', () => {
     expect(screen.getByRole('button', { name: 'Move a run' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByLabelText('Which run?')).toHaveValue(run.date)
     await user.click(screen.getByRole('button', { name: 'Show what changes' }))
-    expect(await screen.findByText('Choose a free day this week:')).toBeVisible()
+    expect(await screen.findByText(/Choose a free day this week/)).toBeVisible()
     await user.click(within(screen.getByRole('group', { name: 'Move to' })).getByRole('button'))
     expect(await screen.findByText('Two hard days in a row.')).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Apply these changes' }))

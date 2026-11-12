@@ -4,8 +4,7 @@ test('dragging a workout opens a compact confirmation that does not auto-save @p
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/move-run.html')
   const source = page.locator('.week-day-button[draggable="true"]').first()
   const from = await source.getAttribute('data-date')
-  const target = page.locator('.week-day-button[data-date]').filter({ hasNot: page.locator('[data-date="never"]') })
-    .filter({ hasText: /Rest|Easy|Mon|Tue|Wed|Thu|Fri|Sat|Sun/ }).last()
+  const target = page.locator('.week-day-button[data-date]').last()
   const to = await target.getAttribute('data-date')
   if (!from || !to || from === to) throw new Error('Fixture must expose distinct source and destination')
 
@@ -15,6 +14,9 @@ test('dragging a workout opens a compact confirmation that does not auto-save @p
   const dialog = page.getByRole('dialog', { name: 'Move this run?' })
   await expect(dialog).toBeVisible()
   await expect(page.locator('#saved-state')).toHaveText('Not saved')
+  if (test.info().project.name === 'phone') {
+    await dialog.getByRole('group', { name: 'Available dates' }).getByRole('button').first().click()
+  }
   await expect(dialog.getByRole('button', { name: 'Move run', exact: true })).toBeVisible()
   await dialog.getByRole('button', { name: 'Move run', exact: true }).click()
   await expect(page.locator('#saved-state')).toHaveText('Saved')

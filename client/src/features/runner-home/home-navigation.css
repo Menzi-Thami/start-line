@@ -17,3 +17,11 @@
   .home-focus .home-top .home-card { padding: var(--space-4) var(--space-5); }
 }
 @media (prefers-reduced-motion: reduce) { .home-focus .home-top > * { animation: none !important; } }
+
+/* An existing runner sees the Strava invitation as a useful next action, not a recurring interruption. */
+.home-strava-invite { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; margin-block: var(--space-4); }
+.home-strava-invite > div { flex: 1 1 16rem; }
+.home-strava-invite h2 { margin: 0 0 var(--space-2); }
+.home-strava-invite p { margin: 0; max-width: 56ch; }
+.home-strava-invite .button { flex: none; }
+@media (max-width: 47.99rem) { .home-strava-invite .button { width: 100%; } }

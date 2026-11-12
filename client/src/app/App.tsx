@@ -777,8 +777,9 @@ export function App() {
           </nav>
         )}
 
-        <ThemeToggle />
       </header>
+      {/* Keep appearance controls reachable on every route, even after scrolling. */}
+      <ThemeToggle />
 
       <ScrollProgress />
       {ready && !ready.needsPrivacyConsent && synced.newArrival && (

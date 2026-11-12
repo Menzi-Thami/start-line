@@ -126,6 +126,8 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const [toolboxOpen, setToolboxOpen] = useState(preparationMode === 'race' || preparationMode === 'long')
   // A run picked to move from its day: Plan tools opens on Life happens › Move a run, with that run chosen.
   const [moveRequest, setMoveRequest] = useState<string | null>(null)
+  const [moveTarget, setMoveTarget] = useState<string | null>(null)
+  const [moveSequence, setMoveSequence] = useState(0)
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -385,6 +387,16 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     className: `tab-panel${tab === id && direction ? ` slide-${direction}` : ''}`,
   })
 
+  // Drag-and-drop and Move Run both use the server's existing Life Happens preview/apply flow.
+  const requestMove = (from: string, to?: string) => {
+    if (!coach?.adjustments?.life || from < today || from === to) return
+    setMoveRequest(from)
+    setMoveTarget(to ?? null)
+    setMoveSequence(n => n + 1)
+    setToolboxOpen(true)
+    requestAnimationFrame(() => document.querySelector('.life-happens')?.scrollIntoView?.({ block: 'start', behavior: prefersMotion() ? 'smooth' : 'auto' }))
+  }
+  const moveEnabled = !!coach?.adjustments?.life
   const previewDate = selectedDate ?? (shown && today >= shown.week.startDate && today <= weekEnd(shown.week) ? today : shown?.week.startDate ?? today)
   const sessionsOn = (date: string) => plan.weeks.flatMap(week => week.sessions).filter(session => session.date === date)
   const statusOn = (date: string) => dayStatus(sessionsOn(date), effectiveDone, entries.filter(entry => entry.date === date), activityDates.includes(date), sessionsOn(date).some(session => completedViaStrava(session, coach)))
@@ -394,7 +406,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
 
   return (
     <section className={`plan plan-on-${tab}${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
-      {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} onMove={coach?.adjustments?.life ? (moveDate) => { setMoveRequest(moveDate); setToolboxOpen(true); closeDay(); requestAnimationFrame(() => document.querySelector('.life-happens')?.scrollIntoView?.({ block: 'start' })) } : undefined} /></Suspense>}
+      {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} onMove={moveEnabled ? (moveDate) => { requestMove(moveDate); closeDay() } : undefined} /></Suspense>}
       <div hidden={detailDate !== null}>
       {onBack && (
         <button type="button" className="plan-back" aria-label="Back to Home" onClick={onBack}>
@@ -508,7 +520,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
               {weekOffset !== 0 && <button type="button" className="link-button week-return-current" onClick={() => { setWeekOffset(0); setSelectedDay(null) }}>
                 {currentShown?.when === 'soon' ? 'Back to your first week' : currentShown?.when === 'past' ? 'Back to race week' : 'Back to this week'}
               </button>}
-              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={previewDate} daySummaryId={daySummaryId} renderSelectedDay={() => preview(previewDate)} statusFor={statusOn} />
+              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={previewDate} daySummaryId={daySummaryId} renderSelectedDay={() => preview(previewDate)} statusFor={statusOn} onRequestMove={moveEnabled ? requestMove : undefined} />
             </>
           )}
           <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts" open={!!shown?.week.sessions.some(session => session.type === 'Strength')}><summary>Strength workouts</summary><StrengthTab plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={onEditStrength} /></details>
@@ -516,7 +528,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
 
         <div {...panel('all')}>
           <div className="calendar-split">
-          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} historyDates={entries.map(entry => entry.date)} statusFor={statusOn} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} />
+          <PlanCalendar weeks={plan.weeks} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} historyDates={entries.map(entry => entry.date)} statusFor={statusOn} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} onRequestMove={moveEnabled ? requestMove : undefined} />
           {selectedDay?.tab === 'all' && selectedDate ? preview(selectedDate) : tab === 'all' && <div className="calendar-default-day"><DayPreview id={`${daySummaryId}-calendar`} date={calendarDefault} sessions={sessionsOn(calendarDefault)} status={statusOn(calendarDefault)} units={units} paces={plan.paces} onOpen={() => openDay(calendarDefault)} /></div>}
           </div>
           {!coach && <p className="tab-intro">Tick sessions off as you go. Ticks are saved on this device only.</p>}
@@ -577,7 +589,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         <summary>{preparationMode === 'long' ? 'Long-run preparation' : 'Race-day checklist & pacing'}</summary>
         <PreparationGuide plan={plan} units={units} mode={preparationMode} date={preparation?.date ?? preparationQuery.get('date')} />
       </details>
-      <LifeHappens key={moveRequest ?? 'life'} plan={plan} today={today} units={units} actions={coach?.adjustments?.life} moveDate={moveRequest} />
+      <LifeHappens key={`${moveRequest ?? 'life'}|${moveSequence}`} plan={plan} today={today} units={units} actions={coach?.adjustments?.life} moveDate={moveRequest} moveTarget={moveTarget} />
       <WorkoutExport plan={plan} units={units} />
       <details className="disclosure plan-options"><summary>Plan options</summary>
         <div className="plan-actions">

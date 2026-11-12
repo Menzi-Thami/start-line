@@ -47,7 +47,7 @@ describe('reschedule from calendar drag', () => {
     const preview = vi.fn(async (change: LifeChange) => {
       if (change.moveTo === occupied) throw new Error('Choose one of the days offered.')
       if (!change.moveTo) return empty
-      return { ...empty, changes: [{ appliedOn: from, date: free, movedFrom: from, originalTitle: 'Easy run', originalType: 'Easy', originalKm: 4.5, easyKm: 4.5 }] }
+      return { ...empty, changes: [{ appliedOn: from, date: free, movedFrom: from, originalTitle: 'Easy run', originalType: 'Easy', originalKm: 4.5, easyKm: 4.5 }] } as LifeProposal
     })
     const apply = vi.fn(async () => {})
     render(<LifeHappens plan={planFixture} today={from} units="km" moveDate={from} moveTarget={occupied} actions={{ preview, apply, restore: async () => {} }} />)

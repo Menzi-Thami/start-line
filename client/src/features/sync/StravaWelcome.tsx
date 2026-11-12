@@ -28,7 +28,7 @@ export function StravaWelcome({ onContinue, notice, connecting = false }: Props)
       )}
       <div className="submit-row">
         <button type="button" className={connected ? 'button button-primary' : 'button button-quiet'} onClick={onContinue}>
-          {connected ? 'Continue to my plan' : 'I'll connect later'}
+          {connected ? 'Continue to my plan' : "I'll connect later"}
         </button>
       </div>
       <p className="field-help">Optional. You can use Taperday without Strava and upload a run from My runs at any time.</p>

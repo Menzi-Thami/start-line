@@ -19,7 +19,7 @@
     <!-- FIT Protocol License: server-side only, never bundled into the client. See docs/activity-import.md. -->
     <PackageVersion Include="Garmin.FIT.Sdk" Version="21.221.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.14" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.14" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="11.0.0" />
     <!-- Strava tokens are encrypted with Data Protection; the key ring lives in SQL, wrapped by a Key Vault key in Azure. -->
     <PackageVersion Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" Version="10.0.12" />
     <PackageVersion Include="Azure.Extensions.AspNetCore.DataProtection.Keys" Version="1.6.5" />

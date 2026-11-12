@@ -39,6 +39,24 @@ describe('reschedule from calendar drag', () => {
     expect(apply).not.toHaveBeenCalled()
   })
 
+  it('offers server-approved days when a drop targets an occupied day', async () => {
+    const from = planFixture.weeks[0]!.sessions.find(s => s.type !== 'Strength')!.date
+    const occupied = '2026-10-18'
+    const free = '2026-10-19'
+    const empty = { token: 't'.repeat(64), changes: [], moveTargets: [free], proposed: planFixture } as unknown as LifeProposal
+    const preview = vi.fn(async (change: LifeChange) => {
+      if (change.moveTo === occupied) throw new Error('Choose one of the days offered.')
+      if (!change.moveTo) return empty
+      return { ...empty, changes: [{ appliedOn: from, date: free, movedFrom: from, originalTitle: 'Easy run', originalType: 'Easy', originalKm: 4.5, easyKm: 4.5 }] }
+    })
+    const apply = vi.fn(async () => {})
+    render(<LifeHappens plan={planFixture} today={from} units="km" moveDate={from} moveTarget={occupied} actions={{ preview, apply, restore: async () => {} }} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent("isn't an available destination")
+    expect(await screen.findByRole('group', { name: 'Move to' })).toBeVisible()
+    expect(screen.getByRole('button', { name: /19 Oct/ })).toBeVisible()
+    expect(apply).not.toHaveBeenCalled()
+  })
+
   it('does not submit a move when the server rejects the target', async () => {
     const from = planFixture.weeks[0]!.sessions.find(s => s.type !== 'Strength')!.date
     const preview = vi.fn(async () => { throw new Error('No safe day available') })

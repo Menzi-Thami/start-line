@@ -262,3 +262,12 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 @media (min-width: 64rem) {
   .landing-links { display: flex; }
 }
+
+/* A welcoming Strava step after the runner's profile, shared with the existing Account integration. */
+.strava-welcome { max-width: 46rem; margin: var(--space-5) auto var(--space-8); padding: clamp(1.2rem, 4vw, 2rem); }
+.strava-welcome > h1 { margin-block: var(--space-2) var(--space-3); font-family: var(--font-display); font-weight: 400; font-size: clamp(2rem, 5vw, 3.2rem); }
+.strava-welcome > p { max-width: 62ch; }
+.strava-welcome .strava-section { margin-block: var(--space-5); }
+.strava-welcome .submit-row { margin-top: var(--space-5); }
+.strava-welcome .strava-connect { max-width: 100%; }
+.strava-welcome .strava-connect img { max-width: 100%; height: auto; }

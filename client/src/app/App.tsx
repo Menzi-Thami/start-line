@@ -357,11 +357,12 @@ export function App() {
   }, [savedOnScreen, shownPlan, auth, savePlan])
   const notes = coachNotes && coachNotes.planId === savedOnScreen ? coachNotes.notes : undefined
 
-  // Back from Strava: finish connecting, then show the account page with what happened.
+  // Back from Strava: finish connecting, then resume onboarding if this was a new signup.
+  const stravaRunnerId = runner.state.kind === 'ready' ? runner.state.runner.id : null
   useEffect(() => {
-    if (!stravaCallback || stravaHandled.current || runner.state.kind !== 'ready') return
+    if (!stravaCallback || stravaHandled.current || !stravaRunnerId) return
     stravaHandled.current = true
-    const welcome = hasStravaWelcome(runner.state.runner.id)
+    const welcome = hasStravaWelcome(stravaRunnerId)
     window.history.replaceState(null, '', welcome ? '/?view=onboarding' : '/?view=account')
     if (welcome) setView('onboarding')
     const { code, state, scope, error } = stravaCallback
@@ -373,7 +374,7 @@ export function App() {
       .finally(() => setStravaConnecting(false))
       .then(() => setStravaNotice('Strava is connected. Your runs from the last six weeks are on their way, and new ones arrive by themselves.'))
       .catch((failure: unknown) => setStravaNotice(failure instanceof Error ? failure.message : 'Connecting Strava didn’t work. Try again.'))
-  }, [stravaCallback, runner.state.kind, auth])
+  }, [stravaCallback, stravaRunnerId, auth])
 
   // Signed in with a plan: open inside it, not on the builder or Home. From the plan this device kept when there is one,
   // straight away; otherwise built afresh from its answers, which needs only the API, never the sleeping database. Signed

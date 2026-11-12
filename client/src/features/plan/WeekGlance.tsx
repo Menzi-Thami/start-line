@@ -36,13 +36,13 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
   const touchDrag = useRef<{ date: string; x: number; y: number; at: number } | null>(null)
   const startTouch = (event: TouchEvent, date: string) => {
     const touch = event.touches[0]
-    if (touch) touchDrag.current = { date, x: touch.clientX, y: touch.clientY, at: Date.now() }
+    if (touch) touchDrag.current = { date, x: touch.clientX, y: touch.clientY, at: event.timeStamp }
   }
   const finishTouch = (event: TouchEvent) => {
     const source = touchDrag.current
     touchDrag.current = null
     const touch = event.changedTouches[0]
-    if (!source || !touch || Date.now() - source.at < 450 || Math.hypot(touch.clientX - source.x, touch.clientY - source.y) < 24) return
+    if (!source || !touch || event.timeStamp - source.at < 450 || Math.hypot(touch.clientX - source.x, touch.clientY - source.y) < 24) return
     const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest<HTMLElement>('[data-date]')?.dataset.date
     if (target && target !== source.date) { event.stopPropagation(); onRequestMove?.(source.date, target) }
   }

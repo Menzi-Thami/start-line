@@ -43,7 +43,8 @@ public sealed class LifeHappensTests
         var raceDay = Monday.AddDays(5);
         var plan = new TrainingPlan(Distance.FromKilometres(21.0975), DistanceCategory.HalfMarathon,
             raceDay, TimeSpan.FromMinutes(110), Monday,
-            new Dictionary<PaceZone, PaceRange> {
+            new Dictionary<PaceZone, PaceRange>
+            {
                 [PaceZone.Easy] = new(Pace.FromSecondsPerKilometre(330), Pace.FromSecondsPerKilometre(360))
             },
             [new PlanWeek(1, Monday, TrainingPhase.Taper, false,
@@ -67,7 +68,8 @@ public sealed class LifeHappensTests
         var raceDay = Monday.AddDays(5);
         var plan = new TrainingPlan(Distance.FromKilometres(21.0975), DistanceCategory.HalfMarathon,
             raceDay, TimeSpan.FromMinutes(110), Monday,
-            new Dictionary<PaceZone, PaceRange> {
+            new Dictionary<PaceZone, PaceRange>
+            {
                 [PaceZone.Easy] = new(Pace.FromSecondsPerKilometre(330), Pace.FromSecondsPerKilometre(360))
             },
             [new PlanWeek(1, Monday, TrainingPhase.Taper, false,

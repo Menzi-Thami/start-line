@@ -38,6 +38,49 @@ public sealed class LifeHappensTests
     }
 
     [Fact]
+    public void A_shakeout_moves_from_thursday_to_friday_before_saturday_race()
+    {
+        var raceDay = Monday.AddDays(5);
+        var plan = new TrainingPlan(Distance.FromKilometres(21.0975), DistanceCategory.HalfMarathon,
+            raceDay, TimeSpan.FromMinutes(110), Monday,
+            new Dictionary<PaceZone, PaceRange> {
+                [PaceZone.Easy] = new(Pace.FromSecondsPerKilometre(330), Pace.FromSecondsPerKilometre(360))
+            },
+            [new PlanWeek(1, Monday, TrainingPhase.Taper, false,
+                [Run(3, SessionType.Shakeout, 4.5), Run(5, SessionType.Race, 21.0975)])], []);
+
+        var thursday = Monday.AddDays(3);
+        var friday = Monday.AddDays(4);
+        var choice = LifeHappens.Propose(plan, thursday, new(LifeSituation.MoveRun, Date: thursday), []);
+        choice.MoveTargets.ShouldContain(friday);
+
+        var moved = LifeHappens.Propose(plan, thursday, new(LifeSituation.MoveRun, Date: thursday, MoveTo: friday), []);
+        var days = RemainingWeek.Apply(plan, moved.Changes).Weeks[0].Sessions;
+        days.ShouldContain(s => s.Date == friday && s.Type == SessionType.Shakeout && s.DistanceKm == 4.5);
+        days.ShouldNotContain(s => s.Date == thursday && s.Type == SessionType.Shakeout);
+        days.ShouldContain(s => s.Date == raceDay && s.Type == SessionType.Race);
+    }
+
+    [Fact]
+    public void A_hard_workout_still_cannot_move_to_race_eve()
+    {
+        var raceDay = Monday.AddDays(5);
+        var plan = new TrainingPlan(Distance.FromKilometres(21.0975), DistanceCategory.HalfMarathon,
+            raceDay, TimeSpan.FromMinutes(110), Monday,
+            new Dictionary<PaceZone, PaceRange> {
+                [PaceZone.Easy] = new(Pace.FromSecondsPerKilometre(330), Pace.FromSecondsPerKilometre(360))
+            },
+            [new PlanWeek(1, Monday, TrainingPhase.Taper, false,
+                [Run(3, SessionType.Intervals, 4.5), Run(5, SessionType.Race, 21.0975)])], []);
+        var thursday = Monday.AddDays(3);
+        var friday = Monday.AddDays(4);
+        var choice = LifeHappens.Propose(plan, thursday, new(LifeSituation.MoveRun, Date: thursday), []);
+        choice.MoveTargets.ShouldNotContain(friday);
+        Should.Throw<DomainException>(() => LifeHappens.Propose(plan, thursday,
+            new(LifeSituation.MoveRun, Date: thursday, MoveTo: friday), []));
+    }
+
+    [Fact]
     public void A_long_run_moves_only_to_a_free_day_with_no_hard_run_either_side_and_rests_its_old_day()
     {
         var today = Monday;

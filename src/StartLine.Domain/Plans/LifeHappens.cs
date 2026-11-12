@@ -154,7 +154,7 @@ public static class LifeHappens
     {
         var end = WeekStart(plan, today).AddDays(6);
         return [.. Enumerable.Range(0, end.DayNumber - today.DayNumber + 1).Select(today.AddDays)
-            .Where(day => day != session.Date && !runs.Any(r => r.Date == day) && day < plan.RaceDate && day.AddDays(1) != plan.RaceDate)];
+            // A gentle shakeout can move to the day before a race, but no hard session can.\n            .Where(day => day != session.Date && !runs.Any(r => r.Date == day) && day < plan.RaceDate\n                && (day.AddDays(1) != plan.RaceDate || !IsHard(session.Type)))];
     }
 
     private static DateOnly WeekStart(TrainingPlan plan, DateOnly today) =>

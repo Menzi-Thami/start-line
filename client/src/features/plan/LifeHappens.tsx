@@ -73,17 +73,47 @@ export function LifeHappens({ plan, today, units, actions, moveDate = null, move
   const [message, setMessage] = useState<{ text: string; error?: boolean; undo?: string[] } | null>(null)
   const initializedDrag = useRef(false)
 
-  // A drop never saves on its own: preview the proposed move and require confirmation.
+  // A drop never saves on its own. An occupied, past or race-adjacent target must
+  // fall back to the server's offered dates instead of leaving the runner at a dead end.
   useEffect(() => {
     if (!moveDate || !moveTarget || !actions || initializedDrag.current) return
     initializedDrag.current = true
-    setBusy(true)
+    let cancelled = false
     const change: LifeChange = { situation: 'MoveRun', date: moveDate, moveTo: moveTarget, canRun: true }
-    void actions.preview(change).then(result => {
-      setProposal({ change, result })
-    }).catch(error => {
-      setMessage({ text: error instanceof Error ? error.message : 'This move is not available. Choose another day.', error: true })
-    }).finally(() => setBusy(false))
+    setBusy(true)
+    void (async () => {
+      try {
+        const result = await actions.preview(change)
+        if (!cancelled) {
+          setProposal({ change, result })
+          setMessage(null)
+        }
+      } catch (error) {
+        if (cancelled) return
+        // In particular, the destination may already have a workout or be too
+        // close to race day. Ask the server for permitted destinations, don't guess.
+        try {
+          const offered: LifeChange = { ...change, moveTo: null }
+          const result = await actions.preview(offered)
+          if (cancelled) return
+          setProposal({ change: offered, result })
+          setMessage({
+            text: result.moveTargets.length
+              ? `${formatDate(moveTarget)} isn't an available destination. Choose one of the free days below.`
+              : 'No eligible free days remain this week. Keep this session where it is or use Replan from here for a larger change.',
+            error: true,
+          })
+        } catch {
+          if (!cancelled) setMessage({
+            text: error instanceof Error ? error.message : 'This move is not available. Try another workout or day.',
+            error: true,
+          })
+        }
+      } finally {
+        if (!cancelled) setBusy(false)
+      }
+    })()
+    return () => { cancelled = true }
   }, [actions, moveDate, moveTarget])
 
   const sessions = plan.weeks.flatMap((w) => w.sessions).filter((s) => s.type !== 'Strength' && s.type !== 'Race')
@@ -252,7 +282,7 @@ export function LifeHappens({ plan, today, units, actions, moveDate = null, move
         <div className="callout life-happens-preview">
           {needsDay ? (
             <>
-              <p>{situation === 'MoveRun' ? 'Choose a free day this week:' : 'Choose a day for it. Each keeps an easy day either side of a hard session:'}</p>
+              <p>{situation === 'MoveRun' ? 'Choose a free day this week (the day before race day and already scheduled run days are excluded):' : 'Choose a day for it. Each keeps an easy day either side of a hard session:'}</p>
               <div className="pills" role="group" aria-label="Move to">
                 {result.moveTargets.map((d) => (
                   <button key={d} type="button" className="button button-quiet" disabled={busy} onClick={() => preview(d)}>
@@ -265,7 +295,7 @@ export function LifeHappens({ plan, today, units, actions, moveDate = null, move
             <p>
               {situation === 'MissedRun'
                 ? 'Let it go: carry on with the plan from here. Missed kilometres are never made up, and there’s no safe day to move a key session to.'
-                : 'Nothing needs to change.'}
+                : situation === 'MoveRun' || situation === 'MoveLongRun' ? 'No eligible free days remain this week. Your workout is unchanged.' : 'Nothing needs to change.'}
             </p>
           ) : (
             <>

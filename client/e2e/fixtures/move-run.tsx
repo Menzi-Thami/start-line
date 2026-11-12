@@ -27,7 +27,7 @@ const actions = {
   apply: async (_change: LifeChange, _token: string) => {},
   restore: async (_dates: string[]) => {},
 }
-function QA() {
+export function QA() {
   const [moving, setMoving] = useState<{ from: string; to?: string } | null>(null)
   const [applied, setApplied] = useState(false)
   return (

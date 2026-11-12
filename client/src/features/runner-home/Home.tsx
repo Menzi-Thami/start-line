@@ -389,19 +389,24 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   )
 }
 
-/**
- * One line, only when Strava could send runs and isn't: connecting is set up once, in Account, so Home doesn't list
- * every way in each time. Account has the full list.
- */
+/** Show an actionable, dismissible-in-context path to Strava without blocking the plan. */
 function StravaNudge({ strava, onOpenAccount }: { strava?: StravaStatus; onOpenAccount: () => void }) {
   if (!strava?.available || (strava.connected && strava.status !== 'NeedsReconnect')) return null
+  const reconnect = strava.connected
   return (
-    <p className="home-nudge">
-      {strava.connected ? 'Strava has stopped sending your runs.' : 'Connect Strava and your runs arrive by themselves.'}{' '}
-      <button type="button" className="link-button" onClick={onOpenAccount}>
-        {strava.connected ? 'Connect again' : 'Connect Strava'}
+    <section className="panel home-strava-invite" aria-label="Connect your running watch">
+      <div>
+        <h2 className="home-card-heading">{reconnect ? 'Reconnect your runs' : 'Your runs, automatically'}</h2>
+        <p className="field-help">
+          {reconnect
+            ? 'Your Strava connection needs attention. Reconnect to keep your training up to date.'
+            : 'Already recording on a Garmin, Apple Watch or another device? Connect Strava once so your runs arrive after you sync.'}
+        </p>
+      </div>
+      <button type="button" className="button button-primary" onClick={onOpenAccount}>
+        {reconnect ? 'Reconnect Strava' : 'Connect Strava'}
       </button>
-    </p>
+    </section>
   )
 }
 

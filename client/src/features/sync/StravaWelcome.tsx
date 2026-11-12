@@ -16,7 +16,7 @@ export function StravaWelcome({ onContinue, notice, connecting = false }: Props)
 
   return (
     <section className="strava-welcome panel" aria-labelledby="strava-welcome-title">
-      <p className="field-help">Your first steps · 2 of 3</p>
+      <p className="field-help">Connect your runs · optional</p>
       <h1 id="strava-welcome-title">Bring your runs with you.</h1>
       <p>Connect Strava once, and runs recorded on your watch can arrive in Taperday automatically after they sync to Strava. We'll compare them with your training plan.</p>
       <StravaSection key={notice ?? 'initial'} notice={notice} connecting={connecting} onStatusChange={setStatus} />

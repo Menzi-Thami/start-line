@@ -20,6 +20,6 @@ test('dragging a workout opens a compact confirmation that does not auto-save @p
   await expect(dialog.getByRole('button', { name: 'Move run', exact: true })).toBeVisible()
   await dialog.getByRole('button', { name: 'Move run', exact: true }).click()
   await expect(page.locator('#saved-state')).toHaveText('Saved')
-  await expect(dialog.getByText('Saved! Your training calendar has been updated.')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Run moved' }).getByText('Saved! Your training calendar has been updated.')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
 })

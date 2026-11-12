@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { LifeChange, LifeProposal, LifeSituation, SessionRevision, TrainingPlan } from '../../lib/types'
 
@@ -60,7 +60,7 @@ function describe(r: SessionRevision, units: Units): string {
  * upcoming sessions. The runner previews them, applies them, and can put any day back as the plan first wrote it. Hard
  * sessions keep an easy day either side; missed kilometres are never made up; past days and the race never change.
  */
-export function LifeHappens({ plan, today, units, actions, moveDate = null }: { plan: TrainingPlan; today: string; units: Units; actions?: LifeHappensActions; /** A run to move, chosen from its day: opens straight on Move a run. */ moveDate?: string | null }) {
+export function LifeHappens({ plan, today, units, actions, moveDate = null, moveTarget = null }: { plan: TrainingPlan; today: string; units: Units; actions?: LifeHappensActions; /** A run to move, chosen from its day: opens straight on Move a run. */ moveDate?: string | null; /** A target selected by dragging onto a calendar day. */ moveTarget?: string | null }) {
   const ids = { session: useId(), minutes: useId(), from: useId(), until: useId(), days: useId(), canRun: useId() }
   const [situation, setSituation] = useState<LifeSituation | null>(moveDate ? 'MoveRun' : null)
   const [date, setDate] = useState(moveDate ?? '')
@@ -71,6 +71,20 @@ export function LifeHappens({ plan, today, units, actions, moveDate = null }: { 
   const [proposal, setProposal] = useState<{ change: LifeChange; result: LifeProposal } | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ text: string; error?: boolean; undo?: string[] } | null>(null)
+  const initializedDrag = useRef(false)
+
+  // A drop never saves on its own: preview the proposed move and require confirmation.
+  useEffect(() => {
+    if (!moveDate || !moveTarget || !actions || initializedDrag.current) return
+    initializedDrag.current = true
+    setBusy(true)
+    const change: LifeChange = { situation: 'MoveRun', date: moveDate, moveTo: moveTarget, canRun: true }
+    void actions.preview(change).then(result => {
+      setProposal({ change, result })
+    }).catch(error => {
+      setMessage({ text: error instanceof Error ? error.message : 'This move is not available. Choose another day.', error: true })
+    }).finally(() => setBusy(false))
+  }, [actions, moveDate, moveTarget])
 
   const sessions = plan.weeks.flatMap((w) => w.sessions).filter((s) => s.type !== 'Strength' && s.type !== 'Race')
   const thisWeek = weekStart(today)

@@ -1,0 +1,7 @@
+/* Drag affordance belongs to the existing Night Run design language. */
+.week-day-button[draggable="true"], .plan-calendar-day[draggable="true"] { cursor: grab; }
+.week-day-button[draggable="true"]:active, .plan-calendar-day[draggable="true"]:active { cursor: grabbing; }
+.schedule-drag-handle { display: inline-flex; align-items: center; justify-content: center; color: var(--volt, #c6ff3e); font-weight: 700; margin-inline-end: .35rem; padding: .15rem; touch-action: none; user-select: none; -webkit-user-select: none; }
+.plan-calendar-day .schedule-drag-handle { position: absolute; inset-inline-end: 1px; inset-block-end: 1px; font-size: .7rem; }
+.week-day-button[draggable="true"]:focus-visible, .plan-calendar-day[draggable="true"]:focus-visible { outline: 2px solid var(--volt, #c6ff3e); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .schedule-drag-handle { transition: none; } }

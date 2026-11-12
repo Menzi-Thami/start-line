@@ -1,4 +1,5 @@
 import './plan-journey.css'
+import './schedule-drag.css'
 import { DayPreview } from './DayPreview'
 import { dayStatus } from './training-status'
 import { LifeHappens } from './LifeHappens'

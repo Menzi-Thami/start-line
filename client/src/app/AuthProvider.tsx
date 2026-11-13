@@ -47,9 +47,16 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
     msal
       .initialize()
       .then(() => msal.handleRedirectPromise())
-      .then((result) => {
+      .then(async (result) => {
         if (cancelled) return
-        const account = result?.account ?? msal.getAllAccounts()[0] ?? null
+        // One runner per device. Whoever just signed in replaces anyone this device remembered, so signing out later can't
+        // reveal an older account; otherwise it's the account last signed in with (MSAL keeps it as the active one).
+        if (result?.account) {
+          const others = msal.getAllAccounts().filter((a) => a.homeAccountId !== result.account.homeAccountId)
+          await Promise.all(others.map((account) => msal.clearCache({ account }).catch(() => undefined)))
+        }
+        if (cancelled) return
+        const account = result?.account ?? msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null
         if (account) msal.setActiveAccount(account)
         setInfo(account)
       })
@@ -82,10 +89,14 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       signIn: () => start('sign-in'),
       signUp: () => start('sign-up'),
       signInWithGoogle: config.google ? () => start('google') : undefined,
-      // Signing out leaves nothing of the runner's on this device: the copy of their Home goes too.
+      // Signing out leaves nothing of anyone's on this device: every remembered account (MSAL's logout only removes the one
+      // it's given, and an older one would then open as signed in), and the copy of their Home. Then Microsoft ends its session.
       signOut: () => {
         clearSnapshot()
-        void msal.logoutRedirect({ account: info ?? undefined })
+        void (async () => {
+          await msal.clearCache().catch(() => undefined)
+          await msal.logoutRedirect({ account: info ?? undefined })
+        })()
       },
       getToken: async () => {
         if (!info) return null

@@ -76,4 +76,12 @@ describe('Move Run confirmation dialog', () => {
     fireEvent.click(swaps.querySelector('button')!)
     await waitFor(() => expect(preview).toHaveBeenCalledWith({ situation: 'SwapRuns', date: from, moveTo: target, canRun: true }))
   })
+
+  it('opens over the screen, outside the plan, so nothing around the plan can pin it out of view', async () => {
+    const preview = vi.fn(async (_change: LifeChange) => proposed(moved))
+    render(<section className="plan plan-reveal"><MoveRunDialog from={from} to={target} plan={planFixture} units="km" actions={{ preview, apply: async () => {}, restore: async () => {} }} onClose={() => {}} /></section>)
+    const dialog = await screen.findByRole('dialog', { name: 'Move this run?' })
+    expect(dialog.closest('.plan')).toBeNull()
+    expect(dialog.parentElement?.parentElement).toBe(document.body)
+  })
 })

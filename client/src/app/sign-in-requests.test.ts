@@ -19,7 +19,7 @@ describe('what each sign-in button asks Microsoft for', () => {
 
   it('opens Google directly, still letting the runner pick which Google account', () => {
     const request = signInRequest('google', SCOPE, PAGE)
-    expect(request.domainHint).toBe('google')
+    expect(request.domainHint).toBe('google.com')
     expect(request.prompt).toBe('select_account')
     expect(request.redirectStartPage).toBe(PAGE)
   })

@@ -94,8 +94,16 @@ How it signs in, with no password stored anywhere:
   `repo:Menzi-Thami@43884343/start-line@1410876756:environment:production` (GitHub now puts the owner and repo
   IDs in the subject, so a deleted-and-recreated repo with the same name can't inherit the trust), and the
   environment only accepts runs from `main`.
-- It holds **Website Contributor on the API app only**: it can't touch the database server, the resource group or
-  anything else in the subscription.
+- It holds **Website Contributor on the API app only**, plus **firewall rules on the SQL server only**: it can't
+  change the database server's settings, the resource group or anything else in the subscription.
+- The firewall rights exist because GitHub's runners aren't all in Azure, so "Allow Azure services" doesn't always let
+  the migration in (error 40615, first seen 13 Nov 2026 from an AWS address). Each deploy opens a rule for its own
+  runner's address and removes it straight after migrating. The role is `infra/sql-firewall-deploy-role.json`; set it
+  up once (one identity serves staging and production):
+  ```bash
+  az role definition create --role-definition infra/sql-firewall-deploy-role.json
+  az role assignment create --assignee 7f076390-5180-4af6-b078-67c1661931e8 --role "Taperday deploy SQL firewall rules" --scope "$(az sql server show -g rg-taperday -n sql-taperday-3ghg5t --query id -o tsv)"
+  ```
 - In the database it is a user with `db_ddladmin` (to run migrations) plus read/write. The API itself still only
   has read/write.
 
@@ -178,6 +186,7 @@ Use **Run workflow → main** to test the current workflow after resolving the c
 | Install .NET | Exact SDK download error. The current workflow uses Microsoft's current install script and an exact version to avoid the old storage URL. |
 | Build API / Build website | First compiler or dependency error. Reproduce with `dotnet publish src/StartLine.API -c Release` or `cd client && npm ci && npm run build`. |
 | Azure login | The `production` environment's Azure IDs and the app registration's federated credential subject described above. |
+| Allow migration runner through SQL firewall | `AuthorizationFailed` on `firewallRules/write` means the deploy identity is missing the firewall role (see above). |
 | Migrate database | SQL error code: 40613 means waking; 40615 means firewall; authentication or permission errors need the deploy identity's database access checked. |
 | Database reports free monthly allowance exhausted | Wait for the portal's displayed allowance reset or explicitly choose a paid database tier. Retries and workflow changes cannot replenish the allowance. |
 | Deploy API / Deploy website | Azure role assignment, correct app name, or the Static Web Apps deployment token, according to the error. |

@@ -81,7 +81,9 @@
 
 /* New pages feel composed: headline first, then the actionable content. */
 .view-enter > :first-child:not(.scroll-progress) {
-  animation: polish-rise 380ms var(--ease-emphasis) both;
+  /* backwards, not both: a transform kept after the rise would make this block the frame of anything fixed inside it
+     (the race step's Continue, the plan-building screen, the Move run pop-up), pinning them to the page, not the screen. */
+  animation: polish-rise 380ms var(--ease-emphasis) backwards;
 }
 
 @keyframes polish-rise {
@@ -189,8 +191,8 @@
 }
 .home-heading { font-family: var(--font-display); letter-spacing: -0.025em; }
 .home-intro { display: grid; gap: var(--space-5); }
-.home-panel.slide-forward { animation: slide-from-right var(--dur-slide) var(--ease-glide) both; }
-.home-panel.slide-back { animation: slide-from-left var(--dur-slide) var(--ease-glide) both; }
+.home-panel.slide-forward { animation: slide-from-right var(--dur-slide) var(--ease-glide) backwards; }
+.home-panel.slide-back { animation: slide-from-left var(--dur-slide) var(--ease-glide) backwards; }
 .home-race-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

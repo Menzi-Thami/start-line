@@ -773,11 +773,11 @@ select {
 }
 
 .slide-forward {
-  animation: slide-from-right var(--dur-slide) var(--ease-glide) both;
+  animation: slide-from-right var(--dur-slide) var(--ease-glide) backwards;
 }
 
 .slide-back {
-  animation: slide-from-left var(--dur-slide) var(--ease-glide) both;
+  animation: slide-from-left var(--dur-slide) var(--ease-glide) backwards;
 }
 
 @keyframes slide-from-right {

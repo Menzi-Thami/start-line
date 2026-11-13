@@ -114,25 +114,32 @@ jobs:
           # Only once the rule exists, so the clean-up step never tries to remove a rule that was never made.
           echo "rule_name=$rule" >> "$GITHUB_OUTPUT"
           echo "Temporary SQL firewall rule created for this deployment runner."
-          # Azure SQL firewall changes can take a few minutes to propagate; existing migration retry handles that.
+          # A new firewall rule can take up to five minutes to apply; the migration below keeps trying for longer than that.
 
       # Migrations run before the new API starts, so it never meets a schema older than it expects.
       # Keep migrations additive: the old API keeps serving until the deploy below swaps it out.
-      # The free database pauses when idle and answers 40613 ("not currently available") while it wakes, which can
-      # take a minute or two, so keep trying. Retrying is safe: migrations that already ran are skipped.
+      # Two waits are normal here, so keep trying for 8 minutes: the free database pauses when idle and answers 40613
+      # ("not currently available") while it wakes, and the runner's new firewall rule can take up to five minutes to
+      # apply (40615, "not allowed to access the server"; on 13 Nov 2026 the release failed after three minutes of that,
+      # then passed on a rerun). Retrying is safe: migrations that already ran are skipped.
       - name: Migrate database
         run: |
           dotnet build src/StartLine.Infrastructure -c Release -v q
-          for attempt in 1 2 3 4 5 6; do
+          attempt=0
+          SECONDS=0
+          while true; do
+            attempt=$((attempt + 1))
             if dotnet ef database update --no-build --configuration Release \
               --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure \
               --connection "Server=tcp:${{ vars.SQL_SERVER }},1433;Database=${{ vars.SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True;Connect Timeout=120;"; then
               exit 0
             fi
-            echo "Attempt $attempt failed; the database may still be waking. Trying again in 30 s."
+            if (( SECONDS >= 480 )); then
+              echo "Database migration failed after $attempt attempts over $((SECONDS / 60)) minutes" && exit 1
+            fi
+            echo "Attempt $attempt failed after $SECONDS s; the database may be waking or the firewall rule still applying. Trying again in 30 s."
             sleep 30
           done
-          echo "Database migration failed after 6 attempts" && exit 1
 
       - name: Remove temporary migration SQL firewall rule
         if: ${{ always() && steps.sql_firewall.outputs.rule_name != '' }}

@@ -211,7 +211,7 @@ describe('Home from the copy kept on this device', () => {
     renderApp(signedIn())
 
     // No waiting screen: one line says their plan is on its way, and the page under it works.
-    expect(await screen.findByText(/Finding your plan/)).toBeInTheDocument()
+    expect(await screen.findByText(/Opening your training/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
   })
@@ -337,14 +337,14 @@ describe('their plan from the copy kept on this device', () => {
 
     renderApp(signedIn())
 
-    expect(await screen.findByText(/Signed in as Thandi/)).toBeInTheDocument()
+    expect(await screen.findByText(/Opening your training/)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
 
     await waitFor(() => expect(answer).toBeDefined())
     answer!()
 
     expect(await screen.findByRole('heading', { name: 'Parkrun PB' }, { timeout: 3000 })).toBeInTheDocument()
-    expect(screen.queryByText(/Finding your plan/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Opening your training/)).not.toBeInTheDocument()
   })
 
   it('opens on their plan, built from its answers, when the copy here has only which plan it is', async () => {
@@ -374,7 +374,7 @@ describe('their plan from the copy kept on this device', () => {
     window.history.replaceState(null, '', '/')
     renderApp(signedIn({ account: { name: 'Sipho', email: 'sipho@example.com' } }))
 
-    expect(await screen.findByText(/Finding your plan/)).toBeInTheDocument()
+    expect(await screen.findByText(/Opening your training/)).toBeInTheDocument()
     expect(screen.queryByText(/Showing your plan/)).not.toBeInTheDocument()
   })
 })

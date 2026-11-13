@@ -247,12 +247,28 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
 .tab-bar-item[aria-current='page'] { color: var(--ink); }
 .tab-bar-item[aria-current='page'] svg { color: var(--ink); }
 
-/* The website's light/dark switch: a quiet round button at the end of the masthead. */
+/* Global appearance control: anchored to the viewport, not the scrollable/clipped masthead.
+ * Stay clear of mobile safe areas and keep the existing bottom navigation unobstructed. */
 .theme-toggle {
-  flex: none; display: inline-grid; place-items: center; width: var(--tap); height: var(--tap); margin-left: 12px;
-  border: 1px solid var(--line-strong); border-radius: 999px; background: var(--paper); color: var(--ink); cursor: pointer;
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  right: calc(env(safe-area-inset-right, 0px) + 16px);
+  z-index: 75;
+  display: inline-grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
 }
 .theme-toggle:hover { background: var(--surface); }
+.theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.masthead { padding-right: calc(var(--tap) + 24px); }
+@media print { .theme-toggle { display: none; } }
 /* The proof mark keeps its ink disc in both themes, so the white runner stays visible. */
 .hero-proof-mark { background-color: #111111; }
 

@@ -46,9 +46,54 @@ New registration, name **Taperday Web**.
 ## 4. Sign-up and sign-in flow
 
 1. External Identities → **User flows** → New → "Sign up and sign in".
-2. Sign-in methods: **Email one-time passcode** (no passwords to leak). Add Google later if wanted.
+2. Sign-in methods: **Email one-time passcode** (no passwords to leak). Add Google with step 4a.
 3. Attributes to collect: **Display name**.
 4. In the flow's **Applications**, add *Taperday Web*.
+
+## 4a. Sign in with Google (optional, recommended)
+
+Google lets runners in with no emailed code, so it keeps working when Microsoft's code email is slow or lost. Until all
+three parts below are done, leave `VITE_AUTH_GOOGLE` unset: the app then hides its Google button, which would otherwise
+fail. Microsoft's page: "Add Google as an identity provider" (External ID, external tenants).
+
+**1. Google Cloud console** (signed in with the Google account that should own this; a personal one, as for the tenant):
+
+1. New project, e.g. *Taperday sign-in*, and open it.
+2. APIs & services → **OAuth consent screen** → User type **External**. App name **Taperday**, a support email, and
+   under **Authorized domains** add `ciamlogin.com` and `microsoftonline.com`. Save.
+3. **Credentials** → Create credentials → **OAuth client ID** → **Web application**, name *Microsoft Entra External ID*.
+   Under **Authorized redirect URIs** add all seven (`<tenant-id>` is the Directory ID, `<subdomain>` is `taperday`):
+
+   ```text
+   https://login.microsoftonline.com
+   https://login.microsoftonline.com/te/<tenant-id>/oauth2/authresp
+   https://login.microsoftonline.com/te/<subdomain>.onmicrosoft.com/oauth2/authresp
+   https://<tenant-id>.ciamlogin.com/<tenant-id>/federation/oidc/accounts.google.com
+   https://<tenant-id>.ciamlogin.com/<subdomain>.onmicrosoft.com/federation/oidc/accounts.google.com
+   https://<subdomain>.ciamlogin.com/<tenant-id>/federation/oauth2
+   https://<subdomain>.ciamlogin.com/<subdomain>.onmicrosoft.com/federation/oauth2
+   ```
+
+4. Create, then copy the **Client ID** and **Client secret** straight into step 2. Don't save the secret anywhere else,
+   and never in this repo or a chat.
+5. Publish the consent screen (Audience → **Publish app**), or only the test users you list can sign in.
+
+**2. Entra admin center** (the external tenant):
+
+1. External Identities → **All identity providers** → Built-in → **Google** → Configure. Name *Google*, paste the
+   client ID and secret, Save.
+2. External Identities → **User flows** → your sign-up and sign-in flow → **Identity providers** → tick **Google**, Save.
+   Microsoft's own sign-in page now shows a Google button too.
+
+**3. Test it before runners see it** (a private window on the staging site, or locally):
+
+1. A Google account that has never used Taperday: it should sign up and land on "finish your account".
+2. A Google account whose address **already has an email-code account**. External ID doesn't link the two by email, so
+   expect Microsoft to send it back to the email code, or a second, empty Taperday account (runners are found by the
+   Microsoft user ID, not the email). Note which happens; if it's the second, existing runners keep signing in by email.
+
+**4. Switch the app's button on:** GitHub → Settings → Environments → `staging` (and later `production`) → Variables →
+`VITE_AUTH_GOOGLE` = `true`, then deploy. Locally, add `VITE_AUTH_GOOGLE=true` to `client/.env.local`.
 
 ## 5. Point the app at it
 
@@ -67,7 +112,12 @@ Client (`client/.env.local`, git-ignored):
 VITE_AUTH_CLIENT_ID=<web-client-id>
 VITE_AUTH_AUTHORITY=https://<subdomain>.ciamlogin.com/<tenant-id>/
 VITE_AUTH_SCOPE=api://<api-client-id>/Plans.ReadWrite
+# VITE_AUTH_GOOGLE=true   # only after step 4a
 ```
+
+Every sign-in button lets the runner choose the account: the app asks Microsoft with `prompt=select_account` and
+forgets the device's remembered account first, so Microsoft's page never locks in the last email used on that device
+(`client/src/app/sign-in-requests.ts`).
 
 > **The client authority must end in the tenant ID**, not `<subdomain>.onmicrosoft.com` and not a bare host.
 > External ID issues tokens as `https://<tenant-id>.ciamlogin.com/<tenant-id>/v2.0`, and MSAL 5 checks the issuer

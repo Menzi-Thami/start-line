@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { clearSnapshot } from '../lib/home-snapshot'
 import { AuthContext, accountsOff, type Auth, type AuthConfig } from './auth-context'
 import { describeSignInError, type SignInProblem } from './sign-in-errors'
+import { signInRequest, type SignInKind } from './sign-in-requests'
 
 const toAccount = (info: AccountInfo) => ({ name: info.name || info.username, email: info.username || null })
 
@@ -66,14 +67,21 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
 
   const value = useMemo<Auth>(() => {
     if (!msal || !config) return accountsOff
+    // Come back to exactly this page, so a plan being built isn't lost. The runner picks the account each time: the one
+    // this device remembers is forgotten as active (it stays cached, and comes back if they turn round), so its email
+    // isn't locked into Microsoft's page.
+    const start = (kind: SignInKind) => {
+      msal.setActiveAccount(null)
+      void msal.loginRedirect(signInRequest(kind, config.scope, window.location.href))
+    }
     return {
       enabled: true,
       loading,
       account: info ? toAccount(info) : null,
       error,
-      // Come back to exactly this page, so a plan being built isn't lost.
-      signIn: () => void msal.loginRedirect({ scopes: [config.scope], redirectStartPage: window.location.href }),
-      signUp: () => void msal.loginRedirect({ scopes: [config.scope], prompt: 'create', redirectStartPage: window.location.href }),
+      signIn: () => start('sign-in'),
+      signUp: () => start('sign-up'),
+      signInWithGoogle: config.google ? () => start('google') : undefined,
       // Signing out leaves nothing of the runner's on this device: the copy of their Home goes too.
       signOut: () => {
         clearSnapshot()

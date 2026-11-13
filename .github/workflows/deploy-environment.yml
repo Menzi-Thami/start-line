@@ -71,6 +71,8 @@ jobs:
           VITE_AUTH_CLIENT_ID: ${{ vars.VITE_AUTH_CLIENT_ID }}
           VITE_AUTH_AUTHORITY: ${{ vars.VITE_AUTH_AUTHORITY }}
           VITE_AUTH_SCOPE: ${{ vars.VITE_AUTH_SCOPE }}
+          # Optional: "true" once Google is in the tenant's user flow (docs/accounts-setup.md). Unset hides the button.
+          VITE_AUTH_GOOGLE: ${{ vars.VITE_AUTH_GOOGLE }}
           VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
         run: |
           npm ci

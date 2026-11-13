@@ -20,7 +20,7 @@ describe('optional sign-in bundle', () => {
   })
 
   it('loads the existing provider with the original configuration', async () => {
-    render(<AppAuth config={{ clientId: 'configured-account', authority: 'https://example.test', scope: 'plans' }}><p>Your running</p></AppAuth>)
+    render(<AppAuth config={{ clientId: 'configured-account', authority: 'https://example.test', scope: 'plans', google: false }}><p>Your running</p></AppAuth>)
     expect(await screen.findByRole('region', { name: 'configured-account' })).toHaveTextContent('Your running')
   })
 })

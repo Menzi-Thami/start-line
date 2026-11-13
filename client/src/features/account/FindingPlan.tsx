@@ -9,17 +9,11 @@ interface Props {
   onSignOut: () => void
 }
 
-const STATUS = {
-  server: 'Connecting to Taperday',
-  database: 'Fetching your training',
-  almost: 'Almost there',
-} as const
-
 /**
  * Just signed in, on a device with no saved copy: the page stays usable while the account answers. Slow API or network
  * responses get recovery controls and dependency checks; fast loads do not need extra readiness requests.
  */
-export function FindingPlan({ name, onRetry, onSignOut }: Props) {
+export function FindingPlan({ name: _name, onRetry, onSignOut }: Props) {
   const [slow, setSlow] = useState(false)
   const step = useWakeStep(slow)
 
@@ -29,15 +23,11 @@ export function FindingPlan({ name, onRetry, onSignOut }: Props) {
   }, [])
 
   return (
-    <div className="finding-plan" role="status" aria-live="polite">
+    <div className={`finding-plan${slow ? " finding-plan-slow" : ""}`} role="status" aria-live="polite">
       <span className="wait-spinner" aria-hidden="true" />
       <div>
-        <p>
-          <strong>{name ? `Signed in as ${name}.` : 'Signed in.'}</strong> {slow ? `${STATUS[step]}…` : 'Finding your plan…'}
-        </p>
-        <p className="field-help">
-          {slow ? 'This is taking longer than usual. Look around meanwhile: your plan opens as soon as it loads.' : 'It opens here by itself.'}
-        </p>
+        <p><strong>{slow ? 'Your account is taking longer than expected' : 'Opening your training…'}</strong></p>
+        {slow && <p className="field-help">{step === 'server' ? 'Connecting to Taperday.' : step === 'database' ? 'Checking your training data.' : 'Finishing up.'} You can retry without signing in again.</p>}
         {slow && (
           <p className="finding-plan-actions">
             <button type="button" className="link-button" onClick={onRetry}>

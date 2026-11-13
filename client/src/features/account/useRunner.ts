@@ -17,10 +17,10 @@ export type RunnerState =
  * but the free API host can cold-start or restart during deployment. Slow loads get recovery controls; fast loads
  * never wait for this ceiling. Time and attempt limits keep a quickly failing server from being retried indefinitely.
  */
-export const WAKE_PATIENCE_MS = 150_000
+export const WAKE_PATIENCE_MS = 60_000
 
 /** A ceiling on tries as well, so a server that keeps erroring quickly is never asked hundreds of times. */
-export const WAKE_TRIES = 30
+export const WAKE_TRIES = 10
 
 /** The pause before the nth retry: two seconds, growing to ten. */
 export const wakePause = (attempt: number) => (import.meta.env.MODE === 'test' ? 0 : Math.min(2_000 * (attempt + 1), 10_000))

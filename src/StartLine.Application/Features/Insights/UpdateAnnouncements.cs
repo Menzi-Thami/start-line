@@ -57,6 +57,7 @@ internal sealed partial class UpdateAnnouncementSender(
         new Dictionary<string, Func<string, string, UnsubscribeLinks, EmailMessage>>(StringComparer.Ordinal)
         {
             [UpdateEmails.RedesignCampaign] = (to, name, links) => UpdateEmails.TaperdayRedesign(to, name, unsubscribe: links),
+            [UpdateEmails.SignInOutageCampaign] = (to, name, links) => UpdateEmails.SignInOutage(to, name, unsubscribe: links),
         };
 
     public async Task<AnnouncementRun> SendDueAsync(string campaign, DateTimeOffset accountsCreatedBefore, DateTimeOffset now, AnnouncementBudget budget, CancellationToken cancellationToken)

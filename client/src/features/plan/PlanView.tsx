@@ -3,6 +3,7 @@ import './schedule-drag.css'
 import { DayPreview } from './DayPreview'
 import { dayStatus } from './training-status'
 import { LifeHappens } from './LifeHappens'
+import { MoveRunDialog } from './MoveRunDialog'
 import { WorkoutExport } from './WorkoutExport'
 import { RaceWeek } from './RaceWeek'
 import { lazy, Suspense, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode, type TouchEvent } from 'react'
@@ -125,10 +126,10 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const [preparationOpen, setPreparationOpen] = useState(preparationMode === 'race' || preparationMode === 'long')
   // "Plan tools" opens by itself for a link straight to race-day or long-run preparation.
   const [toolboxOpen, setToolboxOpen] = useState(preparationMode === 'race' || preparationMode === 'long')
-  // A run picked to move from its day: Plan tools opens on Life happens › Move a run, with that run chosen.
-  const [moveRequest, setMoveRequest] = useState<string | null>(null)
-  const [moveTarget, setMoveTarget] = useState<string | null>(null)
-  const [moveSequence, setMoveSequence] = useState(0)
+  // Open a focused confirmation instead of scrolling down to the Life Happens form.
+  const [moveRequest, setMoveRequest] = useState<{ from: string; to?: string; id: number } | null>(null)
+  const moveSequence = useRef(0)
+  const closeMove = useCallback(() => setMoveRequest(null), [])
   const menuRef = useRef<HTMLDetailsElement>(null)
   const calendarRef = useRef<HTMLDetailsElement>(null)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -388,14 +389,11 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     className: `tab-panel${tab === id && direction ? ` slide-${direction}` : ''}`,
   })
 
-  // Drag-and-drop and Move Run both use the server's existing Life Happens preview/apply flow.
+  // Dragging or tapping Move Run opens the same server-validated confirmation.
   const requestMove = (from: string, to?: string) => {
     if (!coach?.adjustments?.life || from < today || from === to) return
-    setMoveRequest(from)
-    setMoveTarget(to ?? null)
-    setMoveSequence(n => n + 1)
-    setToolboxOpen(true)
-    requestAnimationFrame(() => document.querySelector('.life-happens')?.scrollIntoView?.({ block: 'start', behavior: prefersMotion() ? 'smooth' : 'auto' }))
+    moveSequence.current += 1
+    setMoveRequest({ from, to, id: moveSequence.current })
   }
   const moveEnabled = !!coach?.adjustments?.life
   const previewDate = selectedDate ?? (shown && today >= shown.week.startDate && today <= weekEnd(shown.week) ? today : shown?.week.startDate ?? today)
@@ -407,6 +405,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
 
   return (
     <section className={`plan plan-on-${tab}${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
+      {moveRequest && coach?.adjustments?.life && <MoveRunDialog key={moveRequest.id} from={moveRequest.from} to={moveRequest.to} plan={plan} units={units} actions={coach.adjustments.life} onClose={closeMove} />}
       {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canCompleteRuns} onOpenRun={onOpenRun} onClose={closeDay} onMove={moveEnabled ? (moveDate) => { requestMove(moveDate); closeDay() } : undefined} /></Suspense>}
       <div hidden={detailDate !== null}>
       {onBack && (
@@ -590,7 +589,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         <summary>{preparationMode === 'long' ? 'Long-run preparation' : 'Race-day checklist & pacing'}</summary>
         <PreparationGuide plan={plan} units={units} mode={preparationMode} date={preparation?.date ?? preparationQuery.get('date')} />
       </details>
-      <LifeHappens key={`${moveRequest ?? 'life'}|${moveSequence}`} plan={plan} today={today} units={units} actions={coach?.adjustments?.life} moveDate={moveRequest} moveTarget={moveTarget} />
+      <LifeHappens plan={plan} today={today} units={units} actions={coach?.adjustments?.life} />
       <WorkoutExport plan={plan} units={units} />
       <details className="disclosure plan-options"><summary>Plan options</summary>
         <div className="plan-actions">

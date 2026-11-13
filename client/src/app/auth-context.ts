@@ -17,6 +17,8 @@ export interface Auth {
   signIn: () => void
   /** Like signIn, but opens straight on "create account". */
   signUp: () => void
+  /** Signs in or up with Google directly. Absent until Google is added to the tenant (VITE_AUTH_GOOGLE). */
+  signInWithGoogle?: () => void
   signOut: () => void
   /** An access token for the API, or null if the runner isn't signed in. */
   getToken: () => Promise<string | null>
@@ -41,12 +43,18 @@ export interface AuthConfig {
   clientId: string
   authority: string
   scope: string
+  /** True once Google is an identity provider in the tenant's user flow; shows "Continue with Google". */
+  google: boolean
 }
 
-/** Reads the sign-in settings from client/.env.local. All three must be present or accounts stay off. */
+/**
+ * Reads the sign-in settings from client/.env.local. The first three must be present or accounts stay off;
+ * VITE_AUTH_GOOGLE=true is optional and only shows the Google button.
+ */
 export function readAuthConfig(env: Record<string, string | undefined> = import.meta.env): AuthConfig | null {
   const clientId = env.VITE_AUTH_CLIENT_ID?.trim()
   const authority = env.VITE_AUTH_AUTHORITY?.trim()
   const scope = env.VITE_AUTH_SCOPE?.trim()
-  return clientId && authority && scope ? { clientId, authority, scope } : null
+  const google = env.VITE_AUTH_GOOGLE?.trim().toLowerCase() === 'true'
+  return clientId && authority && scope ? { clientId, authority, scope, google } : null
 }

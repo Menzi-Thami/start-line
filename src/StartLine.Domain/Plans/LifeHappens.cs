@@ -4,12 +4,12 @@ using StartLine.Domain.Running;
 
 namespace StartLine.Domain.Plans;
 
-public enum LifeSituation { MissedRun, ShortOnTime, Travelling, Unwell, MoveLongRun, MoveRun }
+public enum LifeSituation { MissedRun, ShortOnTime, Travelling, Unwell, MoveLongRun, MoveRun, SwapRuns }
 
 /// <summary>
 /// What the runner says happened. <paramref name="Date"/> is the missed run, the short day, or the first travel day;
 /// <paramref name="Until"/> the last travel day; <paramref name="Days"/> how many days unwell, from today;
-/// <paramref name="MoveTo"/> the day to run a missed or moved session instead.
+/// <paramref name="MoveTo"/> the day to run a missed or moved session instead, or for a swap, the other run's day.
 /// </summary>
 public sealed record LifeChange(LifeSituation Situation, DateOnly? Date = null, DateOnly? Until = null, int? Minutes = null, bool CanRun = true, int? Days = null, DateOnly? MoveTo = null);
 
@@ -35,11 +35,17 @@ public static class LifeHappens
     /// <summary>Anything that isn't easy running or strength needs an easy day either side.</summary>
     public static bool IsHard(SessionType type) => !Gentle.Contains(type);
 
-    public static LifeProposal Propose(TrainingPlan plan, DateOnly today, LifeChange change, IReadOnlyList<SessionCheckIn> checkIns)
+    /// <param name="plan">The plan as the runner sees it, with <paramref name="adjustments"/> already applied.</param>
+    /// <param name="adjustments">The plan's saved changes, so a run that was moved before moves again from where it was written.</param>
+    public static LifeProposal Propose(TrainingPlan plan, DateOnly today, LifeChange change, IReadOnlyList<SessionCheckIn> checkIns,
+        IReadOnlyList<SessionRevision>? adjustments = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(change);
         ArgumentNullException.ThrowIfNull(checkIns);
+        // The day a session was written on. A moved session points back there, because that's where the plan keeps it.
+        DateOnly Origin(PlannedSession s) =>
+            adjustments?.LastOrDefault(r => r.MovedFrom is not null && r.Date == s.Date && r.OriginalType == s.Type)?.MovedFrom ?? s.Date;
         var sessions = plan.Weeks.SelectMany(w => w.Sessions).ToList();
         var runs = sessions.Where(s => SessionCheckIn.IsCheckable(s.Type) && s.Type != SessionType.Strength).ToList();
         bool Done(PlannedSession s) => checkIns.Any(c => !c.IsAdditional && c.Date == s.Date && c.SessionType == s.Type);
@@ -90,7 +96,7 @@ public static class LifeHappens
                     if (Done(missed)) throw new DomainException("That run is already logged.");
                     // Easy runs are let go: missed kilometres are never made up. A key session can move to a safe free day.
                     var targets = IsHard(missed.Type) ? SafeDays(plan, runs, today, missed, ignore: null) : [];
-                    return Moved(missed, targets, change.MoveTo, today, restSource: false);
+                    return Moved(missed, Origin(missed), targets, change.MoveTo, today, restSource: false);
                 }
 
             case LifeSituation.MoveLongRun:
@@ -98,7 +104,7 @@ public static class LifeHappens
                     var longRun = open.Where(s => s.Date < WeekStart(plan, today).AddDays(7))
                         .FirstOrDefault(s => s.Type is SessionType.LongRun or SessionType.LongRunFastFinish or SessionType.LongRunRacePace or SessionType.MediumLongRun)
                         ?? throw new DomainException("There's no long run left to move this week.");
-                    return Moved(longRun, SafeDays(plan, runs, today, longRun, ignore: longRun.Date), change.MoveTo, today, restSource: true);
+                    return Moved(longRun, Origin(longRun), SafeDays(plan, runs, today, longRun, ignore: longRun.Date), change.MoveTo, today, restSource: true);
                 }
 
             case LifeSituation.MoveRun:
@@ -107,7 +113,30 @@ public static class LifeHappens
                     // side by side are allowed here, and the app warns about them, where Move my long run only offers safe days.
                     var run = open.FirstOrDefault(s => s.Date == change.Date && s.Date < WeekStart(plan, today).AddDays(7))
                         ?? throw new DomainException("Choose a run from today to the end of this week that isn't done yet.");
-                    return Moved(run, FreeDays(plan, runs, today, run), change.MoveTo, today, restSource: true);
+                    return Moved(run, Origin(run), FreeDays(plan, runs, today, run), change.MoveTo, today, restSource: true);
+                }
+
+            case LifeSituation.SwapRuns:
+                {
+                    // Two runs left this week trade days, each as written. Nothing is overwritten or stacked: a swap is the
+                    // way onto a day that already has a run. Like Move run, hard days side by side are allowed (the app warns),
+                    // but neither run may land on or after the race, nor a hard one on race eve.
+                    var weekEnd = WeekStart(plan, today).AddDays(7);
+                    var run = open.FirstOrDefault(s => s.Date == change.Date && s.Date < weekEnd)
+                        ?? throw new DomainException("Choose a run from today to the end of this week that isn't done yet.");
+                    bool Fits(PlannedSession s, DateOnly day) => day < plan.RaceDate && (day.AddDays(1) != plan.RaceDate || !IsHard(s.Type));
+                    var partners = open.Where(o => o.Date < weekEnd && o.Date != run.Date && Fits(run, o.Date) && Fits(o, run.Date)).ToList();
+                    var targets = partners.Select(p => p.Date).Distinct().ToList();
+                    if (change.MoveTo is not { } to) return new([], targets);
+                    var other = partners.FirstOrDefault(p => p.Date == to) ?? throw new DomainException("Choose one of the runs offered.");
+                    var (runFrom, otherFrom) = (Origin(run), Origin(other));
+                    // Rests first, then the moves: a run swapped back home cancels its own rest (SavedPlan.MergeAdjustments).
+                    List<SessionRevision> changes = [];
+                    if (runFrom == run.Date) changes.Add(Rest(run, today));
+                    if (otherFrom == other.Date) changes.Add(Rest(other, today));
+                    changes.Add(MoveTo(run, other.Date, runFrom, today));
+                    changes.Add(MoveTo(other, run.Date, otherFrom, today));
+                    return new(changes, targets);
                 }
 
             default:
@@ -115,7 +144,8 @@ public static class LifeHappens
         }
     }
 
-    private static LifeProposal Moved(PlannedSession session, IReadOnlyList<DateOnly> targets, DateOnly? moveTo, DateOnly today, bool restSource)
+    /// <param name="origin">The day the session was written on: its own day, or where an earlier move took it from.</param>
+    private static LifeProposal Moved(PlannedSession session, DateOnly origin, IReadOnlyList<DateOnly> targets, DateOnly? moveTo, DateOnly today, bool restSource)
     {
         if (moveTo is not { } to)
         {
@@ -127,14 +157,21 @@ public static class LifeHappens
             throw new DomainException("Choose one of the days offered.");
         }
 
-        List<SessionRevision> changes = [new(today, to, session.Type, session.Title, session.DistanceKm, session.DistanceKm, MovedFrom: session.Date)];
-        if (restSource)
+        // A session moved before already rests its written day; moving it again only changes where it's run.
+        List<SessionRevision> changes = [MoveTo(session, to, origin, today)];
+        if (restSource && origin == session.Date)
         {
-            changes.Insert(0, new(today, session.Date, session.Type, session.Title, session.DistanceKm, null));
+            changes.Insert(0, Rest(session, today));
         }
 
         return new(changes, targets);
     }
+
+    private static SessionRevision Rest(PlannedSession session, DateOnly today) =>
+        new(today, session.Date, session.Type, session.Title, session.DistanceKm, null);
+
+    private static SessionRevision MoveTo(PlannedSession session, DateOnly to, DateOnly origin, DateOnly today) =>
+        new(today, to, session.Type, session.Title, session.DistanceKm, session.DistanceKm, MovedFrom: origin);
 
     /// <summary>
     /// Free days left this week (from today, no run planned) where a hard session fits: no hard run the day before or after,

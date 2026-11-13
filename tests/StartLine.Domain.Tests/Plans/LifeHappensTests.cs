@@ -154,4 +154,73 @@ public sealed class LifeHappensTests
         saved.Adjustments.ShouldBeEmpty();
         Should.Throw<DomainException>(() => saved.ApplyLifeChange([move[0] with { Date = Monday.AddDays(-1) }], Monday));
     }
+
+    private static SavedPlan Saved() => SavedPlan.Create(Guid.NewGuid(), "Club half", new SavedPlanInputs(null, "Club half", 21.1, new DateOnly(2026, 12, 20),
+        TimeSpan.FromMinutes(110), [DayOfWeek.Tuesday, DayOfWeek.Sunday], DayOfWeek.Sunday, 30, Experience.Regular, [], Monday));
+
+    private static IReadOnlyList<PlannedSession> Shown(IReadOnlyList<SessionRevision> adjustments) => RemainingWeek.Apply(Plan(), adjustments).Weeks[0].Sessions;
+
+    [Fact]
+    public void Two_runs_swap_days_as_written_and_a_restore_from_either_day_puts_both_back()
+    {
+        var tuesday = Monday.AddDays(1);
+        var thursday = Monday.AddDays(3);
+        // Tuesday's intervals can trade with any run left this week: Monday (today), Thursday or Sunday.
+        LifeHappens.Propose(Plan(), Monday, new(LifeSituation.SwapRuns, Date: tuesday), []).MoveTargets.ShouldBe([Monday, thursday, Monday.AddDays(6)]);
+
+        var swap = LifeHappens.Propose(Plan(), Monday, new(LifeSituation.SwapRuns, Date: tuesday, MoveTo: thursday), []).Changes;
+        var saved = Saved();
+        saved.ApplyLifeChange(swap, Monday);
+        var days = Shown(saved.Adjustments);
+        days.Where(s => s.Date == tuesday).ShouldHaveSingleItem().ShouldSatisfyAllConditions(s => s.Type.ShouldBe(SessionType.Easy), s => s.DistanceKm.ShouldBe(7));
+        days.Where(s => s.Date == thursday).ShouldHaveSingleItem().ShouldSatisfyAllConditions(s => s.Type.ShouldBe(SessionType.Intervals), s => s.DistanceKm.ShouldBe(9));
+        days.Count.ShouldBe(4);
+
+        saved.RestoreOriginal([thursday], Monday);
+        saved.Adjustments.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void A_swap_never_puts_a_run_on_race_day_or_a_hard_one_on_race_eve_and_only_offers_runs()
+    {
+        // Saturday race: Thursday's intervals can't trade with Friday's shakeout (it would sit on race eve).
+        var raceDay = Monday.AddDays(5);
+        var plan = new TrainingPlan(Distance.FromKilometres(21.0975), DistanceCategory.HalfMarathon, raceDay, TimeSpan.FromMinutes(110), Monday,
+            new Dictionary<PaceZone, PaceRange> { [PaceZone.Easy] = new(Pace.FromSecondsPerKilometre(330), Pace.FromSecondsPerKilometre(360)) },
+            [new PlanWeek(1, Monday, TrainingPhase.Taper, false,
+                [Run(1, SessionType.Easy, 5), Run(3, SessionType.Intervals, 4.5), Run(4, SessionType.Shakeout, 3), Run(5, SessionType.Race, 21.0975)])], []);
+        var thursday = Monday.AddDays(3);
+        LifeHappens.Propose(plan, Monday, new(LifeSituation.SwapRuns, Date: thursday), []).MoveTargets.ShouldBe([Monday.AddDays(1)]);
+        Should.Throw<DomainException>(() => LifeHappens.Propose(plan, Monday, new(LifeSituation.SwapRuns, Date: thursday, MoveTo: Monday.AddDays(4)), []));
+        Should.Throw<DomainException>(() => LifeHappens.Propose(plan, Monday, new(LifeSituation.SwapRuns, Date: thursday, MoveTo: raceDay), []));
+        // A free day isn't a swap: that's Move run.
+        Should.Throw<DomainException>(() => LifeHappens.Propose(Plan(), Monday, new(LifeSituation.SwapRuns, Date: Monday.AddDays(1), MoveTo: Monday.AddDays(2)), []));
+    }
+
+    [Fact]
+    public void A_moved_run_moves_again_and_moving_it_back_home_cancels_the_move()
+    {
+        var (tuesday, wednesday, friday) = (Monday.AddDays(1), Monday.AddDays(2), Monday.AddDays(4));
+        var saved = SavedPlan.MergeAdjustments([], LifeHappens.Propose(Plan(), Monday, new(LifeSituation.MoveRun, Date: tuesday, MoveTo: wednesday), []).Changes);
+
+        // Reschedule again: Wednesday's intervals (written for Tuesday) go to Friday. Only one copy, and Tuesday still rests.
+        var again = LifeHappens.Propose(RemainingWeek.Apply(Plan(), saved), Monday, new(LifeSituation.MoveRun, Date: wednesday, MoveTo: friday), [], saved);
+        var moved = SavedPlan.MergeAdjustments(saved, again.Changes);
+        var days = Shown(moved);
+        days.Where(s => s.Type == SessionType.Intervals).ShouldHaveSingleItem().Date.ShouldBe(friday);
+        days.ShouldNotContain(s => s.Date == tuesday || s.Date == wednesday);
+
+        // Back to the day it was written for: the plan is as first built.
+        var home = LifeHappens.Propose(RemainingWeek.Apply(Plan(), moved), Monday, new(LifeSituation.MoveRun, Date: friday, MoveTo: tuesday), [], moved);
+        SavedPlan.MergeAdjustments(moved, home.Changes).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void Swapping_two_runs_back_leaves_the_plan_as_first_built()
+    {
+        var (tuesday, thursday) = (Monday.AddDays(1), Monday.AddDays(3));
+        var swapped = SavedPlan.MergeAdjustments([], LifeHappens.Propose(Plan(), Monday, new(LifeSituation.SwapRuns, Date: tuesday, MoveTo: thursday), []).Changes);
+        var back = LifeHappens.Propose(RemainingWeek.Apply(Plan(), swapped), Monday, new(LifeSituation.SwapRuns, Date: tuesday, MoveTo: thursday), [], swapped);
+        SavedPlan.MergeAdjustments(swapped, back.Changes).ShouldBeEmpty();
+    }
 }

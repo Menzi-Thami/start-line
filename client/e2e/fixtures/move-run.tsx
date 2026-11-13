@@ -12,18 +12,23 @@ import '../../src/styles/polish.css'
 import '../../src/styles/skin.css'
 
 const original = plan as TrainingPlan
-const week = original.weeks.find(w => w.sessions.some(s => s.type !== 'Strength' && s.type !== 'Race'))!
-const from = week.sessions.find(s => s.type !== 'Strength' && s.type !== 'Race')!.date
-const to = week.startDate === from
-  ? new Date(Date.parse(from + 'T12:00:00Z') + 86400000).toISOString().slice(0, 10)
-  : week.startDate
+const isRun = (type: string) => type !== 'Strength' && type !== 'Race'
+const week = original.weeks.find(w => new Set(w.sessions.filter(s => isRun(s.type)).map(s => s.date)).size >= 2)!
+const runDays = [...new Set(week.sessions.filter(s => isRun(s.type)).map(s => s.date))]
+const from = runDays[0]!
+const partner = runDays[1]!
+const free = Array.from({ length: 7 }, (_, i) => new Date(Date.parse(week.startDate + 'T12:00:00Z') + i * 86400000).toISOString().slice(0, 10))
+  .find(day => !week.sessions.some(s => s.date === day))!
 const actions = {
-  preview: async (change: LifeChange) => ({
-    token: 'T'.repeat(64),
-    changes: change.moveTo ? [{ appliedOn: from, date: change.moveTo, movedFrom: from, originalType: 'Easy', originalTitle: 'Easy run', originalKm: 4.5, easyKm: 4.5 }] : [],
-    moveTargets: [to],
-    proposed: original,
-  }) as LifeProposal,
+  preview: async (change: LifeChange) => {
+    const swap = change.situation === 'SwapRuns'
+    const revision = (date: string, movedFrom?: string) =>
+      ({ appliedOn: from, date, movedFrom, originalType: 'Easy', originalTitle: 'Easy run', originalKm: 4.5, easyKm: movedFrom ? 4.5 : null })
+    const changes = !change.moveTo ? [] : swap
+      ? [revision(from), revision(change.moveTo), revision(change.moveTo, from), revision(from, change.moveTo)]
+      : [revision(change.moveTo, from)]
+    return { token: 'T'.repeat(64), changes, moveTargets: swap ? [partner] : [free], proposed: original } as LifeProposal
+  },
   apply: async (_change: LifeChange, _token: string) => {},
   restore: async (_dates: string[]) => {},
 }
@@ -35,6 +40,7 @@ export function QA() {
       <h1>Run move interaction QA</h1>
       <WeekGlance week={week} done={new Set()} today={week.startDate} units="km" onSelectDate={() => {}} onRequestMove={(from, to) => setMoving({ from, to })} />
       <button type="button" onClick={() => setMoving({ from })}>Move run</button>
+      <button type="button" onClick={() => setMoving({ from, to: partner })}>Drop on another run</button>
       <p id="saved-state" role="status">{applied ? 'Saved' : 'Not saved'}</p>
       {moving && <MoveRunDialog from={moving.from} to={moving.to} units="km" plan={original}
         actions={{ ...actions, apply: async (change, token) => { await actions.apply(change, token); setApplied(true) } }}

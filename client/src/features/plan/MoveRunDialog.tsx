@@ -16,16 +16,26 @@ interface Props {
 const makeMove = (from: string, to?: string): LifeChange =>
   ({ situation: 'MoveRun', date: from, moveTo: to ?? null, canRun: true })
 
-/** Short, accessible confirmation for both calendar drops and the day view Move Run button. */
+const makeSwap = (from: string, to?: string): LifeChange =>
+  ({ situation: 'SwapRuns', date: from, moveTo: to ?? null, canRun: true })
+
+const GENTLE = ['Easy', 'Recovery', 'EasyWithStrides', 'Shakeout', 'Strength', 'Race']
+
+/**
+ * Short, accessible confirmation for both calendar drops and the day view Move Run button. A run goes to a free day, or
+ * trades days with another run (a swap): it never overwrites or stacks on a day that already has one.
+ */
 export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props) {
   const [proposal, setProposal] = useState<{ change: LifeChange; result: LifeProposal } | null>(null)
+  const [swapTargets, setSwapTargets] = useState<string[]>([])
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [complete, setComplete] = useState(false)
   const [undoDates, setUndoDates] = useState<string[]>([])
   const closeRef = useRef<HTMLButtonElement>(null)
   const previousFocus = useRef<HTMLElement | null>(null)
-  const session = plan.weeks.flatMap(w => w.sessions).find(s => s.date === from && s.type !== 'Strength' && s.type !== 'Race')
+  const runOn = (date?: string | null) => date ? plan.weeks.flatMap(w => w.sessions).find(s => s.date === date && s.type !== 'Strength' && s.type !== 'Race') : undefined
+  const session = runOn(from)
   const preview = actions.preview
   const apply = actions.apply
   const restore = actions.restore
@@ -51,24 +61,30 @@ export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props
     }
   }, [onClose])
 
+  // Dropped on a day that has a run: that's a swap. Otherwise a move.
+  const occupied = !!to && !!runOn(to)
+
   useEffect(() => {
     let cancelled = false
-    const initial = makeMove(from, to)
+    const initial = occupied ? makeSwap(from, to) : makeMove(from, to)
     void (async () => {
       try {
         const result = await preview(initial)
         if (!cancelled) setProposal({ change: initial, result })
       } catch (reason) {
-        // A drop can land on a rest day the domain cannot use, including
-        // occupied/past/race-adjacent days. Ask the server for eligible dates.
+        // A drop can land on a day the domain cannot use (past, race-adjacent, or a run that can't swap).
+        // Ask the server for the free days and the runs this one can trade with.
         try {
-          const offered = makeMove(from)
-          const result = await preview(offered)
+          const [offered, swaps] = await Promise.all([
+            preview(makeMove(from)),
+            preview(makeSwap(from)).catch(() => null),
+          ])
           if (cancelled) return
-          setProposal({ change: offered, result })
-          setError(result.moveTargets.length
-            ? `${to ? formatDate(to) : 'That day'} is not available. Choose a free day below.`
-            : 'No eligible free days remain this week. Your run has not changed.')
+          setProposal({ change: makeMove(from), result: offered })
+          setSwapTargets(swaps?.moveTargets ?? [])
+          setError(offered.moveTargets.length || swaps?.moveTargets.length
+            ? `${to ? formatDate(to) : 'That day'} is not available. Choose another day below.`
+            : 'No free days or runs to swap with remain this week. Your run has not changed.')
         } catch {
           if (!cancelled) setError(reason instanceof Error ? reason.message : 'Could not load available dates.')
         }
@@ -77,13 +93,13 @@ export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props
       }
     })()
     return () => { cancelled = true }
-  }, [from, to, preview])
+  }, [from, to, occupied, preview])
 
-  const choose = async (date: string) => {
+  const choose = async (date: string, swap = false) => {
     setBusy(true)
     setError(null)
     try {
-      const change = makeMove(from, date)
+      const change = swap ? makeSwap(from, date) : makeMove(from, date)
       const result = await preview(change)
       setProposal({ change, result })
     } catch (reason) {
@@ -126,26 +142,29 @@ export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props
 
   const result = proposal?.result
   const destination = proposal?.change.moveTo
-  const moved = result?.changes.find(c => c.movedFrom === from)
-  const hard = moved && !['Easy', 'Recovery', 'EasyWithStrides', 'Shakeout'].includes(moved.originalType)
-  const adjacent = hard && result?.proposed.weeks.flatMap(w => w.sessions).some(s =>
-    (s.date === addDays(moved.date, -1) || s.date === addDays(moved.date, 1)) &&
-    !['Easy', 'Recovery', 'EasyWithStrides', 'Shakeout', 'Strength', 'Race'].includes(s.type))
+  const swapping = proposal?.change.situation === 'SwapRuns'
+  const partner = swapping ? runOn(destination) : undefined
+  // Any hard session that lands next to another hard one gets a warning; the runner decides.
+  const sessions = result?.proposed.weeks.flatMap(w => w.sessions) ?? []
+  const hardOn = (date: string) => sessions.some(s => s.date === date && !GENTLE.includes(s.type))
+  const adjacent = result?.changes.some(c => c.movedFrom && !GENTLE.includes(c.originalType) && (hardOn(addDays(c.date, -1)) || hardOn(addDays(c.date, 1))))
+  const offering = !complete && !busy && result?.changes.length === 0 && (result.moveTargets.length > 0 || swapTargets.length > 0)
 
   return (
     <div className="move-run-overlay" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
       <section className="move-run-dialog" role="dialog" aria-modal="true" aria-labelledby="move-run-heading" aria-describedby="move-run-summary">
         <div className="move-run-dialog-header">
-          <h2 id="move-run-heading">{complete ? 'Run moved' : 'Move this run?'}</h2>
+          <h2 id="move-run-heading">{complete ? (swapping ? 'Runs swapped' : 'Run moved') : swapping ? 'Swap these runs?' : 'Move this run?'}</h2>
           <button ref={closeRef} type="button" className="move-run-close" aria-label="Close move run" onClick={onClose}>×</button>
         </div>
         <p id="move-run-summary">
           <strong>{session?.title ?? 'Scheduled run'}{session?.distanceKm ? ` · ${formatDistance(session.distanceKm, units)}` : ''}</strong>
-          <span>{formatDate(from)}{destination ? ` → ${formatDate(destination)}` : ''}</span>
+          <span>{formatDate(from)}{destination ? ` ${swapping ? '⇄' : '→'} ${formatDate(destination)}` : ''}</span>
+          {partner && <span>{partner.title}{partner.distanceKm ? ` · ${formatDistance(partner.distanceKm, units)}` : ''} moves to {formatDate(from)}</span>}
         </p>
         {busy && !complete && <p role="status">Checking your training calendar…</p>}
         {error && <p className="move-run-error" role="alert">{error}</p>}
-        {!complete && !busy && result?.changes.length === 0 && result.moveTargets.length > 0 && (
+        {offering && result.moveTargets.length > 0 && (
           <div className="move-run-options">
             <p>Choose a free day</p>
             <div role="group" aria-label="Available dates">
@@ -153,13 +172,21 @@ export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props
             </div>
           </div>
         )}
+        {offering && swapTargets.length > 0 && (
+          <div className="move-run-options">
+            <p>Or swap with another run</p>
+            <div role="group" aria-label="Runs to swap with">
+              {swapTargets.map(date => <button className="button button-quiet" type="button" key={date} onClick={() => void choose(date, true)}>{formatDate(date)}{runOn(date) ? ` · ${runOn(date)!.title}` : ''}</button>)}
+            </div>
+          </div>
+        )}
         {!complete && result && result.changes.length > 0 && (
           <>
             {adjacent && <p className="move-run-warning" role="note">This creates back-to-back hard sessions. Consider making the other session easy.</p>}
-            <p className="field-help">Your workout stays the same. The original day becomes a rest day.</p>
+            <p className="field-help">{swapping ? 'Both workouts stay the same. They trade days.' : 'Your workout stays the same. The original day becomes a rest day.'}</p>
             <div className="move-run-actions">
               <button type="button" className="button button-quiet" disabled={busy} onClick={onClose}>Cancel</button>
-              <button type="button" className="button" disabled={busy} onClick={() => void confirm()}>{busy ? 'Moving…' : 'Move run'}</button>
+              <button type="button" className="button" disabled={busy} onClick={() => void confirm()}>{busy ? (swapping ? 'Swapping…' : 'Moving…') : swapping ? 'Swap runs' : 'Move run'}</button>
             </div>
           </>
         )}

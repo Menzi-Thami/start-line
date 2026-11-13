@@ -28,6 +28,78 @@ public static class UpdateEmails
         ("Night Run mode", "Switch your phone to dark and Taperday goes near-black and volt. Made for those 5am starts."),
     ];
 
+    /// <summary>
+    /// The maker's preview of a campaign: a made-up copy marked [Test], with no runner's details and no unsubscribe key.
+    /// Null for a campaign Taperday doesn't know.
+    /// </summary>
+    public static EmailMessage? Preview(string campaign, string to) => campaign switch
+    {
+        RedesignCampaign => TaperdayRedesign(to, "Thami", test: true),
+        SignInOutageCampaign => SignInOutage(to, "Thami", test: true),
+        _ => null,
+    };
+
+    private const string OutageOpening = "If you've tried to sign in to Taperday today and your sign-in code never turned up, it isn't you, and it isn't your inbox.";
+    private const string OutageCause = "Taperday's sign-in codes are sent by Microsoft, which looks after our sign-in. Microsoft is having an outage today that's delaying or stopping those emails, whatever email you use. They're working on it, and codes will start arriving again once it's fixed.";
+
+    private static readonly (string Title, string Detail)[] OutageSteps =
+    [
+        ("Already signed in? Stay that way", "Taperday remembers you on your phone or laptop, so you can keep using it as normal. Just don't sign out until this is fixed."),
+        ("Signed out and use Gmail?", "Tap Continue with Google on the sign-in page. It doesn't need a code. If it still asks for one, it's best to wait for Microsoft's fix."),
+        ("Otherwise, give it a little time", "Once Microsoft is back to normal, ask for a new code and it'll arrive as usual."),
+    ];
+
+    private const string OutageClosing = "Your plan, your runs and your Strava connection are all safe. Nothing's lost, and there's nothing you need to change. Sorry for the hassle.";
+    private const string OutageSubject = "Not getting your Taperday sign-in code? Here's why";
+
+    /// <summary>The 13 November 2026 sign-in code outage notice's campaign name, kept in each runner's delivery record.</summary>
+    public const string SignInOutageCampaign = "sign-in-outage-2026-11-13";
+
+    /// <summary>
+    /// A heads-up during Microsoft's email outage of 13 November 2026: sign-in codes aren't arriving, why, and what to do
+    /// meanwhile. With <paramref name="unsubscribe"/> (a runner's copy) the footer and headers offer a way out of updates; a
+    /// preview to the maker has none.
+    /// </summary>
+    public static EmailMessage SignInOutage(string to, string? name = null, bool test = false, UnsubscribeLinks? unsubscribe = null)
+    {
+        var greeting = string.IsNullOrWhiteSpace(name) ? "Hi there," : $"Hi {name.Trim()},";
+        var body = new StringBuilder();
+        body.Append(EmailLayout.Paragraph(greeting));
+        body.Append(EmailLayout.Paragraph(OutageOpening));
+        body.Append(EmailLayout.Paragraph(OutageCause));
+        body.Append(EmailLayout.Heading("What you can do"));
+        foreach (var (title, detail) in OutageSteps)
+        {
+            body.Append(EmailLayout.Item(title, detail));
+        }
+
+        body.Append(EmailLayout.Paragraph(OutageClosing));
+
+        var html = EmailLayout.Wrap(
+            preheader: "Microsoft's outage is holding up sign-in codes. Your plan and runs are safe.",
+            kicker: "Heads-up · Signing in today",
+            title: "Your code's stuck in traffic.",
+            body: body.ToString(),
+            buttonText: "Open Taperday",
+            buttonUrl: EmailLayout.Site + "/?view=home",
+            footer: "You're getting this because you said yes to Taperday news and updates. Your weekly recap isn't affected.",
+            unsubscribeUrl: unsubscribe?.Page.AbsoluteUri);
+
+        var text = new StringBuilder("Your code's stuck in traffic.\n\n").Append(greeting).Append("\n\n").Append(OutageOpening).Append("\n\n").Append(OutageCause).Append("\n\nWhat you can do\n");
+        foreach (var (title, detail) in OutageSteps)
+        {
+            text.Append("- ").Append(title).Append(": ").Append(detail).Append('\n');
+        }
+
+        text.Append('\n').Append(OutageClosing).Append("\n\nOpen Taperday: https://taperday.run/?view=home\n");
+        if (unsubscribe is not null)
+        {
+            text.Append("\nUnsubscribe from Taperday news and updates (your weekly recap isn't affected): ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
+        }
+
+        return new EmailMessage(to, (test ? "[Test] " : "") + OutageSubject, html, text.ToString(), unsubscribe);
+    }
+
     private const string RedesignOpening = "We've been doing some training of our own. Taperday is simpler, quicker, and a lot easier on the eyes. Same coach, new kit.";
     private const string RedesignClosing = "Your plan, your runs and your Strava connection are exactly where you left them. Nothing to set up. Just lace up.";
     private const string RedesignSubject = "Fresh legs, fresh look: meet the new Taperday";

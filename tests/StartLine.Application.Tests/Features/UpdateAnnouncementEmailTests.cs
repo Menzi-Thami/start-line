@@ -34,6 +34,39 @@ public sealed class UpdateAnnouncementEmailTests
         mail.Unsubscribe.ShouldBeNull();
     }
 
+    [Fact]
+    public void The_sign_in_outage_email_says_it_is_microsoft_what_to_do_and_that_nothing_is_lost()
+    {
+        var mail = UpdateEmails.SignInOutage("runner@example.test", "Thandi <b>", unsubscribe: Links);
+
+        mail.Subject.ShouldBe("Not getting your Taperday sign-in code? Here's why");
+        mail.Html.ShouldContain("Hi Thandi &lt;b&gt;,");
+        mail.Html.ShouldNotContain("<b>,");
+        foreach (var what in new[] { "sent by Microsoft", "Already signed in? Stay that way", "Continue with Google", "give it a little time", "all safe" })
+        {
+            mail.Html.ShouldContain(what);
+            mail.Text.ShouldContain(what);
+        }
+
+        mail.Text.ShouldContain(Links.Page.AbsoluteUri);
+        mail.Unsubscribe.ShouldBe(Links);
+    }
+
+    [Theory]
+    [InlineData(UpdateEmails.RedesignCampaign, "Fresh legs")]
+    [InlineData(UpdateEmails.SignInOutageCampaign, "sign-in code")]
+    public void Every_campaign_has_a_preview_marked_as_a_test_without_a_way_out(string campaign, string subject)
+    {
+        var mail = UpdateEmails.Preview(campaign, "maker@example.test").ShouldNotBeNull();
+        mail.Subject.ShouldStartWith("[Test] ");
+        mail.Subject.ShouldContain(subject);
+        mail.Unsubscribe.ShouldBeNull();
+        IUpdateAnnouncements.Campaigns.ShouldContain(campaign);
+    }
+
+    [Fact]
+    public void An_unknown_campaign_has_no_preview() => UpdateEmails.Preview("no-such-campaign", "maker@example.test").ShouldBeNull();
+
     [Theory]
     [InlineData(0, 0, 0, 25)]
     [InlineData(0, 200, 40, 10)]

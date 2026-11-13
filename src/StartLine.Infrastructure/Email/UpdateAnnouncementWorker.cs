@@ -121,9 +121,9 @@ internal sealed partial class UpdateAnnouncementWorker(
     {
         try
         {
-            if (campaign == UpdateEmails.RedesignCampaign)
+            if (UpdateEmails.Preview(campaign, to) is { } preview)
             {
-                await email.SendAsync(UpdateEmails.TaperdayRedesign(to, "Thami", test: true), cancellationToken);
+                await email.SendAsync(preview, cancellationToken);
             }
 
             LogPreviewSent(logger, campaign);

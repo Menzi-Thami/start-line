@@ -101,8 +101,9 @@ the weekly recap and onboarding emails (Brevo's free plan: 300 a day), and the r
 
 ### Queued: it goes automatically after the production release
 
-`ops/queued-announcement` holds the campaign waiting to go (one line; empty means none). It currently holds
-`redesign-2026-11`.
+`ops/queued-announcement` holds the campaign waiting to go (one line; empty means none). It is empty: the
+`sign-in-outage-2026-11-13` notice (Microsoft's email outage that stopped sign-in codes) was switched on by hand after
+its preview, so no release switches `redesign-2026-11` back on over it.
 
 When **release** (or **deploy**) finishes successfully on `main`, the **announce** workflow sets the production API's
 settings:

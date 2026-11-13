@@ -107,9 +107,11 @@ jobs:
             exit 1
           fi
           rule="github-release-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          echo "rule_name=$rule" >> "$GITHUB_OUTPUT"
-          az sql server firewall-rule create --resource-group rg-taperday --server "$SQL_SERVER" \
+          # SQL_SERVER is the connection hostname; ARM requires the short Azure SQL server resource name.
+          server="${SQL_SERVER%%.database.windows.net}"
+          az sql server firewall-rule create --resource-group rg-taperday --server "$server" \
             --name "$rule" --start-ip-address "$ip" --end-ip-address "$ip" --output none
+          echo "rule_name=$rule" >> "$GITHUB_OUTPUT"
           echo "Temporary SQL firewall rule created for this deployment runner."
           # Azure SQL firewall changes can take a few minutes to propagate; existing migration retry handles that.
 
@@ -137,8 +139,9 @@ jobs:
           SQL_SERVER: ${{ vars.SQL_SERVER }}
           RULE_NAME: ${{ steps.sql_firewall.outputs.rule_name }}
         run: |
-          az sql server firewall-rule delete --resource-group rg-taperday --server "$SQL_SERVER" \
-            --name "$RULE_NAME" --yes --output none
+          server="${SQL_SERVER%%.database.windows.net}"
+          printf 'y\\n' | az sql server firewall-rule delete --resource-group rg-taperday --server "$server" \
+            --name "$RULE_NAME" --output none
 
       - name: Deploy API
         run: az webapp deploy -g rg-taperday -n "${{ vars.API_APP_NAME }}" --src-path api.zip --type zip --restart true

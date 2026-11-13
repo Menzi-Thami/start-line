@@ -140,12 +140,37 @@ public sealed class SavedPlan
             || r.Date >= today.AddDays(LifeHappens.HorizonDays) || r.OriginalType is SessionType.Strength or SessionType.Race
             || r.EasyKm is { } km && (!double.IsFinite(km) || km < RemainingWeek.MinimumRunKm || km > r.OriginalKm)))
             throw new DomainException("Only upcoming runs in the next two weeks can change. Past sessions stay unchanged.");
-        var changes = Adjustments.ToDictionary(r => (r.Date, r.MovedFrom));
+        Adjustments = [.. MergeAdjustments(Adjustments, revisions)];
+    }
+
+    /// <summary>
+    /// Saved changes plus new ones, as the plan keeps them; used for the preview too, so it shows exactly what applying saves.
+    /// A day changed before keeps its original prescription. A session is only ever in one place: moving it again replaces
+    /// its earlier move, and moving it back to the day it was written cancels the move and that day's rest.
+    /// </summary>
+    public static IReadOnlyList<SessionRevision> MergeAdjustments(IEnumerable<SessionRevision> saved, IEnumerable<SessionRevision> revisions)
+    {
+        ArgumentNullException.ThrowIfNull(saved);
+        ArgumentNullException.ThrowIfNull(revisions);
+        var changes = saved.ToDictionary(r => (r.Date, r.MovedFrom));
         foreach (var revision in revisions)
+        {
+            if (revision.MovedFrom is { } from)
+            {
+                foreach (var earlier in changes.Keys.Where(k => k.MovedFrom == from).ToList()) changes.Remove(earlier);
+                if (from == revision.Date)
+                {
+                    changes.Remove((from, null));
+                    continue;
+                }
+            }
+
             changes[(revision.Date, revision.MovedFrom)] = changes.TryGetValue((revision.Date, revision.MovedFrom), out var original)
                 ? revision with { OriginalType = original.OriginalType, OriginalTitle = original.OriginalTitle, OriginalKm = original.OriginalKm }
                 : revision;
-        Adjustments = [.. changes.Values.OrderBy(r => r.Date)];
+        }
+
+        return [.. changes.Values.OrderBy(r => r.Date)];
     }
 
     /// <summary>Puts upcoming days back as the plan first wrote them. Past days keep whatever was applied then.</summary>

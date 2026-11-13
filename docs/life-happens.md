@@ -9,6 +9,8 @@
 | Travelling (from–until, up to two weeks) | "I can still run easy": hard sessions become easy and runs are capped at 8 km. Otherwise those days rest. |
 | Not feeling well (1–7 days) | Those days rest, and the next two runs come back easy and capped at 5 km. It says not to run with a fever or chest symptoms, and to see a doctor if it doesn't settle. Never a diagnosis. |
 | Move my long run | Offers the free days left this week with no hard run either side and not the day before the race. The long run moves there as written, and its old day rests. |
+| Move a run (`MoveRun`, the day view's **Move run** button and drag-and-drop) | Any run left this week (not done, not the race) goes to a free day this week. Hard days side by side are allowed, with a warning. |
+| Swap two runs (`SwapRuns`, dropping a run on another run's day, or **Or swap with another run** in the Move run dialog) | Two runs left this week trade days, both as written. Neither lands on or after the race, and no hard session lands on race eve. A run never overwrites or stacks on a day that already has one: a swap is the only way onto it. |
 
 **Rules:**
 - Only today and the next 13 days change.
@@ -25,6 +27,8 @@
 ## Model
 
 `SessionRevision` gains an optional `MovedFrom`. The session planned that day is run on `Date` instead, as written. A move from a future day is two revisions: rest on the old day, and the session on the new one. A missed day in the past keeps its history and is only made up. Adjustments are stored as JSON, so there's no migration.
+
+`MovedFrom` is always the day the plan **wrote** the session on, so a run can be rescheduled again: moving a moved run replaces its earlier move (one copy, its written day still rests), and moving it back to its written day cancels the move and that day's rest. A swap is four revisions: rest on both days, and each session on the other's day; swapping back leaves no adjustments at all. `SavedPlan.MergeAdjustments` applies these rules for both the preview and the apply, so the preview is exactly what's saved. Restore undoes a move or swap whole, back to the plan as first written.
 
 ## Tests
 

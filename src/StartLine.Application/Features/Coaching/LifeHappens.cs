@@ -39,7 +39,7 @@ internal sealed class LifeHappensHandler(IApplicationDbContext db, CurrentRunner
         var entries = await db.SessionCheckIns.AsNoTracking()
             .Where(c => c.SavedPlanId == saved.Id && c.Date >= from && c.Date < today.AddDays(Domain.Plans.LifeHappens.HorizonDays))
             .OrderBy(c => c.Id).ToListAsync(cancellationToken);
-        var proposal = Domain.Plans.LifeHappens.Propose(plan, today, request.Change, entries);
+        var proposal = Domain.Plans.LifeHappens.Propose(plan, today, request.Change, entries, saved.Adjustments);
         var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
         {
             today,
@@ -60,7 +60,7 @@ internal sealed class LifeHappensHandler(IApplicationDbContext db, CurrentRunner
         }
 
         // The preview shows the plan as it would be; nothing is saved until it's applied.
-        var proposed = request.AcceptToken is null ? [.. saved.Adjustments, .. proposal.Changes] : saved.Adjustments;
+        var proposed = request.AcceptToken is null ? SavedPlan.MergeAdjustments(saved.Adjustments, proposal.Changes) : saved.Adjustments;
         return new(token, proposal.Changes, proposal.MoveTargets, builder.Build(query, calls, proposed, today));
     }
 }

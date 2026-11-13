@@ -40,4 +40,40 @@ describe('Move Run confirmation dialog', () => {
     expect(await screen.findByRole('group', { name: 'Available dates' })).toBeVisible()
     expect(apply).not.toHaveBeenCalled()
   })
+
+  it('turns a drop onto another run into a swap, and nothing is saved until it is confirmed', async () => {
+    const runs = planFixture.weeks.flatMap(w => w.sessions).filter(s => s.type !== 'Race' && s.type !== 'Strength')
+    const [first, second] = [runs[0]!, runs.find(s => s.date !== runs[0]!.date)!]
+    const swapped = [
+      { appliedOn: first.date, date: first.date, originalType: first.type, originalTitle: first.title, originalKm: first.distanceKm, easyKm: null },
+      { appliedOn: first.date, date: second.date, originalType: second.type, originalTitle: second.title, originalKm: second.distanceKm, easyKm: null },
+      { appliedOn: first.date, date: second.date, movedFrom: first.date, originalType: first.type, originalTitle: first.title, originalKm: first.distanceKm, easyKm: first.distanceKm },
+      { appliedOn: first.date, date: first.date, movedFrom: second.date, originalType: second.type, originalTitle: second.title, originalKm: second.distanceKm, easyKm: second.distanceKm },
+    ] as LifeProposal['changes']
+    const preview = vi.fn(async (_change: LifeChange) => proposed(swapped))
+    const apply = vi.fn(async () => {})
+    const restore = vi.fn(async () => {})
+    render(<MoveRunDialog from={first.date} to={second.date} plan={planFixture} units="km" actions={{ preview, apply, restore }} onClose={() => {}} />)
+    expect(await screen.findByRole('dialog', { name: 'Swap these runs?' })).toBeVisible()
+    expect(preview).toHaveBeenCalledWith({ situation: 'SwapRuns', date: first.date, moveTo: second.date, canRun: true })
+    expect(screen.getByText('Both workouts stay the same. They trade days.')).toBeVisible()
+    expect(apply).not.toHaveBeenCalled()
+    fireEvent.click(await screen.findByRole('button', { name: 'Swap runs' }))
+    await waitFor(() => expect(apply).toHaveBeenCalledWith({ situation: 'SwapRuns', date: first.date, moveTo: second.date, canRun: true }, 'A'.repeat(64)))
+    expect(await screen.findByRole('heading', { name: 'Runs swapped' })).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(restore).toHaveBeenCalledWith([first.date, second.date]))
+  })
+
+  it('offers runs to swap with next to free days when a drop is not allowed', async () => {
+    const preview = vi.fn(async (change: LifeChange) => {
+      if (change.moveTo) throw new Error('Choose one of the days offered.')
+      return change.situation === 'SwapRuns' ? proposed([], [target]) : proposed([], [])
+    })
+    render(<MoveRunDialog from={from} to={target} plan={planFixture} units="km" actions={{ preview, apply: async () => {}, restore: async () => {} }} onClose={() => {}} />)
+    const swaps = await screen.findByRole('group', { name: 'Runs to swap with' })
+    expect(screen.queryByRole('group', { name: 'Available dates' })).not.toBeInTheDocument()
+    fireEvent.click(swaps.querySelector('button')!)
+    await waitFor(() => expect(preview).toHaveBeenCalledWith({ situation: 'SwapRuns', date: from, moveTo: target, canRun: true }))
+  })
 })

@@ -1,0 +1,12 @@
+{
+  "Name": "Taperday deploy SQL firewall rules",
+  "IsCustom": true,
+  "Description": "Lets the GitHub deploy open and close a temporary firewall rule for its own runner while it migrates the database. Nothing else on the SQL server.",
+  "Actions": [
+    "Microsoft.Sql/servers/firewallRules/read",
+    "Microsoft.Sql/servers/firewallRules/write",
+    "Microsoft.Sql/servers/firewallRules/delete"
+  ],
+  "NotActions": [],
+  "AssignableScopes": ["/subscriptions/137bd367-60ed-4fd7-919d-d6911e3f45c2/resourceGroups/rg-taperday"]
+}

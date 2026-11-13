@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { LifeChange, LifeProposal, TrainingPlan } from '../../lib/types'
 import type { LifeHappensActions } from './LifeHappens'
@@ -150,7 +151,9 @@ export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props
   const adjacent = result?.changes.some(c => c.movedFrom && !GENTLE.includes(c.originalType) && (hardOn(addDays(c.date, -1)) || hardOn(addDays(c.date, 1))))
   const offering = !complete && !busy && result?.changes.length === 0 && (result.moveTargets.length > 0 || swapTargets.length > 0)
 
-  return (
+  // Rendered under <body>, not inside the plan: anything around the plan (its build-reveal rule gave every child
+  // position: relative; a transform would do the same) would otherwise pin the pop-up there, above where the runner is.
+  return createPortal(
     <div className="move-run-overlay" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
       <section className="move-run-dialog" role="dialog" aria-modal="true" aria-labelledby="move-run-heading" aria-describedby="move-run-summary">
         <div className="move-run-dialog-header">
@@ -201,7 +204,7 @@ export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props
         )}
       </section>
     </div>
-  )
+  , document.body)
 }
 
 function addDays(iso: string, delta: number): string {

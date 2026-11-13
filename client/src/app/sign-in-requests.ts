@@ -10,7 +10,8 @@ export type SignInKind = 'sign-in' | 'sign-up' | 'google'
  * `select_account` makes MSAL drop the hint and lets Microsoft offer "use another account" over any session it holds.
  * Sign-up's `create` can't be combined with it, so the provider also forgets the active account before any of these.
  *
- * `google` goes straight to Google (External ID's issuer acceleration). It only works once Google is added to the
+ * `google` goes straight to Google (External ID's issuer acceleration) with domain_hint=google.com: the tenant rejects the
+ * lowercase `google` that Microsoft's docs show (AADSTS90023, seen 13 Nov 2026). It only works once Google is added to the
  * tenant's user flow, so the button shows only when VITE_AUTH_GOOGLE is true (docs/accounts-setup.md).
  */
 export function signInRequest(kind: SignInKind, scope: string, startPage: string): RedirectRequest {
@@ -19,7 +20,7 @@ export function signInRequest(kind: SignInKind, scope: string, startPage: string
     case 'sign-in':
       return { ...base, prompt: 'select_account' }
     case 'google':
-      return { ...base, prompt: 'select_account', domainHint: 'google' }
+      return { ...base, prompt: 'select_account', domainHint: 'google.com' }
     case 'sign-up':
       return { ...base, prompt: 'create' }
   }

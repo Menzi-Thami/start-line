@@ -48,7 +48,7 @@ export function FirstWeek({ hasRuns, strava, onOpenRuns, onOpenAccount }: Props)
 
   const install = useInstallWay()
   const steps = [
-    { id: 'runs', done: hasRuns || !!strava?.connected, title: 'Bring in your runs', why: 'Connect Strava or upload from your watch, so the coach adjusts to what you actually ran.', action: 'Add runs', onClick: onOpenRuns },
+    { id: 'runs', done: hasRuns || !!(strava?.connected && strava.status !== 'NeedsReconnect'), title: 'Bring in your runs', why: 'Connect Strava or upload from your watch, so Taperday can review your actual training.', action: strava?.available ? 'Connect Strava' : 'Add runs', onClick: strava?.available ? onOpenAccount : onOpenRuns },
     { id: 'reminders', done: reminders === true, title: 'Turn on reminders', why: 'A nudge on run days and a heads-up before long runs.', action: 'Turn on', onClick: onOpenAccount },
     // One tap where the browser can install it (Android, desktop Chrome and Edge); the two Share-menu steps on an iPhone.
     { id: 'home', done: isStandalone() || install.kind === 'installed', title: 'Add Taperday to your home screen', why: 'It opens like an app, straight on your plan.', action: 'Add to home screen', onClick: onOpenAccount },

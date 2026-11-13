@@ -37,6 +37,8 @@ import { BrandIntroGate } from '../features/home/BrandIntroGate'
 import { PlanView } from '../features/plan/PlanView'
 import { Replan } from '../features/plan/Replan'
 import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
+import { StravaWelcome } from '../features/sync/StravaWelcome'
+import { beginStravaWelcome, finishStravaWelcome, hasStravaWelcome } from '../features/sync/strava-welcome'
 import { useSyncedRuns } from '../features/sync/useSyncedRuns'
 import { api, ApiError, apiOrigin } from '../lib/api-client'
 import { calendarLinks, personalCalendarLinks } from '../lib/calendar-links'
@@ -59,7 +61,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'home' | 'build' | 'beginner' | 'runs' | 'account' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
+type View = 'home' | 'build' | 'beginner' | 'runs' | 'account' | 'onboarding' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -99,7 +101,7 @@ const viewFromUrl = (): View => {
   const view = new URLSearchParams(window.location.search).get('view')
   // A runner has one plan, so the old My plans page is now Home.
   if (view === 'plans') return 'home'
-  return view === 'home' || view === 'beginner' || view === 'runs' || view === 'account' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
+  return view === 'home' || view === 'beginner' || view === 'runs' || view === 'account' || view === 'onboarding' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
 }
 
 /** Wait for the full five-scene story without delaying reduced-motion users.
@@ -355,11 +357,14 @@ export function App() {
   }, [savedOnScreen, shownPlan, auth, savePlan])
   const notes = coachNotes && coachNotes.planId === savedOnScreen ? coachNotes.notes : undefined
 
-  // Back from Strava: finish connecting, then show the account page with what happened.
+  // Back from Strava: finish connecting, then resume onboarding if this was a new signup.
+  const stravaRunnerId = runner.state.kind === 'ready' ? runner.state.runner.id : null
   useEffect(() => {
-    if (!stravaCallback || stravaHandled.current || runner.state.kind !== 'ready') return
+    if (!stravaCallback || stravaHandled.current || !stravaRunnerId) return
     stravaHandled.current = true
-    window.history.replaceState(null, '', '/?view=account')
+    const welcome = hasStravaWelcome(stravaRunnerId)
+    window.history.replaceState(null, '', welcome ? '/?view=onboarding' : '/?view=account')
+    if (welcome) setView('onboarding')
     const { code, state, scope, error } = stravaCallback
     const connecting =
       error || !code || !state
@@ -369,7 +374,7 @@ export function App() {
       .finally(() => setStravaConnecting(false))
       .then(() => setStravaNotice('Strava is connected. Your runs from the last six weeks are on their way, and new ones arrive by themselves.'))
       .catch((failure: unknown) => setStravaNotice(failure instanceof Error ? failure.message : 'Connecting Strava didn’t work. Try again.'))
-  }, [stravaCallback, runner.state.kind, auth])
+  }, [stravaCallback, stravaRunnerId, auth])
 
   // Signed in with a plan: open inside it, not on the builder or Home. From the plan this device kept when there is one,
   // straight away; otherwise built afresh from its answers, which needs only the API, never the sleeping database. Signed
@@ -507,7 +512,7 @@ export function App() {
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'home' || next === 'beginner' || next === 'runs' || next === 'account' || next === 'privacy' || next === 'sign-in'
+      next === 'home' || next === 'beginner' || next === 'runs' || next === 'account' || next === 'onboarding' || next === 'privacy' || next === 'sign-in'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
@@ -667,9 +672,35 @@ export function App() {
   // Home shows for a registered runner, or, while the account is still loading, from the copy kept on this device.
   const homeRunner = state.kind === 'ready' ? state.runner : state.kind === 'loading' ? (copy?.runner ?? null) : null
   const signedUp = (saved: Runner) => {
+    beginStravaWelcome(saved.id, window.location.search)
     setJustSignedUp(true)
     runner.setRunner(saved)
+    landing.current = true
+    setView('onboarding')
+    window.history.replaceState(null, '', '?view=onboarding')
     if (prefersMotion()) setCelebrating(saved.displayName)
+  }
+  const leaveStravaWelcome = () => {
+    if (state.kind !== 'ready') return
+    const search = finishStravaWelcome(state.runner.id)
+    landing.current = true
+    setLanded(true)
+    setView('build')
+    const linked = fromSearchParams(new URLSearchParams(search))
+    if (linked && plan.kind !== 'ready') {
+      setPlan({ kind: 'loading' })
+      fetchPlan(linked)
+    } else if (plan.kind === 'ready') {
+      window.history.replaceState(null, '', `?${toSearchParams(plan.inputs)}`)
+    } else {
+      setPlan({ kind: 'idle' })
+      window.history.replaceState(null, '', '/')
+    }
+    window.scrollTo?.({ top: 0 })
+  }
+  const openStravaConnections = () => {
+    go('account')
+    window.history.replaceState(null, '', '?view=account&settings=connections')
   }
   const builderInitial = plan.kind === 'ready' || plan.kind === 'error' ? plan.inputs : initial
   const showBuilder = view === 'build' && (editing || plan.kind === 'idle')
@@ -690,7 +721,7 @@ export function App() {
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
   const showBar =
     !(plan.kind === 'loading' && showBuilder) &&
-    state.kind === 'ready'
+    state.kind === 'ready' && view !== 'onboarding'
 
   const gate: Gate | undefined =
     state.kind === 'signed-out'
@@ -822,6 +853,9 @@ export function App() {
 
         {view === 'sign-in' && state.kind === 'signed-out' && <SignInLanding onSignIn={auth.signIn} onSignUp={auth.signUp} onGoogle={auth.signInWithGoogle} onBack={() => go('build')} />}
         {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty" role="status"><p>{state.kind === 'loading' || state.kind === 'ready' ? 'Finding your training plan…' : 'Finish your account setup to continue.'}</p>{state.kind === 'needs-sign-up' && <button type="button" className="button" onClick={() => go('sign-up')}>Finish setting up your account</button>}</div>}
+        {view === 'onboarding' && state.kind === 'ready' && (
+          <StravaWelcome notice={stravaNotice} connecting={stravaConnecting} onContinue={leaveStravaWelcome} />
+        )}
         {view === 'privacy' && <PrivacyPolicy />}
         {view === 'unsubscribe' && <Unsubscribe token={new URLSearchParams(window.location.search).get('t')} weekly={new URLSearchParams(window.location.search).get('list') === 'weekly'} onOpenAccount={() => go('account')} />}
 
@@ -858,7 +892,6 @@ export function App() {
             <ProfileForm
               onSaved={(saved) => {
                 signedUp(saved)
-                go('build')
               }}
             />
           </section>
@@ -887,7 +920,7 @@ export function App() {
             onOpenBeginner={() => go('beginner')}
             onOpenRun={(id) => showRun(id)}
             onOpenRuns={() => go('runs')}
-            onOpenAccount={() => go('account')}
+            onOpenAccount={openStravaConnections}
           />
         )}
 

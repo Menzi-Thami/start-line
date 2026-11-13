@@ -209,7 +209,7 @@ describe('signing up comes first', () => {
     expect(auth.signIn).toHaveBeenCalled()
   })
 
-  it('asks for the profile next, needs the privacy notice accepted, then moves on to the race', async () => {
+  it('requires profile consent, offers optional Strava, then continues to the race', async () => {
     const db = accountApi({ runner: null })
     const user = renderWith(signedIn())
 
@@ -228,8 +228,10 @@ describe('signing up comes first', () => {
     await user.click(screen.getByRole('checkbox', { name: /I’ve read this/ }))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
 
-    expect(await screen.findByRole('heading', { name: 'Which race?' })).toHaveFocus()
-    expect(screen.getByText('Step 2 of 6')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Bring your runs with you.' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Which race?' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: "I'll connect later" }))
+    expect(await screen.findByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Runs' })).toBeInTheDocument()
     expect(db.profiles[0]).toMatchObject({ displayName: 'Thandi M', acceptPrivacyNotice: true, units: 'Kilometres' })
     expect(typeof (db.profiles[0] as { timeZone: string }).timeZone).toBe('string')
@@ -651,9 +653,11 @@ describe('signing up, with a little theatre', () => {
     const status = await screen.findByRole('status')
     expect(status).toHaveTextContent('You’re on the start list!')
     expect(status).toHaveTextContent('Welcome, Thandi M.')
-    // The next question is already there underneath; the celebration doesn't hold it up.
-    expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
+    // The Strava choice appears underneath without waiting for the celebration to finish.
+    expect(screen.getByRole('heading', { name: 'Bring your runs with you.' })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('You’re on the start list!')).not.toBeInTheDocument(), { timeout: 5000 })
+    await user.click(screen.getByRole('button', { name: "I'll connect later" }))
+    expect(await screen.findByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
   }, 10000)
 })
 

@@ -5092,31 +5092,32 @@ select.input option {
   animation-delay: 180ms;
 }
 
-/* Just signed in, the plan still on its way: one line over a page that stays usable. */
+/* Quiet handoff after identity sign-in; only an unusually slow load needs a recovery panel. */
 .finding-plan {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  padding: var(--space-2) 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.finding-plan .wait-spinner { flex-shrink: 0; }
+.finding-plan p { margin: 0; }
+.finding-plan strong { font-weight: 600; color: var(--ink); }
+.finding-plan-slow {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-3);
-  margin: var(--space-4) 0 0;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--line-strong);
-  border-left: 3px solid var(--accent);
+  max-width: 32rem;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: var(--glass);
-  animation: view-in var(--dur-page) var(--ease-out);
-  position: relative;
+  background: var(--surface);
 }
-
-.finding-plan .wait-spinner {
-  margin-top: 3px;
-}
-
-.finding-plan p {
-  margin: 0;
-}
-
+.finding-plan-slow .field-help { margin-top: var(--space-2); }
 .finding-plan-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-4);
   margin-top: var(--space-2) !important;
 }

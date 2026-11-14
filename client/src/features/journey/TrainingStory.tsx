@@ -28,7 +28,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
     heading: isFinisher ? 'RACE FINISHED' : story.earned ? 'TRAINING COMPLETE' : 'MY TRAINING STORY',
     raceName: story.raceName,
     stats: [
-      ...(finishTime ? [{ value: finishTime, label: 'Recorded race time' }] : []),
+      ...(finishTime ? [{ value: finishTime, label: 'Race result time' }] : []),
       { value: `${story.confirmedRuns}/${story.scheduledRuns}`, label: 'Training runs confirmed' },
       { value: String(story.weeks), label: story.weeks === 1 ? 'Training week' : 'Training weeks' },
       story.recordedKm !== null
@@ -115,7 +115,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
       )}
       {story.weekly && story.weekly.length > 0 && (
         <figure className="training-story-weeks">
-          <figcaption><strong>Every week tells a story.</strong><span>Confirmed runs against planned runs</span></figcaption>
+          <figcaption><strong>Every week tells a story.</strong><span>Confirmed runs, week by week</span></figcaption>
           <ol>
             {story.weekly.map((week, i) => (
               <li key={week.weekStart} aria-label={`Week ${i + 1}: ${week.confirmedRuns} of ${week.scheduledRuns} runs confirmed`}>
@@ -137,7 +137,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
         </div>
         <div className="journey-actions">
           <button type="button" className="button button-primary" onClick={() => void share()}>Share my story</button>
-          <button type="button" className="button" onClick={() => void download()}>Save story card</button>
+          <button type="button" className="button" aria-label="Download card" onClick={() => void download()}>Save story card</button>
         </div>
       </section>
       {story.source === 'device' && (

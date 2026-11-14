@@ -409,7 +409,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const moveEnabled = !!coach?.adjustments?.life
   const previewDate = selectedDate ?? (shown && today >= shown.week.startDate && today <= weekEnd(shown.week) ? today : shown?.week.startDate ?? today)
   const sessionsOn = (date: string) => plan.weeks.flatMap(week => week.sessions).filter(session => session.date === date)
-  const statusOn = (date: string) => dayStatus(sessionsOn(date), effectiveDone, entries.filter(entry => entry.date === date), activityDates.includes(date), sessionsOn(date).some(session => completedViaStrava(session, coach)))
+  const statusOn = (date: string) => dayStatus(sessionsOn(date), effectiveDone, entries.filter(entry => entry.date === date), activityDates.includes(date), sessionsOn(date).some(session => completedViaStrava(session, coach)), date >= plan.startDate && date <= plan.race.date)
   // On a desktop the calendar shows today's day (or the first plan day) beside the month until a day is chosen.
   const calendarDefault = today >= plan.startDate && today <= plan.race.date ? today : plan.startDate
   const preview = (date: string) => <DayPreview id={daySummaryId} date={date} sessions={sessionsOn(date)} status={statusOn(date)} units={units} paces={plan.paces} onOpen={() => openDay(date)} />

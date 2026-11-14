@@ -166,3 +166,27 @@ Implement resource ownership and versioned, authenticated CRUD with migration an
 6. **QA/staging/prod**: full checks, screenshot evidence, no regressions in sign-in, Strava, PWA, move-run, plan generation, accessibility.
 
 Do not merge simply because a PR exists or tests are written. Code-implement and verify every checkbox; clearly record any deferred scope and test limitations.
+
+
+## 9. Calendar boundaries: scheduled rest vs outside the plan
+
+**Reported bug:** after the plan ends, remaining dates in the visible month and the tail of a final week show as "Rest day", although no training prescription covers those dates.
+
+**Correct contract:**
+- **Within the plan's actual start/end dates and no workout:** Rest day; this is an intentional calendar gap in the training schedule.
+- **Before start or after finish, no scheduled session:** Outside this plan; visibly neutral/unmarked, never a rest day or missed workout. Still allow the runner to open the date and see activity history if any.
+- **Race day:** Keep the race-day marker, distinct from both rest and a training completion milestone.
+- **After race confirmation:** If an optional recovery programme is created, paint recovery/rest/optional-movement days **only from that recovery plan's own dated sessions**, with an explicit Recovery label. Do not retroactively fill the rest of the calendar with inferred rest days.
+- **Out-of-plan recorded activity:** Show the actual activity marker; do not claim it was prescribed or make it a fake rest day.
+- **Moved runs, custom start and race dates, shortened/replanned schedules:** resolve status from authoritative plan boundaries and actual sessions; never classify merely from absence of sessions.
+
+**Initial fix already committed in this PR:** `training-status.ts`, `PlanView.tsx`, `PlanCalendar.tsx`, `WeekGlance.tsx`, `DayPreview.tsx`, `plan-journey.css` and corresponding training-status tests. Needs test execution and real visual verification.
+
+**QA:**
+- [ ] Plan ends mid-month; remaining days are neutral "Outside this plan", not rest.
+- [ ] Final week extends beyond race day; dates after race are outside.
+- [ ] Real rest days between training sessions retain Rest status.
+- [ ] Recorded independent run after plan end remains visible as recorded activity.
+- [ ] Before custom start date, dates are outside; no invented early rest.
+- [ ] Mobile/desktop, light/dark, calendar and day detail labels agree.
+- [ ] When recovery plan is implemented, only recovery sessions carry recovery/rest labels.

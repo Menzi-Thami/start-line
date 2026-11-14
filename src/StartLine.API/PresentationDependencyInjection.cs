@@ -106,7 +106,7 @@ internal static class PresentationDependencyInjection
 
         services.AddCors(o => o.AddPolicy(SpaCorsPolicy, p => p
             .WithOrigins(configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
-            .WithMethods("GET", "POST", "PUT", "DELETE")
+            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE")
             .WithHeaders("Content-Type", "Authorization")));
 
         services.AddRateLimiter(o =>

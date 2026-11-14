@@ -4,6 +4,70 @@
  */
 
 export interface paths {
+    "/api/v1/me/beginner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BeginnerProgressState"];
+                        "application/json": components["schemas"]["BeginnerProgressState"];
+                        "text/json": components["schemas"]["BeginnerProgressState"];
+                    };
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["BeginnerProgressState"];
+                    "text/json": components["schemas"]["BeginnerProgressState"];
+                    "application/*+json": components["schemas"]["BeginnerProgressState"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["BeginnerProgressState"];
+                        "application/json": components["schemas"]["BeginnerProgressState"];
+                        "text/json": components["schemas"]["BeginnerProgressState"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calendar/{token}.ics": {
         parameters: {
             query?: never;
@@ -1058,6 +1122,561 @@ export interface paths {
                     planId: string;
                     id: string;
                 };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["JourneyDto"];
+                        "application/json": components["schemas"]["JourneyDto"];
+                        "text/json": components["schemas"]["JourneyDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey/plans/{planId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PlanChapterDto"];
+                        "application/json": components["schemas"]["PlanChapterDto"];
+                        "text/json": components["schemas"]["PlanChapterDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey/achievements/{id}/celebrated": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey/plans/{planId}/race-result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaveRaceResultRequest"];
+                    "text/json": components["schemas"]["SaveRaceResultRequest"];
+                    "application/*+json": components["schemas"]["SaveRaceResultRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RaceResultDto"];
+                        "application/json": components["schemas"]["RaceResultDto"];
+                        "text/json": components["schemas"]["RaceResultDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey/recovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartRecoveryRequest"];
+                    "text/json": components["schemas"]["StartRecoveryRequest"];
+                    "application/*+json": components["schemas"]["StartRecoveryRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RecoveryPlanDto"];
+                        "application/json": components["schemas"]["RecoveryPlanDto"];
+                        "text/json": components["schemas"]["RecoveryPlanDto"];
+                    };
+                };
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RecoveryPlanDto"];
+                        "application/json": components["schemas"]["RecoveryPlanDto"];
+                        "text/json": components["schemas"]["RecoveryPlanDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey/recovery/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ChangeRecoveryRequest"];
+                    "text/json": components["schemas"]["ChangeRecoveryRequest"];
+                    "application/*+json": components["schemas"]["ChangeRecoveryRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RecoveryPlanDto"];
+                        "application/json": components["schemas"]["RecoveryPlanDto"];
+                        "text/json": components["schemas"]["RecoveryPlanDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/me/journey/recovery/{id}/check-ins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RecoveryCheckInRequest"];
+                    "text/json": components["schemas"]["RecoveryCheckInRequest"];
+                    "application/*+json": components["schemas"]["RecoveryCheckInRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RecoveryPlanDto"];
+                        "application/json": components["schemas"]["RecoveryPlanDto"];
+                        "text/json": components["schemas"]["RecoveryPlanDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StartMaintenanceRequest"];
+                    "text/json": components["schemas"]["StartMaintenanceRequest"];
+                    "application/*+json": components["schemas"]["StartMaintenanceRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["MaintenancePlanDto"];
+                        "application/json": components["schemas"]["MaintenancePlanDto"];
+                        "text/json": components["schemas"]["MaintenancePlanDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
                 cookie?: never;
             };
             requestBody?: never;
@@ -3260,6 +3879,96 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/races/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RaceDto"][];
+                        "application/json": components["schemas"]["RaceDto"][];
+                        "text/json": components["schemas"]["RaceDto"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/races/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RaceDto"];
+                        "application/json": components["schemas"]["RaceDto"];
+                        "text/json": components["schemas"]["RaceDto"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ticks": {
         parameters: {
             query?: never;
@@ -3403,7 +4112,23 @@ export interface components {
             shoes?: null | components["schemas"]["ShoeExportDto"][];
             coachingDecisions?: null | components["schemas"]["CoachingDecisionExportDto"][];
             readiness?: null | components["schemas"]["ReadinessDto"][];
+            journey?: null | components["schemas"]["JourneyExportDto"];
         };
+        AchievementDto: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["AchievementKind"];
+            /** Format: uuid */
+            planId: string;
+            /** Format: date */
+            earnedOn: string;
+            /** Format: date-time */
+            awardedAt: string;
+            /** Format: date-time */
+            celebratedAt: null | string;
+        };
+        /** @enum {unknown} */
+        AchievementKind: "TrainingComplete" | "RaceFinished";
         ActivityDto: {
             /** Format: uuid */
             id: string;
@@ -3476,6 +4201,20 @@ export interface components {
             change: components["schemas"]["LifeChange"];
             token: string;
         };
+        BeginnerProgressState: {
+            /** Format: date */
+            startedOn: string;
+            days: string[];
+            completed: string[];
+            /** Format: int32 */
+            week: number;
+            paused: boolean;
+            /** Format: int32 */
+            revision: number;
+            weekDelays?: null | number[];
+            /** Format: date */
+            pausedOn?: null | string;
+        };
         BestEffortDto: {
             name: string;
             /** Format: double */
@@ -3502,6 +4241,25 @@ export interface components {
         };
         CalendarLinkDto: {
             token: string;
+        };
+        ChangeRecoveryRequest: {
+            action: components["schemas"]["RecoveryAction"];
+            /** Format: int32 */
+            extendDays?: null | number;
+            effort?: null | components["schemas"]["RecoveryEffort"];
+            preference?: null | components["schemas"]["RecoveryPreference"];
+            runDays?: null | components["schemas"]["DayOfWeek"][];
+            expectedVersion?: null | string;
+        };
+        ChapterWeekDto: {
+            /** Format: date */
+            weekStart: string;
+            /** Format: int32 */
+            scheduledRuns: number;
+            /** Format: int32 */
+            confirmedRuns: number;
+            /** Format: double */
+            recordedKm: null | number;
         };
         CheckInDto: {
             /** Format: date */
@@ -3743,6 +4501,19 @@ export interface components {
         ImportStatus: "Imported" | "AlreadyUploaded" | "Skipped" | "Unreadable" | "LimitReached";
         /** @enum {unknown} */
         InsightGap: "FewWeeks" | "MissingDistances" | "StravaWindow" | "FewEasyRuns" | "UnloggedSessions";
+        JourneyDto: {
+            chapters: components["schemas"]["PlanChapterDto"][];
+            recovery: null | components["schemas"]["RecoveryPlanDto"];
+            maintenance: null | components["schemas"]["MaintenancePlanDto"];
+        };
+        JourneyExportDto: {
+            raceResults: components["schemas"]["RaceResultDto"][];
+            achievements: components["schemas"]["AchievementDto"][];
+            recoveries: components["schemas"]["RecoveryPlanDto"][];
+            maintenance: components["schemas"]["MaintenancePlanDto"][];
+        };
+        /** @enum {unknown} */
+        JourneyLifecycle: "Active" | "TrainingComplete" | "RacePending" | "RaceCompleted" | "RaceNotCompleted" | "Recovering" | "Recovered" | "Archived";
         /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
         LifeChange: {
@@ -3800,6 +4571,40 @@ export interface components {
             soreness?: null | components["schemas"]["Soreness"];
             note?: null | string;
         };
+        MaintenancePlanDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int32 */
+            daysPerWeek: number;
+            runDays: components["schemas"]["DayOfWeek"][];
+            includeStrength: boolean;
+            /** Format: date */
+            startedOn: string;
+            status: components["schemas"]["MaintenanceStatus"];
+            weeks: components["schemas"]["MaintenanceWeekDto"][];
+            version: string;
+        };
+        MaintenanceSessionDto: {
+            /** Format: date */
+            date: string;
+            kind: components["schemas"]["MaintenanceSessionKind"];
+            title: string;
+            guidance: string;
+            /** Format: int32 */
+            minMinutes: number;
+            /** Format: int32 */
+            maxMinutes: number;
+            optional: boolean;
+        };
+        /** @enum {unknown} */
+        MaintenanceSessionKind: "EasyRun" | "LongerEasyRun" | "Strength";
+        /** @enum {unknown} */
+        MaintenanceStatus: "Active" | "Ended";
+        MaintenanceWeekDto: {
+            /** Format: date */
+            weekStart: string;
+            sessions: components["schemas"]["MaintenanceSessionDto"][];
+        };
         MissingDataDto: {
             /** Format: int32 */
             runs: number;
@@ -3830,7 +4635,7 @@ export interface components {
             claimedAt: null | string;
         };
         /** @enum {unknown} */
-        NotificationKind: "RunCongratulations" | "TrainingReview" | "LongRunPreparation" | "RacePreparation" | "ConnectionAlert" | "ShoeMileage";
+        NotificationKind: "RunCongratulations" | "TrainingReview" | "LongRunPreparation" | "RacePreparation" | "ConnectionAlert" | "ShoeMileage" | "FirstRun";
         NotificationPreferencesDto: {
             runCongratulations: boolean;
             trainingReviews: boolean;
@@ -3876,6 +4681,25 @@ export interface components {
             /** Format: date */
             localDate: string;
             source: components["schemas"]["ActivitySource"];
+        };
+        PlanChapterDto: {
+            /** Format: uuid */
+            planId: string;
+            name: string;
+            raceName: string;
+            /** Format: date */
+            raceDate: null | string;
+            /** Format: double */
+            distanceKm: null | number;
+            status: components["schemas"]["SavedPlanStatus"];
+            /** Format: date */
+            startDate: string;
+            lifecycle: components["schemas"]["JourneyLifecycle"];
+            training: components["schemas"]["TrainingRecapDto"];
+            raceResult: null | components["schemas"]["RaceResultDto"];
+            achievements: components["schemas"]["AchievementDto"][];
+            goalTime: string;
+            weeks: null | components["schemas"]["ChapterWeekDto"][];
         };
         PlannedVsActualDto: {
             planName: string;
@@ -4035,6 +4859,30 @@ export interface components {
             latest: null | string;
             first: null | string;
         };
+        /** @enum {unknown} */
+        RaceOutcome: "Finished" | "DidNotStart" | "DidNotFinish";
+        RaceResultDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            planId: string;
+            outcome: components["schemas"]["RaceOutcome"];
+            /** Format: date */
+            raceDate: string;
+            finishTime: null | string;
+            /** Format: double */
+            distanceKm: null | number;
+            /** Format: uuid */
+            activityId: null | string;
+            note: null | string;
+            goalTime: null | string;
+            versusGoal: null | string;
+            version: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
         RaceSummaryDto: {
             slug: null | string;
             name: string;
@@ -4056,7 +4904,103 @@ export interface components {
         /** @enum {unknown} */
         RecordingFormat: "Fit" | "Gpx" | "Tcx";
         /** @enum {unknown} */
+        RecoveryAction: "Pause" | "Resume" | "Extend" | "Complete" | "End" | "Restart" | "Update";
+        /** @enum {unknown} */
+        RecoveryCategory: "FiveK" | "TenK" | "Half" | "Marathon" | "Ultra" | "LongUltra";
+        RecoveryCheckInDto: {
+            /** Format: date */
+            date: string;
+            feeling: components["schemas"]["RecoveryFeeling"];
+            redFlags: components["schemas"]["RecoveryRedFlag"][];
+            note: null | string;
+        };
+        RecoveryCheckInRequest: {
+            /** Format: date */
+            date: null | string;
+            feeling: components["schemas"]["RecoveryFeeling"];
+            redFlags?: null | components["schemas"]["RecoveryRedFlag"][];
+            note?: null | string;
+        };
+        RecoveryDayDto: {
+            /** Format: date */
+            date: string;
+            /** Format: int32 */
+            dayNumber: number;
+            phase: components["schemas"]["RecoveryPhase"];
+            kind: components["schemas"]["RecoveryDayKind"];
+            title: string;
+            guidance: string;
+            /** Format: int32 */
+            minMinutes: null | number;
+            /** Format: int32 */
+            maxMinutes: null | number;
+            optional: boolean;
+            gated: boolean;
+        };
+        /** @enum {unknown} */
+        RecoveryDayKind: "RaceDay" | "Rest" | "Walk" | "Mobility" | "CrossTraining" | "EasyRun" | "SeekCare" | "Paused";
+        /** @enum {unknown} */
+        RecoveryEffort: "Easy" | "Hard" | "AllOut";
+        /** @enum {unknown} */
+        RecoveryFeeling: "GoodToGo" | "StillSore" | "VeryFatigued" | "PainOrInjury" | "NotSure";
+        RecoveryPauseDto: {
+            /** Format: date */
+            from: string;
+            /** Format: date */
+            to: null | string;
+        };
+        /** @enum {unknown} */
+        RecoveryPhase: "RaceDay" | "Rest" | "Gentle" | "EasyReturn" | "SeekCare" | "Paused";
+        RecoveryPlanDto: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            planId: null | string;
+            eventName: string;
+            /** Format: double */
+            distanceKm: number;
+            category: components["schemas"]["RecoveryCategory"];
+            /** Format: date */
+            raceDate: string;
+            effort: components["schemas"]["RecoveryEffort"];
+            preference: components["schemas"]["RecoveryPreference"];
+            runDays: components["schemas"]["DayOfWeek"][];
+            status: components["schemas"]["RecoveryStatus"];
+            /** Format: int32 */
+            generatorVersion: number;
+            /** Format: int32 */
+            dayNumber: number;
+            /** Format: date */
+            endsOn: string;
+            framing: string;
+            readiness: components["schemas"]["RecoveryReadinessState"];
+            phase: components["schemas"]["RecoveryPhase"];
+            seekCare: boolean;
+            safetyMessage: null | string;
+            canComplete: boolean;
+            days: components["schemas"]["RecoveryDayDto"][];
+            checkIns: components["schemas"]["RecoveryCheckInDto"][];
+            pauses: components["schemas"]["RecoveryPauseDto"][];
+            /** Format: int32 */
+            extraDays: number;
+            version: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date */
+            endedOn: null | string;
+        };
+        /** @enum {unknown} */
+        RecoveryPreference: "Rest" | "Walk" | "CrossTraining" | "EasyRunning";
+        /** @enum {unknown} */
         RecoveryReadiness: "NotReported" | "Ready" | "Tired" | "Unwell";
+        /** @enum {unknown} */
+        RecoveryReadinessState: "NotCheckedIn" | "GoodToGo" | "StillSore" | "VeryFatigued" | "PainOrInjury" | "NotSure";
+        /** @enum {unknown} */
+        RecoveryRedFlag: "SeverePain" | "CannotWalkNormally" | "MarkedSwelling" | "DarkUrine" | "Fainting" | "ChestPain";
+        /** @enum {unknown} */
+        RecoveryStatus: "Active" | "Paused" | "Completed" | "Ended";
         RemainingWeekProposalDto: {
             token: string;
             summary: string;
@@ -4230,6 +5174,18 @@ export interface components {
             maxHeartRate?: null | number;
             heartRateConsent?: null | boolean;
             updateEmails?: null | boolean;
+        };
+        SaveRaceResultRequest: {
+            outcome: components["schemas"]["RaceOutcome"];
+            /** Format: date */
+            raceDate?: null | string;
+            finishTime?: null | string;
+            /** Format: double */
+            distanceKm?: null | number;
+            /** Format: uuid */
+            activityId?: null | string;
+            note?: null | string;
+            expectedVersion?: null | string;
         };
         SaveShoeRequest: {
             name: string;
@@ -4417,6 +5373,27 @@ export interface components {
             /** Format: double */
             inTargetShare: null | number;
         };
+        StartMaintenanceRequest: {
+            /** Format: int32 */
+            daysPerWeek: number;
+            runDays?: null | components["schemas"]["DayOfWeek"][];
+            /** @default false */
+            includeStrength: boolean;
+        };
+        StartRecoveryRequest: {
+            /** Format: uuid */
+            planId: null | string;
+            eventName: null | string;
+            /** Format: double */
+            distanceKm: number;
+            /** Format: date */
+            raceDate: string;
+            effort: components["schemas"]["RecoveryEffort"];
+            preference: components["schemas"]["RecoveryPreference"];
+            runDays?: null | components["schemas"]["DayOfWeek"][];
+            feeling?: null | components["schemas"]["RecoveryFeeling"];
+            redFlags?: null | components["schemas"]["RecoveryRedFlag"][];
+        };
         /** @enum {unknown} */
         StepKind: "WarmUp" | "Run" | "Recover" | "CoolDown" | "Repeat";
         StravaConnectDto: {
@@ -4544,6 +5521,39 @@ export interface components {
             suggestedGoal?: null | string;
             outlook?: null | components["schemas"]["GoalOutlookDto"];
             adjustments?: null | components["schemas"]["SessionRevision"][];
+        };
+        TrainingRecapDto: {
+            /** Format: int32 */
+            scheduledRuns: number;
+            /** Format: int32 */
+            confirmedRuns: number;
+            /** Format: int32 */
+            cutShortRuns: number;
+            /** Format: int32 */
+            skippedRuns: number;
+            /** Format: int32 */
+            unansweredRuns: number;
+            /** Format: int32 */
+            weeks: number;
+            /** Format: int32 */
+            runningDays: number;
+            /** Format: double */
+            plannedKmConfirmed: number;
+            /** Format: double */
+            recordedKm: null | number;
+            /** Format: int32 */
+            recordedRuns: number;
+            /** Format: double */
+            longestRecordedKm: null | number;
+            /** Format: date */
+            longestRecordedOn: null | string;
+            /** Format: date */
+            lastTrainingDate: null | string;
+            allConfirmed: boolean;
+            trainingEnded: boolean;
+            raceDatePassed: boolean;
+            /** Format: int32 */
+            swappedRuns: number;
         };
         TrainingTrendsResult: {
             weeks: components["schemas"]["TrendWeek"][];

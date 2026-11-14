@@ -489,3 +489,107 @@ internal sealed class DailyReadinessConfiguration : IEntityTypeConfiguration<Dai
         builder.HasOne<Runner>().WithMany().HasForeignKey(r => r.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+/// <summary>Weekdays as a 7-bit mask, as on saved plans: one column instead of a child table.</summary>
+internal static class DayMask
+{
+    public static readonly ValueConverter<IReadOnlyList<DayOfWeek>, int> Converter = new(
+        days => days.Aggregate(0, (mask, day) => mask | (1 << (int)day)),
+        mask => Enumerable.Range(0, 7).Where(bit => (mask & (1 << bit)) != 0).Select(bit => (DayOfWeek)bit).ToList());
+
+    public static readonly ValueComparer<IReadOnlyList<DayOfWeek>> Comparer = new(
+        (a, b) => a != null && b != null && a.SequenceEqual(b),
+        days => days.Aggregate(0, (hash, day) => HashCode.Combine(hash, day)),
+        days => days.ToList());
+}
+
+/// <summary>A small list kept whole in one JSON column, enums by name so reordering an enum never changes stored data.</summary>
+internal static class JsonList<T>
+{
+    private static readonly JsonSerializerOptions Options = new() { Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() } };
+
+    public static readonly ValueConverter<IReadOnlyList<T>, string> Converter = new(
+        items => JsonSerializer.Serialize(items, Options),
+        json => JsonSerializer.Deserialize<List<T>>(json, Options) ?? new List<T>());
+
+    public static readonly ValueComparer<IReadOnlyList<T>> Comparer = new(
+        (a, b) => a != null && b != null && a.SequenceEqual(b),
+        items => items.Aggregate(0, (hash, item) => HashCode.Combine(hash, item)),
+        items => items.ToList());
+}
+
+internal sealed class RaceResultConfiguration : IEntityTypeConfiguration<StartLine.Domain.Journey.RaceResult>
+{
+    public void Configure(EntityTypeBuilder<StartLine.Domain.Journey.RaceResult> builder)
+    {
+        builder.ToTable("RaceResults");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
+        builder.Property(r => r.Outcome).HasConversion<string>().HasMaxLength(16);
+        // SQL `time` stops at 24 hours; an ultra doesn't, so finish times are stored as seconds.
+        builder.Property(r => r.FinishTime).HasColumnName("FinishSeconds")
+            .HasConversion(t => t.HasValue ? (long?)t.Value.TotalSeconds : null, s => s.HasValue ? TimeSpan.FromSeconds(s.Value) : null);
+        builder.Property(r => r.Note).HasMaxLength(StartLine.Domain.Journey.RaceResult.MaxNoteLength);
+        builder.Property(r => r.Version).IsRowVersion();
+        // One result per plan. Through the plan to the runner, so deleting either deletes it; only the run's id is kept.
+        builder.HasIndex(r => r.SavedPlanId).IsUnique();
+        builder.HasIndex(r => r.RunnerId);
+        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(r => r.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class AchievementConfiguration : IEntityTypeConfiguration<StartLine.Domain.Journey.Achievement>
+{
+    public void Configure(EntityTypeBuilder<StartLine.Domain.Journey.Achievement> builder)
+    {
+        builder.ToTable("Achievements");
+        builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
+        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(24);
+        // One of each badge per plan, whichever request awards it first. The plan going takes its badges with it.
+        builder.HasIndex(a => new { a.RunnerId, a.SavedPlanId, a.Kind }).IsUnique();
+        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(a => a.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class RecoveryPlanConfiguration : IEntityTypeConfiguration<StartLine.Domain.Journey.RecoveryPlan>
+{
+    public void Configure(EntityTypeBuilder<StartLine.Domain.Journey.RecoveryPlan> builder)
+    {
+        builder.ToTable("RecoveryPlans");
+        builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
+        builder.Property(r => r.EventName).HasMaxLength(StartLine.Domain.Journey.RecoveryPlan.MaxEventNameLength).IsRequired();
+        builder.Property(r => r.Effort).HasConversion<string>().HasMaxLength(16);
+        builder.Property(r => r.Preference).HasConversion<string>().HasMaxLength(16);
+        builder.Property(r => r.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Property(r => r.RunDays).HasConversion(DayMask.Converter, DayMask.Comparer);
+        builder.Property(r => r.Pauses).HasColumnType("nvarchar(max)")
+            .HasConversion(JsonList<StartLine.Domain.Journey.RecoveryPause>.Converter, JsonList<StartLine.Domain.Journey.RecoveryPause>.Comparer);
+        builder.Property(r => r.CheckIns).HasColumnType("nvarchar(max)")
+            .HasConversion(JsonList<StartLine.Domain.Journey.RecoveryCheckIn>.Converter, JsonList<StartLine.Domain.Journey.RecoveryCheckIn>.Comparer);
+        builder.Property(r => r.Version).IsRowVersion();
+        builder.Ignore(r => r.IsOpen);
+        // One recovery going at a time, and one per plan's race, whatever the application does.
+        builder.HasIndex(r => r.RunnerId).IsUnique().HasFilter("[Status] IN ('Active', 'Paused')").HasDatabaseName("IX_RecoveryPlans_OneOpenPerRunner");
+        builder.HasIndex(r => new { r.RunnerId, r.SavedPlanId }).IsUnique().HasFilter("[SavedPlanId] IS NOT NULL").HasDatabaseName("IX_RecoveryPlans_OnePerPlan");
+        // No foreign key to the plan: a plan with a recovery is archived, never deleted, and the runner going takes both.
+        builder.HasOne<Runner>().WithMany().HasForeignKey(r => r.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class MaintenancePlanConfiguration : IEntityTypeConfiguration<StartLine.Domain.Journey.MaintenancePlan>
+{
+    public void Configure(EntityTypeBuilder<StartLine.Domain.Journey.MaintenancePlan> builder)
+    {
+        builder.ToTable("MaintenancePlans");
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.Id).ValueGeneratedNever();
+        builder.Property(m => m.Status).HasConversion<string>().HasMaxLength(16);
+        builder.Property(m => m.RunDays).HasConversion(DayMask.Converter, DayMask.Comparer);
+        builder.Property(m => m.Version).IsRowVersion();
+        // One easy-running plan going at a time; the runner going takes theirs.
+        builder.HasIndex(m => m.RunnerId).IsUnique().HasFilter("[Status] = 'Active'").HasDatabaseName("IX_MaintenancePlans_OneActivePerRunner");
+        builder.HasOne<Runner>().WithMany().HasForeignKey(m => m.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}

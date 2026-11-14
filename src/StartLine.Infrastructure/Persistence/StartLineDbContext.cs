@@ -50,6 +50,14 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<Feedback> Feedback => Set<Feedback>();
 
+    public DbSet<StartLine.Domain.Journey.RaceResult> RaceResults => Set<StartLine.Domain.Journey.RaceResult>();
+
+    public DbSet<StartLine.Domain.Journey.Achievement> Achievements => Set<StartLine.Domain.Journey.Achievement>();
+
+    public DbSet<StartLine.Domain.Journey.RecoveryPlan> RecoveryPlans => Set<StartLine.Domain.Journey.RecoveryPlan>();
+
+    public DbSet<StartLine.Domain.Journey.MaintenancePlan> MaintenancePlans => Set<StartLine.Domain.Journey.MaintenancePlan>();
+
     /// <summary>The searchable race catalogue (read by the race sync only).</summary>
     public DbSet<Races.CatalogueRace> CatalogueRaces => Set<Races.CatalogueRace>();
 

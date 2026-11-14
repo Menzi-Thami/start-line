@@ -18,7 +18,7 @@ namespace StartLine.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.13")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -469,6 +469,233 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasFilter("[IsAdditional] = 0");
 
                     b.ToTable("SessionCheckIns", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Journey.Achievement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("AwardedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("CelebratedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateOnly>("EarnedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SavedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SavedPlanId");
+
+                    b.HasIndex("RunnerId", "SavedPlanId", "Kind")
+                        .IsUnique();
+
+                    b.ToTable("Achievements", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Journey.MaintenancePlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("DaysPerWeek")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("EndedOn")
+                        .HasColumnType("date");
+
+                    b.Property<int>("GeneratorVersion")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IncludeStrength")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RunDays")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("StartedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_MaintenancePlans_OneActivePerRunner")
+                        .HasFilter("[Status] = 'Active'");
+
+                    b.ToTable("MaintenancePlans", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Journey.RaceResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActivityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double?>("DistanceKm")
+                        .HasColumnType("float");
+
+                    b.Property<long?>("FinishTime")
+                        .HasColumnType("bigint")
+                        .HasColumnName("FinishSeconds");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(280)
+                        .HasColumnType("nvarchar(280)");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly>("RaceDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("SavedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId");
+
+                    b.HasIndex("SavedPlanId")
+                        .IsUnique();
+
+                    b.ToTable("RaceResults", (string)null);
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Journey.RecoveryPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CheckIns")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double>("DistanceKm")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Effort")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly?>("EndedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("EventName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ExtraDays")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GeneratorVersion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Pauses")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Preference")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateOnly>("RaceDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("RunDays")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("SavedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RecoveryPlans_OneOpenPerRunner")
+                        .HasFilter("[Status] IN ('Active', 'Paused')");
+
+                    b.HasIndex("RunnerId", "SavedPlanId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_RecoveryPlans_OnePerPlan")
+                        .HasFilter("[SavedPlanId] IS NOT NULL");
+
+                    b.ToTable("RecoveryPlans", (string)null);
                 });
 
             modelBuilder.Entity("StartLine.Domain.Notifications.NotificationDelivery", b =>
@@ -1363,6 +1590,42 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
                         .WithMany()
                         .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Journey.Achievement", b =>
+                {
+                    b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Journey.MaintenancePlan", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Journey.RaceResult", b =>
+                {
+                    b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
+                        .WithMany()
+                        .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Journey.RecoveryPlan", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

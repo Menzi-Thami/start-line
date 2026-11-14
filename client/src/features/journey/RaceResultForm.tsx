@@ -71,8 +71,9 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
     try {
       const activity = await onLoadActivity(run.id)
       if (activity.id !== run.id || activity.localDate !== run.localDate
-        || !Number.isFinite(activity.elapsedSeconds) || activity.elapsedSeconds < 60
-        || !Number.isFinite(activity.distanceKm) || activity.distanceKm <= 0) {
+        || activity.kind !== run.kind
+        || !Number.isFinite(activity.elapsedSeconds) || activity.elapsedSeconds < 60 || activity.elapsedSeconds > 48 * 3600
+        || !Number.isFinite(activity.distanceKm) || !raceMatches(chapter, [{ ...run, distanceKm: activity.distanceKm }]).length) {
         throw new Error('That recording could not be verified. You can enter your result manually.')
       }
       const seconds = Math.round(activity.elapsedSeconds)

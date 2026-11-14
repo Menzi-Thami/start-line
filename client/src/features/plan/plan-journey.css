@@ -61,3 +61,10 @@
 @media (max-width: 767px) {
   .plan .day-detail-page.day-has-recording .day-summary-section:nth-child(2) { order: -1; }
 }
+
+
+/* Blank dates before/after a training plan are not prescribed rest days. */
+.plan .plan-calendar-day.is-outside { opacity: .48; border-color: transparent; background: transparent; }
+.plan .plan-calendar-day.is-outside[data-status="outside"] .calendar-status { display: none; }
+.plan .week-day .training-status.is-outside { color: var(--muted); }
+.plan .week-day:has(.training-status.is-outside) .week-day-dot { opacity: .55; }

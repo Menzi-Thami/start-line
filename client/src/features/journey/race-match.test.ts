@@ -34,7 +34,7 @@ describe('race recording suggestions', () => {
   })
   it('ranks Strava ahead of an uploaded duplicate while leaving the final decision to the runner', () => {
     const uploaded = candidate({ id: '22222222-2222-4222-8222-222222222222', source: { kind: 'Upload', viewUrl: null, recordedOnGarmin: false, cachedUntil: null } })
-    expect(raceMatches(marathon, [uploaded, candidate()])[0].source.kind).toBe('Strava')
+    expect(raceMatches(marathon, [uploaded, candidate()]).at(0)?.source.kind).toBe('Strava')
   })
   it('does not guess when there is no known race date or distance', () => {
     expect(raceMatches({ raceDate: null, distanceKm: null }, [candidate()])).toEqual([])

@@ -1,6 +1,6 @@
 # Taperday Finish Line — complete design and implementation handover
 
-> **Status (2026-11-14):** Existing PR #262 contains an initial frontend slice. The product experience below is the complete requested scope, **not** a claim that all features are implemented. Keep this PR in draft until the full acceptance matrix passes. Preserve Taperday's approved Night Run design system, original lime/black palette, typography and existing cartoon Runner. Do not replace brand animation, increase dependencies unnecessarily or change generation rules in existing plan versions.
+> **Status (2026-11-14, implementation):** the journey is implemented end to end in PR #262: account-backed achievements and history, race results, recovery generator v1 with readiness check-ins, maintenance, Home/Plan/calendar integration and the Finish Line film. Results, screenshots and limits: `docs/qa/2026-11-14/finish-line/README.md`; API as built: `docs/features/finish-line-api-contract.md`. Boxes below are ticked only where a test or browser check was run and passed. The Night Run / Frame look, the Runner and existing generator versions are unchanged.
 
 ## 1. Product contract
 
@@ -127,32 +127,32 @@ Implement resource ownership and versioned, authenticated CRUD with migration an
 ## 7. Acceptance criteria
 
 ### Completion and data
-- [ ] Training ended yesterday but zero workouts confirmed: **no earned full-training badge**.
-- [ ] All eligible runs confirmed while race tomorrow: training celebration, **no race finisher badge**, pre-race guidance.
-- [ ] Some days missing, skipped or CutShort: recap truthful, counts correct.
-- [ ] Ephemeral Strava match expires: no permanent completion award; confirmed check-in still persists.
-- [ ] Existing already-completed plan: recap and animation eligible on first visit, including archive when implemented.
-- [ ] Multiple plans, replan/move run, deleted/recovered workouts: stable keys, correct totals and no duplicate badges.
-- [ ] Race past with no actual race result: request confirmation, no assumed finish.
-- [ ] No recorded distance or pace data: 'not enough evidence', never invented measurements.
+- [x] Training ended yesterday but zero workouts confirmed: **no earned full-training badge**. *(TrainingRecap domain tests, journey-model and JourneyPanel tests)*
+- [x] All eligible runs confirmed while race tomorrow: training celebration, **no race finisher badge**, pre-race guidance. *(JourneyPanel test, browser journey)*
+- [x] Some days missing, skipped or CutShort: recap truthful, counts correct. *(TrainingRecap domain tests)*
+- [x] Ephemeral Strava match expires: no permanent completion award; confirmed check-in still persists. *(Strava never counts as confirmation or recorded distance; domain tests)*
+- [x] Existing already-completed plan: recap and animation eligible on first visit, including archive when implemented. *(retrospective award integration test; past plans replay from Running journey)*
+- [ ] Multiple plans, replan/move run, deleted/recovered workouts: stable keys, correct totals and no duplicate badges. *(partial: unique indexes and idempotent award sync tested; replan and moved-run recaps not specifically tested)*
+- [x] Race past with no actual race result: request confirmation, no assumed finish. *(Home no longer says "Race complete" from the date)*
+- [x] No recorded distance or pace data: 'not enough evidence', never invented measurements.
 
 ### Recovery
-- [ ] After confirmed half marathon: optional recovery offer; appropriate default, adjustable and symptom-aware.
-- [ ] User declines: Home remains useful, no unwanted recovery session creation.
-- [ ] Still sore/pain: do not progress load or show high-intensity sessions.
-- [ ] No planned hard training during recovery; no punishment for rest.
-- [ ] Race on different date/time zone: recovery dates align with local race date.
-- [ ] Ultra progression conservative and personalised; clear seek-care safety state.
-- [ ] Returning from recovery: maintenance and next-race options both work, no data loss.
-- [ ] Anonymous mode explicitly explains device-local limitations.
+- [x] After confirmed half marathon: optional recovery offer; appropriate default, adjustable and symptom-aware.
+- [x] User declines: Home remains useful, no unwanted recovery session creation.
+- [x] Still sore/pain: do not progress load or show high-intensity sessions. *(RecoveryGenerator ceiling tests)*
+- [x] No planned hard training during recovery; no punishment for rest. *(generator never emits pace, intervals, tempo or long runs; 45-minute cap)*
+- [x] Race on different date/time zone: recovery dates align with local race date. *(local DateOnly throughout; DST boundary domain test)*
+- [x] Ultra progression conservative and personalised; clear seek-care safety state.
+- [x] Returning from recovery: maintenance and next-race options both work, no data loss. *(next race opens the existing builder, which asks before replacing a saved plan)*
+- [x] Anonymous mode explicitly explains device-local limitations.
 
 ### Experience/QA
-- [ ] Responsive on 320/375/768/1024/1440 widths, phones, desktop and installed PWA.
-- [ ] Light/dark themes retain contrast; approved Night Run look unchanged.
-- [ ] Reduced motion, keyboard, screen reader, focus restoration and Escape dismissal.
-- [ ] Share/copy/download on Safari/iOS, Chrome and supported PWA, with failures handled.
-- [ ] Refresh, sign out/in, reconnection, concurrent tabs and duplicate API requests behave safely.
-- [ ] Unit/integration/E2E including legacy plan, custom start date, moved run, provisional Strava and signed-out view.
+- [ ] Responsive on 320/375/768/1024/1440 widths, phones, desktop and installed PWA. *(partial: all widths verified in Chromium; installed PWA and physical phones not tested)*
+- [x] Light/dark themes retain contrast; approved Night Run look unchanged. *(axe WCAG 2.2 AA at every width in both themes)*
+- [ ] Reduced motion, keyboard, screen reader, focus restoration and Escape dismissal. *(partial: reduced motion, keyboard, focus trap/restore and Escape verified in Chromium and WebKit; no manual screen-reader pass)*
+- [ ] Share/copy/download on Safari/iOS, Chrome and supported PWA, with failures handled. *(partial: PNG download verified in Chromium; native share sheets need a real device)*
+- [ ] Refresh, sign out/in, reconnection, concurrent tabs and duplicate API requests behave safely. *(partial: duplicate and concurrent API requests tested; failed refresh keeps the last journey; cross-tab refresh not tested)*
+- [ ] Unit/integration/E2E including legacy plan, custom start date, moved run, provisional Strava and signed-out view. *(partial: all except moved run)*
 - [ ] Run `scripts/check.sh` with disposable test services, then Playwright visual QA before any merge; never test against production data.
 - [ ] Merge to staging first; review real screens with before/after screenshots, then only merge to prod when verified.
 
@@ -183,10 +183,10 @@ Do not merge simply because a PR exists or tests are written. Code-implement and
 **Initial fix already committed in this PR:** `training-status.ts`, `PlanView.tsx`, `PlanCalendar.tsx`, `WeekGlance.tsx`, `DayPreview.tsx`, `plan-journey.css` and corresponding training-status tests. Needs test execution and real visual verification.
 
 **QA:**
-- [ ] Plan ends mid-month; remaining days are neutral "Outside this plan", not rest.
-- [ ] Final week extends beyond race day; dates after race are outside.
-- [ ] Real rest days between training sessions retain Rest status.
-- [ ] Recorded independent run after plan end remains visible as recorded activity.
-- [ ] Before custom start date, dates are outside; no invented early rest.
-- [ ] Mobile/desktop, light/dark, calendar and day detail labels agree.
-- [ ] When recovery plan is implemented, only recovery sessions carry recovery/rest labels.
+- [x] Plan ends mid-month; remaining days are neutral "Outside this plan", not rest.
+- [x] Final week extends beyond race day; dates after race are outside.
+- [x] Real rest days between training sessions retain Rest status.
+- [x] Recorded independent run after plan end remains visible as recorded activity.
+- [x] Before custom start date, dates are outside; no invented early rest.
+- [ ] Mobile/desktop, light/dark, calendar and day detail labels agree. *(partial: month calendar, week strip and day preview labels tested; the full day-detail page for an outside date not checked in a browser)*
+- [x] When recovery plan is implemented, only recovery sessions carry recovery/rest labels.

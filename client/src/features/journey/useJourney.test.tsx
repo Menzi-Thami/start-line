@@ -58,4 +58,20 @@ describe('Journey writes and refresh failures', () => {
     expect(await pending).toMatchObject({ message: expect.stringContaining('account changed') })
     expect(save).not.toHaveBeenCalled()
   })
+
+  it('hides the previous account history while another account loads and when its load fails', async () => {
+    let fail!: (error: Error) => void
+    let identity: Auth = auth
+    vi.spyOn(api.me.journey, 'get').mockResolvedValueOnce(initial).mockImplementationOnce(() => new Promise((_, reject) => { fail = reject }))
+    const wrapped = ({ children }: { children: React.ReactNode }) => <AuthContext.Provider value={identity}>{children}</AuthContext.Provider>
+    const { result, rerender } = renderHook(() => useJourney(true), { wrapper: wrapped })
+    await waitFor(() => expect(result.current.state.kind).toBe('ready'))
+    identity = { ...auth, account: { name: 'Another runner', email: 'another@example.test' } }
+    rerender()
+    expect(result.current.state).toEqual({ kind: 'loading' })
+    await waitFor(() => expect(fail).toBeDefined())
+    await act(async () => fail(new Error('Unavailable')))
+    expect(result.current.state).toMatchObject({ kind: 'error', message: 'Unavailable' })
+    expect(result.current.state).not.toHaveProperty('journey')
+  })
 })

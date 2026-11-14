@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '../../app/auth-context'
+import { useAuth, type Auth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { isJourneyPayload } from './journey-model'
 import type {
@@ -41,7 +41,8 @@ export interface JourneyActions {
  */
 export function useJourney(enabled: boolean): { state: JourneyState; actions: JourneyActions } {
   const auth = useAuth()
-  const [state, setState] = useState<JourneyState>({ kind: 'loading' })
+  const [loaded, setState] = useState<JourneyState & { owner: Auth }>({ kind: 'loading', owner: auth })
+  const state: JourneyState = loaded.owner === auth ? loaded : { kind: 'loading' }
   const sequence = useRef(0)
   const owner = useRef(0)
 
@@ -52,12 +53,12 @@ export function useJourney(enabled: boolean): { state: JourneyState; actions: Jo
       .then(journey => {
         if (mine !== sequence.current) return
         if (!isJourneyPayload(journey)) throw new Error('Your running journey returned an unexpected response. Try again.')
-        setState({ kind: 'ready', journey, refreshFailed: false })
+        setState({ kind: 'ready', journey, refreshFailed: false, owner: auth })
       })
       .catch((error: unknown) => {
         if (mine !== sequence.current) return
         const message = error instanceof Error ? error.message : 'Your running journey couldn’t load.'
-        setState(previous => previous.kind === 'ready' ? { ...previous, refreshFailed: true } : { kind: 'error', message })
+        setState(previous => previous.owner === auth && previous.kind === 'ready' ? { ...previous, refreshFailed: true } : { kind: 'error', message, owner: auth })
       })
   }, [auth])
 
@@ -85,7 +86,7 @@ export function useJourney(enabled: boolean): { state: JourneyState; actions: Jo
     // The write succeeded even if its following refresh fails. Keep its confirmed result visible and invalidate
     // earlier reads; achievements and lifecycle are still refreshed from the server, never invented here.
     sequence.current++
-    if (apply) setState(previous => previous.kind === 'ready' ? { ...previous, journey: apply(previous.journey, result) } : previous)
+    if (apply) setState(previous => previous.owner === auth && previous.kind === 'ready' ? { ...previous, journey: apply(previous.journey, result) } : previous)
     window.dispatchEvent(new Event(CHANGED))
     return result
   }, [auth])

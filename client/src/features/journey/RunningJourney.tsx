@@ -35,7 +35,8 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
   const { state, actions } = useJourney(true)
   const [loaded, setDetail] = useState<Detail | null>(null)
   const detail = loaded?.owner === auth ? loaded : null
-  const [replay, setReplay] = useState<{ kind: 'training' | 'race'; chapter: PlanChapter; trigger?: HTMLElement } | null>(null)
+  const [chosen, setReplay] = useState<{ owner: Auth; kind: 'training' | 'race'; chapter: PlanChapter; trigger?: HTMLElement } | null>(null)
+  const replay = chosen?.owner === auth ? chosen : null
   const [offerPlan, setOfferPlan] = useState<string | null>(null)
   const journeyRef = useRef<HTMLDivElement>(null)
   const [manual, setManual] = useState(false)
@@ -141,7 +142,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                   <button type="button" className="button" aria-expanded={!!opened && opened.kind === 'ready'} onClick={() => void open(chapter.planId)}>
                     {opened?.kind === 'ready' ? 'Close chapter' : 'View chapter'}
                   </button>
-                  {achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ kind: 'training', chapter, trigger: event.currentTarget })}>Replay finish line</button>}
+                  {achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ owner: auth, kind: 'training', chapter, trigger: event.currentTarget })}>Replay finish line</button>}
                 </div>
                 {opened?.kind === 'loading' && <p className="field-help" role="status">Opening…</p>}
                 {opened?.kind === 'error' && <p className="field-error" role="alert">{opened.message}</p>}
@@ -172,7 +173,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                             ? { ...previous, chapter: { ...previous.chapter, raceResult: result } } : previous)
                           if (request.current === requestId && recoveryWelcome(result.outcome)) setOfferPlan(opened.chapter.planId)
                           if (request.current === requestId && result.outcome === 'Finished' && opened.chapter.raceResult?.outcome !== 'Finished') {
-                            setReplay({ kind: 'race', chapter: { ...opened.chapter, raceResult: result } })
+                            setReplay({ owner: auth, kind: 'race', chapter: { ...opened.chapter, raceResult: result } })
                           }
                           return result
                         }}
@@ -183,7 +184,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                             ? { ...previous, chapter: { ...previous.chapter, raceResult: null } } : previous)
                           if (request.current === requestId) setOfferPlan(null)
                         }}
-                        onCelebrate={opened.chapter.raceResult?.outcome === 'Finished' ? trigger => setReplay({ kind: 'race', chapter: opened.chapter, trigger }) : undefined}
+                        onCelebrate={opened.chapter.raceResult?.outcome === 'Finished' ? trigger => setReplay({ owner: auth, kind: 'race', chapter: opened.chapter, trigger }) : undefined}
                       />
                     )}
                     {recovery ? <RecoveryDashboard recovery={recovery} today={today}

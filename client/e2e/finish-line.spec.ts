@@ -147,6 +147,7 @@ test.describe('finish line journey', () => {
     const film = page.getByRole('dialog', { name: 'RACE FINISHED.' })
     await expect(film.getByText('4:40:12')).toBeVisible()
     await film.getByRole('button', { name: 'Back to my journey' }).click()
+    await expect(page.getByText('✓ Race finisher · 18 Oct')).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Want a gentle recovery plan?' })).toBeVisible()
     await expect(page.getByRole('textbox', { name: 'Distance (km)' })).toHaveCount(0)
     await page.getByRole('button', { name: 'Start my recovery' }).dblclick()

@@ -35,7 +35,7 @@ const importedRuns: ActivitySummary[] = params.get('duplicate') === '1'
   ? [stravaMarathon, { ...stravaMarathon, id: '44444444-4444-4444-8444-444444444444', source: { ...stravaMarathon.source, kind: 'Upload', viewUrl: null } }]
   : [stravaMarathon]
 const award = (kind: 'TrainingComplete' | 'RaceFinished', celebratedAt: string | null = null) =>
-  ({ id: `award-${kind}`, kind, planId: PLAN_ID, earnedOn: kind === 'RaceFinished' ? '2026-11-15' : '2026-11-14', awardedAt: '2026-11-14T10:00:00Z', celebratedAt })
+  ({ id: `award-${kind}`, kind, planId: PLAN_ID, earnedOn: kind === 'RaceFinished' ? raceDate : '2026-11-14', awardedAt: '2026-11-14T10:00:00Z', celebratedAt })
 const seen = '2026-11-14T11:00:00Z'
 
 function initial(): Journey {
@@ -78,7 +78,7 @@ function useFakeJourney() {
       const result = raceResult({ outcome: body.outcome, raceDate: body.raceDate ?? '2026-11-15', finishTime: body.finishTime ?? null, distanceKm: body.distanceKm ?? null, activityId: body.activityId ?? null, versusGoal: body.finishTime === '01:52:10' ? '-00:02:50' : null, note: body.note ?? null, version: `v${Date.now()}` })
       update(j => ({ ...j, chapters: j.chapters.map(c => c.planId !== planId ? c : {
         ...c, raceResult: result, lifecycle: body.outcome === 'Finished' ? 'RaceCompleted' : 'RaceNotCompleted',
-        achievements: [...c.achievements.filter(a => a.kind !== 'RaceFinished'), ...(body.outcome === 'Finished' ? [award('RaceFinished')] : [])],
+        achievements: [...c.achievements.filter(a => a.kind !== 'RaceFinished'), ...(body.outcome === 'Finished' ? [{ ...award('RaceFinished'), earnedOn: result.raceDate }] : [])],
       }) }))
       return Promise.resolve(result)
     },
@@ -131,7 +131,7 @@ window.fetch = (input, init) => {
     const result = body ? raceResult({ ...body, planId: resultPath[1], raceDate: body.raceDate ?? raceDate, version: crypto.randomUUID(), versusGoal: null }) : null
     served.journey = { ...served.journey, chapters: served.journey.chapters.map(c => c.planId !== resultPath[1] ? c : {
       ...c, raceResult: result,
-      achievements: [...c.achievements.filter(a => a.kind !== 'RaceFinished'), ...(result?.outcome === 'Finished' ? [award('RaceFinished', seen)] : [])],
+      achievements: [...c.achievements.filter(a => a.kind !== 'RaceFinished'), ...(result?.outcome === 'Finished' ? [{ ...award('RaceFinished', seen), earnedOn: result.raceDate }] : [])],
     }) }
     if (scene === 'strava-history') localStorage.setItem('test:past-marathon-journey', JSON.stringify(served.journey))
     return Promise.resolve(result ? Response.json(result) : new Response(null, { status: 204 }))

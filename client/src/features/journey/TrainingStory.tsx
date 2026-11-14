@@ -40,7 +40,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
         : { value: formatDistance(story.plannedKmConfirmed, units), label: 'Plan distance of confirmed runs' },
     ].slice(0, 3),
     footer: 'EVERY FINISH IS A BEGINNING  ·  taperday.run',
-  }), [finishTime, isFinisher, raceResult?.distanceKm, story.confirmedRuns, story.scheduledRuns, story.weeks,
+  }), [finishTime, isFinisher, raceResult, story.confirmedRuns, story.scheduledRuns, story.weeks,
     story.recordedKm, story.plannedKmConfirmed, story.earned, story.raceName, units])
   const shareText = isFinisher
     ? `I finished ${story.raceName}${finishTime ? ` in ${finishTime}` : ''}! My Taperday story: ${story.confirmedRuns} confirmed training runs over ${story.weeks} weeks. #Taperday`

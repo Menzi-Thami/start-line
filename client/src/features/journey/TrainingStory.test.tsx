@@ -19,14 +19,14 @@ describe('Training story sharing', () => {
         { value: '21.1 km', label: 'Race distance' },
         { value: '38/38', label: 'Training runs confirmed' },
       ],
-    }), expect.stringContaining('in 1:51:00!'), 'taperday-race-finish')
+    }), expect.stringContaining('in 1:51:00!'), 'taperday-race-finish', null)
     expect(await screen.findByRole('status')).toHaveTextContent('Shared.')
   })
 
   it('keeps an unfinished race out of the finish card and share text', async () => {
     render(<TrainingStory story={storyFromChapter(chapter())} units="km" raceResult={raceResult({ outcome: 'DidNotFinish', finishTime: null })} />)
     await userEvent.click(screen.getByRole('button', { name: 'Share my story' }))
-    expect(shareCard).toHaveBeenLastCalledWith(expect.objectContaining({ heading: 'TRAINING COMPLETE' }), expect.not.stringContaining('I finished'), 'taperday-training-story')
+    expect(shareCard).toHaveBeenLastCalledWith(expect.objectContaining({ heading: 'TRAINING COMPLETE' }), expect.not.stringContaining('I finished'), 'taperday-training-story', null)
   })
 
   it('escapes user text in the SVG fallback and preserves the portrait size and result', () => {

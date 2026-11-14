@@ -1,7 +1,7 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import { formatClock } from './journey-model'
-import { downloadCard, shareCard, type CardContent } from './share-card'
+import { downloadCard, prepareCard, shareCard, type CardContent } from './share-card'
 import { highlights, type StoryData } from './journey-story'
 import type { RaceResult } from './types'
 
@@ -21,10 +21,12 @@ interface Props {
 export function TrainingStory({ story, units, raceResult, onReplay, onNext, nextLabel = 'Plan my next challenge' }: Props) {
   const titleId = useId()
   const [notice, setNotice] = useState<string | null>(null)
+  const [sharing, setSharing] = useState(false)
+  const [prepared, setPrepared] = useState<{ key: string; file: File | null } | null>(null)
   const isFinisher = raceResult?.outcome === 'Finished'
   const finishTime = isFinisher ? formatClock(raceResult?.finishTime) : null
   const completion = story.scheduledRuns > 0 ? Math.min(100, Math.round(100 * story.confirmedRuns / story.scheduledRuns)) : 0
-  const card: CardContent = {
+  const card = useMemo<CardContent>(() => ({
     kicker: isFinisher ? 'TAPERDAY · RACE FINISH' : 'TAPERDAY · TRAINING STORY',
     heading: isFinisher ? 'RACE FINISHED' : story.earned ? 'TRAINING COMPLETE' : 'MY TRAINING STORY',
     raceName: story.raceName,
@@ -38,11 +40,21 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
         : { value: formatDistance(story.plannedKmConfirmed, units), label: 'Plan distance of confirmed runs' },
     ].slice(0, 3),
     footer: 'EVERY FINISH IS A BEGINNING  ·  taperday.run',
-  }
+  }), [finishTime, isFinisher, raceResult?.distanceKm, story.confirmedRuns, story.scheduledRuns, story.weeks,
+    story.recordedKm, story.plannedKmConfirmed, story.earned, story.raceName, units])
   const shareText = isFinisher
     ? `I finished ${story.raceName}${finishTime ? ` in ${finishTime}` : ''}! My Taperday story: ${story.confirmedRuns} confirmed training runs over ${story.weeks} weeks. #Taperday`
     : `My Taperday training story for ${story.raceName}: ${story.confirmedRuns} of ${story.scheduledRuns} training runs confirmed over ${story.weeks} weeks. #Taperday`
   const fileName = isFinisher ? 'taperday-race-finish' : 'taperday-training-story'
+  const needsFile = typeof navigator.share === 'function'
+  const cardKey = JSON.stringify({ card, fileName })
+  useEffect(() => {
+    if (!needsFile) return
+    let current = true
+    prepareCard(card, fileName).then(file => { if (current) setPrepared({ key: cardKey, file }) })
+      .catch(() => { if (current) setPrepared({ key: cardKey, file: null }) })
+    return () => { current = false }
+  }, [card, cardKey, fileName, needsFile])
   const download = async () => {
     try {
       const kind = await downloadCard(card, fileName)
@@ -52,8 +64,12 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
     }
   }
   const share = async () => {
-    const outcome = await shareCard(card, shareText, fileName)
-    setNotice(outcome === 'shared' ? 'Shared.' : outcome === 'copied' ? 'Copied your story to the clipboard.' : outcome === 'cancelled' ? null : 'Sharing isn’t available here. Save the card instead.')
+    if (sharing || (needsFile && prepared?.key !== cardKey)) return
+    setSharing(true)
+    try {
+      const outcome = await shareCard(card, shareText, fileName, needsFile ? prepared?.file : null)
+      setNotice(outcome === 'shared' ? 'Shared.' : outcome === 'copied' ? 'Copied your story to the clipboard.' : outcome === 'cancelled' ? null : 'Sharing isn’t available here. Save the card instead.')
+    } finally { setSharing(false) }
   }
   const lines = highlights(story)
   const most = Math.max(1, ...(story.weekly ?? []).map(week => week.scheduledRuns))
@@ -138,7 +154,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
           <p>Make a Taperday story card with your real numbers. No routes or private details.</p>
         </div>
         <div className="journey-actions">
-          <button type="button" className="button button-primary" onClick={() => void share()}>Share my story</button>
+          <button type="button" className="button button-primary" disabled={sharing || (needsFile && prepared?.key !== cardKey)} onClick={() => void share()}>Share my story</button>
           <button type="button" className="button" onClick={() => void download()}>Save story card</button>
         </div>
       </section>

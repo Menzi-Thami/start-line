@@ -1,10 +1,10 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { accountsOff, AuthContext } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { Activity, ActivitySummary } from '../../lib/types'
-import { chapter, journeyOf, raceResult } from './journey-fixtures'
+import { chapter, journeyOf, raceResult, recovery } from './journey-fixtures'
 import { RunningJourney } from './RunningJourney'
 import type { PlanChapter, RaceResult } from './types'
 
@@ -39,6 +39,9 @@ describe('Past plan race recordings', () => {
     expect(await screen.findByRole('heading', { name: 'We found your Past marathon.' })).toBeInTheDocument()
     expect(save).not.toHaveBeenCalled()
     await user.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    const film = await screen.findByRole('dialog', { name: 'RACE FINISHED.' })
+    expect(within(film).getByText('4:40:12')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
     expect(await screen.findByRole('heading', { name: 'Finished in 4:40:12' })).toBeInTheDocument()
     expect(load).toHaveBeenCalledWith('test-token', run.id)
     expect(save).toHaveBeenCalledWith('test-token', past.planId, expect.objectContaining({ activityId: run.id, finishTime: '04:40:12', distanceKm: 42.35 }))
@@ -55,6 +58,27 @@ describe('Past plan race recordings', () => {
     await user.click(screen.getByRole('button', { name: 'Remove result' }))
     expect(await screen.findByRole('heading', { name: 'We found your Past marathon.' })).toBeInTheDocument()
     expect(saved).toBeNull()
+  })
+
+  it('starts recovery from the saved historical race without re-entering its name, date or distance', async () => {
+    const saved = { ...past, raceResult: result }
+    const started = recovery({ planId: past.planId, eventName: past.raceName, raceDate: result.raceDate, distanceKm: result.distanceKm! })
+    vi.spyOn(api.me.journey, 'get').mockResolvedValueOnce(journeyOf([saved])).mockResolvedValue(journeyOf([saved], { recovery: started }))
+    vi.spyOn(api.me.journey, 'chapter').mockResolvedValue(saved)
+    vi.spyOn(api.me, 'activities').mockResolvedValue([])
+    const start = vi.spyOn(api.me.journey, 'startRecovery').mockResolvedValue(started)
+    const user = userEvent.setup()
+    show()
+    await user.click(await screen.findByRole('button', { name: 'View chapter' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Replay race celebration' }))
+    expect(await screen.findByRole('dialog', { name: 'RACE FINISHED.' })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: 'Plan recovery from this race' }))
+    expect(screen.queryByRole('textbox', { name: 'Distance (km)' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Start my recovery' }))
+    expect(start).toHaveBeenCalledWith('test-token', expect.objectContaining({ planId: past.planId, eventName: past.raceName, raceDate: result.raceDate, distanceKm: result.distanceKm }))
+    expect(await screen.findByRole('heading', { name: 'Your recovery days are done' })).toBeInTheDocument()
   })
 
   it('keeps chapter history and manual entry available when recordings fail, with a retry', async () => {

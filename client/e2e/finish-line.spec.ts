@@ -111,6 +111,8 @@ test.describe('finish line journey', () => {
     await expect(page.getByRole('alert')).toContainText(/try again/i)
     await expect(page.getByRole('textbox', { name: 'Minutes' })).toHaveValue('40')
     await page.getByRole('button', { name: 'Save race result' }).dblclick()
+    await expect(page.getByRole('dialog', { name: 'RACE FINISHED.' })).toBeVisible()
+    await page.getByRole('button', { name: 'Close the Finish Line' }).click()
     await expect(page.getByRole('heading', { name: 'Finished in 4:40:12' })).toBeVisible()
     await page.getByRole('button', { name: 'Edit result' }).click()
     await page.getByRole('textbox', { name: 'Minutes' }).fill('39')
@@ -137,6 +139,29 @@ test.describe('finish line journey', () => {
     await expect(page.getByRole('textbox', { name: 'Hours' })).toHaveValue('')
   })
 
+  test('a historical recorded finish celebrates and starts recovery without retyping @phone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await open(page, 'strava-history', '2026-10-19')
+    await page.getByRole('button', { name: 'View chapter' }).click()
+    await page.getByRole('button', { name: 'Confirm my recorded finish' }).click()
+    const film = page.getByRole('dialog', { name: 'RACE FINISHED.' })
+    await expect(film.getByText('4:40:12')).toBeVisible()
+    await film.getByRole('button', { name: 'Back to my journey' }).click()
+    await expect(page.getByRole('heading', { name: 'Want a gentle recovery plan?' })).toBeVisible()
+    await expect(page.getByRole('textbox', { name: 'Distance (km)' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'Start my recovery' }).dblclick()
+    await expect(page.getByRole('heading', { name: 'Rest is training too.' })).toBeVisible()
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('test:past-marathon-journey')!).recovery)
+    expect(saved).toMatchObject({ planId: '11111111-1111-4111-8111-111111111111', eventName: 'Mandela Marathon', raceDate: '2026-10-18', distanceKm: 42.35 })
+    await page.reload()
+    await page.getByRole('button', { name: 'View chapter' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Rest is training too.' })).toBeVisible()
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('test:past-marathon-journey')!).recovery.id)).toBe(saved.id)
+    await accessible(page)
+    await noSideScroll(page)
+  })
+
   test('duplicate recordings require a choice and confirmation on a phone @phone', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
     await open(page, 'strava-marathon', '2026-11-14', '&duplicate=1')
@@ -154,8 +179,14 @@ test.describe('finish line journey', () => {
 
   test('story hands a portrait PNG to native sharing and saves SVG when canvas is unavailable', async ({ page }) => {
     await page.addInitScript(() => {
+      let inGesture = false
+      // Capture starts the gesture; the window's bubble listener ends it after React's click handler.
+      // A microtask reset in capture would incorrectly run before React receives a genuine click.
+      document.addEventListener('click', () => { inGesture = true }, true)
+      window.addEventListener('click', () => { inGesture = false })
       Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true })
       Object.defineProperty(navigator, 'share', { value: async (data: ShareData) => {
+        if (!inGesture || !navigator.userActivation.isActive) throw new DOMException('Sharing must start in the tap handler', 'NotAllowedError')
         const file = data.files![0]!
         const bitmap = await createImageBitmap(file)
         Object.assign(window, { sharedCard: { name: file.name, type: file.type, width: bitmap.width, height: bitmap.height } })
@@ -176,6 +207,14 @@ test.describe('finish line journey', () => {
     expect(svg).toContain('TRAINING COMPLETE')
     expect(svg).toContain('38/38')
     await expect(page.getByText('Card saved as an SVG picture.')).toBeVisible()
+    await page.evaluate(() => {
+      Object.defineProperty(navigator, 'share', { value: async () => { throw new DOMException('Cancelled', 'AbortError') }, configurable: true })
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText: async () => { Object.assign(window, { unexpectedCopy: true }) } }, configurable: true })
+    })
+    await page.getByRole('button', { name: 'Share my story' }).click()
+    await expect(page.getByRole('button', { name: 'Share my story' })).toBeEnabled()
+    expect(await page.evaluate(() => Reflect.get(window, 'unexpectedCopy'))).toBeUndefined()
+    await expect(page.getByRole('status')).toHaveText('')
   })
 
   test('SVG fallback keeps long names and labels inside the portrait card', async ({ page }) => {
@@ -188,6 +227,13 @@ test.describe('finish line journey', () => {
       return box.x < 78 || box.x + box.width > 1002
     }).map(node => node.textContent))
     expect(overflowing).toEqual([])
+    const runner = await page.locator('svg g').boundingBox()
+    const heading = await page.locator('svg text').filter({ hasText: /^TRAINING COMPLETE$/ }).boundingBox()
+    expect(runner).not.toBeNull()
+    expect(heading).not.toBeNull()
+    expect(runner!.y + runner!.height).toBeLessThan(heading!.y)
+    await expect(page.locator('svg text').filter({ hasText: 'RECORDED TRAINING' })).toHaveText('RECORDED TRAINING')
+    await expect(page.locator('svg text').filter({ hasText: /^DISTANCE$/ })).toHaveCount(1)
   })
 
   test('training film: plays once, keyboard-safe, with a still version for reduced motion @phone', async ({ page }) => {

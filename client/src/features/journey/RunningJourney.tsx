@@ -5,8 +5,8 @@ import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { ActivitySummary, DayOfWeek } from '../../lib/types'
 import { FinishLineFilm } from './FinishLineFilm'
 import { storyFromChapter } from './journey-story'
-import { achievement, distanceBadge, formatClock, isLiveRecovery, OUTCOME_WORDS } from './journey-model'
-import { RecoveryOffer } from './Recovery'
+import { achievement, distanceBadge, formatClock, isLiveRecovery, OUTCOME_WORDS, recoveryWelcome } from './journey-model'
+import { RecoveryDashboard, RecoveryOffer } from './Recovery'
 import { RaceResultForm } from './RaceResultForm'
 import { TrainingStory } from './TrainingStory'
 import type { JourneyLifecycle, PlanChapter } from './types'
@@ -35,7 +35,9 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
   const { state, actions } = useJourney(true)
   const [loaded, setDetail] = useState<Detail | null>(null)
   const detail = loaded?.owner === auth ? loaded : null
-  const [replay, setReplay] = useState<{ chapter: PlanChapter; trigger: HTMLElement } | null>(null)
+  const [replay, setReplay] = useState<{ kind: 'training' | 'race'; chapter: PlanChapter; trigger?: HTMLElement } | null>(null)
+  const [offerPlan, setOfferPlan] = useState<string | null>(null)
+  const journeyRef = useRef<HTMLDivElement>(null)
   const [manual, setManual] = useState(false)
   const request = useRef(0)
   useEffect(() => {
@@ -76,15 +78,29 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
   }
 
   const { chapters } = state.journey
-  const finishes = chapters.filter(chapter => achievement(chapter, 'RaceFinished'))
+  const finishes = chapters.filter(chapter => chapter.raceResult?.outcome === 'Finished')
   const completions = chapters.filter(chapter => achievement(chapter, 'TrainingComplete')).length
+  const closeFilm = () => {
+    if (replay) {
+      const current = chapters.find(chapter => chapter.planId === replay.chapter.planId)
+      const award = achievement(current, replay.kind === 'race' ? 'RaceFinished' : 'TrainingComplete')
+      if (award && !award.celebratedAt) void actions.celebrated(award.id).catch(() => undefined)
+    }
+    setReplay(null)
+  }
+  const raceClock = replay?.kind === 'race' ? formatClock(replay.chapter.raceResult?.finishTime) : null
 
   return (
-    <div className="running-journey">
+    <div className="running-journey" ref={journeyRef} tabIndex={-1}>
       {replay && (
-        <FinishLineFilm variant="training" heading="YOU DID IT." lede="Every planned training run, confirmed." raceName={replay.chapter.raceName}
-          metrics={[{ value: String(replay.chapter.training.confirmedRuns), label: 'Training runs confirmed' }, { value: String(replay.chapter.training.weeks), label: 'Weeks' }]}
-          primaryLabel="Back to my journey" onPrimary={() => setReplay(null)} onClose={() => setReplay(null)} returnFocus={() => replay.trigger} />
+        <FinishLineFilm variant={replay.kind} heading={replay.kind === 'race' ? 'RACE FINISHED.' : 'YOU DID IT.'}
+          lede={replay.kind === 'race' ? `You crossed the finish line of ${replay.chapter.raceName}.` : 'Every planned training run, confirmed.'} raceName={replay.chapter.raceName}
+          metrics={replay.kind === 'race' ? [
+            ...(raceClock ? [{ value: raceClock, label: 'Finish time' }] : []),
+            ...(replay.chapter.raceResult?.distanceKm != null ? [{ value: formatDistance(replay.chapter.raceResult.distanceKm, units), label: 'Distance' }] : []),
+          ] : [{ value: String(replay.chapter.training.confirmedRuns), label: 'Training runs confirmed' }, { value: String(replay.chapter.training.weeks), label: 'Weeks' }]}
+          primaryLabel="Back to my journey" onPrimary={closeFilm} onClose={closeFilm}
+          returnFocus={() => replay.trigger?.isConnected ? replay.trigger : journeyRef.current} />
       )}
       <p className="journey-lede">Every finish is a beginning.</p>
       {state.refreshFailed && <p className="field-help" role="status">Showing your journey as last loaded; it couldn’t refresh just now.</p>}
@@ -101,6 +117,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
           {chapters.map(chapter => {
             const result = chapter.raceResult
             const opened = detail && (detail.kind === 'ready' ? detail.chapter.planId : detail.planId) === chapter.planId ? detail : null
+            const recovery = state.journey.recovery?.planId === chapter.planId ? state.journey.recovery : null
             return (
               <li key={chapter.planId} className="journey-chapter">
                 <div className="journey-chapter-head">
@@ -116,14 +133,15 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                   {result && <> · {OUTCOME_WORDS[result.outcome]}{formatClock(result.finishTime) && <> in <span className="mono">{formatClock(result.finishTime)}</span></>}</>}
                 </p>
                 <ul className="journey-badges" aria-label={`Achievements for ${chapter.raceName}`}>
-                  {chapter.achievements.length === 0 && <li className="is-open">No achievements on this plan yet</li>}
+                  {chapter.achievements.length === 0 && result?.outcome !== 'Finished' && <li className="is-open">No achievements on this plan yet</li>}
+                  {result?.outcome === 'Finished' && !achievement(chapter, 'RaceFinished') && <li className="is-earned">✓ Race finisher</li>}
                   {chapter.achievements.map(award => <li key={award.id} className="is-earned">✓ {award.kind === 'RaceFinished' ? 'Race finisher' : 'Training complete'} · {formatDate(award.earnedOn, 'dayMonth')}</li>)}
                 </ul>
                 <div className="journey-actions">
                   <button type="button" className="button" aria-expanded={!!opened && opened.kind === 'ready'} onClick={() => void open(chapter.planId)}>
                     {opened?.kind === 'ready' ? 'Close chapter' : 'View chapter'}
                   </button>
-                  {achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ chapter, trigger: event.currentTarget })}>Replay finish line</button>}
+                  {achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ kind: 'training', chapter, trigger: event.currentTarget })}>Replay finish line</button>}
                 </div>
                 {opened?.kind === 'loading' && <p className="field-help" role="status">Opening…</p>}
                 {opened?.kind === 'error' && <p className="field-error" role="alert">{opened.message}</p>}
@@ -148,18 +166,36 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                           return api.me.activity(token, id)
                         }}
                         onSave={async body => {
+                          const requestId = request.current
                           const result = await actions.saveRaceResult(opened.chapter.planId, body)
-                          setDetail(previous => previous?.kind === 'ready' && previous.chapter.planId === opened.chapter.planId
+                          setDetail(previous => request.current === requestId && previous?.owner === auth && previous.kind === 'ready' && previous.chapter.planId === opened.chapter.planId
                             ? { ...previous, chapter: { ...previous.chapter, raceResult: result } } : previous)
+                          if (request.current === requestId && recoveryWelcome(result.outcome)) setOfferPlan(opened.chapter.planId)
+                          if (request.current === requestId && result.outcome === 'Finished' && opened.chapter.raceResult?.outcome !== 'Finished') {
+                            setReplay({ kind: 'race', chapter: { ...opened.chapter, raceResult: result } })
+                          }
                           return result
                         }}
                         onDelete={async () => {
+                          const requestId = request.current
                           await actions.deleteRaceResult(opened.chapter.planId)
-                          setDetail(previous => previous?.kind === 'ready' && previous.chapter.planId === opened.chapter.planId
+                          setDetail(previous => request.current === requestId && previous?.owner === auth && previous.kind === 'ready' && previous.chapter.planId === opened.chapter.planId
                             ? { ...previous, chapter: { ...previous.chapter, raceResult: null } } : previous)
+                          if (request.current === requestId) setOfferPlan(null)
                         }}
+                        onCelebrate={opened.chapter.raceResult?.outcome === 'Finished' ? trigger => setReplay({ kind: 'race', chapter: opened.chapter, trigger }) : undefined}
                       />
                     )}
+                    {recovery ? <RecoveryDashboard recovery={recovery} today={today}
+                      onCheckIn={(feeling, redFlags) => actions.checkIn(recovery.id, { feeling, redFlags, date: today })}
+                      onChange={body => actions.changeRecovery(recovery.id, body)} />
+                      : recoveryWelcome(opened.chapter.raceResult?.outcome) && !isLiveRecovery(state.journey.recovery) && (
+                        offerPlan === chapter.planId
+                          ? <RecoveryOffer key={`${chapter.planId}:${opened.chapter.raceResult?.version}`} planId={chapter.planId} eventName={chapter.raceName}
+                              distanceKm={opened.chapter.raceResult?.distanceKm ?? chapter.distanceKm} raceDate={opened.chapter.raceResult?.raceDate} today={today} runDays={runDays}
+                              onStart={async body => { await actions.startRecovery(body); setOfferPlan(null) }} onDecline={() => setOfferPlan(null)} />
+                          : <button type="button" className="button" onClick={() => setOfferPlan(chapter.planId)}>Plan recovery from this race</button>
+                      )}
                     <TrainingStory story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />
                   </div>
                 )}

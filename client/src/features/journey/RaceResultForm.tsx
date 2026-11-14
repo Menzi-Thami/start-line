@@ -18,7 +18,7 @@ interface Props {
   onCelebrate?: (trigger: HTMLElement) => void
 }
 
-type Draft = { outcome: RaceOutcome; hours: string; minutes: string; seconds: string; distance: string; date: string; activityId: string; note: string }
+type Draft = { outcome: RaceOutcome; hours: string; minutes: string; seconds: string; distance: string; date: string; activityId: string; note: string; expectedVersion: string | null }
 
 const draftFrom = (chapter: PlanChapter, today: string, outcome: RaceOutcome = 'Finished'): Draft => {
   const result = chapter.raceResult
@@ -33,6 +33,7 @@ const draftFrom = (chapter: PlanChapter, today: string, outcome: RaceOutcome = '
     date: result?.raceDate ?? raceDate,
     activityId: result?.activityId ?? '',
     note: result?.note ?? '',
+    expectedVersion: result?.version ?? null,
   }
 }
 
@@ -67,7 +68,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
   const suggested = suggestions.length === 1 ? suggestions[0] : suggestions.find(run => run.id === selectedRecording)
   const found = suggestions.length > 0 && !!onLoadActivity
 
-  const fromRecording = async (run: ActivitySummary, review = false) => {
+  const fromRecording = async (run: ActivitySummary, review = false, linkOnly = false) => {
     if (busy || !onLoadActivity) return
     setBusy(true)
     setError(null)
@@ -77,14 +78,16 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
       if (activity.id !== run.id || activity.localDate !== run.localDate
         || activity.kind !== run.kind
         || !Number.isFinite(activity.elapsedSeconds) || activity.elapsedSeconds < 60 || activity.elapsedSeconds > 48 * 3600
+        || !Number.isFinite(activity.movingSeconds) || activity.movingSeconds < 0
         || activity.elapsedSeconds < activity.movingSeconds
-        || !raceMatches(chapter, [{ ...run, ...activity }]).length) {
+        || !Number.isFinite(activity.distanceKm) || activity.distanceKm < 0.1 || activity.distanceKm > 400
+        || (!linkOnly && !raceMatches(chapter, [{ ...run, ...activity }]).length)) {
         throw new Error('That recording could not be verified. You can enter your result manually.')
       }
       const seconds = Math.round(activity.elapsedSeconds)
       const next = {
-        ...draftFrom(chapter, today, 'Finished'),
-        outcome: 'Finished' as const,
+        ...(linkOnly ? draft : draftFrom(chapter, today, 'Finished')),
+        outcome: linkOnly ? draft.outcome : 'Finished' as const,
         date: activity.localDate,
         activityId: activity.id,
         hours: String(Math.floor(seconds / 3600)),
@@ -94,7 +97,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
       }
       // Keep the verified numbers if saving fails, so retrying doesn't require retyping them.
       setDraft(next)
-      if (review) {
+      if (review || linkOnly) {
         setMode('form')
         return
       }
@@ -106,7 +109,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
         distanceKm: activity.distanceKm,
         activityId: activity.id,
         note: null,
-        expectedVersion: saved?.version ?? null,
+        expectedVersion: next.expectedVersion,
       })
       setLocal({ result, over: serverVersion })
       setMode('saved')
@@ -152,7 +155,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
         distanceKm: draft.outcome === 'DidNotStart' ? null : distance,
         activityId: draft.outcome === 'DidNotStart' || !draft.activityId ? null : draft.activityId,
         note: draft.note.trim() || null,
-        expectedVersion: saved?.version ?? null,
+        expectedVersion: draft.expectedVersion,
       })
       setLocal({ result, over: serverVersion })
       setMode('saved')
@@ -232,7 +235,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
           <div className="race-match-found" aria-label="Race recording found">
             <p className="plan-kicker">FINISH LINE · RECORDING FOUND</p>
             <h3 className="race-result-title">We found your {chapter.raceName}.</h3>
-            <p>Already in Taperday{suggested ? ` from ${suggested.source.kind === 'Strava' ? 'Strava' : 'your uploaded runs'}` : ''}. No need to type the result again.</p>
+            <p>Already in Taperday{suggested ? ` from ${suggested.source.kind === 'Strava' ? 'Strava' : 'your uploaded runs'}` : ''}. No need to type the result again.{suggested?.source.recordedOnGarmin ? ' Recorded on Garmin.' : ''}</p>
             {suggestions.length > 1 && (
               <label className="field" htmlFor={`${id}-match`}>
                 <span className="field-label">More than one recording matches. Choose your race recording</span>
@@ -276,7 +279,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
       <p className="plan-kicker">Race result</p>
       {draft.activityId && <p className="race-result-imported">A recording is linked. Your official chip time may differ from its elapsed time—use the time you want to record.</p>}
       <h3 id={`${id}-form`} className="race-result-title">{draft.outcome === 'Finished' ? 'Your finish' : draft.outcome === 'DidNotFinish' ? 'You started the race' : 'You didn’t start'}</h3>
-      <fieldset className="race-result-outcome">
+      <fieldset className="race-result-outcome" disabled={busy}>
         <legend className="field-label">Result</legend>
         {(['Finished', 'DidNotFinish', 'DidNotStart'] as const).map(outcome => (
           <label key={outcome} className="session-done">
@@ -286,7 +289,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
         ))}
       </fieldset>
       {draft.outcome === 'Finished' && (
-        <fieldset className="race-result-time">
+        <fieldset className="race-result-time" disabled={busy}>
           <legend className="field-label">Finish time <span className="field-help">(optional)</span></legend>
           <label><span className="visually-hidden">Hours</span><input className="input mono" inputMode="numeric" aria-label="Hours" placeholder="h" value={draft.hours} onChange={e => setDraft({ ...draft, hours: e.target.value.replace(/\D/g, '').slice(0, 2) })} /></label>
           <span aria-hidden="true">:</span>
@@ -298,17 +301,21 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
       {draft.outcome !== 'DidNotStart' && (
         <label className="field" htmlFor={`${id}-distance`}>
           <span className="field-label">{draft.outcome === 'DidNotFinish' ? 'Distance covered (km, optional)' : 'Distance (km)'}</span>
-          <input id={`${id}-distance`} className="input mono" inputMode="decimal" value={draft.distance} onChange={e => setDraft({ ...draft, distance: e.target.value })} />
+          <input id={`${id}-distance`} className="input mono" inputMode="decimal" disabled={busy} value={draft.distance} onChange={e => setDraft({ ...draft, distance: e.target.value })} />
         </label>
       )}
       <label className="field" htmlFor={`${id}-date`}>
         <span className="field-label">Race date</span>
-        <input id={`${id}-date`} className="input" type="date" max={today} min={chapter.startDate} value={draft.date} onChange={e => setDraft({ ...draft, date: e.target.value, activityId: '' })} />
+        <input id={`${id}-date`} className="input" type="date" disabled={busy} max={today} min={chapter.startDate} value={draft.date} onChange={e => setDraft({ ...draft, date: e.target.value, activityId: '' })} />
       </label>
       {draft.outcome !== 'DidNotStart' && candidates.length > 0 && (
         <label className="field" htmlFor={`${id}-run`}>
           <span className="field-label">Link a recorded run (optional)</span>
-          <select id={`${id}-run`} className="input" value={draft.activityId} onChange={e => setDraft({ ...draft, activityId: e.target.value })}>
+          <select id={`${id}-run`} className="input" disabled={busy} value={draft.activityId} onChange={e => {
+            const run = candidates.find(run => run.id === e.target.value)
+            if (run && onLoadActivity) void fromRecording(run, true, true)
+            else setDraft({ ...draft, activityId: e.target.value })
+          }}>
             <option value="">Don’t link a run</option>
             {candidates.map(run => (
               <option key={run.id} value={run.id}>{formatDistance(run.distanceKm, units)} · {formatDuration(run.movingSeconds)}{run.plannedTitle ? ` · ${run.plannedTitle}` : ''}</option>
@@ -318,7 +325,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
       )}
       <label className="field" htmlFor={`${id}-note`}>
         <span className="field-label">A note for yourself (optional)</span>
-        <textarea id={`${id}-note`} className="input" maxLength={280} rows={2} value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })} />
+        <textarea id={`${id}-note`} className="input" disabled={busy} maxLength={280} rows={2} value={draft.note} onChange={e => setDraft({ ...draft, note: e.target.value })} />
       </label>
       {error && <p className="field-error" role="alert">{error}</p>}
       <div className="journey-actions">

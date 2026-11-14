@@ -11,7 +11,7 @@ import { JourneyPanel } from '../../src/features/journey/JourneyPanel'
 import { RunningJourney } from '../../src/features/journey/RunningJourney'
 import { chapter, journeyOf, maintenance, PLAN_ID, raceResult, recap, recovery } from '../../src/features/journey/journey-fixtures'
 import { recoveryDayMap } from '../../src/features/journey/journey-model'
-import type { Journey, RecoveryPlan, SaveRaceResult } from '../../src/features/journey/types'
+import type { Journey, RecoveryPlan, SaveRaceResult, StartRecovery } from '../../src/features/journey/types'
 import type { JourneyActions } from '../../src/features/journey/useJourney'
 import { PlanCalendar } from '../../src/features/plan/PlanCalendar'
 import { dayStatus } from '../../src/features/plan/training-status'
@@ -107,6 +107,14 @@ const served: { journey: Journey } = { journey: initial() }
 let failSave = params.get('saveFail') === '1'
 window.fetch = (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  if (url.endsWith('/api/v1/me/journey/recovery') && init?.method === 'POST') {
+    const body = JSON.parse(String(init.body)) as StartRecovery
+    const started = served.journey.recovery ?? recovery({ planId: body.planId, eventName: body.eventName ?? raceName, raceDate: body.raceDate,
+      distanceKm: body.distanceKm, effort: body.effort, preference: body.preference, runDays: body.runDays ?? [] })
+    served.journey = { ...served.journey, recovery: started }
+    if (scene === 'strava-history') localStorage.setItem('test:past-marathon-journey', JSON.stringify(served.journey))
+    return Promise.resolve(Response.json(started, { status: 201 }))
+  }
   if (url.endsWith('/api/v1/me/activities')) return Promise.resolve(Response.json(isStravaMarathon ? importedRuns : []))
   if (url.endsWith(`/api/v1/me/activities/${stravaMarathon.id}`)) {
     return Promise.resolve(params.get('expired') === '1'

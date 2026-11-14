@@ -231,6 +231,12 @@ public sealed class JourneyTests(JourneyFactory factory) : IClassFixture<Journey
         var edited = await Json(await PutResult(client, plan, new { outcome = "Finished", finishTime = "00:52:00", distanceKm = 10.15, activityId = activity.Id, expectedVersion = saved.GetProperty("version").GetString() }));
         edited.GetProperty("id").GetGuid().ShouldBe(saved.GetProperty("id").GetGuid());
         (await Chapter(client, plan)).GetProperty("raceResult").GetProperty("finishTime").GetString().ShouldBe("00:52:00");
+        var recoveryBody = new { planId = plan, eventName = "Spring 10K", distanceKm = 10.15, raceDate = "2026-10-04", effort = "Hard", preference = "Walk" };
+        var recovery = await Json(await StartRecovery(client, recoveryBody));
+        recovery.GetProperty("planId").GetGuid().ShouldBe(plan);
+        recovery.GetProperty("raceDate").GetString().ShouldBe("2026-10-04");
+        recovery.GetProperty("distanceKm").GetDouble().ShouldBe(10.15);
+        (await Json(await StartRecovery(client, recoveryBody))).GetProperty("id").GetGuid().ShouldBe(recovery.GetProperty("id").GetGuid());
         (await client.DeleteAsync(Url($"/api/v1/me/journey/plans/{plan}/race-result"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
         var undone = await Chapter(client, plan);
         undone.GetProperty("raceResult").ValueKind.ShouldBe(JsonValueKind.Null);

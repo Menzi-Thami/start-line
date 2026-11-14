@@ -50,6 +50,22 @@ describe('Race result from an existing Strava recording', () => {
     expect(screen.getByText(/official chip time/)).toBeInTheDocument()
   })
 
+  it.each(['Finished', 'DidNotFinish'] as const)('loads known metrics when manually linking a run without changing %s or the note', async outcome => {
+    const user = userEvent.setup()
+    const onSave = vi.fn(async () => raceResult({ outcome }))
+    const recording = { ...run, distanceKm: 20 }
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[recording]} onLoadActivity={async () => ({ ...detail, distanceKm: 20 })} onSave={onSave} onDelete={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: outcome === 'Finished' ? 'I finished' : 'I didn’t finish' }))
+    await user.type(screen.getByRole('textbox', { name: 'A note for yourself (optional)' }), 'My race note')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Link a recorded run (optional)' }), run.id)
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /Distance.*km/ })).toHaveValue('20'))
+    expect(onSave).not.toHaveBeenCalled()
+    if (outcome === 'Finished') expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('40')
+    await user.click(screen.getByRole('button', { name: 'Save race result' }))
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ outcome, activityId: run.id, distanceKm: 20,
+      finishTime: outcome === 'Finished' ? '04:40:12' : null, note: 'My race note' }))
+  })
+
   it('does not save a result when the full recording cannot be verified', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn()
@@ -124,6 +140,21 @@ describe('Race result from an existing Strava recording', () => {
     unmount()
     await act(async () => resolve(detail))
     expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('holds the version the runner edited when a newer server result arrives', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn(async () => { throw new Error('Your result changed on another device. Load it again before saving.') })
+    const props = { chapter: { ...marathon, raceResult: raceResult({ version: 'original', raceDate: marathon.raceDate! }) }, today: '2026-11-14', units: 'km' as const, onSave, onDelete: vi.fn() }
+    const { rerender } = render(<RaceResultForm {...props} />)
+    await user.click(screen.getByRole('button', { name: 'Edit result' }))
+    await user.clear(screen.getByRole('textbox', { name: 'Minutes' }))
+    await user.type(screen.getByRole('textbox', { name: 'Minutes' }), '50')
+    rerender(<RaceResultForm {...props} chapter={{ ...props.chapter, raceResult: raceResult({ version: 'other-device', finishTime: '01:49:00' }) }} />)
+    await user.click(screen.getByRole('button', { name: 'Save race result' }))
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ expectedVersion: 'original', finishTime: '01:50:10' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('changed on another device')
+    expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('50')
   })
 
   it.each([

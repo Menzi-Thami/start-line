@@ -27,6 +27,14 @@ export function fitText(value: string, max: number) {
   return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`
 }
 
+/** Two readable lines keep metric labels whole instead of squeezing or cutting off their meaning. */
+function labelLines(value: string): string[] {
+  const words = value.toUpperCase().trim().split(/\s+/)
+  let first = words.shift() ?? ''
+  while (words.length && `${first} ${words[0]}`.length <= 21) first += ` ${words.shift()}`
+  return words.length ? [fitText(first, 21), fitText(words.join(' '), 24)] : [fitText(first, 24)]
+}
+
 /** A Night Run poster rather than a table: track lines, race mark, runner, a hero stat and two split cards.
  * Safe SVG fallback uses exactly the same facts as the downloadable PNG.
  */
@@ -43,7 +51,7 @@ export function cardSvg(content: CardContent): string {
   const stat = (value: { value: string; label: string } | undefined, x: number) => !value ? '' :
     '<rect x="' + x + '" y="1260" width="425" height="280" rx="28" fill="#181b1d" stroke="#3a4042" stroke-width="2"/>'
     + text(fitText(value.value, 12), x + 36, 1390, value.value.length > 8 ? 66 : 98, LIGHT, 700, '', 353)
-    + text(fitText(value.label.toUpperCase(), 24), x + 36, 1470, 22, MUTED, 600, 'letter-spacing="1"', 353)
+    + labelLines(value.label).map((line, i) => text(line, x + 36, 1458 + i * 34, 24, MUTED, 600, 'letter-spacing="1"', 353)).join('')
   const bigSize = first?.value.length && first.value.length > 9 ? 130 : 193
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="${escapeXml(`${content.heading}. ${content.raceName}. ${content.stats.map(s => `${s.value} ${s.label}`).join(', ')}`)}">`
     + `<defs><linearGradient id="td-night" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#171b1b"/><stop offset=".58" stop-color="${INK}"/><stop offset="1" stop-color="#171a16"/></linearGradient></defs>`
@@ -54,7 +62,7 @@ export function cardSvg(content: CardContent): string {
     + '<rect x="96" y="115" width="28" height="28" rx="6" fill="' + VOLT + '"/>'
     + text('TAPERDAY', 147, 140, 44, LIGHT, 800, 'letter-spacing="5"')
     + text(fitText(content.kicker.toUpperCase(), 32), 96, 255, 29, VOLT, 750, 'letter-spacing="3"')
-    + `<g transform="translate(760 260) scale(3.2)" fill="none" stroke="${VOLT}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="10" r="8" fill="${VOLT}" stroke="none"/><path d="M30 21 L30 46"/><path d="M30 26 L16 8"/><path d="M30 26 L44 8"/><path d="M30 46 L22 76"/><path d="M30 46 L38 76"/></g>`
+    + `<g transform="translate(760 190) scale(3.2)" fill="none" stroke="${VOLT}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="10" r="8" fill="${VOLT}" stroke="none"/><path d="M30 21 L30 46"/><path d="M30 26 L16 8"/><path d="M30 26 L44 8"/><path d="M30 46 L22 76"/><path d="M30 46 L38 76"/></g>`
     + text(fitText(content.heading, 22), 96, 570, 93, LIGHT, 800, 'letter-spacing="-2"')
     + text(fitText(content.raceName, 31), 96, 655, 44, MUTED, 600)
     + '<rect x="96" y="735" width="888" height="7" rx="4" fill="' + VOLT + '"/>'
@@ -144,7 +152,7 @@ export async function cardPng(content: CardContent): Promise<Blob | null> {
   context.textBaseline = 'alphabetic'
   write('TAPERDAY', 147, 140, 44, LIGHT, 800)
   write(fitText(content.kicker.toUpperCase(), 32), 96, 255, 29, VOLT, 750)
-  drawRunner(context, 760, 260, 3.2)
+  drawRunner(context, 760, 190, 3.2)
   write(fitText(content.heading, 22), 96, 570, 93, LIGHT, 800)
   write(fitText(content.raceName, 31), 96, 655, 44, MUTED, 600)
 
@@ -166,7 +174,7 @@ export async function cardPng(content: CardContent): Promise<Blob | null> {
     context.lineWidth = 2
     context.stroke()
     write(fitText(item.value, 12), x + 36, 1390, item.value.length > 8 ? 66 : 98, LIGHT, 700, 360)
-    write(fitText(item.label.toUpperCase(), 24), x + 36, 1470, 22, MUTED, 600, 353)
+    labelLines(item.label).forEach((line, i) => write(line, x + 36, 1458 + i * 34, 24, MUTED, 600, 353))
   }
   context.strokeStyle = '#404449'
   context.lineWidth = 2
@@ -207,13 +215,18 @@ export async function downloadCard(content: CardContent, baseName: string): Prom
 
 export type ShareOutcome = 'shared' | 'copied' | 'cancelled' | 'unavailable'
 
+/** Prepare before the tap: Safari requires navigator.share to be called during the original user gesture. */
+export async function prepareCard(content: CardContent, baseName: string): Promise<File | null> {
+  const png = await cardPng(content)
+  return png && typeof File === 'function' ? new File([png], `${baseName}.png`, { type: 'image/png' }) : null
+}
+
 /** The phone's share sheet with the picture where it can take files, then words only, then the clipboard. */
-export async function shareCard(content: CardContent, text: string, baseName: string): Promise<ShareOutcome> {
+export async function shareCard(content: CardContent, text: string, baseName: string, prepared?: File | null): Promise<ShareOutcome> {
   const title = `${content.heading} · Taperday`
   if (typeof navigator.share === 'function') {
     try {
-      const png = await cardPng(content)
-      const file = png && typeof File === 'function' ? new File([png], `${baseName}.png`, { type: 'image/png' }) : null
+      const file = prepared === undefined ? await prepareCard(content, baseName) : prepared
       if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], text, title })
       else await navigator.share({ text, title })
       return 'shared'

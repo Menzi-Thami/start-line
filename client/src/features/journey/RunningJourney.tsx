@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
-import type { DayOfWeek } from '../../lib/types'
+import type { ActivitySummary, DayOfWeek } from '../../lib/types'
 import { FinishLineFilm } from './FinishLineFilm'
 import { storyFromChapter } from './journey-story'
 import { achievement, distanceBadge, formatClock, isLiveRecovery, OUTCOME_WORDS } from './journey-model'
 import { RecoveryOffer } from './Recovery'
+import { RaceResultForm } from './RaceResultForm'
 import { TrainingStory } from './TrainingStory'
 import type { JourneyLifecycle, PlanChapter } from './types'
 import { useJourney } from './useJourney'
@@ -23,7 +24,7 @@ const LIFECYCLE_WORDS: Record<JourneyLifecycle, string> = {
   Archived: 'Past plan',
 }
 
-type Detail = { kind: 'loading'; planId: string } | { kind: 'ready'; chapter: PlanChapter } | { kind: 'error'; planId: string; message: string }
+type Detail = { kind: 'loading'; planId: string } | { kind: 'ready'; chapter: PlanChapter; runs: ActivitySummary[] } | { kind: 'error'; planId: string; message: string }
 
 /**
  * The runner's running journey: every plan they've finished or moved on from, newest first, with its training story,
@@ -42,7 +43,13 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
     try {
       const token = await auth.getToken()
       if (!token) throw new Error('Sign in again to open this plan.')
-      setDetail({ kind: 'ready', chapter: await api.me.journey.chapter(token, planId) })
+      // The past chapter already has a race date; retrieve the runner's imported runs beside it.
+      // A temporary activity-list failure must not hide their training history.
+      const [chapter, runs] = await Promise.all([
+        api.me.journey.chapter(token, planId),
+        api.me.activities(token).catch(() => [] as ActivitySummary[]),
+      ])
+      setDetail({ kind: 'ready', chapter, runs })
     } catch (reason) {
       setDetail({ kind: 'error', planId, message: reason instanceof Error ? reason.message : 'This plan couldn’t open.' })
     }
@@ -111,7 +118,36 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                 </div>
                 {opened?.kind === 'loading' && <p className="field-help" role="status">Opening…</p>}
                 {opened?.kind === 'error' && <p className="field-error" role="alert">{opened.message}</p>}
-                {opened?.kind === 'ready' && <div className="journey-chapter-story"><TrainingStory story={storyFromChapter(opened.chapter)} units={units} /></div>}
+                {opened?.kind === 'ready' && (
+                  <div className="journey-chapter-story">
+                    <TrainingStory story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />
+                    {opened.chapter.raceDate && opened.chapter.raceDate <= today && (
+                      <RaceResultForm
+                        key={opened.chapter.planId}
+                        chapter={opened.chapter}
+                        today={today}
+                        units={units}
+                        runs={opened.runs}
+                        onLoadActivity={async id => {
+                          const token = await auth.getToken()
+                          if (!token) throw new Error('Sign in again to load this recording.')
+                          return api.me.activity(token, id)
+                        }}
+                        onSave={async body => {
+                          const result = await actions.saveRaceResult(opened.chapter.planId, body)
+                          setDetail(previous => previous?.kind === 'ready' && previous.chapter.planId === opened.chapter.planId
+                            ? { ...previous, chapter: { ...previous.chapter, raceResult: result } } : previous)
+                          return result
+                        }}
+                        onDelete={async () => {
+                          await actions.deleteRaceResult(opened.chapter.planId)
+                          setDetail(previous => previous?.kind === 'ready' && previous.chapter.planId === opened.chapter.planId
+                            ? { ...previous, chapter: { ...previous.chapter, raceResult: null } } : previous)
+                        }}
+                      />
+                    )}
+                  </div>
+                )}
               </li>
             )
           })}

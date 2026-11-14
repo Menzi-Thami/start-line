@@ -57,6 +57,14 @@ public interface IApplicationDbContext
 
     DbSet<Feedback> Feedback { get; }
 
+    DbSet<StartLine.Domain.Journey.RaceResult> RaceResults { get; }
+
+    DbSet<StartLine.Domain.Journey.Achievement> Achievements { get; }
+
+    DbSet<StartLine.Domain.Journey.RecoveryPlan> RecoveryPlans { get; }
+
+    DbSet<StartLine.Domain.Journey.MaintenancePlan> MaintenancePlans { get; }
+
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
 

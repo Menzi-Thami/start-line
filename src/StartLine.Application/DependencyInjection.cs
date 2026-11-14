@@ -42,6 +42,7 @@ public static class DependencyInjection
         services.AddScoped<Features.Insights.IUpdateAnnouncements, Features.Insights.UpdateAnnouncementSender>();
         services.AddScoped<Features.Shoes.ShoeMileage>();
         services.AddScoped<Features.Shoes.ShoeKeeper>();
+        services.AddScoped<Features.Journey.JourneyReader>();
         services.AddSingleton<StravaRateGate>();
         services.AddScoped<StravaTokens>();
         services.AddScoped<IStravaSync, StravaSyncRunner>();

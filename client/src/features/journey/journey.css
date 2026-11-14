@@ -1,0 +1,207 @@
+/*
+ * The running journey: Finish Line film, training story, race result, recovery, next chapter and history. Built only
+ * from the app's tokens, so light (Frame) and dark (Night Run) follow by themselves; no new colours, fonts or runner.
+ */
+
+/* ---------- Finish Line film ---------- */
+.finish-film {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  background: var(--page);
+  color: var(--ink);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.finish-film-stage {
+  position: relative;
+  width: min(100%, 640px);
+  padding: clamp(1.25rem, 5vw, 2.5rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  text-align: center;
+}
+.finish-film-close { position: absolute; top: .75rem; right: .75rem; min-height: var(--tap); }
+/* Room above the kicker for Close, so they never overlap on a phone. */
+.finish-film-stage { padding-top: calc(var(--tap) + 1.5rem); }
+.finish-film-kicker { margin: 0; font-size: var(--text-xs); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+.finish-film-course { position: relative; height: 150px; margin: 1.25rem auto .5rem; overflow: hidden; }
+.finish-film-ground { position: absolute; left: 0; right: 0; bottom: 14px; height: 2px; background: var(--line-strong); }
+.finish-film-runner { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); color: var(--accent); }
+.finish-film-post { position: absolute; bottom: 14px; width: 4px; height: 92px; border-radius: 2px; background: var(--ink); }
+.finish-film-post.is-left { left: calc(50% - 92px); }
+.finish-film-post.is-right { left: calc(50% + 88px); }
+.finish-film-tape { position: absolute; bottom: 70px; width: 90px; height: 6px; border-radius: 3px; background: var(--accent); }
+.finish-film-tape.is-left { left: calc(50% - 90px); transform-origin: left center; }
+.finish-film-tape.is-right { left: 50%; transform-origin: right center; }
+.finish-film-medal { position: absolute; left: calc(50% + 46px); top: 10px; display: grid; justify-items: center; transform-origin: top center; color: var(--on-accent); }
+.finish-film-ribbon { width: 16px; height: 34px; background: var(--ink); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%); }
+.finish-film-disc { display: grid; place-items: center; width: 44px; height: 44px; margin-top: -6px; border-radius: 50%; background: var(--accent); border: 3px solid var(--ink); font-weight: 800; }
+.finish-film-confetti { position: absolute; inset: 0; pointer-events: none; }
+.finish-film-confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; opacity: 0; background: var(--accent); }
+.finish-film-confetti i.tone-1 { background: var(--sage); }
+.finish-film-confetti i.tone-2 { background: var(--ink-2); }
+.finish-film-title { margin: .5rem 0 0; font-family: var(--font-body); font-weight: 800; font-size: clamp(2.6rem, 11vw, 4.8rem); line-height: .95; letter-spacing: -.03em; color: var(--ink); }
+.finish-film-lede { margin: .75rem auto 0; max-width: 34ch; font-size: var(--text-lg); color: var(--ink-2); }
+.finish-film-race { margin: .35rem 0 0; font-family: var(--font-display); font-size: var(--text-xl); overflow-wrap: anywhere; }
+.finish-film-metrics { display: flex; flex-wrap: wrap; justify-content: center; gap: .75rem; margin: 1.25rem 0 0; }
+.finish-film-metrics div { min-width: 7.5rem; padding: .65rem .9rem; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); }
+.finish-film-metrics dt { font-size: var(--text-xs); color: var(--muted); }
+.finish-film-metrics dd { margin: .15rem 0 0; font-size: var(--text-xl); font-weight: 700; color: var(--ink); }
+.finish-film-actions { margin-top: 1.5rem; display: flex; justify-content: center; }
+.finish-film-actions .button { min-height: var(--tap); min-width: min(100%, 16rem); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .finish-film.is-training .finish-film-runner { animation: finish-film-run 1.25s var(--ease-glide) both; }
+  .finish-film.is-training .finish-film-tape.is-left { animation: finish-film-tape-left .7s .95s var(--ease-out) both; }
+  .finish-film.is-training .finish-film-tape.is-right { animation: finish-film-tape-right .7s .95s var(--ease-out) both; }
+  .finish-film.is-race .finish-film-medal { animation: finish-film-medal 1.4s .2s var(--ease-spring) both; }
+  .finish-film.is-race .finish-film-runner { animation: finish-film-hop .6s .15s var(--ease-out) both; }
+  .finish-film-confetti i { animation-name: finish-film-fall; animation-timing-function: linear; animation-fill-mode: both; }
+  .finish-film-title { animation: finish-film-reveal .6s 1.05s var(--ease-out) both; }
+  .finish-film-lede, .finish-film-race { animation: finish-film-reveal .6s 1.3s var(--ease-out) both; }
+  .finish-film-metrics div { animation: finish-film-reveal .5s 1.5s var(--ease-out) both; }
+  .finish-film-metrics div:nth-child(2) { animation-delay: 1.62s; }
+  .finish-film-metrics div:nth-child(3) { animation-delay: 1.74s; }
+  .finish-film-actions { animation: finish-film-reveal .5s 1.85s var(--ease-out) both; }
+}
+@keyframes finish-film-run { from { transform: translateX(calc(-50% - 60vw)); } to { transform: translateX(-50%); } }
+@keyframes finish-film-tape-left { to { transform: rotate(62deg); opacity: .55; } }
+@keyframes finish-film-tape-right { to { transform: rotate(-62deg); opacity: .55; } }
+@keyframes finish-film-medal { 0% { transform: translateY(-120px) rotate(0); } 55% { transform: translateY(0) rotate(14deg); } 75% { transform: rotate(-8deg); } 100% { transform: rotate(0); } }
+@keyframes finish-film-hop { 0%, 100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-10px); } }
+@keyframes finish-film-fall { 0% { opacity: 0; transform: translateY(0) rotate(0); } 10% { opacity: 1; } 100% { opacity: 0; transform: translateY(160px) rotate(220deg); } }
+@keyframes finish-film-reveal { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Plan page journey section ---------- */
+.journey-panel { margin: var(--space-5) 0; }
+.journey-head { margin-top: 0; }
+.journey-title { margin: .35rem 0 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(2rem, 5.5vw, 3.2rem); line-height: 1.02; overflow-wrap: anywhere; }
+.journey-lede { margin: .5rem 0 0; color: var(--ink-2); max-width: 60ch; }
+.journey-subtitle, .recovery-title, .next-chapter-title, .maintenance-title, .race-result-title, .training-story-title {
+  margin: .25rem 0 .5rem; font-family: var(--font-display); font-weight: 400; font-size: var(--text-2xl); line-height: 1.1; overflow-wrap: anywhere;
+}
+.journey-grid { display: grid; gap: var(--space-4); }
+.journey-grid > .panel, .journey-side > .panel { margin-top: 0; }
+.journey-side { display: grid; gap: var(--space-4); align-content: start; }
+@media (min-width: 1024px) {
+  .journey-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+}
+.journey-badges { display: flex; flex-wrap: wrap; gap: .5rem; padding: 0; margin: var(--space-4) 0 0; list-style: none; }
+.journey-badges li { display: inline-flex; flex-direction: column; padding: .4rem .8rem; border-radius: 999px; border: 1px solid var(--line-strong); font-size: var(--text-sm); font-weight: 700; }
+.journey-badges li.is-earned { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.journey-badges li.is-open { color: var(--muted); font-weight: 600; border-style: dashed; }
+.journey-badges.is-large li { border-radius: var(--radius-sm); padding: .6rem .9rem; font-size: var(--text-md); }
+.journey-badges small { font-weight: 500; color: var(--ink-2); font-size: var(--text-xs); }
+.journey-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: var(--space-4); }
+.journey-actions .button, .journey-confirm .button, .race-result-choices .button, .recovery-feelings .button { min-height: var(--tap); }
+.journey-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-top: var(--space-3); padding: var(--space-3); border: 1px solid var(--warn-line); border-radius: var(--radius-sm); background: var(--warn-bg); color: var(--warn-ink); }
+.journey-confirm p { flex: 1 1 100%; margin: 0; }
+.journey-race-ahead p { margin: 0 0 var(--space-3); }
+
+/* ---------- Training story ---------- */
+.training-story-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .75rem; margin: var(--space-4) 0; }
+.training-story-stats div { min-width: 0; padding: .9rem 1rem; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+.training-story-stats dt { font-size: var(--text-xs); color: var(--muted); }
+.training-story-stats dd { margin: .25rem 0 0; font-size: var(--text-xl); font-weight: 700; color: var(--ink); overflow-wrap: anywhere; }
+.training-story-stats dd small { display: block; margin-top: .2rem; font-size: var(--text-xs); font-weight: 500; color: var(--muted); }
+.training-story-stats dd.training-story-unknown { font-size: var(--text-md); color: var(--ink-2); }
+.training-story-note { padding-left: var(--space-3); border-left: 3px solid var(--accent); color: var(--ink-2); }
+.training-story-highlights { margin: var(--space-3) 0; padding-left: 1.2rem; }
+.training-story-highlights li + li { margin-top: .25rem; }
+.training-story-weeks { margin: var(--space-4) 0 0; }
+.training-story-weeks figcaption { font-size: var(--text-sm); color: var(--muted); margin-bottom: .5rem; }
+.training-story-weeks ol { display: flex; align-items: flex-end; gap: 4px; height: 96px; margin: 0; padding: 0; list-style: none; }
+.training-story-weeks li { flex: 1 1 0; min-width: 0; display: grid; grid-template-rows: 1fr auto; height: 100%; }
+.training-story-bar { position: relative; display: block; }
+.training-story-bar span { position: absolute; left: 0; right: 0; bottom: 0; border-radius: 4px 4px 0 0; }
+.training-story-bar .is-planned { background: var(--surface-sunk); }
+.training-story-bar .is-done { background: var(--accent); }
+.training-story-week { font-size: 10px; text-align: center; color: var(--muted); }
+
+/* ---------- Race result ---------- */
+.race-result-choices { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); margin-top: var(--space-3); }
+.race-result-facts { display: flex; flex-wrap: wrap; gap: 1.25rem; margin: var(--space-3) 0; }
+.race-result-facts dt { font-size: var(--text-xs); color: var(--muted); }
+.race-result-facts dd { margin: .15rem 0 0; font-weight: 700; font-size: var(--text-lg); }
+.race-result-versus { font-weight: 700; }
+.race-result-note { font-style: italic; color: var(--ink-2); }
+.race-result-outcome, .race-result-time { border: 0; padding: 0; margin: 0 0 var(--space-3); }
+.race-result-outcome { display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
+.race-result-time { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.race-result-time legend { width: 100%; margin-bottom: .35rem; }
+.race-result-time .input { width: 4.25rem; text-align: center; }
+.race-result.is-form .field { margin-bottom: var(--space-3); }
+
+/* ---------- Recovery ---------- */
+.recovery-head { display: flex; align-items: center; gap: var(--space-3); }
+.recovery-runner { color: var(--accent); flex: none; }
+.recovery-today { margin: var(--space-3) 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--line); }
+.recovery-today p { margin: 0; }
+.recovery-today-title { font-weight: 700; font-size: var(--text-lg); margin: .2rem 0 !important; }
+.recovery-feelings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr)); gap: .5rem; margin-top: .5rem; }
+.recovery-feelings .button[aria-pressed='true'] { outline: 3px solid var(--accent); outline-offset: 2px; }
+.recovery-checkin { margin-top: var(--space-4); }
+.recovery-safety { padding: var(--space-3); border-radius: var(--radius-sm); border: 1px solid var(--warn-line); background: var(--warn-bg); color: var(--warn-ink); font-weight: 600; }
+.recovery.is-seek-care .recovery-runner { opacity: .6; }
+.recovery-flags { margin-top: var(--space-3); }
+.recovery-flags summary { cursor: pointer; min-height: var(--tap); display: flex; align-items: center; gap: .5rem; font-weight: 600; }
+.recovery-flags fieldset { border: 0; padding: 0; margin: .25rem 0 0; display: grid; gap: .25rem; }
+.recovery-week { margin-top: var(--space-4); }
+.recovery-week ol { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin: .5rem 0; padding: 0; list-style: none; }
+.recovery-week-day { display: grid; gap: .2rem; justify-items: center; padding: .5rem .15rem; border-radius: var(--radius-sm); border: 1px solid var(--line); background: var(--surface); text-align: center; min-height: 64px; }
+.recovery-week-day.is-outside { background: transparent; border-color: transparent; color: var(--muted); }
+.recovery-week-day.is-today { border-color: var(--ink); }
+.recovery-week-day.is-EasyRun, .recovery-week-day.is-Walk, .recovery-week-day.is-CrossTraining, .recovery-week-day.is-Mobility { background: var(--accent-soft); }
+.recovery-week-day.is-SeekCare { background: var(--warn-bg); color: var(--warn-ink); }
+.recovery-week-name { font-size: var(--text-xs); color: var(--muted); }
+.recovery-week-kind { font-size: 11px; line-height: 1.2; font-weight: 700; overflow-wrap: normal; word-break: normal; hyphens: none; }
+.recovery-trend ol { display: flex; flex-wrap: wrap; gap: .4rem; padding: 0; margin: .4rem 0 0; list-style: none; }
+.recovery-trend li { padding: .3rem .6rem; border-radius: 999px; border: 1px solid var(--line); font-size: var(--text-xs); }
+.recovery-trend li.is-GoodToGo { border-color: var(--accent); background: var(--accent-soft); }
+.recovery-trend li.is-PainOrInjury { border-color: var(--warn-line); background: var(--warn-bg); color: var(--warn-ink); }
+.recovery-adjust { margin-top: var(--space-3); }
+.recovery-adjust-body { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+.recovery.is-compact .recovery-checkin { margin-top: var(--space-3); }
+.journey-choice { display: flex; flex-wrap: wrap; gap: .5rem; border: 0; padding: 0; margin: var(--space-4) 0 0; }
+.journey-choice legend { width: 100%; margin-bottom: .4rem; }
+.journey-chip { position: relative; display: inline-flex; }
+.journey-chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.journey-chip span { display: inline-flex; flex-direction: column; justify-content: center; min-height: var(--tap); padding: .45rem .9rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--paper); font-weight: 600; }
+.journey-chip span small { font-weight: 500; font-size: var(--text-xs); color: var(--muted); }
+.journey-chip input:checked + span { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.journey-chip input:focus-visible + span { box-shadow: var(--focus); }
+.journey-chip.is-day span { min-width: 3.25rem; align-items: center; }
+.recovery-offer-race { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); margin-top: var(--space-3); }
+
+/* ---------- Next chapter and maintenance ---------- */
+.next-chapter-choices { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); margin: var(--space-3) 0; }
+.next-chapter-choice { display: grid; gap: .3rem; text-align: left; min-height: var(--tap); padding: var(--space-4); border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; }
+.next-chapter-choice span { color: var(--ink-2); font-size: var(--text-sm); }
+.next-chapter-choice:hover, .next-chapter-choice[aria-expanded='true'] { border-color: var(--accent); background: var(--accent-soft); }
+.next-chapter-choice:focus-visible { outline: none; box-shadow: var(--focus); }
+.maintenance-form { margin-top: var(--space-3); }
+.maintenance-sessions { list-style: none; padding: 0; margin: var(--space-3) 0 0; display: grid; gap: .4rem; }
+.maintenance-sessions li { display: grid; grid-template-columns: minmax(6.5rem, auto) 1fr auto; gap: .75rem; align-items: center; padding: .55rem .8rem; border-radius: var(--radius-sm); background: var(--surface); }
+.maintenance-sessions li.is-past { opacity: .6; }
+.maintenance-sessions li.is-today { box-shadow: inset 0 0 0 2px var(--accent); }
+@media (max-width: 420px) { .maintenance-sessions li { grid-template-columns: 1fr auto; } .maintenance-sessions li > span:first-child { grid-column: 1 / -1; } }
+
+/* ---------- Running journey history ---------- */
+.journey-chapters { list-style: none; padding: 0; margin: var(--space-4) 0 0; display: grid; gap: var(--space-3); }
+.journey-chapter { padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--paper); }
+.journey-chapter-head { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; flex-wrap: wrap; }
+.journey-chapter-name { margin: 0; font-weight: 700; font-size: var(--text-lg); overflow-wrap: anywhere; }
+.journey-chapter-facts { margin: .5rem 0 0; color: var(--ink-2); }
+.journey-chapter .journey-badges { margin-top: .6rem; }
+.journey-chapter-story { margin-top: var(--space-4); padding-top: var(--space-4); border-top: 1px solid var(--line); }
+.journey-lifecycle { padding: .25rem .65rem; border-radius: 999px; font-size: var(--text-xs); font-weight: 700; background: var(--surface-sunk); color: var(--ink-2); white-space: nowrap; }
+.journey-lifecycle.is-RaceCompleted, .journey-lifecycle.is-TrainingComplete, .journey-lifecycle.is-Recovered { background: var(--accent-soft); color: var(--ink); }
+.journey-empty, .journey-state { padding: var(--space-4); border: 1px dashed var(--line-strong); border-radius: var(--radius-md); color: var(--ink-2); }
+.journey-home .recovery-title { font-size: var(--text-xl); }
+.journey-home > .button { margin-top: var(--space-3); min-height: var(--tap); }
+.link-button.journey-link { display: inline-flex; align-items: center; min-height: var(--tap); margin-top: var(--space-3); }

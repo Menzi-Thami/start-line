@@ -7,6 +7,8 @@ interface Props {
   statusFor?: (date: string) => ReturnType<typeof dayStatus>
   onRequestMove?: (from: string, to: string) => void
   weeks: readonly PlanWeek[]
+  /** The day the plan really starts (a custom start can be mid-week). Days before it are outside the plan, not rest. */
+  planStart?: string
   raceDate: string
   today: string
   done: Set<string>
@@ -40,7 +42,7 @@ function monthsBetween(from: string, to: string): string[] {
  * The whole plan as a calendar, a month at a time: run days ringed, ticked ones in volt, today filled, race day flagged.
  * Every date opens its day summary, including rest days. It opens on today's month.
  */
-export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId, statusFor, onRequestMove }: Props) {
+export function PlanCalendar({ weeks, planStart, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId, statusFor, onRequestMove }: Props) {
   const touchDrag = useRef<{ date: string; x: number; y: number; at: number } | null>(null)
   const startTouch = (event: TouchEvent, date: string) => {
     const touch = event.touches[0]
@@ -97,22 +99,22 @@ export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [
           const recorded = activityDates.includes(date) || additional > 0
           const status = statusFor?.(date)
           const completion = calendarDayState(day, done, recorded, date, today)
-          const state = isRace ? 'race' : status?.kind === 'complete' ? 'done' : status?.kind === 'partial' ? 'partial' : !status && completion === 'done' ? 'done' : runs.length > 0 ? 'run' : day.length > 0 ? 'strength' : 'rest'
-          const inPlan = date >= (weeks[0]?.startDate ?? today) && date <= raceDate
+          const inPlan = date >= (planStart ?? weeks[0]?.startDate ?? today) && date <= raceDate
+          const state = !inPlan ? (status?.kind === 'recovery' ? 'recovery' : recorded ? 'recorded' : 'outside') : isRace ? 'race' : status?.kind === 'complete' ? 'done' : status?.kind === 'partial' ? 'partial' : !status && completion === 'done' ? 'done' : runs.length > 0 ? 'run' : day.length > 0 ? 'strength' : 'rest'
           // On wide screens the day also shows these words (drawn by CSS from data-what); its accessible name already has them.
           const what = isRace ? 'race day' : day.map((s) => s.title).join(', ')
-          const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace || day.length ? what : inPlan ? 'rest' : 'outside this plan'}${status ? `, ${status.label.toLowerCase()}` : completion === 'done' ? ', done' : completion === 'missed' ? ', no completion recorded' : ''}${recorded ? ', activity recorded' : ''}${additional ? `, ${additional} additional ${additional === 1 ? 'run' : 'runs'} logged` : ''}`
+          const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace || day.length ? what : inPlan ? 'rest' : status?.kind === 'recovery' ? 'recovery plan' : 'outside this plan'}${status && status.kind !== 'outside' ? `, ${status.label.toLowerCase()}` : status ? '' : completion === 'done' && day.length > 0 ? ', done' : completion === 'missed' ? ', no completion recorded' : ''}${recorded && status?.kind !== 'recorded' ? ', activity recorded' : ''}${additional ? `, ${additional} additional ${additional === 1 ? 'run' : 'runs'} logged` : ''}`
           const cls = `plan-calendar-day is-${state}${completion === 'missed' ? ' is-missed' : ''}${date === today ? ' is-today' : ''}${recorded ? ' has-activity' : ''}`
           return (
             <button key={date} data-date={date} draggable={!!onRequestMove && date >= today && runs.length > 0 && !isRace} onDragStart={event => { event.dataTransfer.setData('text/plain', date); event.dataTransfer.effectAllowed = 'move' }} onDragOver={event => { if (onRequestMove && date >= today && inPlan) event.preventDefault() }} onDrop={event => { event.preventDefault(); const from = event.dataTransfer.getData('text/plain'); if (from && from !== date && date >= today && inPlan) onRequestMove?.(from, date) }} data-what={isRace || day.length ? what : undefined} type="button" className={cls} data-status={status?.kind} aria-label={label} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
               {Number(date.slice(8))}
               {onRequestMove && date >= today && runs.length > 0 && !isRace && <span className="schedule-drag-handle" aria-hidden="true" onTouchStart={event => startTouch(event, date)} onTouchEnd={finishTouch} onTouchCancel={() => { touchDrag.current = null }}>⠿</span>}
-              {status && <span className="calendar-status" aria-hidden="true">{status.icon}</span>}
+              {status?.icon && <span className="calendar-status" aria-hidden="true">{status.icon}</span>}
             </button>
           )
         })}
       </div>
-      <p className="field-help plan-calendar-key">✓ Completed · − Cut short · ↗ Activity recorded · • Scheduled · ○ Rest. Select a date to preview it, then open day details.</p>
+      <p className="field-help plan-calendar-key">✓ Completed · − Cut short · ↗ Activity recorded · • Scheduled · ○ Rest within plan · ◌ Recovery · Unmarked Outside plan. Select a date to preview it, then open day details.</p>
     </section>
   )
 }

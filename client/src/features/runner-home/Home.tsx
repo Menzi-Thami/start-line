@@ -37,6 +37,9 @@ import { change, todayInPlan, trainingTotals, weeklyBars, weekStreak, type Chang
 import { completedTasks, raceChecklistKey, RACE_TASKS } from '../race-week/checklist'
 import { YourWeek } from './YourWeek'
 import { WeeklyChart } from './WeeklyChart'
+import { JourneyHomeCard } from '../journey/JourneyHomeCard'
+import { isLiveRecovery } from '../journey/journey-model'
+import { useJourney } from '../journey/useJourney'
 
 const Calculators = lazy(() => import('./Calculators').then((module) => ({ default: module.Calculators })))
 
@@ -330,7 +333,7 @@ function TodaysRuns({ plan, today, units, runs, coach }: { plan: TrainingPlan; t
   const body = (() => {
     if (progress.kind === 'before') return <p>Your plan starts {formatDate(plan.startDate, 'long')}. Easy running until then.</p>
     if (progress.kind === 'race') return <p className="home-today-title">Race day. Everything you’ve run was for this. Go and enjoy it.</p>
-    if (progress.kind === 'after') return <p>Race done. Time to rest, then pick the next one.</p>
+    if (progress.kind === 'after') return <p>Your plan’s dates have finished. Tell us how race day went on your plan, whenever you’re ready.</p>
     if (day.runs.length === 0) {
       return (
         <>
@@ -457,6 +460,9 @@ export function Home({
   const [insightsVisited, setInsightsVisited] = useState(false)
   const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
+  // Recovery, maintenance or a race result to add: shown above Today, and recovery takes Today's place.
+  const journey = useJourney(true)
+  const recovering = journey.state.kind === 'ready' && isLiveRecovery(journey.state.journey.recovery)
   // Sessions a held Strava run completes, computed by the API on each read; asked for again as check-ins or runs change.
   const synced = useSyncedCompletions(current?.id ?? null, completionsKey(checkIns.entries, runs))
   useEffect(() => {
@@ -545,8 +551,9 @@ export function Home({
             {onOpenRacePrep && <button type="button" className="button button-primary" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
           </section>
         )}
+        <JourneyHomeCard journey={journey} today={today} currentPlanId={current?.id ?? null} onOpenPlan={onOpenPlan} onNewRace={onBuildPlan} />
         <div className="home-top">
-          {current ? (
+          {recovering ? null : current ? (
             <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={onOpenDay} />
           ) : (
             <section className="panel home-card home-today" aria-labelledby="home-goal">
@@ -594,7 +601,7 @@ export function Home({
           </section>
         {plan && progress && <button type="button" className="home-race-brief" onClick={onOpenPlan} aria-description="Open your training plan">
           <span><span className="field-help">Your finish line</span><strong>{plan.race.name}</strong><RaceLine plan={plan} week={week} units={units} /></span>
-          <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Race complete'}</span>
+          <span className="home-race-remaining mono">{progress.daysToGo > 0 ? <>{progress.daysToGo}<small>days to go</small></> : progress.kind === 'race' ? 'Race day' : 'Plan finished'}</span>
         </button>}
         <LatestRun runs={runs} strava={strava} units={units} today={today} onOpenRun={onOpenRun} onOpenRuns={onOpenRuns} />
         </div>

@@ -61,3 +61,12 @@
 @media (max-width: 767px) {
   .plan .day-detail-page.day-has-recording .day-summary-section:nth-child(2) { order: -1; }
 }
+
+
+/* Blank dates before/after a training plan are not prescribed rest days. */
+.plan .plan-calendar-day.is-outside { color: var(--muted); border-color: transparent; background: transparent; }
+.plan .plan-calendar-day.is-outside[data-status="outside"] .calendar-status { display: none; }
+.plan .week-day .training-status.is-outside { color: var(--muted); }
+.plan .week-day:has(.training-status.is-outside) .week-day-dot { color: var(--muted); }
+/* A day of an accepted recovery plan, after the training plan: marked, but quieter than training. */
+.plan .plan-calendar-day.is-recovery { border-style: dashed; border-color: var(--line-strong); background: transparent; }

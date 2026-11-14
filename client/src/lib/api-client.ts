@@ -40,6 +40,18 @@ import type {
   TrainingPlan,
   TurnOnRemindersRequest,
 } from './types'
+import type {
+  ChangeRecovery,
+  Journey,
+  MaintenancePlan,
+  PlanChapter,
+  RaceResult,
+  RecoveryCheckInRequest,
+  RecoveryPlan,
+  SaveRaceResult,
+  StartMaintenance,
+  StartRecovery,
+} from '../features/journey/types'
 
 /** The one place the app talks to the network. Every failure becomes an ApiError with words a runner can act on. */
 export class ApiError extends Error {
@@ -316,6 +328,27 @@ export const api = {
     allTimeRunning: (token: string) => request<LoggedRun[]>('/api/v1/me/running?allTime=true', { cache: 'no-store' }, token),
     sendFeedback: (token: string, message: string, page: string) =>
       request<void>('/api/v1/me/feedback', { method: 'POST', body: JSON.stringify({ message, page }) }, token),
+    /** The running journey: past and current plans, achievements, race results, recovery and maintenance. */
+    journey: {
+      get: (token: string) => request<Journey>('/api/v1/me/journey', { cache: 'no-store' }, token),
+      chapter: (token: string, planId: string) =>
+        request<PlanChapter>(`/api/v1/me/journey/plans/${encodeURIComponent(planId)}`, { cache: 'no-store' }, token),
+      celebrated: (token: string, achievementId: string) =>
+        request<void>(`/api/v1/me/journey/achievements/${encodeURIComponent(achievementId)}/celebrated`, { method: 'POST' }, token),
+      saveRaceResult: (token: string, planId: string, body: SaveRaceResult) =>
+        request<RaceResult>(`/api/v1/me/journey/plans/${encodeURIComponent(planId)}/race-result`, { method: 'PUT', body: JSON.stringify(body) }, token),
+      deleteRaceResult: (token: string, planId: string) =>
+        request<void>(`/api/v1/me/journey/plans/${encodeURIComponent(planId)}/race-result`, { method: 'DELETE' }, token),
+      startRecovery: (token: string, body: StartRecovery) =>
+        request<RecoveryPlan>('/api/v1/me/journey/recovery', { method: 'POST', body: JSON.stringify(body) }, token),
+      changeRecovery: (token: string, id: string, body: ChangeRecovery) =>
+        request<RecoveryPlan>(`/api/v1/me/journey/recovery/${encodeURIComponent(id)}`, { method: 'PATCH', body: JSON.stringify(body) }, token),
+      checkIn: (token: string, id: string, body: RecoveryCheckInRequest) =>
+        request<RecoveryPlan>(`/api/v1/me/journey/recovery/${encodeURIComponent(id)}/check-ins`, { method: 'POST', body: JSON.stringify(body) }, token),
+      startMaintenance: (token: string, body: StartMaintenance) =>
+        request<MaintenancePlan>('/api/v1/me/journey/maintenance', { method: 'POST', body: JSON.stringify(body) }, token),
+      endMaintenance: (token: string) => request<void>('/api/v1/me/journey/maintenance', { method: 'DELETE' }, token),
+    },
     reminders: {
       get: (token: string) => request<Reminders>('/api/v1/me/reminders', {}, token),
       turnOn: (token: string, body: TurnOnRemindersRequest) =>

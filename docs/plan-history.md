@@ -8,7 +8,7 @@ Same-race form changes retain the original build date, generator version and rep
 
 An existing saved run remains editable even if its old date/type is no longer in the generated schedule. New check-ins still require valid prescribed sessions; new additional entries still require a date within the plan. Existing additional entries can be corrected after a later start moves them outside that window. Ownership, active-plan status, source associations, positive distance/time and duplicate-link checks remain enforced.
 
-Removing a plan with check-ins archives its schedule, preserving recorded history and totals; removing a blank plan deletes it. Deleting the account still removes personal data. Archived plans remain read-only for adding/editing check-ins, and the current app does not offer a past-plans browser.
+Removing a plan with check-ins archives its schedule, preserving recorded history and totals; removing a blank plan deletes it. Deleting the account still removes personal data. Archived plans remain read-only for adding/editing check-ins, and Progress → Your running journey lists every current and past plan read-only, with its training story, race result and achievements. A plan with a race result, achievements or a recovery is archived rather than deleted.
 
 Strength workouts and the exercise library use collapsed summaries. A summary shows date, exercise count and set progress; opening reveals exercises. Closing or changing tabs preserves device-local set ticks. Printing opens workout instructions and restores collapsed strength sections afterward. Strength completion stays separate from running.
 

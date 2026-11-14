@@ -55,8 +55,8 @@ requests (the free Actions minutes are kept for deploys; see `docs/deploy.md`), 
 - `Domain/Sync` — `ProviderConnection` (encrypted tokens), `SyncJob` (retries), `RateLimit`. Worked by
   `Application/Features/Sync/StravaSyncRunner` behind `IStravaApi`; tests use `FakeStravaApi`, never Strava.
 - `Domain/Plans/SavedPlan` — a runner has **one current plan** (a filtered unique index enforces it). A new plan for the
-  same race updates it in place; another race replaces it (the old one is kept server-side as `Archived`; the app has no
-  My plans page since 25 Oct 2026, so it is not shown). Signed-in runners open on Home; removing a plan with check-ins archives it to retain running history. See `docs/plan-history.md`.
+  same race updates it in place; another race replaces it (the old one is kept server-side as `Archived`; past plans are
+  browsable read-only in Progress → Your running journey). Signed-in runners open on Home; removing a plan with check-ins archives it to retain running history. See `docs/plan-history.md`.
 - `Domain/Plans` — `TrainingPlanGenerator` (phases, volume, taper), `WeekLayout` (which run goes on which
   chosen day), `WorkoutBuilder` (concrete sessions per distance), `PlanProfile` (per-distance shape).
 - `Application/Features/{Plans,Races,Predictions}` — query + validator + handler per feature.
@@ -146,5 +146,13 @@ the app slept goes out later that day. `ReminderWorker` sleeps until the next on
 `ReminderScheduleInterceptor` when a plan, time zone or device changes: it never polls the database. Daily guidance is a per-device choice (06:00 by default for new devices; existing choices stay unchanged). Recent synced runs send one congratulations notification through `RunCelebrator`, opening the actual run without completing prescribed training. The atomic marker is on the cached activity and disappears with it. Old signed Tick it actions remain compatible. Read `docs/pwa-reminders.md` for device and hosting requirements. Push endpoints are
 secrets: encrypted like Strava tokens, never logged, redacted in traces (`PushTraces`), and only push-service hosts are
 accepted. VAPID keys come from App Service settings (`docs/deploy.md`); without them reminders stay hidden.
+
+Running journey (`Domain/Journey`, `Features/Journey`, `/me/journey`, client `features/journey`): training complete is
+not race complete. Achievements (`TrainingComplete`, `RaceFinished`) are evaluated on read from durable evidence only
+(the runner's own Done; uploads and own distances for recorded km; never Strava or a date) and kept idempotently, once
+per plan. Race results come only from the runner. Recovery (`RecoveryGenerator` v1, versioned, never touches training
+plans) is optional, readiness-gated by check-ins, red flags stop all exercise; maintenance is easy and optional. The
+calendar shows Rest only inside a plan and recovery only on the recovery plan's own days. See
+`docs/features/finish-line-api-contract.md`.
 
 Adaptive training is explicit preview/apply: see `docs/flexible-training-week.md`. Existing v1/v2 generator outputs remain unchanged.

@@ -282,9 +282,12 @@ internal sealed class DeleteMyPlanHandler(IApplicationDbContext db, CurrentRunne
             throw new NotFoundException("Saved plan", request.Id.ToString());
         }
 
-        // Removing a training schedule must not erase runs the runner has already recorded.
-        // Archived plans already retain history and are absent from the app's current-plan view.
-        if (await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id, cancellationToken))
+        // Removing a training schedule must not erase runs the runner has already recorded, nor their race result,
+        // badges or recovery. Archived plans already retain history and are absent from the app's current-plan view.
+        if (await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id, cancellationToken)
+            || await db.RaceResults.AnyAsync(r => r.SavedPlanId == saved.Id, cancellationToken)
+            || await db.Achievements.AnyAsync(a => a.SavedPlanId == saved.Id, cancellationToken)
+            || await db.RecoveryPlans.AnyAsync(r => r.SavedPlanId == saved.Id, cancellationToken))
             saved.Archive();
         else
             db.SavedPlans.Remove(saved);

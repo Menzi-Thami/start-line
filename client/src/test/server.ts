@@ -79,6 +79,8 @@ export const handlers = [
   http.get('*/api/v1/me/plans/:id/insights', () => HttpResponse.json(insightsEmpty)),
   http.get('*/api/v1/me/plans/:id/progress', () => HttpResponse.json(progressEmpty)),
   http.get('*/api/v1/me/readiness', () => HttpResponse.json([])),
+  // No running journey yet: no finished plans, recovery or maintenance.
+  http.get('*/api/v1/me/journey', () => HttpResponse.json({ chapters: [], recovery: null, maintenance: null })),
   http.get('*/api/v1/me/shoes', () => HttpResponse.json([])),
   http.get('*/api/v1/me/shoes/unworn-runs', () => HttpResponse.json([])),
   http.post('*/api/v1/plans', async ({ request }) => {

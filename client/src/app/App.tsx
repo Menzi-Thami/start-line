@@ -35,6 +35,8 @@ import { Hero, RaceTicker } from '../features/home/Hero'
 import { SignInLanding } from '../features/home/SignInLanding'
 import { BrandIntroGate } from '../features/home/BrandIntroGate'
 import { PlanView } from '../features/plan/PlanView'
+import { RunningJourney } from '../features/journey/RunningJourney'
+import { planRunDays } from '../features/journey/journey-model'
 import { Replan } from '../features/plan/Replan'
 import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
 import { StravaWelcome } from '../features/sync/StravaWelcome'
@@ -1118,8 +1120,15 @@ export function App() {
                       <h3 id="progress-trends">Training trends</h3>
                       <TrainingInsights planId={savedOnScreen} units={units} refreshKey={`${checkIns.entries.length}|${runs?.length ?? 0}`} />
                     </section>
+                    <section className="progress-extra" aria-labelledby="progress-journey">
+                      <h3 id="progress-journey">Your running journey</h3>
+                      <RunningJourney units={units} today={today} runDays={planRunDays(plan.plan)} />
+                    </section>
                   </div>
                 ) : undefined}
+                journeyPlanId={savedOnScreen && state.kind === 'ready' ? savedOnScreen : null}
+                onNewRace={startFresh}
+                onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                 // The bar's Home does this job wherever the bar is shown.
                 onBack={state.kind === 'ready' && !showBar ? () => go('home') : undefined}
                 units={units}

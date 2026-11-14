@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { TrainingPlan } from '../../lib/types'
 import { chapter, journeyOf, raceResult, recap, recovery } from './journey-fixtures'
+import type { Journey } from './types'
 import {
+  chapterFor,
   clockSeconds,
+  isJourneyPayload,
   distanceBadge,
   finishStage,
   formatClock,
@@ -109,5 +112,18 @@ describe('helpers', () => {
   })
   it('gives Monday-first weeks across a month end', () => {
     expect(weekOf('2026-12-01')).toEqual(['2026-11-30', '2026-12-01', '2026-12-02', '2026-12-03', '2026-12-04', '2026-12-05', '2026-12-06'])
+  })
+})
+
+describe('unavailable journey API does not crash existing pages', () => {
+  it('rejects malformed or legacy API responses instead of rendering them as a journey', () => {
+    expect(isJourneyPayload([])).toBe(false)
+    expect(isJourneyPayload(null)).toBe(false)
+    expect(isJourneyPayload({ chapters: 'wrong', recovery: null, maintenance: null })).toBe(false)
+    expect(isJourneyPayload({ chapters: [], recovery: null, maintenance: null })).toBe(true)
+  })
+  it('does not access chapters on missing or malformed journey data', () => {
+    expect(chapterFor(null, 'plan-id')).toBeNull()
+    expect(chapterFor([] as unknown as Journey, 'plan-id')).toBeNull()
   })
 })

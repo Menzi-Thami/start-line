@@ -245,7 +245,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
           </div>
         )}
         <h3 id={`${id}-ask`} className="race-result-title">{suggested && onLoadActivity ? 'Not your race?' : 'How did race day go?'}</h3>
-        <p className="field-help">Your recording is a suggestion, not an automatic result. Only you can confirm the finish.</p>
+        <p className="field-help">{suggested ? 'Your recording is a suggestion, not an automatic result. Only you can confirm the finish.' : 'Only you know. Taperday never assumes a race was run because its date has passed.'}</p>
         <div className="race-result-choices">
           <button type="button" className="button button-primary" onClick={() => begin('Finished')}>I finished</button>
           <button type="button" className="button" onClick={() => begin('DidNotFinish')}>I didn’t finish</button>

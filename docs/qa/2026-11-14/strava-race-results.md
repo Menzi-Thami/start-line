@@ -43,7 +43,7 @@ Reviewed captures: race suggestion at 375 px in [light](strava-race-results/race
 
 ## Before / after
 
-Before captures run the unchanged application code from the comparison base, staging commit `c3d4dee537e4b0cab18d46826b05314a88741f16`. Only the test fixture was supplied with the same synthetic Mandela Marathon chapter and existing Strava recording used for the after captures. These are local browser renders and actual downloads, not production screenshots or design mockups.
+Before captures run the unchanged application code from the comparison base, staging commit `c3d4dee537e4b0cab18d46826b05314a88741f16`. Only the test fixture was supplied with the same synthetic Mandela Marathon chapter and existing Strava recording used for the after captures. Both Instrument Serif and Instrument Sans Variable are explicitly loaded and checked before capture, avoiding fallback-font differences between checkouts. These are local browser renders and actual downloads, not production screenshots or design mockups.
 
 | Surface | Before | After |
 | --- | --- | --- |

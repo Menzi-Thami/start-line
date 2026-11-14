@@ -227,7 +227,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const confirmedDone = new Set(done)
   for (const entry of entries.filter(entry => !entry.isAdditional)) {
     const key = sessionKey({ date: entry.date, type: entry.sessionType })
-    if (entry.status === 'Skipped') confirmedDone.delete(key)
+    if (entry.status === 'Skipped' || entry.status === 'CutShort') confirmedDone.delete(key)
     else if (entry.status === 'Done') confirmedDone.add(key)
   }
   const provisionalDone = new Set(plan.weeks.flatMap(week => week.sessions).filter(session => completedViaStrava(session, coach)).map(sessionKey))

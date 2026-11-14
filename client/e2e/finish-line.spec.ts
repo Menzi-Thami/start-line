@@ -80,6 +80,11 @@ test.describe('finish line journey', () => {
     await expect(page.getByText(/No need to type the result again/)).toBeVisible()
     await expect(page.getByRole('button', { name: 'Confirm my recorded finish' })).toBeEnabled()
     await expect(page.getByRole('heading', { name: 'How did race day go?' })).toHaveCount(0)
+    await page.setViewportSize({ width: 1440, height: 900 })
+    const storyWidth = await page.locator('.journey-main').evaluate(element => element.getBoundingClientRect().width)
+    const gridWidth = await page.locator('.journey-grid').evaluate(element => element.getBoundingClientRect().width)
+    expect(storyWidth).toBeGreaterThanOrEqual(gridWidth - 1)
+    await page.setViewportSize({ width: 375, height: 812 })
     await accessible(page)
     await page.screenshot({ path: shot('12-strava-marathon-found-phone'), fullPage: true })
 

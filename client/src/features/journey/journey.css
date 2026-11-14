@@ -91,6 +91,8 @@
 @media (min-width: 1024px) {
   .journey-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
 }
+.journey-grid:has(> .journey-side:empty) { grid-template-columns: minmax(0, 1fr); }
+.journey-side:empty { display: none; }
 .journey-badges { display: flex; flex-wrap: wrap; gap: .5rem; padding: 0; margin: var(--space-4) 0 0; list-style: none; }
 .journey-badges li { display: inline-flex; flex-direction: column; padding: .4rem .8rem; border-radius: 999px; border: 1px solid var(--line-strong); font-size: var(--text-sm); font-weight: 700; }
 .journey-badges li.is-earned { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }

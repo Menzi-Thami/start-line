@@ -1,0 +1,19 @@
+.finish-line { margin: 1.5rem 0; padding: clamp(1.25rem, 4vw, 2.5rem); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.finish-line-kicker { font-size: .76rem; font-weight: 800; letter-spacing: .15em; color: var(--accent); }
+.finish-line h3 { font-size: clamp(1.65rem, 4vw, 3rem); margin: .5rem 0; }
+.finish-line-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .75rem; margin: 1.5rem 0; }
+.finish-line-stats div { min-width: 0; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius-md); display: grid; gap: .4rem; }
+.finish-line-stats strong { font-size: clamp(1.15rem,3vw,2rem); color: var(--accent); overflow-wrap: anywhere; }
+.finish-line-stats span { font-size: .8rem; color: var(--ink-2); }
+.finish-line-caveat,.finish-line-next { border-left: 3px solid var(--accent); padding-left: 1rem; }
+.finish-line-actions { display: flex; gap: .6rem; flex-wrap: wrap; }
+.finish-line-actions button { min-height: 44px; }
+.finish-line-celebration { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 1rem; background: #0b0e12; color: #fff; overflow-y: auto; }
+.finish-line-film { text-align: center; width: min(100%, 600px); }
+.finish-line-film h2 { font-size: clamp(3rem,12vw,6rem); margin: 1rem 0; color: #fff; }
+.finish-line-film p { color: #fff; }
+.finish-line-runner { display: grid; place-items: center; margin: 2rem auto; color: #c6ff3e; }
+@media (prefers-reduced-motion: no-preference) { .finish-line-runner { animation: finish-line-arrive 1.3s both cubic-bezier(.2,.8,.3,1); } .finish-line-film h2 { animation: finish-line-reveal .6s .5s both; } }
+@keyframes finish-line-arrive { from { transform: translateX(-110vw) scale(.7); opacity: .4; } to { transform: translateX(0) scale(1); opacity: 1; } }
+@keyframes finish-line-reveal { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: none; } }
+@media (max-width: 560px) { .finish-line-stats { grid-template-columns: 1fr 1fr; } .finish-line-stats div:last-child { grid-column: 1 / -1; } .finish-line-actions button { width: 100%; } }

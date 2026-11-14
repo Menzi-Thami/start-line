@@ -36,3 +36,16 @@ describe('calendar plan boundaries', () => {
     expect(dayStatus([], new Set(), [], true, false, false).kind).toBe('recorded')
   })
 })
+
+describe('recovery days on the calendar', () => {
+  it('shows an accepted recovery plan’s day outside the training plan, with its guidance', () => {
+    expect(dayStatus([], new Set(), [], false, false, false, { title: 'Easy walk', guidance: 'Gentle and short.' }))
+      .toEqual({ kind: 'recovery', icon: '◌', label: 'Recovery: Easy walk', detail: 'Gentle and short.' })
+  })
+  it('never paints recovery over the training plan’s own days', () => {
+    expect(dayStatus([], new Set(), [], false, false, true, { title: 'Rest', guidance: '' }).kind).toBe('rest')
+  })
+  it('stays neutral outside both plans', () => {
+    expect(dayStatus([], new Set(), [], false, false, false, null).kind).toBe('outside')
+  })
+})

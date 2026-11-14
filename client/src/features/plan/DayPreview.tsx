@@ -14,10 +14,10 @@ export function DayPreview({ date, sessions, status, units, onOpen, id, paces }:
 }) {
   return <section id={id} className="day-preview panel" aria-label="Selected day preview" aria-live="polite">
     <p className="plan-kicker">{formatDate(date, 'long')}</p>
-    <h3>{sessions.length ? sessions.map(session => session.title).join(' + ') : status.kind === 'outside' ? 'Outside this plan' : 'Rest day'}</h3>
+    <h3>{sessions.length ? sessions.map(session => session.title).join(' + ') : status.kind === 'recovery' ? status.label : status.kind === 'outside' ? 'Outside this plan' : 'Rest day'}</h3>
     <p className={`training-status is-${status.kind}`}><span aria-hidden="true">{status.icon}</span> {status.label}{sessions.length > 1 ? ` · ${sessions.length} sessions` : ''}</p>
     {sessions.some(session => session.distanceKm > 0) && <p className="mono">{formatDistance(sessions.reduce((km, session) => km + session.distanceKm, 0), units)} planned</p>}
-    <p>{sessions[0]?.purpose || (sessions.length ? sessions[0]?.detail : status.kind === 'outside' ? 'This date is not part of your training schedule. Any recorded activity stays in your running history.' : 'Take time to recover. Any recorded activity stays separate from your prescription.')}</p>
+    <p>{sessions[0]?.purpose || (sessions.length ? sessions[0]?.detail : status.kind === 'recovery' ? status.detail : status.kind === 'outside' ? 'This date is not part of your training schedule. Any recorded activity stays in your running history.' : 'Take time to recover. Any recorded activity stays separate from your prescription.')}</p>
     {sessions.length > 0 && <div className="day-preview-structure">
       {sessions.map((session, i) => {
         const pace = paces?.find(p => p.zone === session.zone)

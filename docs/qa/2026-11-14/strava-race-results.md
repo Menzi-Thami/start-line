@@ -31,6 +31,8 @@ The share card uses the confirmed race result, including edited chip time, and r
 - All 61 focused journey unit tests pass after the final prompt-order and accessibility changes.
 - Full Playwright results are recorded in the PR's validation section. The script's browser stage was rerun separately after overlapping local browser processes competed for the same ports.
 
+Reviewed captures: race suggestion at 375 px in [light](strava-race-results/race-found-375-light.png) and [dark](strava-race-results/race-found-375-dark.png); confirmed result at 1440 px in [light](strava-race-results/race-finished-1440-light.png) and [dark](strava-race-results/race-finished-1440-dark.png); the actual [exported PNG](strava-race-results/race-finish-card.png).
+
 ## Remaining release checks
 
 Native sharing is tested with a browser stub that receives and decodes the actual PNG. This does not verify a physical iPhone/Android share sheet, Safari or Instagram. Live Entra sign-in, a real Strava sync and staging-account QA are not established by these synthetic fixtures. Complete staging and physical-device QA before production promotion.

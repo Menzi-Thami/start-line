@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '../../app/auth-context'
+import { useAuth, type Auth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { isJourneyPayload } from './journey-model'
 import type {
@@ -41,8 +41,10 @@ export interface JourneyActions {
  */
 export function useJourney(enabled: boolean): { state: JourneyState; actions: JourneyActions } {
   const auth = useAuth()
-  const [state, setState] = useState<JourneyState>({ kind: 'loading' })
+  const [loaded, setState] = useState<JourneyState & { owner: Auth }>({ kind: 'loading', owner: auth })
+  const state: JourneyState = loaded.owner === auth ? loaded : { kind: 'loading' }
   const sequence = useRef(0)
+  const owner = useRef(0)
 
   const load = useCallback(() => {
     const mine = ++sequence.current
@@ -51,31 +53,40 @@ export function useJourney(enabled: boolean): { state: JourneyState; actions: Jo
       .then(journey => {
         if (mine !== sequence.current) return
         if (!isJourneyPayload(journey)) throw new Error('Your running journey returned an unexpected response. Try again.')
-        setState({ kind: 'ready', journey, refreshFailed: false })
+        setState({ kind: 'ready', journey, refreshFailed: false, owner: auth })
       })
       .catch((error: unknown) => {
         if (mine !== sequence.current) return
         const message = error instanceof Error ? error.message : 'Your running journey couldn’t load.'
-        setState(previous => previous.kind === 'ready' ? { ...previous, refreshFailed: true } : { kind: 'error', message })
+        setState(previous => previous.owner === auth && previous.kind === 'ready' ? { ...previous, refreshFailed: true } : { kind: 'error', message, owner: auth })
       })
   }, [auth])
 
   useEffect(() => {
     if (!enabled) return
     const requests = sequence
+    const identity = owner
     load()
     window.addEventListener(CHANGED, load)
     return () => {
       window.removeEventListener(CHANGED, load)
       // An answer arriving after this screen has gone is dropped.
       requests.current++
+      identity.current++
     }
   }, [enabled, load])
 
-  const withToken = useCallback(async <T,>(run: (token: string) => Promise<T>): Promise<T> => {
+  const withToken = useCallback(async <T,>(run: (token: string) => Promise<T>, apply?: (journey: Journey, result: T) => Journey): Promise<T> => {
+    const mine = owner.current
     const token = await auth.getToken()
+    if (mine !== owner.current) throw new Error('Your account changed. Open this journey again before saving.')
     if (!token) throw new Error('Sign in again to save this.')
     const result = await run(token)
+    if (mine !== owner.current) return result
+    // The write succeeded even if its following refresh fails. Keep its confirmed result visible and invalidate
+    // earlier reads; achievements and lifecycle are still refreshed from the server, never invented here.
+    sequence.current++
+    if (apply) setState(previous => previous.owner === auth && previous.kind === 'ready' ? { ...previous, journey: apply(previous.journey, result) } : previous)
     window.dispatchEvent(new Event(CHANGED))
     return result
   }, [auth])
@@ -87,11 +98,17 @@ export function useJourney(enabled: boolean): { state: JourneyState; actions: Jo
       const token = await auth.getToken()
       if (token) await api.me.journey.celebrated(token, id)
     },
-    saveRaceResult: (planId, body) => withToken(token => api.me.journey.saveRaceResult(token, planId, body)),
-    deleteRaceResult: (planId) => withToken(token => api.me.journey.deleteRaceResult(token, planId)),
-    startRecovery: (body) => withToken(token => api.me.journey.startRecovery(token, body)),
-    changeRecovery: (id, body) => withToken(token => api.me.journey.changeRecovery(token, id, body)),
-    checkIn: (id, body) => withToken(token => api.me.journey.checkIn(token, id, body)),
+    saveRaceResult: (planId, body) => withToken(token => api.me.journey.saveRaceResult(token, planId, body), (journey, result) => ({ ...journey,
+      chapters: journey.chapters.map(chapter => chapter.planId === planId ? { ...chapter, raceResult: result,
+        achievements: chapter.achievements.filter(a => a.kind !== 'RaceFinished' || result.outcome === 'Finished') } : chapter),
+    })),
+    deleteRaceResult: (planId) => withToken(token => api.me.journey.deleteRaceResult(token, planId), journey => ({ ...journey,
+      chapters: journey.chapters.map(chapter => chapter.planId === planId ? { ...chapter, raceResult: null,
+        achievements: chapter.achievements.filter(a => a.kind !== 'RaceFinished') } : chapter),
+    })),
+    startRecovery: (body) => withToken(token => api.me.journey.startRecovery(token, body), (journey, recovery) => ({ ...journey, recovery })),
+    changeRecovery: (id, body) => withToken(token => api.me.journey.changeRecovery(token, id, body), (journey, recovery) => ({ ...journey, recovery })),
+    checkIn: (id, body) => withToken(token => api.me.journey.checkIn(token, id, body), (journey, recovery) => ({ ...journey, recovery })),
     startMaintenance: async (body) => { await withToken(token => api.me.journey.startMaintenance(token, body)) },
     endMaintenance: () => withToken(token => api.me.journey.endMaintenance(token)),
   }

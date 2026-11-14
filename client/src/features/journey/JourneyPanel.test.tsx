@@ -146,7 +146,8 @@ describe('Recovery as its own state', () => {
     const act = show(journeyOf([chapter({ raceResult: raceResult(), lifecycle: 'Recovering' })], { recovery: recovery() }), '2026-11-18')
     expect(screen.getByText('Recovery · day 3')).toBeInTheDocument()
     expect(screen.getByText('Easy walk')).toBeInTheDocument()
-    expect(screen.queryByText(/%/)).not.toBeInTheDocument()
+    // Training Story may show its historical completion percentage; recovery itself has no completion score.
+    expect(document.querySelector('.recovery')?.textContent).not.toMatch(/\d+%/)
     await user.click(screen.getByRole('button', { name: 'Still sore' }))
     await waitFor(() => expect(act.checkIn).toHaveBeenCalledWith(recovery().id, { feeling: 'StillSore', redFlags: [], date: '2026-11-18' }))
     const week = screen.getByRole('list', { name: 'This recovery week' })

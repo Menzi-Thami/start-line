@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { formatDistance, type Units } from '../../lib/format'
-import type { ActivitySummary, DayOfWeek, TrainingPlan } from '../../lib/types'
+import type { Activity, ActivitySummary, DayOfWeek, TrainingPlan } from '../../lib/types'
 import { FinishLineFilm } from './FinishLineFilm'
 import { achievement, chapterFor, finishStage, formatClock, isLiveRecovery, owedCelebration, recoveryFor, recoveryWelcome, versusGoalWords } from './journey-model'
 import { MaintenanceCard, NextChapter } from './NextChapter'
@@ -31,6 +31,7 @@ interface Props {
   journey?: { state: JourneyState; actions: JourneyActions }
   local: LocalSummary
   runs?: readonly ActivitySummary[]
+  onLoadActivity?: (id: string) => Promise<Activity>
   runDays: DayOfWeek[]
   onNewRace?: () => void
   onOpenRacePrep?: () => void
@@ -42,7 +43,7 @@ interface Props {
  * chapter. Signed in, everything comes from the account and is the same on every device; signed out, only this
  * device's ticks are known, so it says so and offers nothing it can't keep.
  */
-export function JourneyPanel({ plan, today, units, planId, journey, local, runs, runDays, onNewRace, onOpenRacePrep, onSignIn }: Props) {
+export function JourneyPanel({ plan, today, units, planId, journey, local, runs, onLoadActivity, runDays, onNewRace, onOpenRacePrep, onSignIn }: Props) {
   const signedIn = !!planId && !!journey && journey.state.kind !== 'off'
   const ready = journey?.state.kind === 'ready' ? journey.state.journey : null
   const chapter = chapterFor(ready, planId)
@@ -111,6 +112,22 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
     />
   )
 
+  const resultForm = signedIn && chapter && journey && (stage === 'race-day' || stage === 'race-result-needed' || stage === 'race-recorded') && (
+    <div className="panel">
+      <RaceResultForm
+        key={chapter.planId}
+        chapter={chapter}
+        today={today}
+        units={units}
+        runs={runs}
+        onLoadActivity={onLoadActivity}
+        onSave={(body) => journey.actions.saveRaceResult(chapter.planId, body)}
+        onDelete={() => journey.actions.deleteRaceResult(chapter.planId)}
+        onCelebrate={raceAward ? (trigger) => setFilm({ kind: 'race', award: raceAward, trigger }) : undefined}
+      />
+    </div>
+  )
+
   return (
     <section className="journey-panel" aria-label="Your finish line">
       {film && (
@@ -145,11 +162,14 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
         </ul>
       </header>
 
+      {!result && resultForm}
+
       <div className="journey-grid">
         <div className="journey-main panel" ref={storyRef} tabIndex={-1}>
           <TrainingStory
             story={story}
             units={units}
+            raceResult={result}
             onReplay={earned ? (trigger) => setFilm({ kind: 'training', award: trainingAward, trigger }) : undefined}
           />
         </div>
@@ -172,20 +192,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
             </section>
           )}
 
-          {signedIn && chapter && journey && (stage === 'race-day' || stage === 'race-result-needed' || stage === 'race-recorded') && (
-            <div className="panel">
-              <RaceResultForm
-                key={chapter.planId}
-                chapter={chapter}
-                today={today}
-                units={units}
-                runs={runs}
-                onSave={(body) => journey.actions.saveRaceResult(chapter.planId, body)}
-                onDelete={() => journey.actions.deleteRaceResult(chapter.planId)}
-                onCelebrate={raceAward ? (trigger) => setFilm({ kind: 'race', award: raceAward, trigger }) : undefined}
-              />
-            </div>
-          )}
+          {result && resultForm}
 
           {signedIn && journey && liveRecovery && (
             <div className="panel">

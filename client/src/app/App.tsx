@@ -1142,6 +1142,7 @@ export function App() {
                 today={today}
                 canCompleteRuns={!savedOnScreen || checkIns.ready}
                 runs={state.kind === 'ready' ? runs : undefined}
+                onLoadActivity={state.kind === 'ready' ? async (id) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to view your race recording.'); return api.me.activity(token, id) } : undefined}
                 bests={state.kind === 'ready' ? synced.bests : undefined}
                 strava={state.kind === 'ready' ? synced.strava : undefined}
                 onOpenAccount={state.kind === 'ready' ? () => go('account') : undefined}

@@ -16,7 +16,7 @@ import { prefersMotion } from '../../lib/motion'
 import { allowsSwipe, horizontalSwipe } from '../../lib/swipe'
 import { loadDone, saveDone } from '../../lib/storage'
 import { revealDelta, tabFade, type TabFade } from '../../lib/tab-scroll'
-import type { CoachNote as CoachNoteType, ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
+import type { CoachNote as CoachNoteType, Activity, ActivitySummary, PersonalBest, PlanWeek, StravaStatus, TrainingPlan } from '../../lib/types'
 import { PlanAdjustment } from '../coaching/PlanAdjustment'
 import { RunLog } from '../coaching/RunLog'
 import { SavedRun } from '../coaching/SavedRun'
@@ -72,6 +72,8 @@ interface Props {
   calendar?: CalendarLinks
   /** The runner's uploaded runs. Without them (signed out, or accounts off) the plan shows on its own. */
   runs?: ActivitySummary[]
+  /** Load the race recording with its elapsed time (the summary only has moving time). */
+  onLoadActivity?: (id: string) => Promise<Activity>
   /** Opens one uploaded run. Without it, runs show in the plan but don't link anywhere. */
   onOpenRun?: (id: string) => void
   /** The runner's fastest times, for the overview. */
@@ -128,7 +130,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, progressExtras, journeyPlanId, onNewRace, onSignIn }: Props) {
+export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, progressExtras, journeyPlanId, onNewRace, onSignIn, onLoadActivity }: Props) {
   const journey = useJourney(!!journeyPlanId)
   const journeyData = journey.state.kind === 'ready' ? journey.state.journey : null
   const recoveryDays = recoveryDayMap(recoveryFor(journeyData, journeyPlanId))
@@ -452,7 +454,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </li>
       </ul>
 
-      {(finishLine.visible || journeyPlanId) && <JourneyPanel key={planKey} plan={plan} today={today} units={units} planId={journeyPlanId} journey={journeyPlanId ? journey : undefined} local={finishLine} runs={runs} runDays={planRunDays(plan)} onNewRace={onNewRace ?? onEditPlan} onOpenRacePrep={() => setTab('week')} onSignIn={onSignIn} />}
+      {(finishLine.visible || journeyPlanId) && <JourneyPanel key={planKey} plan={plan} today={today} units={units} planId={journeyPlanId} journey={journeyPlanId ? journey : undefined} local={finishLine} runs={runs} onLoadActivity={onLoadActivity} runDays={planRunDays(plan)} onNewRace={onNewRace ?? onEditPlan} onOpenRacePrep={() => setTab('week')} onSignIn={onSignIn} />}
       {onEditPlan && <button type="button" className="button button-quiet plan-edit-button" onClick={onEditPlan}>Edit plan</button>}
       {coach && <div ref={runLogRef} hidden={selectedDate !== null}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
       {coach && earlierEntries.length > 0 && <section aria-label="Earlier logged runs"><details className="disclosure"><summary>Earlier logged runs · {earlierEntries.length}</summary>{earlierEntries.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}</details></section>}

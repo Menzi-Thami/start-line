@@ -147,7 +147,7 @@ public class RecoveryGeneratorTests
         schedule.Days.Skip(1).ShouldAllBe(d => d.Kind == RecoveryDayKind.SeekCare && d.MinMinutes == null && d.MaxMinutes == null);
     }
 
-    public static TheoryData<RecoveryRedFlag> RedFlags() => [.. Enum.GetValues<RecoveryRedFlag>()];
+    public static TheoryData<RecoveryRedFlag> RedFlags() => new(Enum.GetValues<RecoveryRedFlag>());
 
     [Theory]
     [MemberData(nameof(RedFlags))]

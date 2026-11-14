@@ -5,13 +5,13 @@ import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthContext, accountsOff } from '../../src/app/auth-context'
 import { addDays } from '../../src/lib/format'
-import type { TrainingPlan } from '../../src/lib/types'
+import type { Activity, ActivitySummary, TrainingPlan } from '../../src/lib/types'
 import { JourneyHomeCard } from '../../src/features/journey/JourneyHomeCard'
 import { JourneyPanel } from '../../src/features/journey/JourneyPanel'
 import { RunningJourney } from '../../src/features/journey/RunningJourney'
 import { chapter, journeyOf, maintenance, PLAN_ID, raceResult, recap, recovery } from '../../src/features/journey/journey-fixtures'
 import { recoveryDayMap } from '../../src/features/journey/journey-model'
-import type { Journey, RecoveryPlan } from '../../src/features/journey/types'
+import type { Journey, RecoveryPlan, SaveRaceResult, StartRecovery } from '../../src/features/journey/types'
 import type { JourneyActions } from '../../src/features/journey/useJourney'
 import { PlanCalendar } from '../../src/features/plan/PlanCalendar'
 import { dayStatus } from '../../src/features/plan/training-status'
@@ -20,13 +20,30 @@ const params = new URLSearchParams(window.location.search)
 const scene = params.get('scene') ?? 'training-complete'
 const today = params.get('today') ?? '2026-11-14'
 const longName = params.get('long') === '1'
-const raceName = longName ? 'The Very Long Named Coastal Sunrise Half Marathon and Community Fun Run 2026' : 'Hoka Half Marathon'
+const isStravaMarathon = scene === 'strava-marathon' || scene === 'strava-history'
+const raceName = isStravaMarathon ? 'Mandela Marathon' : longName ? 'The Very Long Named Coastal Sunrise Half Marathon and Community Fun Run 2026' : 'Hoka Half Marathon'
+const raceDate = isStravaMarathon ? '2026-10-18' : '2026-11-15'
+const raceDistanceKm = isStravaMarathon ? 42.195 : 21.1
+const stravaMarathon: ActivitySummary = {
+  id: '33333333-3333-4333-8333-333333333333',
+  startedAt: '2026-10-18T05:30:00Z', localDate: '2026-10-18', kind: 'Run',
+  distanceKm: 42.35, movingSeconds: 15920, paceSecondsPerKm: 376,
+  plannedTitle: null, plannedSessionType: null, pace: null, averageHeartRate: null,
+  source: { kind: 'Strava', viewUrl: 'https://www.strava.com/activities/567', recordedOnGarmin: true, cachedUntil: null },
+}
+const importedRuns: ActivitySummary[] = params.get('duplicate') === '1'
+  ? [stravaMarathon, { ...stravaMarathon, id: '44444444-4444-4444-8444-444444444444', source: { ...stravaMarathon.source, kind: 'Upload', viewUrl: null } }]
+  : [stravaMarathon]
 const award = (kind: 'TrainingComplete' | 'RaceFinished', celebratedAt: string | null = null) =>
-  ({ id: `award-${kind}`, kind, planId: PLAN_ID, earnedOn: kind === 'RaceFinished' ? '2026-11-15' : '2026-11-14', awardedAt: '2026-11-14T10:00:00Z', celebratedAt })
+  ({ id: `award-${kind}`, kind, planId: PLAN_ID, earnedOn: kind === 'RaceFinished' ? raceDate : '2026-11-14', awardedAt: '2026-11-14T10:00:00Z', celebratedAt })
 const seen = '2026-11-14T11:00:00Z'
 
 function initial(): Journey {
-  const done = chapter({ raceName, achievements: [award('TrainingComplete', scene === 'training-complete' ? null : seen)] })
+  if (scene === 'strava-history') {
+    const stored = localStorage.getItem('test:past-marathon-journey')
+    if (stored) return JSON.parse(stored) as Journey
+  }
+  const done = chapter({ raceName, raceDate, distanceKm: raceDistanceKm, achievements: [award('TrainingComplete', scene === 'training-complete' ? null : seen)] })
   const passed = { ...done, training: recap({ raceDatePassed: true }) }
   const finished = { ...passed, raceResult: raceResult(), lifecycle: 'RaceCompleted' as const, achievements: [award('TrainingComplete', seen), award('RaceFinished', seen)] }
   const past = chapter({ planId: '22222222-2222-4222-8222-222222222222', raceName: 'Parkrun 10K Challenge', raceDate: '2026-04-12', distanceKm: 10, status: 'Archived', lifecycle: 'Archived', startDate: '2026-01-19',
@@ -34,6 +51,8 @@ function initial(): Journey {
     achievements: [{ ...award('TrainingComplete', seen), id: 'past-training' }, { ...award('RaceFinished', seen), id: 'past-race', earnedOn: '2026-04-12' }] })
   switch (scene.replace(/^home-/, '')) {
     case 'race-result': return journeyOf([passed])
+    case 'strava-marathon': return journeyOf([passed])
+    case 'strava-history': return journeyOf([{ ...passed, status: 'Archived', lifecycle: 'Archived', achievements: [] }])
     case 'incomplete': return journeyOf([{ ...passed, achievements: [], lifecycle: 'RacePending', training: recap({ confirmedRuns: 22, allConfirmed: false, raceDatePassed: true, recordedKm: null, recordedRuns: 0, longestRecordedKm: null, longestRecordedOn: null, cutShortRuns: 3, skippedRuns: 5, unansweredRuns: 8 }), weeks: null }])
     case 'recovery': return journeyOf([{ ...finished, lifecycle: 'Recovering' }], { recovery: recovery({ checkIns: [{ date: '2026-11-17', feeling: 'StillSore', redFlags: [], note: null }] }) })
     case 'pain': return journeyOf([{ ...finished, lifecycle: 'Recovering' }], { recovery: recovery({ seekCare: true, phase: 'SeekCare', readiness: 'PainOrInjury', safetyMessage: 'Pain that is severe or lasting, trouble walking, marked swelling, dark urine, fainting or chest pain need a doctor or physio today. For chest pain or fainting, call emergency services. Taperday won’t suggest exercise until you’ve been checked.', checkIns: [{ date: today, feeling: 'PainOrInjury', redFlags: ['SeverePain'], note: null }], days: recovery().days.map(d => d.date >= today ? { ...d, kind: 'SeekCare', phase: 'SeekCare', title: 'Get checked', guidance: 'No exercise until you’ve been checked.', minMinutes: null, maxMinutes: null, gated: false } : d) }) })
@@ -45,7 +64,7 @@ function initial(): Journey {
   }
 }
 
-const plan = { race: { name: raceName, date: '2026-11-15' }, startDate: '2026-08-24', weeks: [] } as unknown as TrainingPlan
+const plan = { race: { name: raceName, date: raceDate }, startDate: '2026-08-24', weeks: [] } as unknown as TrainingPlan
 
 /** A stand-in for the API: each change is applied as the server would, then the screen reloads from it. */
 function useFakeJourney() {
@@ -56,10 +75,10 @@ function useFakeJourney() {
     refresh: () => undefined,
     celebrated: (id) => { update(j => ({ ...j, chapters: j.chapters.map(c => ({ ...c, achievements: c.achievements.map(a => a.id === id ? { ...a, celebratedAt: seen } : a) })) })); return Promise.resolve() },
     saveRaceResult: (planId, body) => {
-      const result = raceResult({ outcome: body.outcome, raceDate: body.raceDate ?? '2026-11-15', finishTime: body.finishTime ?? null, distanceKm: body.distanceKm ?? null, versusGoal: body.finishTime === '01:52:10' ? '-00:02:50' : null, note: body.note ?? null, version: `v${Date.now()}` })
+      const result = raceResult({ outcome: body.outcome, raceDate: body.raceDate ?? '2026-11-15', finishTime: body.finishTime ?? null, distanceKm: body.distanceKm ?? null, activityId: body.activityId ?? null, versusGoal: body.finishTime === '01:52:10' ? '-00:02:50' : null, note: body.note ?? null, version: `v${Date.now()}` })
       update(j => ({ ...j, chapters: j.chapters.map(c => c.planId !== planId ? c : {
         ...c, raceResult: result, lifecycle: body.outcome === 'Finished' ? 'RaceCompleted' : 'RaceNotCompleted',
-        achievements: [...c.achievements.filter(a => a.kind !== 'RaceFinished'), ...(body.outcome === 'Finished' ? [award('RaceFinished')] : [])],
+        achievements: [...c.achievements.filter(a => a.kind !== 'RaceFinished'), ...(body.outcome === 'Finished' ? [{ ...award('RaceFinished'), earnedOn: result.raceDate }] : [])],
       }) }))
       return Promise.resolve(result)
     },
@@ -85,8 +104,38 @@ function useFakeJourney() {
 const auth = { ...accountsOff, enabled: true, account: { name: 'Sam Runner', email: null }, getToken: () => Promise.resolve('test-token') }
 const realFetch = window.fetch.bind(window)
 const served: { journey: Journey } = { journey: initial() }
+let failSave = params.get('saveFail') === '1'
 window.fetch = (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  if (url.endsWith('/api/v1/me/journey/recovery') && init?.method === 'POST') {
+    const body = JSON.parse(String(init.body)) as StartRecovery
+    const started = served.journey.recovery ?? recovery({ planId: body.planId, eventName: body.eventName ?? raceName, raceDate: body.raceDate,
+      distanceKm: body.distanceKm, effort: body.effort, preference: body.preference, runDays: body.runDays ?? [] })
+    served.journey = { ...served.journey, recovery: started }
+    if (scene === 'strava-history') localStorage.setItem('test:past-marathon-journey', JSON.stringify(served.journey))
+    return Promise.resolve(Response.json(started, { status: 201 }))
+  }
+  if (url.endsWith('/api/v1/me/activities')) return Promise.resolve(Response.json(isStravaMarathon ? importedRuns : []))
+  if (url.endsWith(`/api/v1/me/activities/${stravaMarathon.id}`)) {
+    return Promise.resolve(params.get('expired') === '1'
+      ? new Response(null, { status: 404 })
+      : Response.json({ ...stravaMarathon, elapsedSeconds: 16812 }))
+  }
+  const resultPath = url.match(/\/api\/v1\/me\/journey\/plans\/([^/]+)\/race-result$/)
+  if (resultPath) {
+    if (failSave && init?.method === 'PUT') {
+      failSave = false
+      return Promise.resolve(Response.json({ detail: 'Your result couldn’t be saved. Try again.' }, { status: 503 }))
+    }
+    const body = init?.method === 'PUT' ? JSON.parse(String(init.body)) as SaveRaceResult : null
+    const result = body ? raceResult({ ...body, planId: resultPath[1], raceDate: body.raceDate ?? raceDate, version: crypto.randomUUID(), versusGoal: null }) : null
+    served.journey = { ...served.journey, chapters: served.journey.chapters.map(c => c.planId !== resultPath[1] ? c : {
+      ...c, raceResult: result,
+      achievements: [...c.achievements.filter(a => a.kind !== 'RaceFinished'), ...(result?.outcome === 'Finished' ? [{ ...award('RaceFinished', seen), earnedOn: result.raceDate }] : [])],
+    }) }
+    if (scene === 'strava-history') localStorage.setItem('test:past-marathon-journey', JSON.stringify(served.journey))
+    return Promise.resolve(result ? Response.json(result) : new Response(null, { status: 204 }))
+  }
   if (url.includes('/api/v1/me/journey/plans/')) {
     const id = url.split('/').pop()!
     const found = served.journey.chapters.find(c => c.planId === id)
@@ -100,7 +149,7 @@ export function Harness() {
   const { journey, actions } = useFakeJourney()
   useEffect(() => { served.journey = journey }, [journey])
   const state = { kind: 'ready' as const, journey, refreshFailed: false }
-  if (scene === 'journey' || scene === 'empty-journey') {
+  if (scene === 'journey' || scene === 'empty-journey' || scene === 'strava-history') {
     return <div className="plan"><section className="progress-extra" aria-labelledby="progress-journey"><h3 id="progress-journey">Your running journey</h3><RunningJourney units="km" today={today} runDays={['Tuesday', 'Thursday', 'Saturday']} /></section></div>
   }
   if (scene === 'calendar') {
@@ -123,6 +172,12 @@ export function Harness() {
     return <div className="home"><div className="home-panel home-focus"><JourneyHomeCard journey={{ state, actions }} today={today} currentPlanId={PLAN_ID} onOpenPlan={() => undefined} onNewRace={() => undefined} /></div></div>
   }
   return <div className="plan"><JourneyPanel plan={plan} today={today} units="km" planId={PLAN_ID} journey={{ state, actions }} local={{ total: 38, completed: 38, provisional: 0, distanceKm: 312.5, weeks: 12, allConfirmed: true, trainingEnded: true, racePassed: false, earned: true, visible: true }}
+    runs={isStravaMarathon ? importedRuns : undefined}
+    onLoadActivity={isStravaMarathon ? async id => {
+      const recording = importedRuns.find(run => run.id === id)
+      if (!recording) throw new Error('Run not found')
+      return { ...recording, elapsedSeconds: 16812 } as unknown as Activity
+    } : undefined}
     runDays={['Tuesday', 'Thursday', 'Saturday', 'Sunday']} onNewRace={() => undefined} onOpenRacePrep={() => undefined} /></div>
 }
 

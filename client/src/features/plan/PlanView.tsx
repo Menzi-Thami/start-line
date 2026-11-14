@@ -454,7 +454,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </li>
       </ul>
 
-      {(finishLine.visible || journeyPlanId) && <JourneyPanel key={planKey} plan={plan} today={today} units={units} planId={journeyPlanId} journey={journeyPlanId ? journey : undefined} local={finishLine} runs={runs} runDays={planRunDays(plan)} onNewRace={onNewRace ?? onEditPlan} onOpenRacePrep={() => setTab('week')} onSignIn={onSignIn} />}
+      {(finishLine.visible || journeyPlanId) && <JourneyPanel key={planKey} plan={plan} today={today} units={units} planId={journeyPlanId} journey={journeyPlanId ? journey : undefined} local={finishLine} runs={runs} onLoadActivity={onLoadActivity} runDays={planRunDays(plan)} onNewRace={onNewRace ?? onEditPlan} onOpenRacePrep={() => setTab('week')} onSignIn={onSignIn} />}
       {onEditPlan && <button type="button" className="button button-quiet plan-edit-button" onClick={onEditPlan}>Edit plan</button>}
       {coach && <div ref={runLogRef} hidden={selectedDate !== null}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
       {coach && earlierEntries.length > 0 && <section aria-label="Earlier logged runs"><details className="disclosure"><summary>Earlier logged runs · {earlierEntries.length}</summary>{earlierEntries.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}</details></section>}

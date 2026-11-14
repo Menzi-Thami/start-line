@@ -97,8 +97,8 @@ export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [
           const recorded = activityDates.includes(date) || additional > 0
           const status = statusFor?.(date)
           const completion = calendarDayState(day, done, recorded, date, today)
-          const state = isRace ? 'race' : status?.kind === 'complete' ? 'done' : status?.kind === 'partial' ? 'partial' : !status && completion === 'done' ? 'done' : runs.length > 0 ? 'run' : day.length > 0 ? 'strength' : 'rest'
           const inPlan = date >= (weeks[0]?.startDate ?? today) && date <= raceDate
+          const state = !inPlan && !recorded ? 'outside' : isRace ? 'race' : status?.kind === 'complete' ? 'done' : status?.kind === 'partial' ? 'partial' : !status && completion === 'done' ? 'done' : runs.length > 0 ? 'run' : day.length > 0 ? 'strength' : 'rest'
           // On wide screens the day also shows these words (drawn by CSS from data-what); its accessible name already has them.
           const what = isRace ? 'race day' : day.map((s) => s.title).join(', ')
           const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace || day.length ? what : inPlan ? 'rest' : 'outside this plan'}${status ? `, ${status.label.toLowerCase()}` : completion === 'done' ? ', done' : completion === 'missed' ? ', no completion recorded' : ''}${recorded ? ', activity recorded' : ''}${additional ? `, ${additional} additional ${additional === 1 ? 'run' : 'runs'} logged` : ''}`
@@ -112,7 +112,7 @@ export function PlanCalendar({ weeks, raceDate, today, done, additionalDates = [
           )
         })}
       </div>
-      <p className="field-help plan-calendar-key">✓ Completed · − Cut short · ↗ Activity recorded · • Scheduled · ○ Rest. Select a date to preview it, then open day details.</p>
+      <p className="field-help plan-calendar-key">✓ Completed · − Cut short · ↗ Activity recorded · • Scheduled · ○ Rest within plan · Unmarked Outside plan. Select a date to preview it, then open day details.</p>
     </section>
   )
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
+import { isJourneyPayload } from './journey-model'
 import type {
   ChangeRecovery,
   Journey,
@@ -47,7 +48,11 @@ export function useJourney(enabled: boolean): { state: JourneyState; actions: Jo
     const mine = ++sequence.current
     auth.getToken()
       .then(token => (token ? api.me.journey.get(token) : Promise.reject(new Error('Sign in again to see your running journey.'))))
-      .then(journey => { if (mine === sequence.current) setState({ kind: 'ready', journey, refreshFailed: false }) })
+      .then(journey => {
+        if (mine !== sequence.current) return
+        if (!isJourneyPayload(journey)) throw new Error('Your running journey returned an unexpected response. Try again.')
+        setState({ kind: 'ready', journey, refreshFailed: false })
+      })
       .catch((error: unknown) => {
         if (mine !== sequence.current) return
         const message = error instanceof Error ? error.message : 'Your running journey couldn’t load.'

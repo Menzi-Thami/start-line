@@ -151,6 +151,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
           <TrainingStory
             story={story}
             units={units}
+            raceResult={result}
             onReplay={earned ? (trigger) => setFilm({ kind: 'training', award: trainingAward, trigger }) : undefined}
           />
         </div>

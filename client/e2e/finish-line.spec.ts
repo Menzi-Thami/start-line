@@ -71,6 +71,31 @@ test.describe('finish line journey', () => {
     await page.screenshot({ path: shot('10-maintenance-phone-light'), fullPage: true })
   })
 
+  test('already-imported Strava marathon is detected, confirmed once, celebrated and shareable @phone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await open(page, 'strava-marathon', '2026-11-14')
+    await expect(page.getByRole('heading', { name: 'We found your Mandela Marathon.' })).toBeVisible()
+    await expect(page.getByText(/No need to type the result again/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Confirm my recorded finish' })).toBeEnabled()
+    await expect(page.getByRole('heading', { name: 'How did race day go?' })).toHaveCount(0)
+    await accessible(page)
+    await page.screenshot({ path: shot('12-strava-marathon-found-phone'), fullPage: true })
+
+    await page.getByRole('button', { name: 'Confirm my recorded finish' }).click()
+    const film = page.getByRole('dialog', { name: 'RACE FINISHED.' })
+    await expect(film).toBeVisible()
+    await film.getByRole('button', { name: 'Close the Finish Line' }).click()
+    await expect(page.getByRole('heading', { name: 'Finished in 4:40:12' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'You finished Mandela Marathon.' })).toBeVisible()
+    await expect(page.locator('.journey-badges').getByText(/✓ Race finisher/)).toBeVisible()
+    await noSideScroll(page)
+    await accessible(page)
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Download card' }).click()
+    expect((await download).suggestedFilename()).toBe('taperday-race-finish.png')
+    await page.screenshot({ path: shot('13-strava-marathon-finish-phone'), fullPage: true })
+  })
+
   test('training film: plays once, keyboard-safe, with a still version for reduced motion @phone', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
     await page.emulateMedia({ reducedMotion: 'no-preference' })

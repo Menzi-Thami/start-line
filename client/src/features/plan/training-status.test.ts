@@ -23,3 +23,16 @@ describe('training status separates attendance from execution', () => {
     expect(dayStatus([session], new Set(), [], false).kind).toBe('planned')
   })
 })
+
+
+describe('calendar plan boundaries', () => {
+  it('does not call a date after the plan a rest day', () => {
+    expect(dayStatus([], new Set(), [], false, false, false)).toEqual({ kind: 'outside', icon: '', label: 'Outside this plan' })
+  })
+  it('keeps unscheduled dates inside the plan as rest', () => {
+    expect(dayStatus([], new Set(), [], false, false, true).kind).toBe('rest')
+  })
+  it('still shows an unplanned recorded run outside the plan', () => {
+    expect(dayStatus([], new Set(), [], true, false, false).kind).toBe('recorded')
+  })
+})

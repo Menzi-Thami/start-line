@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Coaching;
 using StartLine.Domain.Plans;
 using StartLine.Infrastructure.Persistence;
@@ -190,6 +191,70 @@ public sealed class JourneyTests(JourneyFactory factory) : IClassFixture<Journey
         (await PutResult(client, plan, new { outcome = "Finished", distanceKm = 401 })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await PutResult(client, plan, new { outcome = "Finished", note = new string('x', 281) })).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await PutResult(client, plan, new { outcome = "Finished", activityId = Guid.NewGuid() })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    private async Task<Activity> RaceRecording(Guid runnerId, ActivityOrigin origin)
+    {
+        var recording = new ActivityRecording(new DateTimeOffset(2026, 10, 4, 6, 0, 0, TimeSpan.Zero), ActivityKind.Run,
+            [new(TimeSpan.Zero, 0), new(TimeSpan.FromSeconds(1500), 5000), new(TimeSpan.FromSeconds(1620), 5000), new(TimeSpan.FromSeconds(3150), 10150)], DeviceTotals.None);
+        var activity = Activity.Record(runnerId, recording, PastRace, [], origin);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
+        db.Activities.Add(activity);
+        await db.SaveChangesAsync();
+        return activity;
+    }
+
+    [Theory]
+    [InlineData(SavedPlanStatus.Active)]
+    [InlineData(SavedPlanStatus.Archived)]
+    public async Task An_existing_Strava_recording_can_be_confirmed_edited_reloaded_and_undone_on_any_chapter(SavedPlanStatus status)
+    {
+        var (client, runnerId) = await Runner();
+        var plan = await PastPlan(runnerId, status);
+        var activity = await RaceRecording(runnerId, ActivityOrigin.Strava(263, StartLineApiFactory.Now, false));
+
+        var pending = await Chapter(client, plan);
+        pending.GetProperty("raceResult").ValueKind.ShouldBe(JsonValueKind.Null);
+        Kinds(pending).ShouldBeEmpty();
+        var detail = await Json(await client.GetAsync(Url($"/api/v1/me/activities/{activity.Id}")));
+        detail.GetProperty("movingSeconds").GetDouble().ShouldBe(3030);
+        detail.GetProperty("elapsedSeconds").GetDouble().ShouldBe(3150);
+
+        var saved = await Json(await PutResult(client, plan, new { outcome = "Finished", raceDate = "2026-10-04", finishTime = "00:52:30", distanceKm = 10.15, activityId = activity.Id }));
+        var reloaded = await Chapter(client, plan);
+        reloaded.GetProperty("raceResult").GetProperty("activityId").GetGuid().ShouldBe(activity.Id);
+        reloaded.GetProperty("raceResult").GetProperty("distanceKm").GetDouble().ShouldBe(10.15);
+        reloaded.GetProperty("raceResult").GetProperty("finishTime").GetString().ShouldBe("00:52:30");
+        Kinds(reloaded).ShouldBe(["RaceFinished"]);
+
+        var edited = await Json(await PutResult(client, plan, new { outcome = "Finished", finishTime = "00:52:00", distanceKm = 10.15, activityId = activity.Id, expectedVersion = saved.GetProperty("version").GetString() }));
+        edited.GetProperty("id").GetGuid().ShouldBe(saved.GetProperty("id").GetGuid());
+        (await Chapter(client, plan)).GetProperty("raceResult").GetProperty("finishTime").GetString().ShouldBe("00:52:00");
+        (await client.DeleteAsync(Url($"/api/v1/me/journey/plans/{plan}/race-result"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var undone = await Chapter(client, plan);
+        undone.GetProperty("raceResult").ValueKind.ShouldBe(JsonValueKind.Null);
+        Kinds(undone).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task An_expired_or_another_runners_recording_cannot_confirm_a_finish()
+    {
+        var (client, runnerId) = await Runner();
+        var plan = await PastPlan(runnerId);
+        var expired = await RaceRecording(runnerId, ActivityOrigin.Strava(264, StartLineApiFactory.Now.AddDays(-8), false));
+        var (_, otherRunner) = await Runner();
+        var foreign = await RaceRecording(otherRunner, ActivityOrigin.Upload);
+
+        foreach (var recording in new[] { expired, foreign })
+        {
+            (await client.GetAsync(Url($"/api/v1/me/activities/{recording.Id}"))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+            (await PutResult(client, plan, new { outcome = "Finished", finishTime = "00:52:30", distanceKm = 10.15, activityId = recording.Id })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        }
+
+        var pending = await Chapter(client, plan);
+        pending.GetProperty("raceResult").ValueKind.ShouldBe(JsonValueKind.Null);
+        Kinds(pending).ShouldBeEmpty();
     }
 
     [Fact]

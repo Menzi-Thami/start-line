@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { Activity, ActivitySummary } from '../../lib/types'
@@ -58,5 +58,81 @@ describe('Race result from an existing Strava recording', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not be verified/)
     expect(onSave).not.toHaveBeenCalled()
     expect(screen.getByRole('button', { name: 'I finished' })).toBeInTheDocument()
+  })
+
+  it.each<Partial<Activity>>([
+    { localDate: '2026-10-17' }, { kind: 'Other' }, { distanceKm: 5 },
+    { elapsedSeconds: NaN }, { elapsedSeconds: 0 }, { elapsedSeconds: 49 * 3600 },
+    { elapsedSeconds: run.movingSeconds - 1 }, { movingSeconds: NaN },
+  ])('refuses invalid or mismatched recording details: %j', async change => {
+    const onSave = vi.fn()
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run]} onLoadActivity={async () => ({ ...detail, ...change })} onSave={onSave} onDelete={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be verified')
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('requires an explicit choice even for near-identical Strava and upload recordings', async () => {
+    const user = userEvent.setup()
+    const upload = { ...run, id: 'upload-id', source: { ...run.source, kind: 'Upload' as const, viewUrl: null } }
+    const onLoadActivity = vi.fn(async () => ({ ...detail, ...upload }))
+    const onSave = vi.fn(async () => raceResult())
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[upload, run]} onLoadActivity={onLoadActivity} onSave={onSave} onDelete={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Confirm my recorded finish' })).toBeDisabled()
+    expect(onLoadActivity).not.toHaveBeenCalled()
+    await user.selectOptions(screen.getByRole('combobox', { name: /Choose your race recording/ }), upload.id)
+    expect(onSave).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Review details' }))
+    expect(await screen.findByRole('textbox', { name: 'Minutes' })).toHaveValue('40')
+    await user.clear(screen.getByRole('textbox', { name: 'Minutes' }))
+    await user.type(screen.getByRole('textbox', { name: 'Minutes' }), '39')
+    await user.click(screen.getByRole('button', { name: 'Save race result' }))
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ activityId: upload.id, finishTime: '04:39:12' }))
+  })
+
+  it('offers manual entry when a recording expired or became unavailable', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn()
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run]} onLoadActivity={async () => { throw new Error('This recording is no longer available.') }} onSave={onSave} onDelete={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('no longer available')
+    expect(onSave).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'I finished' }))
+    expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveValue('')
+  })
+
+  it('retains the verified result after a failed save and retries without loading or submitting twice', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn().mockRejectedValueOnce(new Error('Save failed. Try again.')).mockResolvedValue(raceResult({ finishTime: '04:40:12' }))
+    const onLoadActivity = vi.fn(async () => detail)
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run]} onLoadActivity={onLoadActivity} onSave={onSave} onDelete={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Save failed')
+    expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('40')
+    await user.dblClick(screen.getByRole('button', { name: 'Save race result' }))
+    expect(onSave).toHaveBeenCalledTimes(2)
+    expect(onLoadActivity).toHaveBeenCalledTimes(1)
+    expect(onSave.mock.calls[1]?.[0]).toMatchObject({ activityId: run.id, distanceKm: 42.35, finishTime: '04:40:12' })
+  })
+
+  it('does not persist a late recording response after leaving the chapter', async () => {
+    let resolve!: (activity: Activity) => void
+    const onSave = vi.fn()
+    const { unmount } = render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run]} onLoadActivity={() => new Promise(done => { resolve = done })} onSave={onSave} onDelete={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    expect(screen.getByRole('button', { name: 'I finished' })).toBeDisabled()
+    unmount()
+    await act(async () => resolve(detail))
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { today: '2026-10-17', distanceKm: run.distanceKm },
+    { today: '2026-11-14', distanceKm: 5 },
+  ])('never treats a future race or no match as a finish (%j)', ({ today, distanceKm }) => {
+    const onSave = vi.fn()
+    render(<RaceResultForm chapter={marathon} today={today} units="km" runs={[{ ...run, distanceKm }]} onLoadActivity={vi.fn()} onSave={onSave} onDelete={vi.fn()} />)
+    expect(screen.queryByRole('heading', { name: /We found your/ })).not.toBeInTheDocument()
+    expect(onSave).not.toHaveBeenCalled()
   })
 })

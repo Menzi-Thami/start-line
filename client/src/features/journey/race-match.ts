@@ -11,7 +11,7 @@ export function raceMatches(
   runs: readonly ActivitySummary[],
 ): ActivitySummary[] {
   const { raceDate, distanceKm } = chapter
-  if (!raceDate || distanceKm == null || distanceKm < 3) return []
+  if (!raceDate || distanceKm == null || !Number.isFinite(distanceKm) || distanceKm < 3) return []
   const tolerance = Math.max(0.4, distanceKm * 0.035)
   return runs
     .filter(run =>

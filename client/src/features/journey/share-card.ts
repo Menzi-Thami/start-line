@@ -34,12 +34,16 @@ export function cardSvg(content: CardContent): string {
   const first = content.stats[0]
   const second = content.stats[1]
   const third = content.stats[2]
-  const text = (value: string, x: number, y: number, size: number, color: string, weight = 700, extra = '') =>
-    `<text x="${x}" y="${y}" fill="${color}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" ${extra}>${escapeXml(value)}</text>`
+  const text = (value: string, x: number, y: number, size: number, color: string, weight = 700, extra = '', maxWidth = 888) => {
+    const spacing = Number(extra.match(/letter-spacing="(-?[\d.]+)"/)?.[1] ?? 0)
+    // SVG has no canvas fillText(maxWidth). Bound long lines for fallback fonts as well as the brand font.
+    const fit = value.length * (size * .75 + spacing) > maxWidth ? `textLength="${maxWidth}" lengthAdjust="spacingAndGlyphs"` : ''
+    return `<text x="${x}" y="${y}" fill="${color}" font-family="${FONT}" font-size="${size}" font-weight="${weight}" ${extra} ${fit}>${escapeXml(value)}</text>`
+  }
   const stat = (value: { value: string; label: string } | undefined, x: number) => !value ? '' :
     '<rect x="' + x + '" y="1260" width="425" height="280" rx="28" fill="#181b1d" stroke="#3a4042" stroke-width="2"/>'
-    + text(fitText(value.value, 12), x + 36, 1390, value.value.length > 8 ? 66 : 98, LIGHT)
-    + text(fitText(value.label.toUpperCase(), 22), x + 36, 1470, 27, MUTED, 600, 'letter-spacing="2"')
+    + text(fitText(value.value, 12), x + 36, 1390, value.value.length > 8 ? 66 : 98, LIGHT, 700, '', 353)
+    + text(fitText(value.label.toUpperCase(), 24), x + 36, 1470, 22, MUTED, 600, 'letter-spacing="1"', 353)
   const bigSize = first?.value.length && first.value.length > 9 ? 130 : 193
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="${escapeXml(`${content.heading}. ${content.raceName}. ${content.stats.map(s => `${s.value} ${s.label}`).join(', ')}`)}">`
     + `<defs><linearGradient id="td-night" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#171b1b"/><stop offset=".58" stop-color="${INK}"/><stop offset="1" stop-color="#171a16"/></linearGradient></defs>`
@@ -162,7 +166,7 @@ export async function cardPng(content: CardContent): Promise<Blob | null> {
     context.lineWidth = 2
     context.stroke()
     write(fitText(item.value, 12), x + 36, 1390, item.value.length > 8 ? 66 : 98, LIGHT, 700, 360)
-    write(fitText(item.label.toUpperCase(), 22), x + 36, 1470, 27, MUTED, 600, 360)
+    write(fitText(item.label.toUpperCase(), 24), x + 36, 1470, 22, MUTED, 600, 353)
   }
   context.strokeStyle = '#404449'
   context.lineWidth = 2

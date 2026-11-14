@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
+import { readFile } from 'node:fs/promises'
+import { cardSvg } from '../src/features/journey/share-card'
 
 // The finish-line journey on the real React screens, against a synthetic in-memory journey (e2e/fixtures/finish-line.tsx).
 // Screenshots land in docs/qa/2026-11-14/finish-line so the pull request can show the real implementation.
@@ -91,9 +93,101 @@ test.describe('finish line journey', () => {
     await noSideScroll(page)
     await accessible(page)
     const download = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Download card' }).click()
-    expect((await download).suggestedFilename()).toBe('taperday-race-finish.png')
+    await page.getByRole('button', { name: 'Save story card' }).click()
+    const file = await download
+    expect(file.suggestedFilename()).toBe('taperday-race-finish.png')
+    const png = await readFile((await file.path())!)
+    expect(png.subarray(1, 4).toString()).toBe('PNG')
+    expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1080, 1920])
     await page.screenshot({ path: shot('13-strava-marathon-finish-phone'), fullPage: true })
+  })
+
+  test('past Strava chapter: failed confirmation → retry → edit → reload → undo @phone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await open(page, 'strava-history', '2026-11-14', '&saveFail=1')
+    await page.getByRole('button', { name: 'View chapter' }).click()
+    await expect(page.getByRole('heading', { name: 'We found your Mandela Marathon.' })).toBeVisible()
+    await page.getByRole('button', { name: 'Confirm my recorded finish' }).click()
+    await expect(page.getByRole('alert')).toContainText(/try again/i)
+    await expect(page.getByRole('textbox', { name: 'Minutes' })).toHaveValue('40')
+    await page.getByRole('button', { name: 'Save race result' }).dblclick()
+    await expect(page.getByRole('heading', { name: 'Finished in 4:40:12' })).toBeVisible()
+    await page.getByRole('button', { name: 'Edit result' }).click()
+    await page.getByRole('textbox', { name: 'Minutes' }).fill('39')
+    await page.getByRole('button', { name: 'Save race result' }).click()
+    await expect(page.getByRole('heading', { name: 'Finished in 4:39:12' })).toBeVisible()
+    await page.reload()
+    await page.getByRole('button', { name: 'View chapter' }).click()
+    await expect(page.getByRole('heading', { name: 'Finished in 4:39:12' })).toBeVisible()
+    await noSideScroll(page)
+    await accessible(page)
+    await page.getByRole('button', { name: 'Undo' }).click()
+    await page.getByRole('button', { name: 'Remove result' }).click()
+    await expect(page.getByRole('heading', { name: 'We found your Mandela Marathon.' })).toBeVisible()
+    await expect(page.getByText('✓ Race finisher')).toHaveCount(0)
+  })
+
+  test('unavailable past recording leaves manual entry and no finisher award', async ({ page }) => {
+    await open(page, 'strava-history', '2026-11-14', '&expired=1')
+    await page.getByRole('button', { name: 'View chapter' }).click()
+    await page.getByRole('button', { name: 'Confirm my recorded finish' }).click()
+    await expect(page.getByRole('alert')).toBeVisible()
+    await expect(page.getByText('✓ Race finisher')).toHaveCount(0)
+    await page.getByRole('button', { name: 'I finished' }).click()
+    await expect(page.getByRole('textbox', { name: 'Hours' })).toHaveValue('')
+  })
+
+  test('duplicate recordings require a choice and confirmation on a phone @phone', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await open(page, 'strava-marathon', '2026-11-14', '&duplicate=1')
+    const confirm = page.getByRole('button', { name: 'Confirm my recorded finish' })
+    await expect(confirm).toBeDisabled()
+    await page.getByRole('combobox', { name: /Choose your race recording/ }).selectOption('44444444-4444-4444-8444-444444444444')
+    await expect(confirm).toBeEnabled()
+    await expect(page.locator('.journey-badges').getByText(/✓ Race finisher/)).toHaveCount(0)
+    await noSideScroll(page)
+    await accessible(page)
+    await confirm.click()
+    await page.getByRole('button', { name: 'Close the Finish Line' }).click()
+    await expect(page.getByRole('heading', { name: 'Finished in 4:40:12' })).toBeVisible()
+  })
+
+  test('story hands a portrait PNG to native sharing and saves SVG when canvas is unavailable', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'canShare', { value: () => true, configurable: true })
+      Object.defineProperty(navigator, 'share', { value: async (data: ShareData) => {
+        const file = data.files![0]!
+        const bitmap = await createImageBitmap(file)
+        Object.assign(window, { sharedCard: { name: file.name, type: file.type, width: bitmap.width, height: bitmap.height } })
+        bitmap.close()
+      }, configurable: true })
+    })
+    await open(page, 'training-complete', '2026-11-14')
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Share my story' }).click()
+    await expect(page.getByRole('status')).toHaveText('Shared.')
+    expect(await page.evaluate(() => Reflect.get(window, 'sharedCard'))).toEqual({ name: 'taperday-training-story.png', type: 'image/png', width: 1080, height: 1920 })
+    await page.evaluate(() => { HTMLCanvasElement.prototype.getContext = () => null })
+    const download = page.waitForEvent('download')
+    await page.getByRole('button', { name: 'Save story card' }).click()
+    const file = await download
+    expect(file.suggestedFilename()).toBe('taperday-training-story.svg')
+    const svg = await readFile((await file.path())!, 'utf8')
+    expect(svg).toContain('TRAINING COMPLETE')
+    expect(svg).toContain('38/38')
+    await expect(page.getByText('Card saved as an SVG picture.')).toBeVisible()
+  })
+
+  test('SVG fallback keeps long names and labels inside the portrait card', async ({ page }) => {
+    const svg = cardSvg({ kicker: 'TAPERDAY · TRAINING STORY', heading: 'TRAINING COMPLETE', raceName: 'The Very Long Named Coastal Sunrise Half Marathon',
+      stats: [{ value: '138/138', label: 'Training runs confirmed' }, { value: '24', label: 'Training weeks' }, { value: '1234.5 km', label: 'Recorded training distance' }],
+      footer: 'EVERY FINISH IS A BEGINNING · taperday.run' })
+    await page.setContent(svg)
+    const overflowing = await page.locator('svg text').evaluateAll(nodes => nodes.filter(node => {
+      const box = (node as SVGGraphicsElement).getBBox()
+      return box.x < 78 || box.x + box.width > 1002
+    }).map(node => node.textContent))
+    expect(overflowing).toEqual([])
   })
 
   test('training film: plays once, keyboard-safe, with a still version for reduced motion @phone', async ({ page }) => {
@@ -135,7 +229,7 @@ test.describe('finish line journey', () => {
     await open(page, 'training-complete', '2026-11-14')
     await page.keyboard.press('Escape')
     const download = page.waitForEvent('download')
-    await page.getByRole('button', { name: 'Download card' }).click()
+    await page.getByRole('button', { name: 'Save story card' }).click()
     expect((await download).suggestedFilename()).toBe('taperday-training-story.png')
     await expect(page.getByText('Card saved as a picture.')).toBeVisible()
   })

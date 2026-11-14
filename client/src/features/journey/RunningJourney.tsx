@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useAuth } from '../../app/auth-context'
+import { useEffect, useRef, useState } from 'react'
+import { useAuth, type Auth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { ActivitySummary, DayOfWeek } from '../../lib/types'
@@ -24,7 +24,7 @@ const LIFECYCLE_WORDS: Record<JourneyLifecycle, string> = {
   Archived: 'Past plan',
 }
 
-type Detail = { kind: 'loading'; planId: string } | { kind: 'ready'; chapter: PlanChapter; runs: ActivitySummary[] } | { kind: 'error'; planId: string; message: string }
+type Detail = { owner: Auth } & ({ kind: 'loading'; planId: string } | { kind: 'ready'; chapter: PlanChapter; runs: ActivitySummary[] | null } | { kind: 'error'; planId: string; message: string })
 
 /**
  * The runner's running journey: every plan they've finished or moved on from, newest first, with its training story,
@@ -33,13 +33,20 @@ type Detail = { kind: 'loading'; planId: string } | { kind: 'ready'; chapter: Pl
 export function RunningJourney({ units, today, runDays = [] }: { units: Units; today: string; runDays?: DayOfWeek[] }) {
   const auth = useAuth()
   const { state, actions } = useJourney(true)
-  const [detail, setDetail] = useState<Detail | null>(null)
+  const [loaded, setDetail] = useState<Detail | null>(null)
+  const detail = loaded?.owner === auth ? loaded : null
   const [replay, setReplay] = useState<{ chapter: PlanChapter; trigger: HTMLElement } | null>(null)
   const [manual, setManual] = useState(false)
+  const request = useRef(0)
+  useEffect(() => {
+    const requests = request
+    return () => { requests.current++ }
+  }, [auth])
 
-  const open = async (planId: string) => {
-    if (detail && detail.kind === 'ready' && detail.chapter.planId === planId) { setDetail(null); return }
-    setDetail({ kind: 'loading', planId })
+  const open = async (planId: string, reload = false) => {
+    const mine = ++request.current
+    if (!reload && detail && detail.kind === 'ready' && detail.chapter.planId === planId) { setDetail(null); return }
+    setDetail({ kind: 'loading', planId, owner: auth })
     try {
       const token = await auth.getToken()
       if (!token) throw new Error('Sign in again to open this plan.')
@@ -47,11 +54,13 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
       // A temporary activity-list failure must not hide their training history.
       const [chapter, runs] = await Promise.all([
         api.me.journey.chapter(token, planId),
-        api.me.activities(token).catch(() => [] as ActivitySummary[]),
+        api.me.activities(token).catch(() => null),
       ])
-      setDetail({ kind: 'ready', chapter, runs })
+      if (mine !== request.current) return
+      setDetail({ kind: 'ready', chapter, runs, owner: auth })
     } catch (reason) {
-      setDetail({ kind: 'error', planId, message: reason instanceof Error ? reason.message : 'This plan couldn’t open.' })
+      if (mine !== request.current) return
+      setDetail({ kind: 'error', planId, owner: auth, message: reason instanceof Error ? reason.message : 'This plan couldn’t open.' })
     }
   }
 
@@ -120,14 +129,19 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                 {opened?.kind === 'error' && <p className="field-error" role="alert">{opened.message}</p>}
                 {opened?.kind === 'ready' && (
                   <div className="journey-chapter-story">
-                    <TrainingStory story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />
+                    {opened.runs === null && (
+                      <div role="status">
+                        <p>Your recorded runs couldn’t load. You can still enter your result manually.</p>
+                        <button type="button" className="button" onClick={() => void open(opened.chapter.planId, true)}>Retry recorded runs</button>
+                      </div>
+                    )}
                     {opened.chapter.raceDate && opened.chapter.raceDate <= today && (
                       <RaceResultForm
                         key={opened.chapter.planId}
                         chapter={opened.chapter}
                         today={today}
                         units={units}
-                        runs={opened.runs}
+                        runs={opened.runs ?? undefined}
                         onLoadActivity={async id => {
                           const token = await auth.getToken()
                           if (!token) throw new Error('Sign in again to load this recording.')
@@ -146,6 +160,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                         }}
                       />
                     )}
+                    <TrainingStory story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />
                   </div>
                 )}
               </li>

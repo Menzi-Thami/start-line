@@ -112,6 +112,22 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
     />
   )
 
+  const resultForm = signedIn && chapter && journey && (stage === 'race-day' || stage === 'race-result-needed' || stage === 'race-recorded') && (
+    <div className="panel">
+      <RaceResultForm
+        key={chapter.planId}
+        chapter={chapter}
+        today={today}
+        units={units}
+        runs={runs}
+        onLoadActivity={onLoadActivity}
+        onSave={(body) => journey.actions.saveRaceResult(chapter.planId, body)}
+        onDelete={() => journey.actions.deleteRaceResult(chapter.planId)}
+        onCelebrate={raceAward ? (trigger) => setFilm({ kind: 'race', award: raceAward, trigger }) : undefined}
+      />
+    </div>
+  )
+
   return (
     <section className="journey-panel" aria-label="Your finish line">
       {film && (
@@ -146,6 +162,8 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
         </ul>
       </header>
 
+      {!result && resultForm}
+
       <div className="journey-grid">
         <div className="journey-main panel" ref={storyRef} tabIndex={-1}>
           <TrainingStory
@@ -174,21 +192,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
             </section>
           )}
 
-          {signedIn && chapter && journey && (stage === 'race-day' || stage === 'race-result-needed' || stage === 'race-recorded') && (
-            <div className="panel">
-              <RaceResultForm
-                key={chapter.planId}
-                chapter={chapter}
-                today={today}
-                units={units}
-                runs={runs}
-                onLoadActivity={onLoadActivity}
-                onSave={(body) => journey.actions.saveRaceResult(chapter.planId, body)}
-                onDelete={() => journey.actions.deleteRaceResult(chapter.planId)}
-                onCelebrate={raceAward ? (trigger) => setFilm({ kind: 'race', award: raceAward, trigger }) : undefined}
-              />
-            </div>
-          )}
+          {result && resultForm}
 
           {signedIn && journey && liveRecovery && (
             <div className="panel">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import { formatClock } from './journey-model'
 import { downloadCard, shareCard, type CardContent } from './share-card'
@@ -19,6 +19,7 @@ interface Props {
  * figures remain visibly distinct. The same trusted figures go into the downloadable share card.
  */
 export function TrainingStory({ story, units, raceResult, onReplay, onNext, nextLabel = 'Plan my next challenge' }: Props) {
+  const titleId = useId()
   const [notice, setNotice] = useState<string | null>(null)
   const isFinisher = raceResult?.outcome === 'Finished'
   const finishTime = isFinisher ? formatClock(raceResult?.finishTime) : null
@@ -29,6 +30,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
     raceName: story.raceName,
     stats: [
       ...(finishTime ? [{ value: finishTime, label: 'Race result time' }] : []),
+      ...(isFinisher && raceResult.distanceKm != null ? [{ value: formatDistance(raceResult.distanceKm, units), label: 'Race distance' }] : []),
       { value: `${story.confirmedRuns}/${story.scheduledRuns}`, label: 'Training runs confirmed' },
       { value: String(story.weeks), label: story.weeks === 1 ? 'Training week' : 'Training weeks' },
       story.recordedKm !== null
@@ -38,7 +40,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
     footer: 'EVERY FINISH IS A BEGINNING  ·  taperday.run',
   }
   const shareText = isFinisher
-    ? `I finished ${story.raceName}${finishTime ? ` in ${finishTime} recorded elapsed time` : ''}! My Taperday story: ${story.confirmedRuns} confirmed training runs over ${story.weeks} weeks. #Taperday`
+    ? `I finished ${story.raceName}${finishTime ? ` in ${finishTime}` : ''}! My Taperday story: ${story.confirmedRuns} confirmed training runs over ${story.weeks} weeks. #Taperday`
     : `My Taperday training story for ${story.raceName}: ${story.confirmedRuns} of ${story.scheduledRuns} training runs confirmed over ${story.weeks} weeks. #Taperday`
   const fileName = isFinisher ? 'taperday-race-finish' : 'taperday-training-story'
   const download = async () => {
@@ -57,10 +59,10 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
   const most = Math.max(1, ...(story.weekly ?? []).map(week => week.scheduledRuns))
 
   return (
-    <section className="training-story" aria-labelledby="training-story-title">
+    <section className="training-story" aria-labelledby={titleId}>
       <header className="training-story-hero">
         <div className="training-story-topline"><span className="plan-kicker">THE WORK BEHIND THE FINISH</span><span className="training-story-chapter">{story.earned ? 'CHAPTER COMPLETE' : 'YOUR CHAPTER'}</span></div>
-        <h3 id="training-story-title" className="training-story-title">{story.raceName}</h3>
+        <h3 id={titleId} className="training-story-title">{story.raceName}</h3>
         <div className="training-story-lead">
           <strong className="mono">{story.confirmedRuns}<span>/{story.scheduledRuns}</span></strong>
           <div className="training-story-lead-copy">
@@ -137,7 +139,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
         </div>
         <div className="journey-actions">
           <button type="button" className="button button-primary" onClick={() => void share()}>Share my story</button>
-          <button type="button" className="button" aria-label="Download card" onClick={() => void download()}>Save story card</button>
+          <button type="button" className="button" onClick={() => void download()}>Save story card</button>
         </div>
       </section>
       {story.source === 'device' && (

@@ -32,6 +32,8 @@ import type { DoneUpdate } from '../strength/strength-progress'
 import { FOCUS, PHASES, ZONES } from './copy'
 import { sessionKey, trainingKm } from './plan-math'
 import { PlanProgress } from './PlanProgress'
+import { FinishLine } from './FinishLine'
+import { finishLineSummary } from './finish-line-model'
 import { OutlookCard } from './OutlookCard'
 import { ProgressInsights } from './ProgressInsights'
 import { WeekList } from './WeekList'
@@ -221,6 +223,15 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   // A held Strava run completes its session on the calendar, the week and the progress bars while the runner hasn't
   // answered. Worked out by the API on each read, never stored, so it goes when the copy lapses.
   for (const session of plan.weeks.flatMap((w) => w.sessions)) if (completedViaStrava(session, coach)) effectiveDone.add(sessionKey(session))
+  // Explicit check-ins and device ticks count as confirmed; ephemeral Strava matches do not.
+  const confirmedDone = new Set(done)
+  for (const entry of entries.filter(entry => !entry.isAdditional)) {
+    const key = sessionKey({ date: entry.date, type: entry.sessionType })
+    if (entry.status === 'Skipped') confirmedDone.delete(key)
+    else if (entry.status === 'Done') confirmedDone.add(key)
+  }
+  const provisionalDone = new Set(plan.weeks.flatMap(week => week.sessions).filter(session => completedViaStrava(session, coach)).map(sessionKey))
+  const finishLine = finishLineSummary(plan, today, confirmedDone, provisionalDone)
   const additionalDates = entries.filter((c) => c.isAdditional && c.status !== 'Skipped').map((c) => c.date)
   const activityDates = [...runs?.filter(run => run.kind !== 'Other').map(run => run.localDate) ?? [], ...entries.filter(entry => entry.status !== 'Skipped').map(entry => entry.date)]
   const notes = plan.warnings.filter((w) => !(today >= plan.startDate && (w.code === 'foundation-first' || w.code === 'starts-later')))
@@ -430,6 +441,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </li>
       </ul>
 
+      {finishLine.visible && <FinishLine key={planKey} plan={plan} summary={finishLine} units={units} onNextPlan={onEditPlan} />}
       {onEditPlan && <button type="button" className="button button-quiet plan-edit-button" onClick={onEditPlan}>Edit plan</button>}
       {coach && <div ref={runLogRef} hidden={selectedDate !== null}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
       {coach && earlierEntries.length > 0 && <section aria-label="Earlier logged runs"><details className="disclosure"><summary>Earlier logged runs · {earlierEntries.length}</summary>{earlierEntries.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}</details></section>}

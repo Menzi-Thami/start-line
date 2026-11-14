@@ -2,6 +2,19 @@ import type { DayOfWeek, TrainingPlan } from '../../lib/types'
 import { addDays } from '../../lib/format'
 import type { Achievement, AchievementKind, Journey, MaintenanceSession, PlanChapter, RaceOutcome, RecoveryDay, RecoveryPlan } from './types'
 
+/**
+ * Treat account responses as untrusted at the browser boundary. A malformed/old API reply (including [] from
+ * a synthetic test server) must not crash Home or the plan when a new Journey feature is unavailable.
+ * The journey UI handles an error while the ordinary workout, runs and navigation remain usable.
+ */
+export function isJourneyPayload(value: unknown): value is Journey {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const journey = value as Partial<Journey>
+  return Array.isArray(journey.chapters)
+    && (journey.recovery == null || (typeof journey.recovery === 'object' && !Array.isArray(journey.recovery)))
+    && (journey.maintenance == null || (typeof journey.maintenance === 'object' && !Array.isArray(journey.maintenance)))
+}
+
 /** What the plan page's journey section is about right now. Never inferred from a date alone. */
 export type FinishStage =
   | 'training' // nothing to show yet: training is under way and not every run is confirmed
@@ -19,7 +32,7 @@ export function finishStage(chapter: PlanChapter, today: string): FinishStage {
 }
 
 export const chapterFor = (journey: Journey | null | undefined, planId: string | null | undefined) =>
-  planId ? journey?.chapters.find(chapter => chapter.planId === planId) ?? null : null
+  planId ? journey?.chapters?.find(chapter => chapter.planId === planId) ?? null : null
 
 export const achievement = (chapter: PlanChapter | null | undefined, kind: AchievementKind): Achievement | null =>
   chapter?.achievements.find(a => a.kind === kind) ?? null

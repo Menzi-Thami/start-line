@@ -20,6 +20,8 @@ export interface FilmProps {
   primaryLabel: string
   onPrimary: () => void
   onClose: () => void
+  /** Where focus goes afterwards. Needed in Safari, which doesn't focus a button when it's clicked. */
+  returnFocus?: () => HTMLElement | null | undefined
 }
 
 /**
@@ -28,12 +30,13 @@ export interface FilmProps {
  * moves in and stays in, Escape or Close leaves at any time, the page behind doesn't scroll, and focus goes back to
  * where it was. With reduced motion every beat is simply there, still.
  */
-export function FinishLineFilm({ variant, heading, lede, raceName, metrics, primaryLabel, onPrimary, onClose }: FilmProps) {
+export function FinishLineFilm({ variant, heading, lede, raceName, metrics, primaryLabel, onPrimary, onClose, returnFocus }: FilmProps) {
   const titleId = useId()
   const dialog = useRef<HTMLDivElement>(null)
   const primary = useRef<HTMLButtonElement>(null)
   const close = useRef(onClose)
-  useLayoutEffect(() => { close.current = onClose })
+  const back = useRef(returnFocus)
+  useLayoutEffect(() => { close.current = onClose; back.current = returnFocus })
 
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -59,7 +62,8 @@ export function FinishLineFilm({ variant, heading, lede, raceName, metrics, prim
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = overflow
-      previous?.focus({ preventScroll: true })
+      const target = back.current?.() ?? (previous && previous !== document.body ? previous : null)
+      target?.focus({ preventScroll: true })
     }
   }, [])
 

@@ -6,7 +6,7 @@ import { highlights, type StoryData } from './journey-story'
 interface Props {
   story: StoryData
   units: Units
-  onReplay?: () => void
+  onReplay?: (trigger: HTMLElement) => void
   onNext?: () => void
   nextLabel?: string
 }
@@ -107,7 +107,7 @@ export function TrainingStory({ story, units, onReplay, onNext, nextLabel = 'Pla
       <div className="journey-actions">
         <button type="button" className="button button-primary" onClick={() => void download()}>Download card</button>
         <button type="button" className="button" onClick={() => void share()}>Share</button>
-        {onReplay && <button type="button" className="button button-quiet" onClick={onReplay}>Replay finish line</button>}
+        {onReplay && <button type="button" className="button button-quiet" onClick={(event) => onReplay(event.currentTarget)}>Replay finish line</button>}
         {onNext && <button type="button" className="button button-quiet" onClick={onNext}>{nextLabel}</button>}
       </div>
       <p className="field-help" role="status" aria-live="polite">{notice}</p>

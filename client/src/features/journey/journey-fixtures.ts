@@ -22,6 +22,7 @@ export function recap(overrides: Partial<TrainingRecap> = {}): TrainingRecap {
     allConfirmed: true,
     trainingEnded: true,
     raceDatePassed: false,
+    swappedRuns: 0,
     ...overrides,
   }
 }

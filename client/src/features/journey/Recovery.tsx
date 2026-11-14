@@ -151,9 +151,9 @@ const KIND_WORDS: Record<RecoveryDay['kind'], string> = {
   Rest: 'Rest',
   Walk: 'Walk',
   Mobility: 'Mobility',
-  CrossTraining: 'Cross-train',
+  CrossTraining: 'Cross',
   EasyRun: 'Easy run',
-  SeekCare: 'Get checked',
+  SeekCare: 'Check',
   Paused: 'Paused',
 }
 
@@ -264,7 +264,7 @@ export function RecoveryDashboard({ recovery, today, onCheckIn, onChange, next, 
           </ol>
         </div>
       )}
-      <p className="field-help">{recovery.framing}</p>
+      <p className="field-help">{framingFor(recovery.distanceKm)} Every body is different, and more days are always fine.</p>
       {!compact && (
         <div className="journey-actions">
           {recovery.canComplete && <button type="button" className="button button-primary" disabled={!!busy} onClick={() => void run('complete', () => onChange({ action: 'Complete', expectedVersion: recovery.version }))}>I feel recovered</button>}

@@ -33,7 +33,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
   const auth = useAuth()
   const { state, actions } = useJourney(true)
   const [detail, setDetail] = useState<Detail | null>(null)
-  const [replay, setReplay] = useState<PlanChapter | null>(null)
+  const [replay, setReplay] = useState<{ chapter: PlanChapter; trigger: HTMLElement } | null>(null)
   const [manual, setManual] = useState(false)
 
   const open = async (planId: string) => {
@@ -66,9 +66,9 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
   return (
     <div className="running-journey">
       {replay && (
-        <FinishLineFilm variant="training" heading="YOU DID IT." lede="Every planned training run, confirmed." raceName={replay.raceName}
-          metrics={[{ value: String(replay.training.confirmedRuns), label: 'Training runs confirmed' }, { value: String(replay.training.weeks), label: 'Weeks' }]}
-          primaryLabel="Back to my journey" onPrimary={() => setReplay(null)} onClose={() => setReplay(null)} />
+        <FinishLineFilm variant="training" heading="YOU DID IT." lede="Every planned training run, confirmed." raceName={replay.chapter.raceName}
+          metrics={[{ value: String(replay.chapter.training.confirmedRuns), label: 'Training runs confirmed' }, { value: String(replay.chapter.training.weeks), label: 'Weeks' }]}
+          primaryLabel="Back to my journey" onPrimary={() => setReplay(null)} onClose={() => setReplay(null)} returnFocus={() => replay.trigger} />
       )}
       <p className="journey-lede">Every finish is a beginning.</p>
       {state.refreshFailed && <p className="field-help" role="status">Showing your journey as last loaded; it couldn’t refresh just now.</p>}
@@ -107,7 +107,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                   <button type="button" className="button" aria-expanded={!!opened && opened.kind === 'ready'} onClick={() => void open(chapter.planId)}>
                     {opened?.kind === 'ready' ? 'Close chapter' : 'View chapter'}
                   </button>
-                  {achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={() => setReplay(chapter)}>Replay finish line</button>}
+                  {achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ chapter, trigger: event.currentTarget })}>Replay finish line</button>}
                 </div>
                 {opened?.kind === 'loading' && <p className="field-help" role="status">Opening…</p>}
                 {opened?.kind === 'error' && <p className="field-error" role="alert">{opened.message}</p>}
@@ -120,7 +120,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
       {!isLiveRecovery(state.journey.recovery) && (
         manual
           ? <RecoveryOffer today={today} runDays={runDays} onStart={async (body) => { await actions.startRecovery(body); setManual(false) }} onDecline={() => setManual(false)} />
-          : <button type="button" className="link-button" onClick={() => setManual(true)}>Ran a race outside Taperday? Plan your recovery</button>
+          : <button type="button" className="link-button journey-link" onClick={() => setManual(true)}>Ran a race outside Taperday? Plan your recovery</button>
       )}
     </div>
   )

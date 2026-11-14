@@ -5,7 +5,7 @@ import type { TrainingPlan } from '../../lib/types'
 import type { finishLineSummary } from '../plan/finish-line-model'
 import { chapter, journeyOf, maintenance, PLAN_ID, raceResult, recap, recovery } from './journey-fixtures'
 import { JourneyPanel } from './JourneyPanel'
-import type { Journey } from './types'
+import type { Journey, RaceResult } from './types'
 import type { JourneyActions } from './useJourney'
 
 const plan = { race: { name: 'Hoka Half Marathon', date: '2026-11-15' }, startDate: '2026-08-24', weeks: [] } as unknown as TrainingPlan
@@ -82,14 +82,14 @@ describe('Finish Line on the plan', () => {
     await waitFor(() => expect(act.saveRaceResult).toHaveBeenCalledWith(PLAN_ID, expect.objectContaining({
       outcome: 'Finished', raceDate: '2026-11-15', finishTime: '01:52:10', distanceKm: 21.1, activityId: null,
     })))
-    expect(await screen.findByText('You finished Hoka Half Marathon')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Finished in 1:52:10' })).toBeInTheDocument()
   })
 
   it('keeps what was typed when a save fails, and does not save twice on a double click', async () => {
     const user = userEvent.setup()
     let fail: (reason: Error) => void = () => undefined
     const act = show(journeyOf([chapter({ training: recap({ raceDatePassed: true }) })]), '2026-11-16', actions({
-      saveRaceResult: vi.fn(() => new Promise((_, reject) => { fail = reject })),
+      saveRaceResult: vi.fn(() => new Promise<RaceResult>((_, reject) => { fail = reject })),
     }))
     await user.click(screen.getByRole('button', { name: 'I didn’t finish' }))
     await user.clear(screen.getByLabelText('Distance covered (km, optional)'))

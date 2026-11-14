@@ -44,7 +44,7 @@ export function NextChapter({ runDays, onMaintenance, onNewRace, onMoreRecovery 
       </div>
       {open === 'maintenance' && <MaintenanceForm runDays={runDays} onStart={onMaintenance} onCancel={() => setOpen(null)} />}
       {!notYet
-        ? <button type="button" className="link-button" onClick={() => setNotYet(true)}>Not ready to choose yet</button>
+        ? <button type="button" className="link-button journey-link" onClick={() => setNotYet(true)}>Not ready to choose yet</button>
         : <p className="field-help" role="status">That’s fine. These choices stay here until you want them.</p>}
     </section>
   )

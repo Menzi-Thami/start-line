@@ -20,7 +20,7 @@ const LOCAL_SEEN = (plan: TrainingPlan) => `taperday:finish-line:v1:${plan.race.
 const localSeen = (plan: TrainingPlan) => { try { return localStorage.getItem(LOCAL_SEEN(plan)) === 'seen' } catch { return true } }
 const rememberLocal = (plan: TrainingPlan) => { try { localStorage.setItem(LOCAL_SEEN(plan), 'seen') } catch { /* It may play once more. */ } }
 
-type Film = { kind: 'training' | 'race'; award: Achievement | null }
+type Film = { kind: 'training' | 'race'; award: Achievement | null; trigger?: HTMLElement }
 
 interface Props {
   plan: TrainingPlan
@@ -125,6 +125,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
           primaryLabel={film.kind === 'race' ? 'Review my race' : 'See my training story'}
           onPrimary={toStory}
           onClose={closeFilm}
+          returnFocus={() => film.trigger ?? storyRef.current}
         />
       )}
 
@@ -145,11 +146,11 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
       </header>
 
       <div className="journey-grid">
-        <div className="journey-main panel" ref={storyRef}>
+        <div className="journey-main panel" ref={storyRef} tabIndex={-1}>
           <TrainingStory
             story={story}
             units={units}
-            onReplay={earned ? () => setFilm({ kind: 'training', award: trainingAward }) : undefined}
+            onReplay={earned ? (trigger) => setFilm({ kind: 'training', award: trainingAward, trigger }) : undefined}
           />
         </div>
 
@@ -181,7 +182,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
                 runs={runs}
                 onSave={(body) => journey.actions.saveRaceResult(chapter.planId, body)}
                 onDelete={() => journey.actions.deleteRaceResult(chapter.planId)}
-                onCelebrate={raceAward ? () => setFilm({ kind: 'race', award: raceAward }) : undefined}
+                onCelebrate={raceAward ? (trigger) => setFilm({ kind: 'race', award: raceAward, trigger }) : undefined}
               />
             </div>
           )}

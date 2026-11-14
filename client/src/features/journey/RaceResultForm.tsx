@@ -12,7 +12,7 @@ interface Props {
   runs?: readonly ActivitySummary[]
   onSave: (body: SaveRaceResult) => Promise<RaceResult>
   onDelete: () => Promise<void>
-  onCelebrate?: () => void
+  onCelebrate?: (trigger: HTMLElement) => void
 }
 
 type Draft = { outcome: RaceOutcome; hours: string; minutes: string; seconds: string; distance: string; date: string; activityId: string; note: string }
@@ -122,7 +122,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onSave, onDel
       <section className="race-result is-saved" aria-labelledby={`${id}-saved`}>
         <p className="plan-kicker">Race result · {formatDate(saved.raceDate, 'dayMonth')}</p>
         <h3 id={`${id}-saved`} className="race-result-title">
-          {saved.outcome === 'Finished' ? `You finished ${chapter.raceName}` : saved.outcome === 'DidNotFinish' ? 'You started, and that took courage' : 'You didn’t start this one'}
+          {saved.outcome === 'Finished' ? (formatClock(saved.finishTime) ? `Finished in ${formatClock(saved.finishTime)}` : 'Finished') : saved.outcome === 'DidNotFinish' ? 'You started, and that took courage' : 'You didn’t start this one'}
         </h3>
         <dl className="race-result-facts">
           <div><dt>Result</dt><dd>{OUTCOME_WORDS[saved.outcome]}</dd></div>
@@ -135,7 +135,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onSave, onDel
         {saved.outcome === 'DidNotStart' && <p>Not starting is sometimes the right call. Your training still happened, and it still counts.</p>}
         {saved.note && <p className="race-result-note">“{saved.note}”</p>}
         <div className="journey-actions">
-          {saved.outcome === 'Finished' && onCelebrate && <button type="button" className="button" onClick={onCelebrate}>Replay race celebration</button>}
+          {saved.outcome === 'Finished' && onCelebrate && <button type="button" className="button" onClick={(event) => onCelebrate(event.currentTarget)}>Replay race celebration</button>}
           <button type="button" className="button button-quiet" onClick={() => { setDraft(draftFrom({ ...chapter, raceResult: saved }, today)); setMode('form') }}>Edit result</button>
           {!confirmUndo && <button type="button" className="button button-quiet" onClick={() => setConfirmUndo(true)}>Undo</button>}
         </div>

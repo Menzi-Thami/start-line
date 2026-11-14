@@ -127,3 +127,27 @@ the rest rest days. Never pace, intervals, tempo, long runs or tests. `gated` ma
 /Sun), 25–40 minutes, and with 3+ days one longer easy run of 40–60 minutes on the last of them. Optional strength (20–30
 minutes) on one non-run day if asked. All optional, no race date, no hard sessions. Served as the current week plus the
 next three.
+
+## As built (differences from the proposal above)
+
+- `TrainingRecapDto.swappedRuns`: runs swapped for an easy run are answered but not confirmed, so the counts add up.
+- CORS allows `PATCH` (needed by `/recovery/{id}` from the app's own origin).
+- `readiness` is `RecoveryReadinessState`; pauses are `RecoveryPauseDto`; maintenance weeks `MaintenanceWeekDto`.
+- Times are .NET TimeSpans (`hh:mm:ss`, `d.hh:mm:ss` past a day); `versusGoal` is `±hh:mm:ss` in total hours.
+- `version` is the row version in base64. Stale `expectedVersion` → 409 `race_result_changed` / `recovery_changed`.
+- `optional` is false on race day and on seek-care days (advice, not exercise). `framing` is a short range ("about 7–14
+  days"); the app words it as a sentence.
+- `journey.recovery` is the open recovery, else one that finished in the last 30 days.
+- A plan whose catalogue race no longer exists is left out of `chapters` (its detail route is 404).
+- Lifecycle precedence: recovery (Recovering / Recovered) → race result (RaceCompleted / RaceNotCompleted) → Archived →
+  race date passed (RacePending) → every run confirmed (TrainingComplete) → training ended (RacePending) → Active.
+- Errors: 409 `race_result_required` (recovery for a plan with no result, or a DNS), `recovery_active` (another recovery
+  open), `recovery_closed` (changing a finished recovery other than Restart; repeated Complete/End is idempotent),
+  `recovery_not_ready` (Complete before a "Good to go" check-in).
+- Restart begins again from today: the days since the race show as a pause, extra days reset, check-ins kept.
+- Persistence: migration `20261114160249_AddRunningJourney`, additive only: `RaceResults`, `Achievements`,
+  `RecoveryPlans` (check-ins and pauses as JSON columns), `MaintenancePlans`. Unique: one result per plan, one award of
+  each kind per plan, one open recovery per runner, one recovery per plan, one active maintenance per runner. Race
+  results and awards go with their plan; recovery and maintenance with the runner (account deletion cascades).
+- Removing a plan that has check-ins, a race result, awards or a recovery archives it instead of deleting it. The
+  personal-data export includes the journey.

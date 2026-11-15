@@ -9,6 +9,7 @@ interface Props {
   today: string
   currentPlanId: string | null
   onOpenPlan: () => void
+  onOpenJourney?: () => void
   onNewRace: () => void
 }
 
@@ -16,7 +17,7 @@ interface Props {
  * Home's journey card, when there is one: recovery (day count, today's idea, a one-tap check-in), the next chapter,
  * easy-running maintenance, or the race result still to add. Otherwise nothing, and Home is exactly as before.
  */
-export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onNewRace }: Props) {
+export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onOpenJourney, onNewRace }: Props) {
   if (journey.state.kind !== 'ready') return null
   const { recovery, maintenance } = journey.state.journey
   const chapter = chapterFor(journey.state.journey, currentPlanId)
@@ -28,7 +29,7 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onN
         <RecoveryDashboard recovery={recovery} today={today} compact
           onCheckIn={(feeling, redFlags) => actions.checkIn(recovery.id, { feeling, redFlags, date: today })}
           onChange={(change) => actions.changeRecovery(recovery.id, change)} />
-        <button type="button" className="button" onClick={onOpenPlan}>Open my recovery</button>
+        <button type="button" className="button" onClick={onOpenJourney ?? onOpenPlan}>Open my recovery</button>
       </section>
     )
   }
@@ -40,13 +41,13 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onN
       </section>
     )
   }
-  if (recovery?.status === 'Completed' && (!recovery.planId || recovery.planId === currentPlanId)) {
+  if (recovery?.status === 'Completed' && (!currentPlanId || !recovery.planId || recovery.planId === currentPlanId)) {
     return (
       <section className="panel home-card journey-home" aria-labelledby="journey-home-next">
         <p className="plan-kicker">Recovered</p>
         <h2 id="journey-home-next" className="home-card-heading">What’s next?</h2>
         <p>Keep running comfortably, train for another race, or take more time. Nothing changes until you choose.</p>
-        <button type="button" className="button button-primary" onClick={onOpenPlan}>Choose my next chapter</button>
+        <button type="button" className="button button-primary" onClick={onOpenJourney ?? onOpenPlan}>Choose my next chapter</button>
       </section>
     )
   }

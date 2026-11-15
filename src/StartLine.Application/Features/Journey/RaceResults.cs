@@ -29,10 +29,11 @@ internal sealed class SaveRaceResultValidator : AbstractValidator<SaveRaceResult
             .When(c => c.Result?.DistanceKm is not null);
         RuleFor(c => c.Result.Note).MaximumLength(RaceResult.MaxNoteLength).When(c => c.Result is not null);
         RuleFor(c => c.Result.ExpectedVersion).MaximumLength(64).When(c => c.Result is not null);
+        RuleFor(c => c.Result.TimeKind).IsInEnum().When(c => c.Result?.TimeKind is not null);
     }
 }
 
-internal sealed class SaveRaceResultHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time)
+internal sealed class SaveRaceResultHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, RaceHistoryReader history, TimeProvider time)
     : IRequestHandler<SaveRaceResultCommand, RaceResultDto>
 {
     public async Task<RaceResultDto> Handle(SaveRaceResultCommand request, CancellationToken cancellationToken)
@@ -52,7 +53,11 @@ internal sealed class SaveRaceResultHandler(IApplicationDbContext db, CurrentRun
 
         var result = await db.RaceResults.SingleOrDefaultAsync(x => x.SavedPlanId == saved.Id, cancellationToken);
         RequireVersion(r.ExpectedVersion, result);
+        var timeKind = r.TimeKind ?? (result is not null && result.FinishTime == answers.FinishTime ? result.TimeKind : RaceTimeKind.Unspecified);
         result = Apply(result, runner.Id, saved.Id, answers, plan.StartDate, today);
+        var eventName = history.View(result, saved).EventName;
+        result.Identify(eventName, plan.RaceDistance.Kilometres, null, timeKind);
+        await history.EnsureUniqueAsync(result, cancellationToken);
         try
         {
             await db.SaveChangesAsync(cancellationToken);
@@ -66,8 +71,10 @@ internal sealed class SaveRaceResultHandler(IApplicationDbContext db, CurrentRun
             // Saved twice at once (a retry, a double tap, a second device) with no version to hold to: one result, the
             // latest answer. If this fails too, it wasn't a clash.
             db.RaceResults.Entry(result).State = EntityState.Detached;
+            await history.EnsureUniqueAsync(result, cancellationToken);
             var latest = await db.RaceResults.SingleOrDefaultAsync(x => x.SavedPlanId == saved.Id, cancellationToken);
             result = Apply(latest, runner.Id, saved.Id, answers, plan.StartDate, today);
+            result.Identify(eventName, plan.RaceDistance.Kilometres, null, timeKind);
             await db.SaveChangesAsync(cancellationToken);
         }
 
@@ -107,8 +114,12 @@ internal sealed class DeleteRaceResultHandler(IApplicationDbContext db, CurrentR
     {
         var runner = await current.FindAsync(cancellationToken);
         var saved = await OwnJourney.PlanAsync(db, runner, request.PlanId, cancellationToken);
-        await db.RaceResults.Where(r => r.SavedPlanId == saved.Id).ExecuteDeleteAsync(cancellationToken);
-        await db.Achievements.Where(a => a.SavedPlanId == saved.Id && a.Kind == AchievementKind.RaceFinished).ExecuteDeleteAsync(cancellationToken);
+        var result = await db.RaceResults.SingleOrDefaultAsync(r => r.SavedPlanId == saved.Id, cancellationToken);
+        var awards = await db.Achievements.Where(a => a.SavedPlanId == saved.Id && a.Kind == AchievementKind.RaceFinished).ToListAsync(cancellationToken);
+        if (result is not null) db.RaceResults.Remove(result);
+        db.Achievements.RemoveRange(awards);
+        try { await db.SaveChangesAsync(cancellationToken); }
+        catch (DbUpdateConcurrencyException) { throw new ConflictException("race_result_changed", "Your race result changed. Load it again before removing it."); }
         return true;
     }
 }
@@ -118,6 +129,7 @@ internal static class RaceAchievements
 {
     public static async Task FollowAsync(IApplicationDbContext db, Guid runnerId, RaceResult result, DateTimeOffset now, CancellationToken cancellationToken)
     {
+        if (result.SavedPlanId is not { } planId) return;
         if (result.Outcome != RaceOutcome.Finished)
         {
             await db.Achievements.Where(a => a.SavedPlanId == result.SavedPlanId && a.Kind == AchievementKind.RaceFinished).ExecuteDeleteAsync(cancellationToken);
@@ -131,7 +143,7 @@ internal static class RaceAchievements
             return;
         }
 
-        var award = Achievement.Award(runnerId, result.SavedPlanId, AchievementKind.RaceFinished, result.RaceDate, now);
+        var award = Achievement.Award(runnerId, planId, AchievementKind.RaceFinished, result.RaceDate, now);
         db.Achievements.Add(award);
         try
         {

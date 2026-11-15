@@ -5,7 +5,8 @@ using StartLine.Domain.Plans;
 namespace StartLine.Application.Features.Journey;
 
 /// <summary>The runner's journey: every plan as a chapter (current first), the recovery going on, and easy running.</summary>
-public sealed record JourneyDto(IReadOnlyList<PlanChapterDto> Chapters, RecoveryPlanDto? Recovery, MaintenancePlanDto? Maintenance);
+public sealed record JourneyDto(IReadOnlyList<PlanChapterDto> Chapters, RecoveryPlanDto? Recovery, MaintenancePlanDto? Maintenance,
+    bool HasMoreChapters = false, int Page = 0);
 
 /// <param name="Weeks">Week by week, only on the chapter's own route.</param>
 public sealed record PlanChapterDto(
@@ -22,7 +23,8 @@ public sealed record PlanChapterDto(
     IReadOnlyList<AchievementDto> Achievements,
     TimeSpan GoalTime,
     IReadOnlyList<ChapterWeekDto>? Weeks,
-    bool DetailsUnavailable = false);
+    bool DetailsUnavailable = false,
+    string? Version = null);
 
 /// <summary>
 /// The plan's training, truthfully. Only the runner's own "Done" confirms a run. <c>RecordedKm</c> is the runner's own
@@ -76,12 +78,13 @@ public sealed record SaveRaceResultRequest(
     double? DistanceKm = null,
     Guid? ActivityId = null,
     string? Note = null,
-    string? ExpectedVersion = null);
+    string? ExpectedVersion = null,
+    RaceTimeKind? TimeKind = null);
 
 /// <param name="VersusGoal">The finish time against the plan's goal, "-hh:mm:ss" faster or "+hh:mm:ss" slower.</param>
 public sealed record RaceResultDto(
     Guid Id,
-    Guid PlanId,
+    Guid? PlanId,
     RaceOutcome Outcome,
     DateOnly RaceDate,
     TimeSpan? FinishTime,
@@ -92,13 +95,18 @@ public sealed record RaceResultDto(
     string? VersusGoal,
     string Version,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt)
+    DateTimeOffset UpdatedAt,
+    RaceTimeKind TimeKind = RaceTimeKind.Unspecified,
+    string? EventName = null,
+    double? EventDistanceKm = null,
+    MarathonMajor? Major = null)
 {
     public static RaceResultDto From(RaceResult r, TimeSpan? goal)
     {
         ArgumentNullException.ThrowIfNull(r);
         return new(r.Id, r.SavedPlanId, r.Outcome, r.RaceDate, r.FinishTime, r.DistanceKm, r.ActivityId, r.Note, goal,
-            r.VersusGoal(goal) is { } versus ? Difference(versus) : null, JourneyVersion.Of(r.Version), r.CreatedAt, r.UpdatedAt);
+            r.VersusGoal(goal) is { } versus ? Difference(versus) : null, JourneyVersion.Of(r.Version), r.CreatedAt, r.UpdatedAt,
+            r.TimeKind, string.IsNullOrEmpty(r.EventName) ? null : r.EventName, r.EventDistanceKm, r.Major);
     }
 
     /// <summary>"+01:02:03" or "-00:04:05": total hours, so a 30-hour difference stays readable.</summary>

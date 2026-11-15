@@ -14,7 +14,7 @@ import type {
 } from './types'
 
 /** Every open screen reloads its journey when another one changes it (Home and the plan can both show recovery). */
-const CHANGED = 'taperday:journey-changed'
+export const JOURNEY_CHANGED = 'taperday:journey-changed'
 
 export type JourneyState =
   | { kind: 'off' }
@@ -24,6 +24,7 @@ export type JourneyState =
 
 export interface JourneyActions {
   refresh: () => void
+  loadMore?: () => Promise<void>
   celebrated: (achievementId: string) => Promise<void>
   saveRaceResult: (planId: string, body: SaveRaceResult) => Promise<RaceResult>
   deleteRaceResult: (planId: string) => Promise<void>
@@ -45,14 +46,18 @@ export function useJourney(enabled: boolean): { state: JourneyState; actions: Jo
   const state: JourneyState = loaded.owner === auth ? loaded : { kind: 'loading' }
   const sequence = useRef(0)
   const owner = useRef(0)
+  const pages = useRef(1)
 
   const load = useCallback(() => {
     const mine = ++sequence.current
     auth.getToken()
-      .then(token => (token ? api.me.journey.get(token) : Promise.reject(new Error('Sign in again to see your running journey.'))))
-      .then(journey => {
+      .then(token => (token ? Promise.all(Array.from({ length: pages.current }, (_, page) => api.me.journey.get(token, page))) : Promise.reject(new Error('Sign in again to see your running journey.'))))
+      .then(replies => {
         if (mine !== sequence.current) return
-        if (!isJourneyPayload(journey)) throw new Error('Your running journey returned an unexpected response. Try again.')
+        const first = replies[0]
+        if (!first || !replies.every(isJourneyPayload)) throw new Error('Your running journey returned an unexpected response. Try again.')
+        const journey = { ...first, chapters: [...new Map(replies.flatMap(page => page.chapters).map(chapter => [chapter.planId, chapter])).values()],
+          page: replies.at(-1)?.page ?? 0, hasMoreChapters: replies.at(-1)?.hasMoreChapters ?? false }
         setState({ kind: 'ready', journey, refreshFailed: false, owner: auth })
       })
       .catch((error: unknown) => {
@@ -66,10 +71,11 @@ export function useJourney(enabled: boolean): { state: JourneyState; actions: Jo
     if (!enabled) return
     const requests = sequence
     const identity = owner
+    pages.current = 1
     load()
-    window.addEventListener(CHANGED, load)
+    window.addEventListener(JOURNEY_CHANGED, load)
     return () => {
-      window.removeEventListener(CHANGED, load)
+      window.removeEventListener(JOURNEY_CHANGED, load)
       // An answer arriving after this screen has gone is dropped.
       requests.current++
       identity.current++
@@ -87,12 +93,26 @@ export function useJourney(enabled: boolean): { state: JourneyState; actions: Jo
     // earlier reads; achievements and lifecycle are still refreshed from the server, never invented here.
     sequence.current++
     if (apply) setState(previous => previous.owner === auth && previous.kind === 'ready' ? { ...previous, journey: apply(previous.journey, result) } : previous)
-    window.dispatchEvent(new Event(CHANGED))
+    window.dispatchEvent(new Event(JOURNEY_CHANGED))
     return result
   }, [auth])
 
   const actions: JourneyActions = {
     refresh: load,
+    loadMore: async () => {
+      const mine = ++sequence.current
+      const token = await auth.getToken()
+      if (mine !== sequence.current) return
+      if (!token) throw new Error('Sign in again to load older chapters.')
+      const journey = await api.me.journey.get(token, pages.current)
+      if (mine !== sequence.current) return
+      if (!isJourneyPayload(journey)) throw new Error('Older chapters couldn’t load. Try again.')
+      pages.current++
+      setState(previous => previous.owner === auth && previous.kind === 'ready' ? { ...previous,
+        journey: { ...previous.journey, chapters: [...new Map([...previous.journey.chapters, ...journey.chapters].map(chapter => [chapter.planId, chapter])).values()],
+          page: journey.page, hasMoreChapters: journey.hasMoreChapters },
+      } : previous)
+    },
     celebrated: async (id) => {
       // Marked without a reload: the film has already been seen, and a failure here only means it may play once more.
       const token = await auth.getToken()

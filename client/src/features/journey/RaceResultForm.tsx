@@ -3,10 +3,12 @@ import { formatDate, formatDistance, formatDuration, toTimeSpan, type Units } fr
 import type { Activity, ActivitySummary } from '../../lib/types'
 import { raceMatches } from './race-match'
 import { clockSeconds, formatClock, OUTCOME_WORDS, versusGoalWords } from './journey-model'
-import type { PlanChapter, RaceOutcome, RaceResult, SaveRaceResult } from './types'
+import type { PlanChapter, RaceOutcome, RaceResult, RaceTimeKind, SaveRaceResult } from './types'
+
+export type RaceResultContext = Pick<PlanChapter, 'raceName' | 'raceDate' | 'startDate' | 'distanceKm' | 'raceResult'>
 
 interface Props {
-  chapter: PlanChapter
+  chapter: RaceResultContext
   today: string
   units: Units
   /** Recorded runs around race day, to link one if the runner wants. Never picked for them. */
@@ -16,11 +18,12 @@ interface Props {
   onSave: (body: SaveRaceResult) => Promise<RaceResult>
   onDelete: () => Promise<void>
   onCelebrate?: (trigger: HTMLElement) => void
+  startEditing?: boolean
 }
 
-type Draft = { outcome: RaceOutcome; hours: string; minutes: string; seconds: string; distance: string; date: string; activityId: string; note: string; expectedVersion: string | null }
+type Draft = { outcome: RaceOutcome; hours: string; minutes: string; seconds: string; distance: string; date: string; activityId: string; note: string; expectedVersion: string | null; timeKind: RaceTimeKind }
 
-const draftFrom = (chapter: PlanChapter, today: string, outcome: RaceOutcome = 'Finished'): Draft => {
+const draftFrom = (chapter: RaceResultContext, today: string, outcome: RaceOutcome = 'Finished'): Draft => {
   const result = chapter.raceResult
   const total = clockSeconds(result?.finishTime) ?? null
   const raceDate = chapter.raceDate && chapter.raceDate <= today ? chapter.raceDate : today
@@ -34,6 +37,7 @@ const draftFrom = (chapter: PlanChapter, today: string, outcome: RaceOutcome = '
     activityId: result?.activityId ?? '',
     note: result?.note ?? '',
     expectedVersion: result?.version ?? null,
+    timeKind: result?.timeKind ?? 'Unspecified',
   }
 }
 
@@ -43,14 +47,14 @@ const draftFrom = (chapter: PlanChapter, today: string, outcome: RaceOutcome = '
  * A synced recording can be proposed with one tap to confirm, but never marks a runner as a finisher without consent.
  * Saving can be edited or undone, and a failed save keeps everything typed.
  */
-export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivity, onSave, onDelete, onCelebrate }: Props) {
+export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivity, onSave, onDelete, onCelebrate, startEditing = false }: Props) {
   const id = useId()
   // What this form last saved or removed, until the reloaded journey brings the server's own copy.
   // It's dropped as soon as the server's copy changes, so a reload always wins.
   const serverVersion = chapter.raceResult?.version ?? null
   const [local, setLocal] = useState<{ result: RaceResult | null; over: string | null } | null>(null)
   const saved = local && local.over === serverVersion ? local.result : chapter.raceResult
-  const [mode, setMode] = useState<'ask' | 'form' | 'later' | 'saved'>(saved ? 'saved' : 'ask')
+  const [mode, setMode] = useState<'ask' | 'form' | 'later' | 'saved'>(startEditing ? 'form' : saved ? 'saved' : 'ask')
   const [draft, setDraft] = useState<Draft>(() => draftFrom(chapter, today))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -94,6 +98,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
         minutes: String(Math.floor((seconds % 3600) / 60)),
         seconds: String(seconds % 60),
         distance: String(activity.distanceKm),
+        timeKind: 'RecordedElapsed' as const,
       }
       // Keep the verified numbers if saving fails, so retrying doesn't require retyping them.
       setDraft(next)
@@ -110,6 +115,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
         activityId: activity.id,
         note: null,
         expectedVersion: next.expectedVersion,
+        timeKind: 'RecordedElapsed',
       })
       setLocal({ result, over: serverVersion })
       setMode('saved')
@@ -152,6 +158,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
         outcome: draft.outcome,
         raceDate: draft.date,
         finishTime: draft.outcome === 'Finished' && anyTime ? toTimeSpan(total) : null,
+        timeKind: draft.timeKind,
         distanceKm: draft.outcome === 'DidNotStart' ? null : distance,
         activityId: draft.outcome === 'DidNotStart' || !draft.activityId ? null : draft.activityId,
         note: draft.note.trim() || null,
@@ -193,7 +200,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
         </h3>
         <dl className="race-result-facts">
           <div><dt>Result</dt><dd>{OUTCOME_WORDS[saved.outcome]}</dd></div>
-          {clock && <div><dt>Finish time</dt><dd className="mono">{clock}</dd></div>}
+          {clock && <div><dt>{saved.timeKind === 'OfficialChip' ? 'Official chip time' : saved.timeKind === 'RecordedElapsed' ? 'Recording elapsed time' : 'Finish time'}</dt><dd className="mono">{clock}</dd></div>}
           {saved.distanceKm != null && <div><dt>{saved.outcome === 'DidNotFinish' ? 'Distance covered' : 'Distance'}</dt><dd className="mono">{formatDistance(saved.distanceKm, units)}</dd></div>}
           {saved.activityId && <div><dt>Recording</dt><dd>Linked run</dd></div>}
         </dl>
@@ -291,12 +298,22 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
       {draft.outcome === 'Finished' && (
         <fieldset className="race-result-time" disabled={busy}>
           <legend className="field-label">Finish time <span className="field-help">(optional)</span></legend>
-          <label><span className="visually-hidden">Hours</span><input className="input mono" inputMode="numeric" aria-label="Hours" placeholder="h" value={draft.hours} onChange={e => setDraft({ ...draft, hours: e.target.value.replace(/\D/g, '').slice(0, 2) })} /></label>
+          <label><span className="visually-hidden">Hours</span><input className="input mono" inputMode="numeric" aria-label="Hours" placeholder="h" value={draft.hours} onChange={e => setDraft({ ...draft, hours: e.target.value.replace(/\D/g, '').slice(0, 2), timeKind: draft.timeKind === 'RecordedElapsed' ? 'Unspecified' : draft.timeKind })} /></label>
           <span aria-hidden="true">:</span>
-          <label><span className="visually-hidden">Minutes</span><input className="input mono" inputMode="numeric" aria-label="Minutes" placeholder="mm" value={draft.minutes} onChange={e => setDraft({ ...draft, minutes: e.target.value.replace(/\D/g, '').slice(0, 2) })} /></label>
+          <label><span className="visually-hidden">Minutes</span><input className="input mono" inputMode="numeric" aria-label="Minutes" placeholder="mm" value={draft.minutes} onChange={e => setDraft({ ...draft, minutes: e.target.value.replace(/\D/g, '').slice(0, 2), timeKind: draft.timeKind === 'RecordedElapsed' ? 'Unspecified' : draft.timeKind })} /></label>
           <span aria-hidden="true">:</span>
-          <label><span className="visually-hidden">Seconds</span><input className="input mono" inputMode="numeric" aria-label="Seconds" placeholder="ss" value={draft.seconds} onChange={e => setDraft({ ...draft, seconds: e.target.value.replace(/\D/g, '').slice(0, 2) })} /></label>
+          <label><span className="visually-hidden">Seconds</span><input className="input mono" inputMode="numeric" aria-label="Seconds" placeholder="ss" value={draft.seconds} onChange={e => setDraft({ ...draft, seconds: e.target.value.replace(/\D/g, '').slice(0, 2), timeKind: draft.timeKind === 'RecordedElapsed' ? 'Unspecified' : draft.timeKind })} /></label>
         </fieldset>
+      )}
+      {draft.outcome === 'Finished' && (
+        <label className="field" htmlFor={`${id}-time-source`}>
+          <span className="field-label" id={`${id}-time-source-label`}>Time source</span>
+          <select id={`${id}-time-source`} aria-labelledby={`${id}-time-source-label`} className="input" disabled={busy} value={draft.timeKind} onChange={e => setDraft({ ...draft, timeKind: e.target.value as RaceTimeKind })}>
+            <option value="Unspecified">Not specified</option>
+            <option value="OfficialChip">Official chip time</option>
+            <option value="RecordedElapsed">Recording elapsed time</option>
+          </select>
+        </label>
       )}
       {draft.outcome !== 'DidNotStart' && (
         <label className="field" htmlFor={`${id}-distance`}>

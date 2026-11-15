@@ -54,9 +54,6 @@ public sealed class SavedPlan
     /// <summary>One plan at a time: Overview, run matching and the dashboard all have a single answer.</summary>
     public const int MaxActivePerRunner = 1;
 
-    /// <summary>Current plus past plans. A runner past this deletes an old past plan to make room.</summary>
-    public const int MaxKeptPerRunner = 50;
-
     private SavedPlan()
     {
     }

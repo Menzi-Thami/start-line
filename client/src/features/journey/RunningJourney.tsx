@@ -11,6 +11,7 @@ import { RaceResultForm } from './RaceResultForm'
 import { TrainingStory } from './TrainingStory'
 import type { JourneyLifecycle, PlanChapter } from './types'
 import { useJourney } from './useJourney'
+import { ArchiveChapter } from './ArchiveChapter'
 import './journey.css'
 
 const LIFECYCLE_WORDS: Record<JourneyLifecycle, string> = {
@@ -30,7 +31,7 @@ type Detail = { owner: Auth } & ({ kind: 'loading'; planId: string } | { kind: '
  * The runner's running journey: every plan they've finished or moved on from, newest first, with its training story,
  * race result and achievements. Account-backed, so it's the same on every device and survives building a new plan.
  */
-export function RunningJourney({ units, today, runDays = [] }: { units: Units; today: string; runDays?: DayOfWeek[] }) {
+export function RunningJourney({ units, today, runDays = [], onArchived }: { units: Units; today: string; runDays?: DayOfWeek[]; onArchived?: () => void }) {
   const auth = useAuth()
   const { state, actions } = useJourney(true)
   const [loaded, setDetail] = useState<Detail | null>(null)
@@ -40,6 +41,8 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
   const [offerPlan, setOfferPlan] = useState<string | null>(null)
   const journeyRef = useRef<HTMLDivElement>(null)
   const [manual, setManual] = useState(false)
+  const [paging, setPaging] = useState(false)
+  const [pageError, setPageError] = useState<string | null>(null)
   const request = useRef(0)
   useEffect(() => {
     const requests = request
@@ -145,6 +148,9 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                   </button>
                   {!chapter.detailsUnavailable && achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ owner: auth, kind: 'training', chapter, trigger: event.currentTarget })}>Replay finish line</button>}
                 </div>
+                {chapter.status === 'Active' && chapter.version && onArchived && (
+                  <ArchiveChapter planId={chapter.planId} version={chapter.version} onArchived={onArchived} />
+                )}
                 {opened?.kind === 'loading' && <p className="field-help" role="status">Opening…</p>}
                 {opened?.kind === 'error' && <p className="field-error" role="alert">{opened.message}</p>}
                 {opened?.kind === 'ready' && (
@@ -208,6 +214,12 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
           })}
         </ol>
       )}
+      {state.journey.hasMoreChapters && actions.loadMore && <button type="button" className="button" disabled={paging} onClick={async () => {
+        setPaging(true); setPageError(null)
+        try { await actions.loadMore?.() } catch (reason) { setPageError(reason instanceof Error ? reason.message : 'Older chapters couldn’t load. Try again.') }
+        finally { setPaging(false) }
+      }}>{paging ? 'Loading older chapters…' : 'Load older chapters'}</button>}
+      {pageError && <p className="field-error" role="alert">{pageError}</p>}
       {!isLiveRecovery(state.journey.recovery) && (
         manual
           ? <RecoveryOffer today={today} runDays={runDays} onStart={async (body) => { await actions.startRecovery(body); setManual(false) }} onDecline={() => setManual(false)} />

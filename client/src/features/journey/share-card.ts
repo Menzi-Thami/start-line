@@ -7,6 +7,7 @@ export interface CardContent {
   raceName: string
   stats: { value: string; label: string }[]
   footer: string
+  medals?: { label: string; earned: boolean }[]
 }
 
 const WIDTH = 1080
@@ -53,7 +54,18 @@ export function cardSvg(content: CardContent): string {
     + text(fitText(value.value, 12), x + 36, 1390, value.value.length > 8 ? 66 : 98, LIGHT, 700, '', 353)
     + labelLines(value.label).map((line, i) => text(line, x + 36, 1458 + i * 34, 24, MUTED, 600, 'letter-spacing="1"', 353)).join('')
   const bigSize = first?.value.length && first.value.length > 9 ? 130 : 193
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="${escapeXml(`${content.heading}. ${content.raceName}. ${content.stats.map(s => `${s.value} ${s.label}`).join(', ')}`)}">`
+  const medals = content.medals?.slice(0, 8).map((medal, index) => {
+    const x = 207 + (index % 4) * 222
+    const y = 1230 + Math.floor(index / 4) * 245
+    const color = medal.earned ? VOLT : '#69716a'
+    return `<g><path d="M${x - 26} ${y - 80}h20l22 50-23 9zM${x + 6} ${y - 80}h20l-19 59-23-9z" fill="${color}"/>`
+      + `<circle cx="${x}" cy="${y}" r="57" fill="${medal.earned ? VOLT : '#181b1d'}" stroke="${color}" stroke-width="3"/>`
+      + `<circle cx="${x}" cy="${y}" r="46" fill="none" stroke="${medal.earned ? INK : color}" stroke-width="2"/>`
+      + text(medal.earned ? '★' : '·', x - 17, y + 13, 42, medal.earned ? INK : color, 800, '', 50)
+      + text(fitText(medal.label, 13), x, y + 96, 26, LIGHT, 650, 'text-anchor="middle"', 198)
+      + text(medal.earned ? 'FINISHED' : 'STILL TO COME', x, y + 130, 17, medal.earned ? VOLT : MUTED, 600, 'text-anchor="middle" letter-spacing="1"', 198) + '</g>'
+  }).join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${HEIGHT}" viewBox="0 0 ${WIDTH} ${HEIGHT}" role="img" aria-label="${escapeXml(`${content.heading}. ${content.raceName}. ${content.stats.map(s => `${s.value} ${s.label}`).join(', ')}${content.medals ? `. ${content.medals.map(medal => `${medal.label}: ${medal.earned ? 'finished' : 'still to come'}`).join(', ')}` : ''}`)}">`
     + `<defs><linearGradient id="td-night" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#171b1b"/><stop offset=".58" stop-color="${INK}"/><stop offset="1" stop-color="#171a16"/></linearGradient></defs>`
     + '<rect width="1080" height="1920" fill="url(#td-night)"/>'
     + `<path d="M710 -100 C1250 330 450 600 1120 1050" stroke="${VOLT}" stroke-opacity=".1" stroke-width="230" fill="none"/>`
@@ -68,7 +80,7 @@ export function cardSvg(content: CardContent): string {
     + '<rect x="96" y="735" width="888" height="7" rx="4" fill="' + VOLT + '"/>'
     + text(first ? fitText(first.value, 13) : '—', 96, 1040, bigSize, VOLT, 800, 'letter-spacing="-6"')
     + text(first ? fitText(first.label.toUpperCase(), 35) : '', 98, 1115, 35, LIGHT, 650, 'letter-spacing="3"')
-    + stat(second, 96) + stat(third, 559)
+    + (content.medals ? medals : stat(second, 96) + stat(third, 559))
     + '<path d="M96 1670 H984" stroke="#404449" stroke-width="2"/>'
     + text(fitText(content.footer, 53), 96, 1770, 29, MUTED, 600)
     + text('KEEP RUNNING.', 96, 1820, 36, VOLT, 800, 'letter-spacing="7"')
@@ -163,7 +175,7 @@ export async function cardPng(content: CardContent): Promise<Blob | null> {
   const first = content.stats[0]
   write(first ? fitText(first.value, 13) : '—', 96, 1040, first?.value.length && first.value.length > 9 ? 130 : 193, VOLT, 800)
   if (first) write(fitText(first.label.toUpperCase(), 35), 98, 1115, 35, LIGHT, 650)
-  for (const [i, x] of [96, 559].entries()) {
+  for (const [i, x] of (content.medals ? [] : [96, 559]).entries()) {
     const item = content.stats[i + 1]
     if (!item) continue
     context.fillStyle = '#181b1d'
@@ -175,6 +187,32 @@ export async function cardPng(content: CardContent): Promise<Blob | null> {
     context.stroke()
     write(fitText(item.value, 12), x + 36, 1390, item.value.length > 8 ? 66 : 98, LIGHT, 700, 360)
     labelLines(item.label).forEach((line, i) => write(line, x + 36, 1458 + i * 34, 24, MUTED, 600, 353))
+  }
+  for (const [index, medal] of (content.medals ?? []).slice(0, 8).entries()) {
+    const x = 207 + (index % 4) * 222
+    const y = 1230 + Math.floor(index / 4) * 245
+    const color = medal.earned ? VOLT : '#69716a'
+    context.strokeStyle = color
+    context.fillStyle = color
+    for (const side of [-1, 1]) {
+      context.beginPath()
+      context.moveTo(x + side * 26, y - 80)
+      context.lineTo(x + side * 6, y - 80)
+      context.lineTo(x - side * 16, y - 30)
+      context.lineTo(x + side * 7, y - 21)
+      context.closePath(); context.fill()
+    }
+    context.fillStyle = medal.earned ? VOLT : '#181b1d'
+    context.lineWidth = 3
+    context.beginPath(); context.arc(x, y, 57, 0, Math.PI * 2); context.fill(); context.stroke()
+    context.strokeStyle = medal.earned ? INK : color
+    context.lineWidth = 2
+    context.beginPath(); context.arc(x, y, 46, 0, Math.PI * 2); context.stroke()
+    context.textAlign = 'center'
+    write(medal.earned ? '★' : '·', x, y + 13, 42, medal.earned ? INK : color, 800, 50)
+    write(fitText(medal.label, 13), x, y + 96, 26, LIGHT, 650, 198)
+    write(medal.earned ? 'FINISHED' : 'STILL TO COME', x, y + 130, 17, medal.earned ? VOLT : MUTED, 600, 198)
+    context.textAlign = 'start'
   }
   context.strokeStyle = '#404449'
   context.lineWidth = 2

@@ -297,19 +297,19 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             [.. (await db.CoachingDecisions.AsNoTracking().Where(d => planIds.Contains(d.SavedPlanId)).OrderBy(d => d.DecidedAt).ToListAsync(cancellationToken))
                 .Select(d => new CoachingDecisionExportDto(d.SavedPlanId, CoachingDecisionDto.From(d)))],
             [.. (await db.Readiness.AsNoTracking().Where(r => r.RunnerId == runner.Id).OrderBy(r => r.Date).ToListAsync(cancellationToken)).Select(ReadinessDto.From)],
-            await JourneyAsync(runner, planIds, plans, cancellationToken));
+            await JourneyAsync(runner, plans, cancellationToken));
     }
 
-    private async Task<Journey.JourneyExportDto> JourneyAsync(Runner runner, List<Guid> planIds, List<SavedPlan> plans, CancellationToken cancellationToken)
+    private async Task<Journey.JourneyExportDto> JourneyAsync(Runner runner, List<SavedPlan> plans, CancellationToken cancellationToken)
     {
         var today = CoachCalls.LocalToday(runner, time);
         var goals = plans.ToDictionary(p => p.Id, p => p.Inputs.GoalTime);
-        var results = await db.RaceResults.AsNoTracking().Where(r => planIds.Contains(r.SavedPlanId)).OrderBy(r => r.RaceDate).ToListAsync(cancellationToken);
+        var results = await db.RaceResults.AsNoTracking().Where(r => r.RunnerId == runner.Id).OrderBy(r => r.RaceDate).ToListAsync(cancellationToken);
         var achievements = await db.Achievements.AsNoTracking().Where(a => a.RunnerId == runner.Id).OrderBy(a => a.AwardedAt).ToListAsync(cancellationToken);
         var recoveries = await db.RecoveryPlans.AsNoTracking().Where(r => r.RunnerId == runner.Id).OrderBy(r => r.CreatedAt).ToListAsync(cancellationToken);
         var maintenance = await db.MaintenancePlans.AsNoTracking().Where(m => m.RunnerId == runner.Id).OrderBy(m => m.CreatedAt).ToListAsync(cancellationToken);
         return new Journey.JourneyExportDto(
-            [.. results.Select(r => Journey.RaceResultDto.From(r, goals.GetValueOrDefault(r.SavedPlanId)))],
+            [.. results.Select(r => Journey.RaceResultDto.From(r, r.SavedPlanId is { } planId ? goals.GetValueOrDefault(planId) : null))],
             [.. achievements.Select(Journey.AchievementDto.From)],
             [.. recoveries.Select(r => Journey.RecoveryPlanDto.From(r, today))],
             [.. maintenance.Select(m => Journey.MaintenancePlanDto.From(m, today))]);

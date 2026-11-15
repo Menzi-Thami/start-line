@@ -12,6 +12,27 @@ const wrapper = ({ children }: { children: React.ReactNode }) => <AuthContext.Pr
 afterEach(() => vi.restoreAllMocks())
 
 describe('Journey writes and refresh failures', () => {
+  it('keeps loaded chapters on a failed page, retries without skipping it and refreshes every loaded page after a write', async () => {
+    const past = chapter({ planId: 'past-plan', status: 'Archived' })
+    let failPage = true
+    let saved = false
+    const get = vi.spyOn(api.me.journey, 'get').mockImplementation(async (_token, page = 0) => {
+      if (page === 1 && failPage) throw new Error('Older chapters unavailable')
+      return page === 1 ? journeyOf([past], { page: 1 }) : journeyOf([chapter({ raceResult: saved ? raceResult() : null })], { hasMoreChapters: true })
+    })
+    vi.spyOn(api.me.journey, 'saveRaceResult').mockImplementation(async () => { saved = true; return raceResult() })
+    const { result } = renderHook(() => useJourney(true), { wrapper })
+    await waitFor(() => expect(result.current.state.kind).toBe('ready'))
+    await expect(act(async () => result.current.actions.loadMore?.())).rejects.toThrow('Older chapters unavailable')
+    expect(result.current.state).toMatchObject({ kind: 'ready', journey: { chapters: [{ planId: PLAN_ID }] } })
+    failPage = false
+    await act(async () => result.current.actions.loadMore?.())
+    expect(result.current.state).toMatchObject({ kind: 'ready', journey: { chapters: [{ planId: PLAN_ID }, { planId: 'past-plan' }], hasMoreChapters: false } })
+    await act(async () => { await result.current.actions.saveRaceResult(PLAN_ID, { outcome: 'Finished' }) })
+    await waitFor(() => expect(result.current.state).toMatchObject({ kind: 'ready', journey: { chapters: [{ raceResult: raceResult() }, { planId: 'past-plan' }] } }))
+    expect(get.mock.calls.filter(([, page]) => page === 1)).toHaveLength(3)
+  })
+
   it('keeps a confirmed result, its recovery, and its undo visible when subsequent reads fail', async () => {
     vi.spyOn(api.me.journey, 'get').mockResolvedValueOnce(initial).mockRejectedValue(new Error('Refresh unavailable'))
     vi.spyOn(api.me.journey, 'saveRaceResult').mockResolvedValue(raceResult())

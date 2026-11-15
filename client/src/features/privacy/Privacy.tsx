@@ -167,6 +167,12 @@ export function PrivacyPolicy() {
             <strong>Your plans:</strong> the race, goal and days you chose, so we can show your plan again.
           </li>
           <li>
+            <strong>Your race history:</strong> the events and results you choose to save, including races outside a training plan:
+            name, date, event distance, outcome, distance covered, finish time and its source, any linked recording, collection
+            and note. These support your running journey and personal trophy cabinet, stay when a plan is archived, and are
+            included in your account export and removed when you delete your account.
+          </li>
+          <li>
             <strong>Your runs:</strong> when you ran, distance, moving and elapsed time, pace, elevation, calories, km splits, best efforts
             and the plan session each run matched. So we can show how each run went against your plan.
           </li>

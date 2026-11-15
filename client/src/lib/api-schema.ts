@@ -1144,7 +1144,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/me/journey": {
+    "/api/v1/me/journey/races": {
         parameters: {
             query?: never;
             header?: never;
@@ -1166,6 +1166,144 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
+                        "text/plain": components["schemas"]["RaceHistoryDto"];
+                        "application/json": components["schemas"]["RaceHistoryDto"];
+                        "text/json": components["schemas"]["RaceHistoryDto"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey/races/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SaveRaceMemoryRequest"];
+                    "text/json": components["schemas"]["SaveRaceMemoryRequest"];
+                    "application/*+json": components["schemas"]["SaveRaceMemoryRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["RaceMemoryDto"];
+                        "application/json": components["schemas"]["RaceMemoryDto"];
+                        "text/json": components["schemas"]["RaceMemoryDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete: {
+            parameters: {
+                query?: {
+                    expectedVersion?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
                         "text/plain": components["schemas"]["JourneyDto"];
                         "application/json": components["schemas"]["JourneyDto"];
                         "text/json": components["schemas"]["JourneyDto"];
@@ -1175,6 +1313,58 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/journey/plans/{planId}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ArchiveChapterRequest"];
+                    "text/json": components["schemas"]["ArchiveChapterRequest"];
+                    "application/*+json": components["schemas"]["ArchiveChapterRequest"];
+                };
+            };
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4205,6 +4395,9 @@ export interface components {
             change: components["schemas"]["LifeChange"];
             token: string;
         };
+        ArchiveChapterRequest: {
+            expectedVersion: string;
+        };
         BeginnerProgressState: {
             /** Format: date */
             startedOn: string;
@@ -4513,6 +4706,13 @@ export interface components {
             chapters: components["schemas"]["PlanChapterDto"][];
             recovery: null | components["schemas"]["RecoveryPlanDto"];
             maintenance: null | components["schemas"]["MaintenancePlanDto"];
+            /** @default false */
+            hasMoreChapters: boolean;
+            /**
+             * Format: int32
+             * @default 0
+             */
+            page: number;
         };
         JourneyExportDto: {
             raceResults: components["schemas"]["RaceResultDto"][];
@@ -4613,6 +4813,16 @@ export interface components {
             weekStart: string;
             sessions: components["schemas"]["MaintenanceSessionDto"][];
         };
+        /** @enum {unknown} */
+        MarathonMajor: "Tokyo" | "Boston" | "London" | "Berlin" | "Chicago" | "NewYork" | "Sydney" | "CapeTown";
+        MarathonMajorDefinition: {
+            id: components["schemas"]["MarathonMajor"];
+            name: string;
+            city: string;
+            originalSix: boolean;
+            /** Format: int32 */
+            firstQualifyingYear: null | number;
+        };
         MissingDataDto: {
             /** Format: int32 */
             runs: number;
@@ -4710,6 +4920,7 @@ export interface components {
             weeks: null | components["schemas"]["ChapterWeekDto"][];
             /** @default false */
             detailsUnavailable: boolean;
+            version?: null | string;
         };
         PlannedVsActualDto: {
             planName: string;
@@ -4869,13 +5080,27 @@ export interface components {
             latest: null | string;
             first: null | string;
         };
+        RaceHistoryDto: {
+            races: components["schemas"]["RaceMemoryDto"][];
+            majors: components["schemas"]["MarathonMajorDefinition"][];
+        };
+        RaceMemoryDto: {
+            eventName: string;
+            /** Format: double */
+            eventDistanceKm: null | number;
+            major: null | components["schemas"]["MarathonMajor"];
+            majorEligible: boolean;
+            result: components["schemas"]["RaceResultDto"];
+            /** @default false */
+            needsReview: boolean;
+        };
         /** @enum {unknown} */
         RaceOutcome: "Finished" | "DidNotStart" | "DidNotFinish";
         RaceResultDto: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
-            planId: string;
+            planId: null | string;
             outcome: components["schemas"]["RaceOutcome"];
             /** Format: date */
             raceDate: string;
@@ -4892,6 +5117,11 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            timeKind?: components["schemas"]["RaceTimeKind"];
+            eventName?: null | string;
+            /** Format: double */
+            eventDistanceKm?: null | number;
+            major?: null | components["schemas"]["MarathonMajor"];
         };
         RaceSummaryDto: {
             slug: null | string;
@@ -4901,6 +5131,11 @@ export interface components {
             /** Format: double */
             distanceKm: number;
         };
+        /**
+         * @default Unspecified
+         * @enum {unknown}
+         */
+        RaceTimeKind: "Unspecified" | "OfficialChip" | "RecordedElapsed";
         ReadinessDto: {
             /** Format: date */
             date: string;
@@ -5185,6 +5420,23 @@ export interface components {
             heartRateConsent?: null | boolean;
             updateEmails?: null | boolean;
         };
+        SaveRaceMemoryRequest: {
+            eventName: string;
+            /** Format: double */
+            eventDistanceKm: number;
+            /** Format: date */
+            raceDate: string;
+            outcome: components["schemas"]["RaceOutcome"];
+            finishTime?: null | string;
+            /** Format: double */
+            distanceKm?: null | number;
+            /** Format: uuid */
+            activityId?: null | string;
+            note?: null | string;
+            timeKind?: components["schemas"]["RaceTimeKind"];
+            major?: null | components["schemas"]["MarathonMajor"];
+            expectedVersion?: null | string;
+        };
         SaveRaceResultRequest: {
             outcome: components["schemas"]["RaceOutcome"];
             /** Format: date */
@@ -5196,6 +5448,7 @@ export interface components {
             activityId?: null | string;
             note?: null | string;
             expectedVersion?: null | string;
+            timeKind?: null | components["schemas"]["RaceTimeKind"];
         };
         SaveShoeRequest: {
             name: string;

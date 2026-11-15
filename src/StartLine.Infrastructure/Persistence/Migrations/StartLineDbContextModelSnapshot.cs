@@ -579,9 +579,23 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<double?>("DistanceKm")
                         .HasColumnType("float");
 
+                    b.Property<double?>("EventDistanceKm")
+                        .HasColumnType("float");
+
+                    b.Property<string>("EventName")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)")
+                        .HasDefaultValue("");
+
                     b.Property<long?>("FinishTime")
                         .HasColumnType("bigint")
                         .HasColumnName("FinishSeconds");
+
+                    b.Property<string>("Major")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
 
                     b.Property<string>("Note")
                         .HasMaxLength(280)
@@ -595,11 +609,22 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly>("RaceDate")
                         .HasColumnType("date");
 
+                    b.Property<string>("RaceKey")
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
                     b.Property<Guid>("RunnerId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("SavedPlanId")
+                    b.Property<Guid?>("SavedPlanId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TimeKind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)")
+                        .HasDefaultValue("Unspecified");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
@@ -615,7 +640,16 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasIndex("RunnerId");
 
                     b.HasIndex("SavedPlanId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[SavedPlanId] IS NOT NULL");
+
+                    b.HasIndex("RunnerId", "ActivityId")
+                        .IsUnique()
+                        .HasFilter("[ActivityId] IS NOT NULL AND [RaceKey] IS NOT NULL");
+
+                    b.HasIndex("RunnerId", "RaceKey")
+                        .IsUnique()
+                        .HasFilter("[RaceKey] IS NOT NULL");
 
                     b.ToTable("RaceResults", (string)null);
                 });
@@ -1632,11 +1666,16 @@ namespace StartLine.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("StartLine.Domain.Journey.RaceResult", b =>
                 {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
                         .WithMany()
                         .HasForeignKey("SavedPlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("StartLine.Domain.Journey.RecoveryPlan", b =>

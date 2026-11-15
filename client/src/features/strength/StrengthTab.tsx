@@ -10,13 +10,14 @@ interface Props {
   done: Set<string>
   onDoneChange: (update: DoneUpdate) => void
   onEditStrength?: () => void
+  readOnly?: boolean
 }
 
 /**
  * The plan's strength work for the week: each session's exercises with a demo, sets and reps, and a tick per set.
  * Without strength days it shows every move, so the runner can see what they'd be adding.
  */
-export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength }: Props) {
+export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength, readOnly = false }: Props) {
   const hasStrength = plan.weeks.some((w) => w.sessions.some((s) => s.exercises.length > 0))
   const sessions = week?.sessions.filter((s) => s.exercises.length > 0) ?? []
 
@@ -24,7 +25,7 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength }: 
     return (
       <>
         <p className="tab-intro">
-          Choose strength days to add sessions to your running plan. Updates to your saved plan keep your logged runs.
+          {readOnly ? 'No strength sessions were scheduled in this training chapter.' : 'Choose strength days to add sessions to your running plan. Updates to your saved plan keep your logged runs.'}
         </p>
         {onEditStrength && <button type="button" className="button" onClick={onEditStrength}>Add strength days</button>}
         <details className="disclosure"><summary>Preview the exercises</summary><ExerciseLibrary /></details>
@@ -35,7 +36,7 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength }: 
   return (
     <>
       <p className="tab-intro">
-        Tick each set as you finish it.
+        {readOnly ? 'Your saved strength sessions.' : 'Tick each set as you finish it.'}
       </p>
       {onEditStrength && <button type="button" className="button button-quiet" onClick={onEditStrength}>Change strength days</button>}
       {sessions.length === 0 && (
@@ -55,7 +56,9 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength }: 
               </p>
             </div>
             <p className="session-why">Why: {session.purpose}</p>
-            <ExerciseList session={session} done={done} onDoneChange={onDoneChange} />
+            <fieldset disabled={readOnly} style={{ border: 0, padding: 0, margin: 0 }} aria-label={`Strength sets for ${session.date}`}>
+              <ExerciseList session={session} done={done} onDoneChange={onDoneChange} />
+            </fieldset>
           </details>
         )
       })}

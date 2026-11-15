@@ -9,6 +9,8 @@ import type { Activity, ActivitySummary, TrainingPlan } from '../../src/lib/type
 import { JourneyHomeCard } from '../../src/features/journey/JourneyHomeCard'
 import { JourneyPanel } from '../../src/features/journey/JourneyPanel'
 import { RunningJourney } from '../../src/features/journey/RunningJourney'
+import { RecoveryPlanPage } from '../../src/features/journey/RecoveryPlanPage'
+import { useJourney } from '../../src/features/journey/useJourney'
 import { chapter, journeyOf, maintenance, PLAN_ID, raceResult, recap, recovery } from '../../src/features/journey/journey-fixtures'
 import { recoveryDayMap } from '../../src/features/journey/journey-model'
 import type { Journey, RecoveryPlan, SaveRaceResult, StartRecovery } from '../../src/features/journey/types'
@@ -161,13 +163,30 @@ window.fetch = (input, init) => {
   return realFetch(input, init)
 }
 
+function HistoryHarness() {
+  const journey = useJourney(true)
+  const [recovering, setRecovering] = useState(params.get('recovery') === '1')
+  const openRecovery = (raceId?: string) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('recovery', '1')
+    if (raceId) url.searchParams.set('race', raceId)
+    window.history.replaceState(null, '', url)
+    setRecovering(true)
+  }
+  return recovering
+    ? <RecoveryPlanPage journey={journey} today={today} units="km" onNewRace={() => undefined} onOpenJourney={() => setRecovering(false)} />
+    : <div className="plan"><section className="progress-extra" aria-labelledby="progress-journey"><h3 id="progress-journey">Your running journey</h3><RunningJourney units="km" today={today} onOpenRecovery={openRecovery} /></section></div>
+}
+
 export function Harness() {
   const { journey, actions } = useFakeJourney()
+  const [recovering, setRecovering] = useState(['recovery', 'pain', 'recovered', 'maintenance'].includes(scene))
   useEffect(() => { served.journey = journey }, [journey])
   const state = { kind: 'ready' as const, journey, refreshFailed: false }
   if (scene === 'journey' || scene === 'empty-journey' || scene === 'strava-history') {
-    return <div className="plan"><section className="progress-extra" aria-labelledby="progress-journey"><h3 id="progress-journey">Your running journey</h3><RunningJourney units="km" today={today} runDays={['Tuesday', 'Thursday', 'Saturday']} /></section></div>
+    return <HistoryHarness />
   }
+  if (recovering) return <RecoveryPlanPage journey={{ state, actions }} today={today} units="km" onNewRace={() => undefined} onOpenJourney={() => setRecovering(false)} />
   if (scene === 'calendar') {
     const days = recoveryDayMap(recovery())
     const weeks = [
@@ -194,7 +213,7 @@ export function Harness() {
       if (!recording) throw new Error('Run not found')
       return { ...recording, elapsedSeconds: isHoka ? 7575 : 16812 } as unknown as Activity
     } : undefined}
-    runDays={['Tuesday', 'Thursday', 'Saturday', 'Sunday']} onNewRace={() => undefined} onOpenRacePrep={() => undefined} /></div>
+    runDays={['Tuesday', 'Thursday', 'Saturday', 'Sunday']} onNewRace={() => undefined} onOpenRacePrep={() => undefined} onOpenRecovery={() => setRecovering(true)} /></div>
 }
 
 createRoot(document.getElementById('root')!).render(

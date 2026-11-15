@@ -9,7 +9,7 @@ export type RaceHistoryState =
   | { kind: 'error'; message: string }
   | { kind: 'ready'; history: RaceHistory; refreshFailed: boolean }
 
-export function useRaceHistory() {
+export function useRaceHistory(enabled = true) {
   const auth = useAuth()
   const [loaded, setLoaded] = useState<RaceHistoryState & { owner: Auth }>({ kind: 'loading', owner: auth })
   const state: RaceHistoryState = loaded.owner === auth ? loaded : { kind: 'loading' }
@@ -31,12 +31,13 @@ export function useRaceHistory() {
     })
   }, [auth])
   useEffect(() => {
+    if (!enabled) return
     const requests = sequence
     const owner = identity
     refresh()
     window.addEventListener(JOURNEY_CHANGED, refresh)
     return () => { requests.current++; owner.current++; window.removeEventListener(JOURNEY_CHANGED, refresh) }
-  }, [refresh])
+  }, [refresh, enabled])
 
   const mutate = async <T,>(run: (token: string) => Promise<T>, apply: (history: RaceHistory, result: T) => RaceHistory): Promise<T> => {
     const mine = identity.current

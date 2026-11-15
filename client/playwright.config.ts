@@ -11,7 +11,7 @@ export default defineConfig({
   timeout: 60_000,
   // Includes the responsive, cross-theme WCAG journeys as well as the production app tests.
   // Individual test timeouts still fail hangs; this ceiling accommodates the expanded serial suite.
-  globalTimeout: 15 * 60_000,
+  globalTimeout: 20 * 60_000,
   maxFailures: process.env.CI ? 3 : 0,
   expect: { timeout: 15_000 },
   fullyParallel: false,

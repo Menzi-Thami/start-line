@@ -40,12 +40,13 @@ internal sealed class StartRecoveryValidator : AbstractValidator<StartRecoveryCo
     }
 }
 
-internal sealed class StartRecoveryHandler(IApplicationDbContext db, CurrentRunner current, IRaceCatalogue catalogue, TimeProvider time)
+internal sealed class StartRecoveryHandler(IApplicationDbContext db, CurrentRunner current, IRaceCatalogue catalogue, TimeProvider time, TrainingLifecycle lifecycle)
     : IRequestHandler<StartRecoveryCommand, StartRecoveryResult>
 {
     public async Task<StartRecoveryResult> Handle(StartRecoveryCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.RequireConsentedAsync(cancellationToken);
+        await lifecycle.ConcludeAsync(runner, cancellationToken);
         var today = CoachCalls.LocalToday(runner, time);
         var r = request.Recovery;
         var raceDate = r.RaceDate;
@@ -68,7 +69,7 @@ internal sealed class StartRecoveryHandler(IApplicationDbContext db, CurrentRunn
             // The race result is the record of when the race was run.
             raceDate = result.RaceDate;
             eventName = string.IsNullOrWhiteSpace(eventName) ? SavedPlanSummaries.Of(plan, catalogue).RaceName : eventName;
-            runDays ??= plan.Inputs.RunDays;
+            if (runDays is not { Count: > 0 }) runDays = plan.Inputs.RunDays;
         }
         else if (await SameAsync(runner.Id, r, cancellationToken) is { } same)
         {

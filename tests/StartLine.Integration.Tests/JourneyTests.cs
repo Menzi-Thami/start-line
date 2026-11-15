@@ -148,7 +148,7 @@ public sealed class JourneyTests(JourneyFactory factory) : IClassFixture<Journey
         var plan = await PastPlan(runnerId);
 
         var pending = await Chapter(client, plan);
-        pending.GetProperty("lifecycle").GetString().ShouldBe("RacePending");
+        pending.GetProperty("lifecycle").GetString().ShouldBe("Concluded");
         pending.GetProperty("raceResult").ValueKind.ShouldBe(JsonValueKind.Null);
         Kinds(pending).ShouldBeEmpty();
         pending.GetProperty("training").GetProperty("recordedKm").ValueKind.ShouldBe(JsonValueKind.Null);
@@ -161,21 +161,21 @@ public sealed class JourneyTests(JourneyFactory factory) : IClassFixture<Journey
         saved.GetProperty("version").GetString().ShouldNotBeNullOrEmpty();
 
         var finished = await Chapter(client, plan);
-        finished.GetProperty("lifecycle").GetString().ShouldBe("RaceCompleted");
+        finished.GetProperty("lifecycle").GetString().ShouldBe("Concluded");
         Kinds(finished).ShouldBe(["RaceFinished"]);
         finished.GetProperty("achievements")[0].GetProperty("earnedOn").GetString().ShouldBe("2026-10-04");
 
         // A result that says they didn't finish takes the finisher badge away; a finish gives it back.
         await Json(await PutResult(client, plan, new { outcome = "DidNotFinish", distanceKm = 7.5 }));
         Kinds(await Chapter(client, plan)).ShouldBeEmpty();
-        (await Chapter(client, plan)).GetProperty("lifecycle").GetString().ShouldBe("RaceNotCompleted");
+        (await Chapter(client, plan)).GetProperty("lifecycle").GetString().ShouldBe("Concluded");
         await Json(await PutResult(client, plan, new { outcome = "Finished" }));
 
         (await client.DeleteAsync(Url($"/api/v1/me/journey/plans/{plan}/race-result"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
         var undone = await Chapter(client, plan);
         undone.GetProperty("raceResult").ValueKind.ShouldBe(JsonValueKind.Null);
         Kinds(undone).ShouldBeEmpty();
-        undone.GetProperty("lifecycle").GetString().ShouldBe("RacePending");
+        undone.GetProperty("lifecycle").GetString().ShouldBe("Concluded");
         (await client.DeleteAsync(Url($"/api/v1/me/journey/plans/{plan}/race-result"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
     }
 
@@ -463,7 +463,7 @@ public sealed class JourneyTests(JourneyFactory factory) : IClassFixture<Journey
         recovery.GetProperty("eventName").GetString().ShouldBe("Spring 10K");
         recovery.GetProperty("framing").GetString().ShouldBe("about 3–7 days");
         recovery.GetProperty("generatorVersion").GetInt32().ShouldBe(1);
-        (await Chapter(client, plan)).GetProperty("lifecycle").GetString().ShouldBe("Recovering");
+        (await Chapter(client, plan)).GetProperty("lifecycle").GetString().ShouldBe("Concluded");
 
         // One recovery at a time.
         var second = await StartRecovery(client, ManualHalf());

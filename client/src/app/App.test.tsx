@@ -131,6 +131,16 @@ describe('beginner journey deep links', () => {
   })
 })
 
+it('opens recovery deep links with a sign-in action when the session has ended', async () => {
+  window.history.replaceState(null, '', '/?view=recovery')
+  const signIn = vi.fn(async () => {})
+  const user = userEvent.setup()
+  render(<AuthContext.Provider value={{ ...accountsOff, enabled: true, signIn }}><App /></AuthContext.Provider>)
+  expect(await screen.findByText('Your recovery plan and check-ins live in your account.')).toBeVisible()
+  await user.click(within(document.querySelector('.signed-out-prompt') as HTMLElement).getByRole('button', { name: 'Sign in' }))
+  expect(signIn).toHaveBeenCalledOnce()
+})
+
 describe('building a plan', () => {
   it('keeps review free of tips and opens the finished plan without an artificial delay', async () => {
     const { user } = setup()

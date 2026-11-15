@@ -1,5 +1,11 @@
 # Plan edits and recorded history
 
+After the runner's local race day, an active training plan automatically becomes `Concluded`. It is retained in Journey with its frozen race details, runs, race result and achievements. A date passing confirms no finish and awards no medal. Concluded training cannot be restored as current or have its prescription changed; a new race starts a new training plan without asking to replace the concluded one. Unknown historical race dates remain explicit rather than being guessed.
+
+Recovery is an independent plan (`?view=recovery`), with its own identity, days, check-ins and readiness controls. Home shows a brief preview; the Plan destination opens recovery while it is running. Journey keeps the training chapter and race review, with a link to recovery. Opening an old training link shows its conclusion first and keeps the read-only schedule behind “View training plan”; recovery days never extend that training calendar. A future training plan may be viewed separately while recovery continues.
+
+Offline check-ins made for dates through race day can still sync to a concluded chapter. New dates after race day are rejected there. Explicitly archived chapters keep the existing read-only check-in rule. Recovery still requires a confirmed Finished/DidNotFinish result, and starting it reuses the saved race date, actual distance and training availability. Its safety choices remain available on the recovery screen.
+
 Changing the current plan's answers is an update to training preferences. The runner's recorded date, identity, own distance/time, feedback and imported activity association must survive. Finishing same-race changes saves them before showing the updated plan. A failed edit retains the saved URL so a reload opens the last saved plan; retry is safe. A new race still requires the existing explicit replacement flow.
 
 Same-race form changes retain the original build date, generator version and replan metadata. A historical custom start remains valid when availability changes. Choosing a new start is allowed; earlier logged runs remain visible above the plan and accessible in the monthly calendar. A session no longer prescribed on its original day appears as a logged run, rather than disappearing or moving to a new date.

@@ -53,7 +53,7 @@ internal sealed class TickFromNotificationHandler(IApplicationDbContext db, ITic
         var plan = await db.SavedPlans.AsNoTracking()
             .SingleOrDefaultAsync(p => p.Id == claim.PlanId && p.RunnerId == claim.RunnerId, cancellationToken)
             ?? throw new NotFoundException("Saved plan", claim.PlanId.ToString());
-        if (plan.Status != SavedPlanStatus.Active)
+        if (plan.Status == SavedPlanStatus.Archived)
         {
             throw new ConflictException("plan_archived", "This is a past plan. Make it your plan again to check in on its runs.");
         }

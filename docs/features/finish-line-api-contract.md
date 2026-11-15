@@ -55,7 +55,8 @@ PlanChapterDto {
   startDate: date, lifecycle: JourneyLifecycle, training: TrainingRecapDto, raceResult: RaceResultDto | null,
   achievements: AchievementDto[], goalTime: "hh:mm:ss", weeks: ChapterWeekDto[] | null, version: string  // weeks only on detail
 }
-JourneyLifecycle = Active | TrainingComplete | RacePending | RaceCompleted | RaceNotCompleted | Recovering | Recovered | Archived
+SavedPlanStatus = Active | Archived | Concluded
+JourneyLifecycle = Active | TrainingComplete | RacePending | RaceCompleted | RaceNotCompleted | Recovering | Recovered | Archived | Concluded
 TrainingRecapDto {
   scheduledRuns, confirmedRuns, cutShortRuns, skippedRuns, unansweredRuns, weeks, runningDays,
   plannedKmConfirmed: number, recordedKm: number | null, recordedRuns: int,

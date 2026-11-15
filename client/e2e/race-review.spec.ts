@@ -35,7 +35,8 @@ test('Hoka Half: automatic recording → one confirmation → review saved race 
   await expect(page.getByRole('button', { name: 'Share my race' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'I finished', exact: true })).toHaveCount(0)
   await expect(page.locator('.journey-training')).not.toHaveAttribute('open')
-  await expect(page.locator('.journey-recovery-details')).not.toHaveAttribute('open')
+  await expect(page.locator('.recovery-offer')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Start recovery plan', exact: true })).toBeVisible()
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('test:hoka-journey')!))
   expect(saved.chapters[0].raceResult).toMatchObject({ finishTime: '02:06:15', distanceKm: 20.3, timeKind: 'RecordedElapsed', activityId: '33333333-3333-4333-8333-333333333333' })
   expect(saved.chapters[0].achievements.map((a: { kind: string }) => a.kind)).toEqual(['RaceFinished'])
@@ -83,7 +84,9 @@ test('race review is calm, responsive and accessible in both themes', async ({ p
       await expect(page.locator('.recovery-offer')).toBeHidden()
       await accessible(page)
       if (width === 1440) await page.screenshot({ path: shot(`saved-desktop-${mode}`), fullPage: true })
-      await page.locator('.journey-recovery-details > summary').click()
+      await page.getByRole('button', { name: 'Start recovery plan', exact: true }).click()
+      await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
+      await expect(page.locator('.training-story')).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Start my recovery' })).toBeVisible()
       const effort = page.getByRole('radio', { name: /All out/, includeHidden: true })
       await expect(effort).toBeHidden()
@@ -139,25 +142,19 @@ test('native race sharing starts in the tap and includes the prepared image', as
   expect(await page.evaluate(() => Reflect.get(window, 'sharedRace'))).toEqual({ text: 'I finished Hoka Half in 2:06:15 (recording elapsed time)! #Taperday', name: 'taperday-race-finish.png', width: 1080, height: 1920 })
 })
 
-test('the actual app opens the saved race and keeps training tools behind one disclosure @phone', async ({ page }) => {
-  const seed = JSON.parse(await readFile(new URL('../src/test/fixtures/plan-5k.json', import.meta.url), 'utf8'))
-  const race = { ...seed.race, name: 'Hoka Half', date: '2026-11-14', distanceKm: 21.1 }
-  const plan = { ...seed, race, startDate: '2026-08-24' }
-  const inputs = { raceName: race.name, distanceKm: 21.1, raceDate: race.date, goalTime: '01:45:00', runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'], longRunDay: 'Sunday', strengthDays: [], planFrom: '2026-08-24', version: 1, experience: 'Regular' }
-  const summary = { id: PLAN_ID, name: race.name, raceName: race.name, raceDate: race.date, createdAt: '2026-08-24T09:00:00Z', status: 'Active' }
-  const result = raceResult({ raceDate: race.date, finishTime: '02:06:15', distanceKm: 20.3, timeKind: 'RecordedElapsed', activityId: 'expired-recording' })
-  let celebrated = false
+test('the actual app offers recovery on Home and retains the saved race in Journey after reload @phone', async ({ page }) => {
+  const result = raceResult({ raceDate: '2026-11-14', finishTime: '02:06:15', distanceKm: 20.3, timeKind: 'RecordedElapsed', activityId: 'expired-recording' })
+  const saved = chapter({ raceName: 'Hoka Half', raceDate: result.raceDate, status: 'Concluded', lifecycle: 'Concluded', raceResult: result,
+    training: recap({ scheduledRuns: 10, confirmedRuns: 4, allConfirmed: false, raceDatePassed: true }),
+    achievements: [{ id: 'race-award', kind: 'RaceFinished', planId: PLAN_ID, earnedOn: result.raceDate, awardedAt: '2026-11-15T08:00:00Z', celebratedAt: '2026-11-15T08:01:00Z' }] })
   await page.route('**/api/v1/**', async route => {
     const path = new URL(route.request().url()).pathname
     let data: unknown = []
     if (path === '/api/v1/me') data = { id: 'synthetic-journey-runner', displayName: 'QA runner', email: 'journey@example.test', timeZone: 'Africa/Johannesburg', units: 'Kilometres', needsPrivacyConsent: false, privacyNoticeVersion: '2026-10-21' }
-    else if (path === '/api/v1/plans') data = plan
-    else if (path === '/api/v1/me/plans') data = [summary]
-    else if (path === `/api/v1/me/plans/${PLAN_ID}` || path.endsWith('/coach')) data = { ...summary, inputs, plan, coaching: [] }
-    else if (path === '/api/v1/me/journey') data = journeyOf([chapter({ raceName: race.name, raceDate: race.date, raceResult: result,
-      training: recap({ scheduledRuns: 10, confirmedRuns: 4, allConfirmed: false, raceDatePassed: true }),
-      achievements: [{ id: 'race-award', kind: 'RaceFinished', planId: PLAN_ID, earnedOn: race.date, awardedAt: '2026-11-15T08:00:00Z', celebratedAt: celebrated ? '2026-11-15T08:01:00Z' : null }] })])
-    else if (path.endsWith('/celebrated')) { celebrated = true; await route.fulfill({ status: 204 }); return }
+    else if (path === '/api/v1/me/plans') data = [{ id: PLAN_ID, raceName: 'Hoka Half', raceDate: result.raceDate, status: 'Concluded' }]
+    else if (path === '/api/v1/me/journey') data = journeyOf([saved])
+    else if (path === `/api/v1/me/journey/plans/${PLAN_ID}`) data = saved
+    else if (path === '/api/v1/me/journey/races') data = { races: [], majors: [] }
     else if (path.endsWith('/strava')) data = { available: true, connected: true, syncedRuns: 0, pending: 0, failed: 0 }
     else if (path.endsWith('/reminders')) data = { available: false }
     else if (path.endsWith('/photo')) { await route.fulfill({ status: 204 }); return }
@@ -165,9 +162,13 @@ test('the actual app opens the saved race and keeps training tools behind one di
   })
   await page.clock.install({ time: new Date('2026-11-15T08:00:00Z') })
   await page.setViewportSize({ width: 375, height: 812 })
-  await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=plan')
-  await page.getByRole('dialog').getByRole('button', { name: 'Review my race' }).click()
-  await expect(page.locator('.journey-race-summary')).toBeFocused()
+  await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=home')
+  await expect(page.getByText('Training concluded', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Start recovery plan', exact: true })).toBeVisible()
+  await expect(page.locator('.journey-home button')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Review my race', exact: true })).toHaveCount(0)
+  await page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Journey', exact: true }).click()
+  await page.getByRole('button', { name: 'View chapter', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Finished in 2:06:15' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Your plan' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Edit plan', exact: true })).toHaveCount(0)
@@ -175,14 +176,8 @@ test('the actual app opens the saved race and keeps training tools behind one di
   await accessible(page)
   await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); scrollTo(0, 0) })
   await page.screenshot({ path: shot('app-saved-phone-light'), fullPage: true })
-  await page.getByRole('button', { name: 'View training plan' }).click()
-  await page.getByRole('tab', { name: 'Calendar', exact: true }).click()
-  await expect(page.getByRole('tab', { name: 'Calendar', exact: true })).toHaveAttribute('aria-selected', 'true')
-  await page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Runs', exact: true }).click()
-  await page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Plan', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'View training plan' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Finished in 2:06:15' })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: 'View chapter', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Finished in 2:06:15' })).toBeVisible()
 })

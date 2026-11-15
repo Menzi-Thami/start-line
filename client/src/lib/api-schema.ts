@@ -4721,7 +4721,7 @@ export interface components {
             maintenance: components["schemas"]["MaintenancePlanDto"][];
         };
         /** @enum {unknown} */
-        JourneyLifecycle: "Active" | "TrainingComplete" | "RacePending" | "RaceCompleted" | "RaceNotCompleted" | "Recovering" | "Recovered" | "Archived";
+        JourneyLifecycle: "Active" | "TrainingComplete" | "RacePending" | "RaceCompleted" | "RaceNotCompleted" | "Recovering" | "Recovered" | "Archived" | "Concluded";
         /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
         LifeChange: {
@@ -5387,7 +5387,7 @@ export interface components {
             adjustments?: null | components["schemas"]["SessionRevision"][];
         };
         /** @enum {unknown} */
-        SavedPlanStatus: "Active" | "Archived";
+        SavedPlanStatus: "Active" | "Archived" | "Concluded";
         SavedPlanSummaryDto: {
             /** Format: uuid */
             id: string;

@@ -61,7 +61,7 @@ internal static class SavedPlanMapping
     {
         var query = ToQuery(plan.Inputs);
         // An archived chapter must not move when an organiser changes the live calendar later.
-        return plan.Status == SavedPlanStatus.Archived && plan.Inputs.HasRaceSnapshot ? query with { RaceSlug = null } : query;
+        return plan.Status != SavedPlanStatus.Active && plan.Inputs.HasRaceSnapshot ? query with { RaceSlug = null } : query;
     }
 
     public static void FreezeRace(SavedPlan plan, IRaceCatalogue catalogue)
@@ -87,15 +87,18 @@ internal sealed class SavePlanValidator : AbstractValidator<SavePlanCommand>
     }
 }
 
-internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time)
+internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time, TrainingLifecycle lifecycle)
     : IRequestHandler<SavePlanCommand, SavedPlanSummaryDto>
 {
     public async Task<SavedPlanSummaryDto> Handle(SavePlanCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.RequireConsentedAsync(cancellationToken);
+        await lifecycle.ConcludeAsync(runner, cancellationToken);
 
         // Build first: a plan that can't be generated must never be saved.
         var plan = builder.Build(request.Plan);
+        if (plan.Race.Date < CoachCalls.LocalToday(runner, time))
+            throw new ConflictException("training_concluded", "This race's training has concluded. Your saved chapter stays in Journey; choose a new race to train again.");
         var inputs = SavedPlanMapping.ToInputs(request.Plan, DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime), plan.Race);
         var name = string.IsNullOrWhiteSpace(request.Name) ? plan.Race.Name[..Math.Min(plan.Race.Name.Length, SavedPlan.MaxNameLength)] : request.Name;
 
@@ -145,7 +148,7 @@ internal static class SavedPlanSummaries
 {
     public static SavedPlanSummaryDto Of(SavedPlan p, IRaceCatalogue catalogue)
     {
-        var race = (p.Status != SavedPlanStatus.Archived || !p.Inputs.HasRaceSnapshot) && p.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug) : null;
+        var race = (p.Status == SavedPlanStatus.Active || !p.Inputs.HasRaceSnapshot) && p.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug) : null;
         return new SavedPlanSummaryDto(p.Id, p.Name, race?.Name ?? p.Inputs.RaceName ?? "Your race", race?.Date ?? p.Inputs.RaceDate, p.CreatedAt, p.Status,
             p.Inputs.Replan?.From);
     }
@@ -153,7 +156,7 @@ internal static class SavedPlanSummaries
 
 public sealed record ListMyPlansQuery : IRequest<IReadOnlyList<SavedPlanSummaryDto>>;
 
-internal sealed class ListMyPlansHandler(IApplicationDbContext db, CurrentRunner current, IRaceCatalogue catalogue)
+internal sealed class ListMyPlansHandler(IApplicationDbContext db, CurrentRunner current, IRaceCatalogue catalogue, TrainingLifecycle lifecycle)
     : IRequestHandler<ListMyPlansQuery, IReadOnlyList<SavedPlanSummaryDto>>
 {
     public async Task<IReadOnlyList<SavedPlanSummaryDto>> Handle(ListMyPlansQuery request, CancellationToken cancellationToken)
@@ -164,10 +167,11 @@ internal sealed class ListMyPlansHandler(IApplicationDbContext db, CurrentRunner
             return [];
         }
 
+        await lifecycle.ConcludeAsync(runner, cancellationToken);
         // The current plan first, then past plans, newest first.
         var plans = await db.SavedPlans.AsNoTracking()
             .Where(p => p.RunnerId == runner.Id)
-            .OrderBy(p => p.Status).ThenByDescending(p => p.UpdatedAt).ThenByDescending(p => p.Id)
+            .OrderBy(p => p.Status == SavedPlanStatus.Active ? 0 : 1).ThenByDescending(p => p.UpdatedAt).ThenByDescending(p => p.Id)
             .ToListAsync(cancellationToken);
 
         return [.. plans.Select(p => SavedPlanSummaries.Of(p, catalogue))];
@@ -176,12 +180,13 @@ internal sealed class ListMyPlansHandler(IApplicationDbContext db, CurrentRunner
 
 public sealed record GetMyPlanQuery(Guid Id) : IRequest<SavedPlanDto>;
 
-internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time)
+internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time, TrainingLifecycle lifecycle)
     : IRequestHandler<GetMyPlanQuery, SavedPlanDto>
 {
     public async Task<SavedPlanDto> Handle(GetMyPlanQuery request, CancellationToken cancellationToken)
     {
         var runner = await current.FindAsync(cancellationToken);
+        if (runner is not null) await lifecycle.ConcludeAsync(runner, cancellationToken);
         // Someone else's plan is "not found", never "forbidden": the API must not confirm it exists.
         var saved = runner is null
             ? null
@@ -201,16 +206,19 @@ internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner c
 /// <summary>Makes a past plan the current one again; the plan that was current becomes a past plan.</summary>
 public sealed record RestoreMyPlanCommand(Guid Id) : IRequest<SavedPlanSummaryDto>;
 
-internal sealed class RestoreMyPlanHandler(IApplicationDbContext db, CurrentRunner current, IRaceCatalogue catalogue)
+internal sealed class RestoreMyPlanHandler(IApplicationDbContext db, CurrentRunner current, IRaceCatalogue catalogue, TrainingLifecycle lifecycle, TimeProvider time)
     : IRequestHandler<RestoreMyPlanCommand, SavedPlanSummaryDto>
 {
     public async Task<SavedPlanSummaryDto> Handle(RestoreMyPlanCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.FindAsync(cancellationToken);
+        if (runner is not null) await lifecycle.ConcludeAsync(runner, cancellationToken);
         var plans = runner is null
             ? []
             : await db.SavedPlans.Where(p => p.RunnerId == runner.Id && (p.Id == request.Id || p.Status == SavedPlanStatus.Active)).ToListAsync(cancellationToken);
         var chosen = plans.SingleOrDefault(p => p.Id == request.Id) ?? throw new NotFoundException("Saved plan", request.Id.ToString());
+        if (SavedPlanSummaries.Of(chosen, catalogue).RaceDate is { } raceDate && raceDate < CoachCalls.LocalToday(runner!, time))
+            throw new ConflictException("training_concluded", "This training plan has concluded. It stays in your journey; choose a new race to train again.");
         if (chosen.Status == SavedPlanStatus.Active)
         {
             return SavedPlanSummaries.Of(chosen, catalogue);
@@ -295,7 +303,8 @@ internal sealed class DeleteMyPlanHandler(IApplicationDbContext db, CurrentRunne
 
         // Removing a training schedule must not erase runs the runner has already recorded, nor their race result,
         // badges or recovery. Archived plans already retain history and are absent from the app's current-plan view.
-        if (await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id, cancellationToken)
+        if (saved.Status == SavedPlanStatus.Concluded
+            || await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id, cancellationToken)
             || await db.RaceResults.AnyAsync(r => r.SavedPlanId == saved.Id, cancellationToken)
             || await db.Achievements.AnyAsync(a => a.SavedPlanId == saved.Id, cancellationToken)
             || await db.RecoveryPlans.AnyAsync(r => r.SavedPlanId == saved.Id, cancellationToken))

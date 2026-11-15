@@ -131,16 +131,22 @@ internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInComman
     }
 }
 
-internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time)
+internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time, TrainingLifecycle lifecycle)
     : IRequestHandler<SaveCheckInCommand, CheckInDto>
 {
     public async Task<CheckInDto> Handle(SaveCheckInCommand request, CancellationToken cancellationToken)
     {
+        var runner = await current.FindAsync(cancellationToken);
+        if (runner is not null) await lifecycle.ConcludeAsync(runner, cancellationToken);
         var plan = await OwnPlan.FindAsync(db, current, request.PlanId, cancellationToken);
-        if (plan.Status != SavedPlanStatus.Active)
+        if (plan.Status == SavedPlanStatus.Archived)
         {
             throw new ConflictException("plan_archived", "This is a past plan. Make it your plan again to check in on its runs.");
         }
+        // An offline check-in from before the finish must still sync after training concludes. New running belongs
+        // to the runner's current plan or recovery, never to dates after this training chapter ended.
+        if (plan.Status == SavedPlanStatus.Concluded && (plan.Inputs.RaceDate is not { } end || request.Date > end))
+            throw new ConflictException("training_concluded", "This training plan has concluded. Log newer runs outside this chapter.");
 
         var additional = request.EntryId is not null;
         var checkIn = additional

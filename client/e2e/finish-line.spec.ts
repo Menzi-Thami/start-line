@@ -55,10 +55,10 @@ test.describe('finish line journey', () => {
     await expect(page.getByRole('button', { name: 'I finished', exact: true })).toHaveCount(0)
 
     // Recovery is offered, optional, and shaped by the runner's answers.
-    await page.getByText('Plan my recovery', { exact: true }).click()
+    await page.getByRole('button', { name: 'Start recovery plan', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Want a gentle recovery plan?' })).toBeVisible()
     await page.getByText('Adjust recovery preferences', { exact: true }).click()
-    await page.getByLabel(/All out/).check()
+    await page.getByRole('radio', { name: /All out/, includeHidden: true }).check()
     await page.screenshot({ path: shot('06-recovery-offer-phone-light'), fullPage: true })
     await page.getByRole('button', { name: 'Start my recovery' }).click()
     await expect(page.getByText(/^Recovery · day \d+$/)).toBeVisible()
@@ -167,7 +167,7 @@ test.describe('finish line journey', () => {
     const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('test:past-marathon-journey')!).recovery)
     expect(saved).toMatchObject({ planId: '11111111-1111-4111-8111-111111111111', eventName: 'Mandela Marathon', raceDate: '2026-10-18', distanceKm: 42.35 })
     await page.reload()
-    await page.getByRole('button', { name: 'View chapter' }).click()
+    await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
     await expect(page.getByRole('heading', { name: 'Rest is training too.' })).toBeVisible()
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem('test:past-marathon-journey')!).recovery.id)).toBe(saved.id)

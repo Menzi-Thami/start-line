@@ -1,11 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { addDays, formatDistance, type Units } from '../../lib/format'
+import { formatDistance, type Units } from '../../lib/format'
 import { Runner } from '../shared/Runner'
 import { FinishLineFilm } from './FinishLineFilm'
 import { formatClock, isLiveRecovery } from './journey-model'
-import { MaintenanceCard, NextChapter } from './NextChapter'
 import { RaceMemories } from './RaceMemories'
-import { RecoveryDashboard, RecoveryOffer } from './Recovery'
 import { RunningJourney } from './RunningJourney'
 import { TrophyCabinet } from './TrophyCabinet'
 import type { MarathonMajor, RaceMemory } from './types'
@@ -19,7 +17,7 @@ const sectionFromUrl = (): Section => {
   return section === 'races' || section === 'cabinet' ? section : 'training'
 }
 
-export function JourneyPage({ today, units, onNewRace, onArchived }: { today: string; units: Units; onNewRace: () => void; onArchived: () => void }) {
+export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { today: string; units: Units; onNewRace: () => void; onArchived: () => void; onOpenRecovery?: (raceId?: string) => void }) {
   const races = useRaceHistory()
   const journey = useJourney(true)
   const [section, setSection] = useState<Section>(sectionFromUrl)
@@ -27,16 +25,11 @@ export function JourneyPage({ today, units, onNewRace, onArchived }: { today: st
   const [selectedRaceId, setSelectedRaceId] = useState<string | null>(null)
   const [newMajor, setNewMajor] = useState<MarathonMajor | null | undefined>()
   const [celebrate, setCelebrate] = useState<RaceMemory | null>(null)
-  const [manualRecovery, setManualRecovery] = useState(false)
-  const [recoveryRace, setRecoveryRace] = useState<RaceMemory | null>(null)
   const title = useRef<HTMLHeadingElement>(null)
-  const recoveryOffer = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (recoveryRace && !celebrate) {
-      recoveryOffer.current?.scrollIntoView?.({ block: 'start' })
-      recoveryOffer.current?.focus()
-    }
-  }, [recoveryRace, celebrate])
+  const openRecovery = (raceId?: string) => {
+    if (onOpenRecovery) onOpenRecovery(raceId)
+    else window.location.assign(`?view=recovery${raceId ? `&race=${encodeURIComponent(raceId)}` : ''}`)
+  }
   useEffect(() => {
     const read = () => { setSection(sectionFromUrl()); setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined) }
     window.addEventListener('popstate', read)
@@ -49,7 +42,6 @@ export function JourneyPage({ today, units, onNewRace, onArchived }: { today: st
     if (url.href !== window.location.href) window.history.pushState(null, '', url)
   }
   const recovery = journey.state.kind === 'ready' ? journey.state.journey.recovery : null
-  const maintenance = journey.state.kind === 'ready' ? journey.state.journey.maintenance : null
   const closeFilm = () => { setCelebrate(null); title.current?.focus() }
   return <div className="journey-page">
     <header className="journey-page-hero">
@@ -61,12 +53,10 @@ export function JourneyPage({ today, units, onNewRace, onArchived }: { today: st
       {([['training', 'Training chapters'], ['races', 'Your races'], ['cabinet', 'Trophy cabinet']] as const).map(([id, label]) =>
         <button type="button" key={id} aria-current={section === id ? 'page' : undefined} onClick={() => { setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined); pick(id) }}>{label}</button>)}
     </nav>
-    {isLiveRecovery(recovery) && <section className="journey-page-recovery" aria-label="Your recovery">
-      <RecoveryDashboard recovery={recovery} today={today} compact
-        onCheckIn={(feeling, redFlags) => journey.actions.checkIn(recovery.id, { feeling, redFlags, date: today })}
-        onChange={change => journey.actions.changeRecovery(recovery.id, change)} />
+    {isLiveRecovery(recovery) && <section className="journey-state" aria-label="Your recovery">
+      <p>Your recovery has its own plan.</p><button type="button" className="button" onClick={() => openRecovery()}>Open recovery plan</button>
     </section>}
-    {section === 'training' && <RunningJourney units={units} today={today} onArchived={onArchived} />}
+    {section === 'training' && <RunningJourney units={units} today={today} onArchived={onArchived} onOpenRecovery={openRecovery} />}
     {section !== 'training' && races.state.kind === 'loading' && <p role="status" className="journey-state">Loading your races and trophies…</p>}
     {section !== 'training' && races.state.kind === 'error' && <div role="alert" className="journey-state"><p>{races.state.message}</p><button type="button" className="button" onClick={races.refresh}>Try again</button></div>}
     {races.state.kind === 'ready' && <>
@@ -74,24 +64,15 @@ export function JourneyPage({ today, units, onNewRace, onArchived }: { today: st
       {section === 'races' && <RaceMemories key={`${newMajor ?? 'all'}|${selectedMajor ?? ''}|${selectedRaceId ?? ''}`} store={races} today={today} units={units}
         selectedMajor={selectedMajor} selectedRaceId={selectedRaceId} newMajor={newMajor}
         onClearFilter={() => { setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined) }}
-        onRecovery={journey.state.kind === 'ready' && !isLiveRecovery(recovery) ? setRecoveryRace : undefined}
+        onRecovery={journey.state.kind === 'ready' && !isLiveRecovery(recovery) ? memory => openRecovery(memory.result.id) : undefined}
         onSaved={(memory, earned) => {
           setNewMajor(undefined)
           if (earned) setCelebrate(memory)
-          if (memory.result.outcome !== 'DidNotStart' && memory.result.raceDate >= addDays(today, -60)) setRecoveryRace(memory)
         }} />}
       {section === 'cabinet' && <TrophyCabinet history={races.state.history} units={units} onMajor={(major, earned) => {
         setSelectedMajor(earned ? major.id : null); setSelectedRaceId(null); setNewMajor(earned ? undefined : major.id); pick('races')
       }} onRace={race => { setSelectedMajor(null); setSelectedRaceId(race.result.id); setNewMajor(undefined); pick('races') }} />}
     </>}
-    {maintenance?.status === 'Active' && <MaintenanceCard maintenance={maintenance} today={today} compact onEnd={journey.actions.endMaintenance} />}
-    {!isLiveRecovery(recovery) && recovery?.status === 'Completed' && !maintenance && <NextChapter runDays={[]} onMaintenance={journey.actions.startMaintenance} onNewRace={onNewRace}
-      onMoreRecovery={() => setManualRecovery(true)} />}
-    {manualRecovery && <RecoveryOffer today={today} runDays={[]} onStart={async body => { await journey.actions.startRecovery(body); setManualRecovery(false) }} onDecline={() => setManualRecovery(false)} />}
-    {recoveryRace && !celebrate && !isLiveRecovery(recovery) && recoveryRace.eventDistanceKm != null && <div ref={recoveryOffer} tabIndex={-1}><RecoveryOffer
-      today={today} runDays={[]} planId={recoveryRace.result.planId ?? undefined} eventName={recoveryRace.eventName}
-      distanceKm={recoveryRace.eventDistanceKm} raceDate={recoveryRace.result.raceDate}
-      onStart={async body => { await journey.actions.startRecovery(body); setRecoveryRace(null) }} onDecline={() => setRecoveryRace(null)} /></div>}
     {celebrate && <FinishLineFilm variant="race" heading="RACE FINISHED." raceName={celebrate.eventName} lede={`You crossed the finish line of ${celebrate.eventName}. This one stays with you.`}
       metrics={[...(celebrate.result.finishTime ? [{ value: formatClock(celebrate.result.finishTime) ?? '', label: celebrate.result.timeKind === 'OfficialChip' ? 'Official chip time' : celebrate.result.timeKind === 'RecordedElapsed' ? 'Recording elapsed time' : 'Finish time' }] : []),
         ...(celebrate.eventDistanceKm != null ? [{ value: formatDistance(celebrate.eventDistanceKm, units), label: 'Event distance' }] : [])]}

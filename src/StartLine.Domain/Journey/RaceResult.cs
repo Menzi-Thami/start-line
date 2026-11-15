@@ -12,12 +12,13 @@ public sealed record RaceResultAnswers(
     string? Note = null);
 
 /// <summary>
-/// The result of one plan's race, recorded by the runner. One per plan. It is the only thing that earns a finisher
+/// The result of a race, recorded by the runner, optionally attached to a training plan. One per plan. It earns a finisher
 /// badge: a race date passing, a synced run or a ticked shakeout never does.
 /// </summary>
 public sealed class RaceResult
 {
     public const int MaxNoteLength = 280;
+    public const int MaxEventNameLength = 120;
     public const double MinDistanceKm = 0.1;
     public const double MaxDistanceKm = 400;
     public static readonly TimeSpan MinFinishTime = TimeSpan.FromMinutes(1);
@@ -31,7 +32,19 @@ public sealed class RaceResult
 
     public Guid RunnerId { get; private set; }
 
-    public Guid SavedPlanId { get; private set; }
+    public Guid? SavedPlanId { get; private set; }
+
+    public string EventName { get; private set; } = "";
+
+    /// <summary>The event's advertised distance, separate from the runner's actual recorded distance.</summary>
+    public double? EventDistanceKm { get; private set; }
+
+    public MarathonMajor? Major { get; private set; }
+
+    public RaceTimeKind TimeKind { get; private set; }
+
+    /// <summary>One runner, one event edition. Legacy rows receive a key when their retained identity is confirmed.</summary>
+    public string? RaceKey { get; private set; }
 
     public RaceOutcome Outcome { get; private set; }
 
@@ -65,6 +78,29 @@ public sealed class RaceResult
         var result = new RaceResult { Id = Guid.NewGuid(), RunnerId = runnerId, SavedPlanId = savedPlanId };
         result.Change(answers, planStart, today);
         return result;
+    }
+
+    public static RaceResult RecordPast(Guid id, Guid runnerId, RaceResultAnswers answers, DateOnly today)
+    {
+        if (id == Guid.Empty || runnerId == Guid.Empty) throw new DomainException("A race belongs to a runner.");
+        var result = new RaceResult { Id = id, RunnerId = runnerId };
+        result.Change(answers, new DateOnly(1900, 1, 1), today);
+        return result;
+    }
+
+    public void Identify(string eventName, double distanceKm, MarathonMajor? major, RaceTimeKind timeKind)
+    {
+        if (string.IsNullOrWhiteSpace(eventName) || eventName.Trim().Length > MaxEventNameLength)
+            throw new DomainException($"Give the race a name of up to {MaxEventNameLength} characters.");
+        if (!double.IsFinite(distanceKm) || distanceKm is < MinDistanceKm or > MaxDistanceKm)
+            throw new DomainException("Choose an event distance between 0.1 and 400 km.");
+        if (!Enum.IsDefined(timeKind) || (major is { } id && (!Enum.IsDefined(id) || !MarathonMajors.IsMarathon(distanceKm))))
+            throw new DomainException("A Marathon Major must be the full marathon event.");
+        EventName = eventName.Trim();
+        EventDistanceKm = distanceKm;
+        Major = major ?? MarathonMajors.Recognise(EventName, distanceKm);
+        TimeKind = FinishTime is null ? RaceTimeKind.Unspecified : timeKind;
+        RaceKey = MarathonMajors.RaceKey(EventName, distanceKm, RaceDate, Major);
     }
 
     public void Change(RaceResultAnswers answers, DateOnly planStart, DateOnly today)
@@ -122,6 +158,9 @@ public sealed class RaceResult
         DistanceKm = answers.DistanceKm is { } d ? Math.Round(d, 2) : null;
         ActivityId = answers.ActivityId;
         Note = note;
+        if (EventDistanceKm is { } eventKm && EventName.Length > 0)
+            RaceKey = MarathonMajors.RaceKey(EventName, eventKm, RaceDate, Major);
+        if (FinishTime is null) TimeKind = RaceTimeKind.Unspecified;
     }
 
     /// <summary>The finish time against the goal: negative is faster. Only for a finished race with a time.</summary>

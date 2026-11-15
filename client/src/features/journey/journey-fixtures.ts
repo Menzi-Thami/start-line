@@ -135,4 +135,4 @@ export function maintenance(overrides: Partial<MaintenancePlan> = {}): Maintenan
   }
 }
 
-export const journeyOf = (chapters: PlanChapter[], rest: Partial<Journey> = {}): Journey => ({ chapters, recovery: null, maintenance: null, ...rest })
+export const journeyOf = (chapters: PlanChapter[], rest: Partial<Journey> = {}): Journey => ({ chapters, recovery: null, maintenance: null, hasMoreChapters: false, page: 0, ...rest })

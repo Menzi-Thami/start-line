@@ -29,8 +29,12 @@ qualify are awarded on first read (retrospective). `CelebratedAt` makes the film
 
 | Method | Route | Body | Returns |
 |---|---|---|---|
-| GET | `/me/journey` | – | `JourneyDto` |
+| GET | `/me/journey?page=0` | – | `JourneyDto`, 20 chapters and `hasMoreChapters` |
 | GET | `/me/journey/plans/{planId}` | – | `PlanChapterDto` with `weeks` |
+| POST | `/me/journey/plans/{planId}/archive` | `{ expectedVersion }` | 204; history and recovery retained |
+| GET | `/me/journey/races` | – | `RaceHistoryDto`, independent and plan-linked results plus Majors definitions |
+| PUT | `/me/journey/races/{id}` | `SaveRaceMemoryRequest` | `RaceMemoryDto`; stable client id for creation/retry, version for edits |
+| DELETE | `/me/journey/races/{id}?expectedVersion=…` | – | 204; stale removal refused |
 | POST | `/me/journey/achievements/{id}/celebrated` | – | 204 (idempotent) |
 | PUT | `/me/journey/plans/{planId}/race-result` | `SaveRaceResultRequest` | `RaceResultDto` |
 | DELETE | `/me/journey/plans/{planId}/race-result` | – | 204 (undo) |
@@ -43,12 +47,13 @@ qualify are awarded on first read (retrospective). `CelebratedAt` makes the film
 ### DTOs (JSON camelCase, enums as strings as elsewhere in the API)
 
 ```
-JourneyDto { chapters: PlanChapterDto[], recovery: RecoveryPlanDto | null, maintenance: MaintenancePlanDto | null }
+JourneyDto { chapters: PlanChapterDto[], recovery: RecoveryPlanDto | null, maintenance: MaintenancePlanDto | null,
+  hasMoreChapters: bool, page: int }
 
 PlanChapterDto {
   planId, name, raceName, raceDate: date | null, distanceKm: number | null, status: SavedPlanStatus,
   startDate: date, lifecycle: JourneyLifecycle, training: TrainingRecapDto, raceResult: RaceResultDto | null,
-  achievements: AchievementDto[], goalTime: "hh:mm:ss", weeks: ChapterWeekDto[] | null   // weeks only on the detail route
+  achievements: AchievementDto[], goalTime: "hh:mm:ss", weeks: ChapterWeekDto[] | null, version: string  // weeks only on detail
 }
 JourneyLifecycle = Active | TrainingComplete | RacePending | RaceCompleted | RaceNotCompleted | Recovering | Recovered | Archived
 TrainingRecapDto {
@@ -61,9 +66,15 @@ ChapterWeekDto { weekStart: date, scheduledRuns, confirmedRuns, recordedKm: numb
 AchievementDto { id, kind: TrainingComplete | RaceFinished, planId, earnedOn: date, awardedAt, celebratedAt | null }
 
 SaveRaceResultRequest { outcome: Finished | DidNotStart | DidNotFinish, raceDate?: date, finishTime?: "hh:mm:ss",
-  distanceKm?: number, activityId?: guid, note?: string (≤ 280), expectedVersion?: string }
-RaceResultDto { id, planId, outcome, raceDate, finishTime | null, distanceKm | null, activityId | null, note | null,
-  goalTime | null, versusGoal: "±hh:mm:ss" | null, version: string, createdAt, updatedAt }
+  distanceKm?: number, activityId?: guid, note?: string (≤ 280), expectedVersion?: string, timeKind?: RaceTimeKind }
+RaceResultDto { id, planId: guid | null, outcome, raceDate, finishTime | null, distanceKm | null, activityId | null, note | null,
+  goalTime | null, versusGoal: "±hh:mm:ss" | null, version: string, createdAt, updatedAt,
+  timeKind, eventName | null, eventDistanceKm | null, major | null }
+RaceTimeKind = Unspecified | OfficialChip | RecordedElapsed
+RaceMemoryDto { eventName, eventDistanceKm | null, major | null, majorEligible: bool, result: RaceResultDto, needsReview: bool }
+RaceHistoryDto { races: RaceMemoryDto[], majors: MarathonMajorDefinition[] }
+SaveRaceMemoryRequest { eventName (≤ 120), eventDistanceKm, raceDate, outcome, finishTime?, distanceKm?, activityId?, note?,
+  timeKind?, major?, expectedVersion? }
 
 StartRecoveryRequest { planId?: guid, eventName?: string, distanceKm: number, raceDate: date,
   effort: Easy | Hard | AllOut, preference: Rest | Walk | CrossTraining | EasyRunning,
@@ -91,6 +102,12 @@ MaintenancePlanDto { id, daysPerWeek, runDays, includeStrength, startedOn, statu
   weeks: { weekStart, sessions: { date, kind: EasyRun | LongerEasyRun | Strength, title, guidance, minMinutes, maxMinutes, optional }[] }[],
   version }
 ```
+
+Race history does not need an active plan. Existing plan-result routes still return their original non-null plan id; the
+same record is exposed in race history, while an independently entered race has `planId: null`. New results are protected
+against duplicate event editions and reused recording ids. Legacy duplicates remain available with `needsReview: true`
+and cannot earn cabinet trophies until the runner removes the incorrect result. The cabinet is computed from these
+confirmed, unambiguous results; it does not create extra plan achievement rows. See [collection and retention rules](../journey-and-trophy-cabinet.md).
 
 ## Recovery generator v1 (`Domain/Journey/RecoveryGenerator`)
 

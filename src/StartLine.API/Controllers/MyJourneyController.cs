@@ -17,13 +17,51 @@ namespace StartLine.API.Controllers;
 [Route("api/v{version:apiVersion}/me/journey")]
 public sealed class MyJourneyController(IDispatcher dispatcher) : ControllerBase
 {
+    /// <summary>Every saved race, including races run without a Taperday training plan, and the current Majors collection.</summary>
+    [HttpGet("races")]
+    [ProducesResponseType<RaceHistoryDto>(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Races(CancellationToken cancellationToken)
+    {
+        Response.Headers.CacheControl = "no-store";
+        return Ok(await dispatcher.Send(new GetRaceHistoryQuery(), cancellationToken));
+    }
+
+    /// <summary>Confirms a past race or corrects a saved result. The client's stable id makes retries safe.</summary>
+    [HttpPut("races/{id:guid}")]
+    [EnableRateLimiting(PresentationDependencyInjection.PlanRateLimitPolicy)]
+    [ProducesResponseType<RaceMemoryDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> SaveRace(Guid id, SaveRaceMemoryRequest race, CancellationToken cancellationToken) =>
+        Ok(await dispatcher.Send(new SaveRaceMemoryCommand(id, race), cancellationToken));
+
+    /// <summary>Withdraws a result and its finisher achievement. A stale device cannot remove a newer correction.</summary>
+    [HttpDelete("races/{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> DeleteRace(Guid id, [FromQuery] string expectedVersion, CancellationToken cancellationToken)
+    {
+        await dispatcher.Send(new DeleteRaceMemoryCommand(id, expectedVersion), cancellationToken);
+        return NoContent();
+    }
+
     /// <summary>Every chapter, the recovery going on and easy running. Badges are brought up to date on every read.</summary>
     [HttpGet]
     [ProducesResponseType<JourneyDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> Get(CancellationToken cancellationToken)
+    public async Task<IActionResult> Get(CancellationToken cancellationToken, [FromQuery] int page = 0)
     {
         Response.Headers.CacheControl = "no-store";
-        return Ok(await dispatcher.Send(new GetMyJourneyQuery(), cancellationToken));
+        return Ok(await dispatcher.Send(new GetMyJourneyQuery(page), cancellationToken));
+    }
+
+    /// <summary>One plan's chapter, week by week.</summary>
+    [HttpPost("plans/{planId:guid}/archive")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Archive(Guid planId, ArchiveChapterRequest archive, CancellationToken cancellationToken)
+    {
+        await dispatcher.Send(new ArchiveChapterCommand(planId, archive), cancellationToken);
+        return NoContent();
     }
 
     /// <summary>One plan's chapter, week by week.</summary>

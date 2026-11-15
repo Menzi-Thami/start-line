@@ -51,6 +51,9 @@ import type {
   SaveRaceResult,
   StartMaintenance,
   StartRecovery,
+  RaceHistory,
+  RaceMemory,
+  SaveRaceMemory,
 } from '../features/journey/types'
 
 /** The one place the app talks to the network. Every failure becomes an ApiError with words a runner can act on. */
@@ -330,7 +333,14 @@ export const api = {
       request<void>('/api/v1/me/feedback', { method: 'POST', body: JSON.stringify({ message, page }) }, token),
     /** The running journey: past and current plans, achievements, race results, recovery and maintenance. */
     journey: {
-      get: (token: string) => request<Journey>('/api/v1/me/journey', { cache: 'no-store' }, token),
+      get: (token: string, page = 0) => request<Journey>(`/api/v1/me/journey${page ? `?page=${page}` : ''}`, { cache: 'no-store' }, token),
+      races: (token: string) => request<RaceHistory>('/api/v1/me/journey/races', { cache: 'no-store' }, token),
+      saveRace: (token: string, id: string, body: SaveRaceMemory) =>
+        request<RaceMemory>(`/api/v1/me/journey/races/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }, token),
+      deleteRace: (token: string, id: string, expectedVersion: string) =>
+        request<void>(`/api/v1/me/journey/races/${encodeURIComponent(id)}?expectedVersion=${encodeURIComponent(expectedVersion)}`, { method: 'DELETE' }, token),
+      archive: (token: string, id: string, expectedVersion: string) =>
+        request<void>(`/api/v1/me/journey/plans/${encodeURIComponent(id)}/archive`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }, token),
       chapter: (token: string, planId: string) =>
         request<PlanChapter>(`/api/v1/me/journey/plans/${encodeURIComponent(planId)}`, { cache: 'no-store' }, token),
       celebrated: (token: string, achievementId: string) =>

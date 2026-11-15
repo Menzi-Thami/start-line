@@ -57,7 +57,7 @@ with backend/frontend checks, Chromium journeys and the additional browser-engin
   `Application/Features/Sync/StravaSyncRunner` behind `IStravaApi`; tests use `FakeStravaApi`, never Strava.
 - `Domain/Plans/SavedPlan` — a runner has **one current plan** (a filtered unique index enforces it). A new plan for the
   same race updates it in place; another race replaces it (the old one is kept server-side as `Archived`; past plans are
-  browsable read-only in Progress → Your running journey). Signed-in runners open on Home; removing a plan with check-ins archives it to retain running history. See `docs/plan-history.md`.
+  browsable read-only in Journey → Training chapters, even without a current plan). History is paged, with no lifetime plan-count limit. Signed-in runners open on Home; removing a plan with check-ins archives it to retain running history. See `docs/plan-history.md`.
 - `Domain/Plans` — `TrainingPlanGenerator` (phases, volume, taper), `WeekLayout` (which run goes on which
   chosen day), `WorkoutBuilder` (concrete sessions per distance), `PlanProfile` (per-distance shape).
 - `Application/Features/{Plans,Races,Predictions}` — query + validator + handler per feature.
@@ -151,7 +151,10 @@ accepted. VAPID keys come from App Service settings (`docs/deploy.md`); without 
 Running journey (`Domain/Journey`, `Features/Journey`, `/me/journey`, client `features/journey`): training complete is
 not race complete. Achievements (`TrainingComplete`, `RaceFinished`) are evaluated on read from durable evidence only
 (the runner's own Done; uploads and own distances for recorded km; never Strava or a date) and kept idempotently, once
-per plan. Race results come only from the runner. Recovery (`RecoveryGenerator` v1, versioned, never touches training
+per plan. Race results come only from the runner and can now exist without a plan. Journey includes race history and a
+personal trophy cabinet; ambiguous legacy duplicates earn no cabinet trophies until reviewed. Event distance, actual distance,
+official chip time and recording elapsed time stay distinct. The featured-race flag is not official Majors classification.
+See `docs/journey-and-trophy-cabinet.md`. Recovery (`RecoveryGenerator` v1, versioned, never touches training
 plans) is optional, readiness-gated by check-ins, red flags stop all exercise; maintenance is easy and optional. The
 calendar shows Rest only inside a plan and recovery only on the recovery plan's own days. See
 `docs/features/finish-line-api-contract.md`.

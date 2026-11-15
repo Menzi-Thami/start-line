@@ -24,6 +24,20 @@ const run = {
 const detail = { ...run, elapsedSeconds: 16812 } as unknown as Activity
 
 describe('Race result from an existing Strava recording', () => {
+  it('stops labelling an edited recording time as elapsed and lets the runner explicitly choose chip time', async () => {
+    const onSave = vi.fn(async () => raceResult())
+    const user = userEvent.setup()
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run]} onLoadActivity={async () => detail} onSave={onSave} onDelete={vi.fn()} />)
+    await user.click(screen.getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('combobox', { name: 'Time source' })).toHaveValue('RecordedElapsed')
+    await user.clear(screen.getByRole('textbox', { name: 'Minutes' }))
+    await user.type(screen.getByRole('textbox', { name: 'Minutes' }), '39')
+    expect(screen.getByRole('combobox', { name: 'Time source' })).toHaveValue('Unspecified')
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Time source' }), 'OfficialChip')
+    await user.click(screen.getByRole('button', { name: 'Save race result' }))
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ finishTime: '04:39:12', timeKind: 'OfficialChip', activityId: run.id }))
+  })
+
   it('finds the marathon, uses recorded elapsed time and saves only after confirmation', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn(async () => raceResult({ raceDate: marathon.raceDate!, distanceKm: run.distanceKm, finishTime: '04:40:12', activityId: run.id }))

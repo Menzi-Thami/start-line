@@ -53,6 +53,7 @@ interface Props {
   bests?: PersonalBest[]
   strava?: StravaStatus
   onOpenPlan: () => void
+  onOpenJourney?: () => void
   /** Race week: straight to the race-day checklist and pacing in the plan. */
   onOpenRacePrep?: () => void
   onOpenDay?: (date: string) => void
@@ -439,6 +440,7 @@ export function Home({
   bests,
   strava,
   onOpenPlan,
+  onOpenJourney,
   onOpenRacePrep,
   onOpenDay,
   onBuildPlan,
@@ -551,7 +553,7 @@ export function Home({
             {onOpenRacePrep && <button type="button" className="button button-primary" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
           </section>
         )}
-        <JourneyHomeCard journey={journey} today={today} currentPlanId={current?.id ?? null} onOpenPlan={onOpenPlan} onNewRace={onBuildPlan} />
+        <JourneyHomeCard journey={journey} today={today} currentPlanId={current?.id ?? null} onOpenPlan={onOpenPlan} onOpenJourney={onOpenJourney} onNewRace={onBuildPlan} />
         <div className="home-top">
           {recovering ? null : current ? (
             <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={onOpenDay} />

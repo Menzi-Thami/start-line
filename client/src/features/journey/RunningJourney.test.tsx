@@ -43,7 +43,7 @@ describe('Past plan race recordings', () => {
     vi.spyOn(api.me, 'activities').mockResolvedValue([run])
     const load = vi.spyOn(api.me, 'activity').mockResolvedValue({ ...run, elapsedSeconds: 16812 } as unknown as Activity)
     const save = vi.spyOn(api.me.journey, 'saveRaceResult').mockImplementation(async (_token, _plan, body) => {
-      saved = { ...result, ...body, raceDate: body.raceDate ?? result.raceDate, version: 'next' }
+      saved = { ...result, ...body, raceDate: body.raceDate ?? result.raceDate, timeKind: body.timeKind ?? 'Unspecified', version: 'next' }
       return saved
     })
     vi.spyOn(api.me.journey, 'deleteRaceResult').mockImplementation(async () => { saved = null })

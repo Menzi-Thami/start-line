@@ -56,6 +56,7 @@ import { useAuth } from './auth-context'
 const AccountPage = lazy(() => import('../features/account/AccountPage').then((module) => ({ default: module.AccountPage })))
 const ActivityPage = lazy(() => import('../features/activities/ActivityPage').then((module) => ({ default: module.ActivityPage })))
 const MyRuns = lazy(() => import('../features/activities/MyRuns').then((module) => ({ default: module.MyRuns })))
+const JourneyPage = lazy(() => import('../features/journey/JourneyPage').then((module) => ({ default: module.JourneyPage })))
 const CouchTo5K = lazy(() => import('../features/beginner/CouchTo5K').then((module) => ({ default: module.CouchTo5K })))
 
 type PlanState =
@@ -64,7 +65,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'home' | 'build' | 'beginner' | 'runs' | 'account' | 'onboarding' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
+type View = 'home' | 'build' | 'beginner' | 'runs' | 'journey' | 'account' | 'onboarding' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -102,9 +103,9 @@ const runFromUrl = (): OpenRun | null => {
 const viewFromUrl = (): View => {
   if (window.location.pathname === STRAVA_CALLBACK_PATH) return 'account'
   const view = new URLSearchParams(window.location.search).get('view')
-  // A runner has one plan, so the old My plans page is now Home.
-  if (view === 'plans') return 'home'
-  return view === 'home' || view === 'beginner' || view === 'runs' || view === 'account' || view === 'onboarding' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
+  // Old saved-plan links now open the permanent journey, including when there is no current plan.
+  if (view === 'plans') return 'journey'
+  return view === 'home' || view === 'beginner' || view === 'runs' || view === 'journey' || view === 'account' || view === 'onboarding' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
 }
 
 /** Wait for the full five-scene story without delaying reduced-motion users.
@@ -143,8 +144,6 @@ export function App() {
   // Phones and tablets get the app's navigation as a bar along the bottom, as an installed app's; desktops get it as a
   // rail down the left. Same five places, same order.
   const compact = useMediaQuery('(max-width: 63.99rem)')
-  // Which part of a plan is open, so the bar can show Progress as its own place.
-  const [planTab, setPlanTab] = useState(() => new URLSearchParams(window.location.search).get('planTab'))
   // Bumped when a run is deleted, so the journal beside it on a desktop loads again.
   const [runsVersion, setRunsVersion] = useState(0)
   // Plan navigation can return to the current week from any training detail.
@@ -501,30 +500,29 @@ export function App() {
     else window.history.replaceState(null, '', url)
   }
 
-  // Plan opens the runner's current week, and Progress the same plan's progress, or the builder when they have no plan.
+  // Plan opens the runner's current week, or the builder when they have no plan. Journey has its own destination.
   // A plan from a link (signed out) works the same way.
   const pickFromBar = (item: TabBarItem) => {
     if (item === 'home') return go('home')
     if (item === 'runs') return go('runs')
+    if (item === 'journey') return go('journey')
     if (item === 'account') return go('account')
     if (view === 'beginner' && item === 'plan') return
-    const tab = item === 'progress' ? 'progress' : 'week'
+    const tab = 'week'
     if (view === 'build' && plan.kind === 'ready' && !editing) {
       const url = new URL(window.location.href)
       url.searchParams.set('planTab', tab)
       url.searchParams.delete('day')
       window.history.replaceState(window.history.state, '', url)
       window.dispatchEvent(new PopStateEvent('popstate'))
-      setPlanTab(tab)
       window.scrollTo?.({ top: 0 })
       return
     }
-    if (ownPlan) { setPlanTab(tab); return openOwnPlan(tab) }
+    if (ownPlan) return openOwnPlan(tab)
     if (plan.kind === 'ready' && state.kind !== 'ready') {
       // Signed out with a plan from a link: back to it, on the asked-for tab.
       const query = new URLSearchParams(toSearchParams(plan.inputs))
       query.set('planTab', tab)
-      setPlanTab(tab)
       setView('build')
       setOpenRun(null)
       moveTo(`?${query}`, true)
@@ -543,7 +541,7 @@ export function App() {
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'home' || next === 'beginner' || next === 'runs' || next === 'account' || next === 'onboarding' || next === 'privacy' || next === 'sign-in'
+      next === 'home' || next === 'beginner' || next === 'runs' || next === 'journey' || next === 'account' || next === 'onboarding' || next === 'privacy' || next === 'sign-in'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
@@ -748,7 +746,7 @@ export function App() {
   // Strength is part of Plan, so training always has one navigation destination.
   const onPlan = view === 'build' && plan.kind === 'ready' && !editing
   const barCurrent: TabBarItem | null =
-    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'account' ? 'account' : onPlan && planTab === 'progress' ? 'progress' : view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
+    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
   const showBar =
     !(plan.kind === 'loading' && showBuilder) &&
@@ -929,7 +927,7 @@ export function App() {
           </section>
         )}
 
-        {(view === 'home' || view === 'runs' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
+        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
           <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
         )}
 
@@ -946,6 +944,7 @@ export function App() {
             initialPlan={copy?.plan}
             onPlanLoaded={savePlan}
             onOpenPlan={() => openOwnPlan()}
+            onOpenJourney={() => go('journey')}
             onOpenRacePrep={() => { setPreparationRequest({ mode: 'race', date: null }); openOwnPlan() }}
             onOpenDay={openOwnDay}
             onBuildPlan={startFresh}
@@ -964,6 +963,9 @@ export function App() {
           </section>
         )}
 
+        {view === 'journey' && state.kind === 'ready' && (
+          <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} />
+        )}
         {view === 'runs' && state.kind === 'ready' && (
           compact ? (
             openRun ? (
@@ -1007,10 +1009,10 @@ export function App() {
           />
         )}
 
-        {(view === 'home' || view === 'runs' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
+        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
           <div className="empty signed-out-prompt">
             <TaperdayRunner pose="crouch" size={40} className="signed-out-runner" />
-            <p><strong>{view === 'runs' ? 'Your runs live in your account.' : view === 'account' ? 'Your account, connections and reminders.' : 'Your Home: today’s session, your week and your race.'}</strong></p>
+            <p><strong>{view === 'journey' ? 'Your training chapters, races and trophies live in your account.' : view === 'runs' ? 'Your runs live in your account.' : view === 'account' ? 'Your account, connections and reminders.' : 'Your Home: today’s session, your week and your race.'}</strong></p>
             <p>Sign in to see your saved plans, runs and account. It’s free, and your plan comes with you.</p>
             <div className="submit-row" style={{ marginTop: 'var(--space-3)' }}>
               {state.kind === 'signed-out' && (
@@ -1135,11 +1137,9 @@ export function App() {
                 preparation={preparationRequest}
                 onEditStrength={changeAnswers}
                 onEditPlan={changeAnswers}
-                progressInBar={showBar}
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
                 reveal={revealPlan}
-                onTabChange={setPlanTab}
                 progressExtras={savedOnScreen && state.kind === 'ready' ? (
                   <div className="progress-extras">
                     <section className="progress-extra" aria-labelledby="progress-compare">
@@ -1235,7 +1235,7 @@ export function App() {
         <TabBar
           variant={compact ? 'bar' : 'rail'}
           current={barCurrent}
-          // Plan and Progress only mean something once there's a plan: until then the bar is Home, Runs and Account.
+          // Journey remains available even after the runner archives their last current plan.
           hasPlan={ownPlan !== null || onPlan}
           onPick={pickFromBar}
           account={state.kind === 'ready' ? { name: state.runner.displayName, photo } : undefined}

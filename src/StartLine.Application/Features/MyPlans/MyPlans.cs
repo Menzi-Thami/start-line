@@ -125,11 +125,6 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
             return SavedPlanSummaries.Of(active, catalogue);
         }
 
-        if (await db.SavedPlans.CountAsync(p => p.RunnerId == runner.Id, cancellationToken) >= SavedPlan.MaxKeptPerRunner)
-        {
-            throw new ConflictException("plan_limit", $"You can keep up to {SavedPlan.MaxKeptPerRunner} plans. Delete a past plan to save another.");
-        }
-
         var saved = SavedPlan.Create(runner.Id, name, inputs);
         if (active is not null)
         {
@@ -173,7 +168,6 @@ internal sealed class ListMyPlansHandler(IApplicationDbContext db, CurrentRunner
         var plans = await db.SavedPlans.AsNoTracking()
             .Where(p => p.RunnerId == runner.Id)
             .OrderBy(p => p.Status).ThenByDescending(p => p.UpdatedAt).ThenByDescending(p => p.Id)
-            .Take(SavedPlan.MaxKeptPerRunner)
             .ToListAsync(cancellationToken);
 
         return [.. plans.Select(p => SavedPlanSummaries.Of(p, catalogue))];

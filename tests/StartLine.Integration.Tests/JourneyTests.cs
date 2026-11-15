@@ -287,11 +287,13 @@ public sealed class JourneyTests(JourneyFactory factory) : IClassFixture<Journey
         Kinds(await Chapter(client, plan)).ShouldBe(["RaceFinished"]);
 
         // Also when the first result is created by both at once.
-        var fresh = await PastPlan(runnerId);
-        var created = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => PutResult(client, fresh, new { outcome = "Finished", finishTime = "00:55:00" })));
+        // Use an independent runner: a second chapter for this runner's same event must now be rejected as a duplicate.
+        var (freshClient, freshRunner) = await Runner();
+        var fresh = await PastPlan(freshRunner);
+        var created = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => PutResult(freshClient, fresh, new { outcome = "Finished", finishTime = "00:55:00" })));
         created.ShouldAllBe(r => r.StatusCode == HttpStatusCode.OK);
         (await Task.WhenAll(created.Select(async r => (await Json(r)).GetProperty("id").GetGuid()))).Distinct().ShouldHaveSingleItem();
-        var chapter = await Chapter(client, fresh);
+        var chapter = await Chapter(freshClient, fresh);
         Kinds(chapter).ShouldBe(["RaceFinished"]);
         chapter.GetProperty("raceResult").GetProperty("versusGoal").GetString().ShouldBe("+00:03:00");
     }

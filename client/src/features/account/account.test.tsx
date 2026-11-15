@@ -308,12 +308,13 @@ describe('a signed-up runner', () => {
     expect(db.plans).toHaveLength(1)
   })
 
-  it('has one plan, so there’s no My plans, and an old My plans link opens Home', async () => {
+  it('keeps an old My plans link useful by opening the permanent journey without a current plan', async () => {
     accountApi({ runner: thandi })
     window.history.replaceState(null, '', '/?view=plans')
     renderWith(signedIn())
 
-    expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' }, { timeout: 3000 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Your journey.' }, { timeout: 3000 })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Journey$/ })).toHaveAttribute('aria-current', 'page')
     expect(screen.queryByRole('button', { name: 'My plans' })).not.toBeInTheDocument()
   })
 
@@ -409,8 +410,9 @@ describe('a signed-up runner', () => {
     expect(new URLSearchParams(window.location.search).get('day')).toBe('2026-10-13')
     await user.click(within(day).getByRole('button', { name: /Back to plan/ }))
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi' })).toBeVisible()
-    await user.click(screen.getByRole('button', { name: 'Progress' }))
-    expect(screen.getByRole('button', { name: 'Progress' })).toHaveAttribute('aria-current', 'page')
+    await user.click(screen.getByRole('button', { name: /^Plan$/ }))
+    await user.click(await screen.findByRole('tab', { name: /^Progress$/ }))
+    expect(screen.getByRole('button', { name: /^Plan$/ })).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByRole('region', { name: 'Training progress' })).toBeVisible()
     expect(new URLSearchParams(window.location.search).get('planTab')).toBe('progress')
     await user.click(screen.getByRole('button', { name: 'Home' }))

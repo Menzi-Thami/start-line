@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using StartLine.Application.Common;
 using StartLine.Application.Common.Dispatcher;
@@ -24,13 +25,15 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
     /// <summary>How long a finished recovery is still shown on the journey.</summary>
     public const int RecentRecoveryDays = 30;
 
-    public async Task<IReadOnlyList<PlanChapterDto>> ChaptersAsync(Runner runner, Guid? onlyPlan, bool withWeeks, CancellationToken cancellationToken)
+    public const int ChapterPageSize = 20;
+
+    public async Task<IReadOnlyList<PlanChapterDto>> ChaptersAsync(Runner runner, Guid? onlyPlan, bool withWeeks, CancellationToken cancellationToken, int page = 0)
     {
         var today = CoachCalls.LocalToday(runner, time);
         var plans = await db.SavedPlans.AsNoTracking()
             .Where(p => p.RunnerId == runner.Id && (onlyPlan == null || p.Id == onlyPlan))
             .OrderBy(p => p.Status).ThenByDescending(p => p.UpdatedAt).ThenByDescending(p => p.Id)
-            .Take(SavedPlan.MaxKeptPerRunner)
+            .Skip(page * ChapterPageSize).Take(ChapterPageSize)
             .ToListAsync(cancellationToken);
         if (plans.Count == 0)
         {
@@ -42,7 +45,7 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
             .ToLookup(c => c.SavedPlanId, c => new RecapCheckIn(c.Id, c.Date, c.SessionType, c.Status, c.IsAdditional, c.DistanceKm, c.DistanceUnreported, c.ActivityId, c.PrescribedKm));
         var calls = (await db.CoachWeeks.AsNoTracking().Where(w => planIds.Contains(w.SavedPlanId)).OrderBy(w => w.WeekStart).ToListAsync(cancellationToken))
             .ToLookup(w => w.SavedPlanId, w => w.ToDecision());
-        var results = await db.RaceResults.AsNoTracking().Where(r => planIds.Contains(r.SavedPlanId)).ToDictionaryAsync(r => r.SavedPlanId, cancellationToken);
+        var results = await db.RaceResults.AsNoTracking().Where(r => r.SavedPlanId != null && planIds.Contains(r.SavedPlanId.Value)).ToDictionaryAsync(r => r.SavedPlanId!.Value, cancellationToken);
         var recoveries = (await db.RecoveryPlans.AsNoTracking().Where(r => r.RunnerId == runner.Id && r.SavedPlanId != null).ToListAsync(cancellationToken))
             .ToDictionary(r => r.SavedPlanId!.Value);
         // Uploaded files only: a synced Strava copy is never evidence for anything kept.
@@ -77,7 +80,8 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
                 result is null ? null : RaceResultDto.From(result, b.Saved.Inputs.GoalTime),
                 [.. achievements.Where(a => a.SavedPlanId == b.Saved.Id).OrderBy(a => a.Kind).Select(AchievementDto.From)],
                 b.Saved.Inputs.GoalTime,
-                withWeeks ? [.. b.Recap.WeekBreakdown.Select(w => new ChapterWeekDto(w.WeekStart, w.ScheduledRuns, w.ConfirmedRuns, w.RecordedKm))] : null);
+                withWeeks ? [.. b.Recap.WeekBreakdown.Select(w => new ChapterWeekDto(w.WeekStart, w.ScheduledRuns, w.ConfirmedRuns, w.RecordedKm))] : null,
+                Version: JourneyVersion.Of(b.Saved.Version));
         }).ToDictionary(c => c.PlanId);
         // Do not invent a schedule, counts or a new award when a legacy race's details were never retained.
         var unavailableIds = plans.Where(p => !chapters.ContainsKey(p.Id)).Select(p => p.Id).ToList();
@@ -92,7 +96,7 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
                 new TrainingRecapDto(0, 0, 0, 0, 0, 0, 0, 0, null, 0, null, null, null, false, false, false, 0),
                 result is null ? null : RaceResultDto.From(result, saved.Inputs.GoalTime),
                 [.. retainedAwards.Where(a => a.SavedPlanId == saved.Id).Select(AchievementDto.From)], saved.Inputs.GoalTime,
-                null, DetailsUnavailable: true);
+                null, DetailsUnavailable: true, Version: JourneyVersion.Of(saved.Version));
         })];
     }
 
@@ -211,7 +215,12 @@ internal static class OwnJourney
         ?? throw new NotFoundException("Recovery", id.ToString());
 }
 
-public sealed record GetMyJourneyQuery : IRequest<JourneyDto>;
+public sealed record GetMyJourneyQuery(int Page = 0) : IRequest<JourneyDto>;
+
+internal sealed class GetMyJourneyValidator : AbstractValidator<GetMyJourneyQuery>
+{
+    public GetMyJourneyValidator() => RuleFor(q => q.Page).InclusiveBetween(0, 10000);
+}
 
 internal sealed class GetMyJourneyHandler(IApplicationDbContext db, CurrentRunner current, JourneyReader reader, TimeProvider time)
     : IRequestHandler<GetMyJourneyQuery, JourneyDto>
@@ -225,11 +234,13 @@ internal sealed class GetMyJourneyHandler(IApplicationDbContext db, CurrentRunne
         }
 
         var today = CoachCalls.LocalToday(runner, time);
-        var chapters = await reader.ChaptersAsync(runner, null, withWeeks: false, cancellationToken);
+        var chapters = await reader.ChaptersAsync(runner, null, withWeeks: false, cancellationToken, request.Page);
+        var totalPlans = await db.SavedPlans.CountAsync(p => p.RunnerId == runner.Id, cancellationToken);
         var recovery = await reader.CurrentRecoveryAsync(runner, cancellationToken);
         var maintenance = await db.MaintenancePlans.AsNoTracking()
             .SingleOrDefaultAsync(m => m.RunnerId == runner.Id && m.Status == MaintenanceStatus.Active, cancellationToken);
-        return new JourneyDto(chapters, recovery is null ? null : RecoveryPlanDto.From(recovery, today), maintenance is null ? null : MaintenancePlanDto.From(maintenance, today));
+        return new JourneyDto(chapters, recovery is null ? null : RecoveryPlanDto.From(recovery, today), maintenance is null ? null : MaintenancePlanDto.From(maintenance, today),
+            totalPlans > (request.Page + 1) * JourneyReader.ChapterPageSize, request.Page);
     }
 }
 

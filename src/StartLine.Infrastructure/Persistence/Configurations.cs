@@ -536,11 +536,19 @@ internal sealed class RaceResultConfiguration : IEntityTypeConfiguration<StartLi
         builder.Property(r => r.FinishTime).HasColumnName("FinishSeconds")
             .HasConversion(t => t.HasValue ? (long?)t.Value.TotalSeconds : null, s => s.HasValue ? TimeSpan.FromSeconds(s.Value) : null);
         builder.Property(r => r.Note).HasMaxLength(StartLine.Domain.Journey.RaceResult.MaxNoteLength);
+        builder.Property(r => r.EventName).HasMaxLength(StartLine.Domain.Journey.RaceResult.MaxEventNameLength).HasDefaultValue("");
+        builder.Property(r => r.Major).HasConversion<string>().HasMaxLength(16);
+        builder.Property(r => r.TimeKind).HasConversion<string>().HasMaxLength(24).HasDefaultValue(StartLine.Domain.Journey.RaceTimeKind.Unspecified);
+        builder.Property(r => r.RaceKey).HasMaxLength(180);
         builder.Property(r => r.Version).IsRowVersion();
-        // One result per plan. Through the plan to the runner, so deleting either deletes it; only the run's id is kept.
+        // At most one result per associated plan. Independent results have no plan; only the activity's id is kept.
         builder.HasIndex(r => r.SavedPlanId).IsUnique();
         builder.HasIndex(r => r.RunnerId);
-        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(r => r.SavedPlanId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(r => new { r.RunnerId, r.RaceKey }).IsUnique().HasFilter("[RaceKey] IS NOT NULL");
+        builder.HasIndex(r => new { r.RunnerId, r.ActivityId }).IsUnique().HasFilter("[ActivityId] IS NOT NULL AND [RaceKey] IS NOT NULL");
+        // Direct runner ownership also covers results without a plan. NO ACTION avoids two cascade paths through a plan.
+        builder.HasOne<Runner>().WithMany().HasForeignKey(r => r.RunnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<SavedPlan>().WithMany().HasForeignKey(r => r.SavedPlanId).OnDelete(DeleteBehavior.NoAction);
     }
 }
 

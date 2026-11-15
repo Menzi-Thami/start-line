@@ -74,7 +74,15 @@ public static class MaintenanceGenerator
             var sessions = Enumerable.Range(0, 7)
                 .Select(weekStart.AddDays)
                 .Where(date => date >= startedOn)
-                .SelectMany(date => SessionsOn(date, ordered, longer, strength))
+                .SelectMany(date =>
+                {
+                    // A runner may start this immediately after a race. Ease into optional runs rather
+                    // than placing a 40–60 minute longer run on the very first day.
+                    var daysSinceStart = date.DayNumber - startedOn.DayNumber;
+                    if (daysSinceStart < 2) return Enumerable.Empty<MaintenanceSession>();
+                    var sessions = SessionsOn(date, ordered, longer, strength);
+                    return daysSinceStart < 7 ? sessions.Where(s => s.Kind != MaintenanceSessionKind.LongerEasyRun) : sessions;
+                })
                 .ToList();
             return new MaintenanceWeek(weekStart, sessions);
         })];

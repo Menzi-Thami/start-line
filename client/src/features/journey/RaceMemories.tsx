@@ -7,6 +7,8 @@ import { formatClock, OUTCOME_WORDS } from './journey-model'
 import { personalBests, timeSource } from './race-history-model'
 import { RaceResultForm } from './RaceResultForm'
 import type { MajorDefinition, MarathonMajor, RaceMemory } from './types'
+import type { SouthAfricanRace } from './sa-races'
+import { RecordedRaceSuggestions } from './RecordedRaceSuggestions'
 import type { RaceHistoryStore } from './useRaceHistory'
 
 interface Props {
@@ -16,13 +18,15 @@ interface Props {
   selectedMajor: MarathonMajor | null
   selectedRaceId?: string | null
   newMajor: MarathonMajor | null | undefined
+  newLocal?: SouthAfricanRace | null
   onClearFilter: () => void
   onSaved: (memory: RaceMemory, celebrate: boolean) => void
   onRecovery?: (memory: RaceMemory) => void
 }
 
-export function RaceMemories({ store, today, units, selectedMajor, selectedRaceId, newMajor, onClearFilter, onSaved, onRecovery }: Props) {
-  const [editing, setEditing] = useState<RaceMemory | 'new' | null>(newMajor !== undefined ? 'new' : null)
+export function RaceMemories({ store, today, units, selectedMajor, selectedRaceId, newMajor, newLocal, onClearFilter, onSaved, onRecovery }: Props) {
+  const [editing, setEditing] = useState<RaceMemory | 'new' | null>(newMajor !== undefined || newLocal ? 'new' : null)
+  const [suggestedLocal, setSuggestedLocal] = useState<SouthAfricanRace | null>(null)
   const [year, setYear] = useState('all')
   const [shown, setShown] = useState(20)
   const title = useRef<HTMLHeadingElement>(null)
@@ -31,7 +35,7 @@ export function RaceMemories({ store, today, units, selectedMajor, selectedRaceI
   const bests = personalBests(races)
   const years = [...new Set(races.map(memory => memory.result.raceDate.slice(0, 4)))].sort().reverse()
   const filtered = races.filter(memory => (year === 'all' || memory.result.raceDate.startsWith(year)) && (!selectedMajor || memory.major === selectedMajor) && (!selectedRaceId || memory.result.id === selectedRaceId))
-  const close = () => { setEditing(null); title.current?.focus() }
+  const close = () => { setEditing(null); setSuggestedLocal(null); title.current?.focus() }
   return <section className="race-memories" aria-labelledby="race-memories-title">
     <header className="journey-section-head">
       <div><p className="plan-kicker">THE FINISH LINES YOU REMEMBER</p><h2 id="race-memories-title" ref={title} tabIndex={-1}>Your races.</h2>
@@ -39,9 +43,10 @@ export function RaceMemories({ store, today, units, selectedMajor, selectedRaceI
       <button type="button" className="button button-primary" onClick={() => setEditing('new')}>Add a past race</button>
     </header>
     {editing && <RaceMemoryEditor key={editing === 'new' ? `new-${newMajor ?? ''}` : editing.result.id}
-      memory={editing === 'new' ? null : editing} initialMajor={editing === 'new' ? newMajor ?? null : editing.major}
+      memory={editing === 'new' ? null : editing} initialMajor={editing === 'new' ? newMajor ?? null : editing.major} initialLocal={editing === 'new' ? newLocal ?? suggestedLocal : null}
       majors={majors} store={store} today={today} units={units} onCancel={close}
       onSaved={(memory) => { onSaved(memory, memory.result.outcome === 'Finished' && (editing === 'new' || editing.result.outcome !== 'Finished')); close() }} />}
+    <RecordedRaceSuggestions saved={races} today={today} units={units} onPick={race => { setSuggestedLocal(race); setEditing('new') }} />
     <div className="race-history-filters">
       <label className="field"><span className="field-label">Race year</span><select className="input" value={year} onChange={event => { setYear(event.target.value); setShown(20) }}>
         <option value="all">All years</option>{years.map(value => <option key={value}>{value}</option>)}
@@ -72,8 +77,8 @@ export function RaceMemories({ store, today, units, selectedMajor, selectedRaceI
   </section>
 }
 
-function RaceMemoryEditor({ memory, initialMajor, majors, store, today, units, onCancel, onSaved }: {
-  memory: RaceMemory | null; initialMajor: MarathonMajor | null; majors: MajorDefinition[]; store: RaceHistoryStore; today: string; units: Units
+function RaceMemoryEditor({ memory, initialMajor, initialLocal, majors, store, today, units, onCancel, onSaved }: {
+  memory: RaceMemory | null; initialMajor: MarathonMajor | null; initialLocal?: SouthAfricanRace | null; majors: MajorDefinition[]; store: RaceHistoryStore; today: string; units: Units
   onCancel: () => void; onSaved: (memory: RaceMemory) => void
 }) {
   const auth = useAuth()
@@ -81,9 +86,9 @@ function RaceMemoryEditor({ memory, initialMajor, majors, store, today, units, o
   const [recordId] = useState(() => memory?.result.id ?? crypto.randomUUID())
   const [major, setMajor] = useState<MarathonMajor | ''>(initialMajor ?? '')
   const selected = majors.find(definition => definition.id === major)
-  const [name, setName] = useState(memory?.eventName ?? selected?.name ?? '')
+  const [name, setName] = useState(memory?.eventName ?? initialLocal?.name ?? selected?.name ?? '')
   const [date, setDate] = useState(memory?.result.raceDate ?? '')
-  const [distance, setDistance] = useState(String(memory?.eventDistanceKm ?? (selected ? 42.195 : '')))
+  const [distance, setDistance] = useState(String(memory?.eventDistanceKm ?? initialLocal?.distanceKm ?? (selected ? 42.195 : '')))
   const [stage, setStage] = useState<'event' | 'result'>('event')
   const [error, setError] = useState<string | null>(null)
   const [runs, setRuns] = useState<ActivitySummary[] | undefined>()
@@ -95,9 +100,20 @@ function RaceMemoryEditor({ memory, initialMajor, majors, store, today, units, o
   useEffect(() => {
     let current = true
     heading.current?.focus()
-    auth.getToken().then(token => current && token ? api.me.activities(token) : undefined).then(value => { if (current) setRuns(value) }).catch(() => { /* Results can be recorded without imported evidence. */ })
+    auth.getToken().then(token => current && token ? api.me.activities(token) : undefined).then(value => {
+      if (!current) return
+      setRuns(value)
+      if (!memory && initialLocal && value) {
+        const matches = value.filter(run => (run.kind === 'Run' || run.kind === 'TrailRun')
+          && run.localDate <= today && Number.isFinite(run.distanceKm)
+          && Math.abs(run.distanceKm - initialLocal.distanceKm) <= Math.max(.4, initialLocal.distanceKm * .05))
+        // Never guess between two marathon recordings. One plausible run pre-fills the date,
+        // but it is still up to the runner to confirm which named event they completed.
+        if (matches.length === 1) { setRecordingId(matches[0]!.id); setDate(matches[0]!.localDate) }
+      }
+    }).catch(() => { /* Results can be recorded without imported evidence. */ })
     return () => { current = false }
-  }, [auth])
+  }, [auth, initialLocal, memory, today])
   const next = (event: FormEvent) => {
     event.preventDefault()
     if (!name.trim() || !date || date > today || date < '1900-01-01' || !Number.isFinite(Number(distance)) || Number(distance) < .1 || Number(distance) > 400) {
@@ -108,6 +124,7 @@ function RaceMemoryEditor({ memory, initialMajor, majors, store, today, units, o
   return <section className="race-memory-editor" aria-labelledby={`${id}-title`}>
     <h3 id={`${id}-title`} ref={heading} tabIndex={-1}>{memory ? 'Correct your race memory' : 'Save a race to your journey'}</h3>
     {stage === 'event' ? <form aria-label="Race details" onSubmit={next}>
+      {initialLocal && !memory && <p className="field-help">We can suggest a recording with the right distance; confirm the race name, date and activity before awarding a finish.</p>}
       {!memory && runs?.some(run => run.kind === 'Run' || run.kind === 'TrailRun') && <label className="field" htmlFor={`${id}-recording`}>
         <span className="field-label" id={`${id}-recording-label`}>Use a recorded run (optional)</span>
         <select id={`${id}-recording`} aria-labelledby={`${id}-recording-label`} className="input" value={recordingId} onChange={event => {

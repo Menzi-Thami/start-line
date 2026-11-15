@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { formatDate } from '../../lib/format'
 import { SHORT_DAY, WEEK, type DayOfWeek } from '../../lib/types'
 import type { MaintenancePlan, StartMaintenance } from './types'
+import { MaintenanceCalendar } from './MaintenanceCalendar'
 
 interface Props {
   runDays: DayOfWeek[]
@@ -110,7 +111,7 @@ export function MaintenanceCard({ maintenance, today, onEnd, onNewRace, compact 
   const [error, setError] = useState<string | null>(null)
   const sessions = maintenance.weeks.flatMap(week => week.sessions)
   const upcoming = sessions.filter(session => session.date >= today)
-  const shown = compact ? upcoming.slice(0, 3) : maintenance.weeks[0]?.sessions ?? []
+  const shown = upcoming.slice(0, 3)
   const end = async () => {
     setBusy(true)
     setError(null)
@@ -121,7 +122,7 @@ export function MaintenanceCard({ maintenance, today, onEnd, onNewRace, compact 
       <p className="plan-kicker">Keep running comfortably</p>
       <h3 id={`${id}-title`} className="maintenance-title">{maintenance.daysPerWeek} easy runs a week</h3>
       <p className="field-help">Conversational effort. Every session is optional; move them around as life needs.</p>
-      <ul className="maintenance-sessions" aria-label={compact ? 'Coming up' : 'This week'}>
+      {compact ? <ul className="maintenance-sessions" aria-label="Coming up">
         {shown.map(session => (
           <li key={`${session.date}|${session.kind}`} className={session.date < today ? 'is-past' : session.date === today ? 'is-today' : undefined}>
             <span className="mono">{formatDate(session.date, 'weekday')} {formatDate(session.date, 'dayMonth')}</span>
@@ -129,7 +130,7 @@ export function MaintenanceCard({ maintenance, today, onEnd, onNewRace, compact 
             <span className="mono">{session.minMinutes}–{session.maxMinutes} min</span>
           </li>
         ))}
-      </ul>
+      </ul> : <MaintenanceCalendar maintenance={maintenance} today={today} />}
       {!compact && (
         <div className="journey-actions">
           {onNewRace && <button type="button" className="button" onClick={onNewRace}>Train for another race</button>}

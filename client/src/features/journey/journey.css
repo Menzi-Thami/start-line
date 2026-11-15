@@ -171,8 +171,11 @@
 .recovery-plan-header > .runner { color: var(--accent); flex: none; width: clamp(5rem, 15vw, 10rem); height: auto; }
 @media (max-width: 600px) {
   .recovery-plan-header { display: block; position: relative; }
-  .recovery-plan-header > .runner { position: absolute; top: var(--space-5); right: 0; width: 5rem; }
-  .recovery-plan-header .plan-kicker { padding-right: 6rem; }
+  .recovery-plan-header > div { min-width: 0; }
+  .recovery-plan-header > .runner { position: absolute; top: var(--space-4); right: 0; width: 4.2rem; }
+  .recovery-plan-header .plan-kicker { padding-right: 5rem; }
+  /* The runner is Taperday's signature character, but must never cover a long plan heading. */
+  .recovery-plan-header h1 { box-sizing: border-box; padding-right: 5rem; font-size: clamp(2.1rem, 8vw, 3.25rem); overflow-wrap: anywhere; }
 }
 .recovery-plan-calendar { margin-top: var(--space-4); border-top: 1px solid var(--line); }
 .recovery-plan-calendar > summary { min-height: var(--tap); padding-block: var(--space-3); cursor: pointer; font-weight: 600; }
@@ -404,3 +407,36 @@
 @media (prefers-reduced-motion: reduce) {
   .training-story-meter > span { transition: none; }
 }
+
+/* Four-week easy-running calendar: compact 7-day strip that works in Night Run and light mode. */
+.maintenance-calendar { display: grid; gap: var(--space-3); margin: var(--space-4) 0; min-width: 0; }
+.maintenance-calendar-nav { display: flex; justify-content: space-between; align-items: center; gap: .5rem; text-align: center; }
+.maintenance-calendar-nav .button { min-width: 2.8rem; padding-inline: .65rem; }
+.maintenance-calendar-nav p { margin: .15rem 0 0; }
+.maintenance-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); list-style: none; padding: 0; margin: 0; gap: clamp(.15rem, 1vw, .5rem); }
+.maintenance-calendar-grid li { min-width: 0; }
+.maintenance-calendar-day { display: grid; justify-items: center; align-content: center; gap: .15rem; width: 100%; min-height: 4.2rem; padding: .35rem .1rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--paper); color: var(--ink); font: inherit; cursor: pointer; }
+.maintenance-calendar-day > span:first-child { font-size: clamp(.63rem, 1.8vw, .78rem); color: var(--ink-2); }
+.maintenance-calendar-day strong { font-size: clamp(.85rem, 2.2vw, 1.08rem); }
+.maintenance-calendar-day.is-today { box-shadow: inset 0 0 0 1px var(--accent); }
+.maintenance-calendar-day.is-selected { background: var(--accent-soft); border: 2px solid var(--accent); }
+.maintenance-calendar-day.has-session .maintenance-calendar-dot { color: var(--accent); }
+.maintenance-calendar-day:focus-visible { outline: none; box-shadow: var(--focus); }
+.maintenance-calendar-dot { font-size: .75rem; line-height: 1; color: var(--muted); }
+.maintenance-day-detail { background: var(--surface); border-radius: var(--radius-sm); padding: clamp(.8rem, 3vw, 1.25rem); min-height: 7rem; }
+.maintenance-day-detail .plan-kicker { margin: 0 0 .55rem; }
+.maintenance-day-detail ul { list-style: none; margin: 0; padding: 0; display: grid; gap: .8rem; }
+.maintenance-day-detail li { display: block; }
+.maintenance-day-detail li > span.mono { float: right; }
+.maintenance-day-detail p { margin: .5rem 0; color: var(--ink-2); }
+.cabinet-local-icon { display: grid; place-items: center; min-height: 5.5rem; font-size: 3.25rem; font-weight: 900; color: var(--accent); }
+@media (max-width: 340px) {
+  .maintenance-calendar-day { min-height: 3.7rem; }
+  .maintenance-calendar-grid { gap: .12rem; }
+}
+
+.race-recording-suggestions { margin: var(--space-4) 0; padding: var(--space-4); border: 1px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius-md); }
+.race-recording-suggestions h3 { margin: .4rem 0 .8rem; color: var(--ink); font-size: var(--text-xl); }
+.race-recording-suggestion { display: flex; gap: 1rem; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.race-recording-suggestion p { margin: .3rem 0; color: var(--ink-2); }
+.race-recording-suggestion .button { flex: 0 0 auto; }

@@ -6,6 +6,7 @@ import { formatClock, isLiveRecovery } from './journey-model'
 import { RaceMemories } from './RaceMemories'
 import { RunningJourney } from './RunningJourney'
 import { TrophyCabinet } from './TrophyCabinet'
+import type { SouthAfricanRace } from './sa-races'
 import type { MarathonMajor, RaceMemory } from './types'
 import { useJourney } from './useJourney'
 import { useRaceHistory } from './useRaceHistory'
@@ -24,6 +25,7 @@ export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { toda
   const [selectedMajor, setSelectedMajor] = useState<MarathonMajor | null>(null)
   const [selectedRaceId, setSelectedRaceId] = useState<string | null>(null)
   const [newMajor, setNewMajor] = useState<MarathonMajor | null | undefined>()
+  const [newLocal, setNewLocal] = useState<SouthAfricanRace | null>(null)
   const [celebrate, setCelebrate] = useState<RaceMemory | null>(null)
   const title = useRef<HTMLHeadingElement>(null)
   const openRecovery = (raceId?: string) => {
@@ -31,7 +33,7 @@ export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { toda
     else window.location.assign(`?view=recovery${raceId ? `&race=${encodeURIComponent(raceId)}` : ''}`)
   }
   useEffect(() => {
-    const read = () => { setSection(sectionFromUrl()); setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined) }
+    const read = () => { setSection(sectionFromUrl()); setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined); setNewLocal(null) }
     window.addEventListener('popstate', read)
     return () => window.removeEventListener('popstate', read)
   }, [])
@@ -51,7 +53,7 @@ export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { toda
     </header>
     <nav className="journey-sections" aria-label="Journey sections">
       {([['training', 'Training chapters'], ['races', 'Your races'], ['cabinet', 'Trophy cabinet']] as const).map(([id, label]) =>
-        <button type="button" key={id} aria-current={section === id ? 'page' : undefined} onClick={() => { setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined); pick(id) }}>{label}</button>)}
+        <button type="button" key={id} aria-current={section === id ? 'page' : undefined} onClick={() => { setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined); setNewLocal(null); pick(id) }}>{label}</button>)}
     </nav>
     {isLiveRecovery(recovery) && <section className="journey-state" aria-label="Your recovery">
       <p>Your recovery has its own plan.</p><button type="button" className="button" onClick={() => openRecovery()}>Open recovery plan</button>
@@ -61,15 +63,15 @@ export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { toda
     {section !== 'training' && races.state.kind === 'error' && <div role="alert" className="journey-state"><p>{races.state.message}</p><button type="button" className="button" onClick={races.refresh}>Try again</button></div>}
     {races.state.kind === 'ready' && <>
       {section !== 'training' && races.state.refreshFailed && <div className="journey-state" role="status"><p>Showing your races as last loaded. The latest changes couldn’t be fetched.</p><button type="button" className="button" onClick={races.refresh}>Retry race history</button></div>}
-      {section === 'races' && <RaceMemories key={`${newMajor ?? 'all'}|${selectedMajor ?? ''}|${selectedRaceId ?? ''}`} store={races} today={today} units={units}
+      {section === 'races' && <RaceMemories key={`${newMajor ?? 'all'}|${selectedMajor ?? ''}|${selectedRaceId ?? ''}|${newLocal?.id ?? ''}`} newLocal={newLocal} store={races} today={today} units={units}
         selectedMajor={selectedMajor} selectedRaceId={selectedRaceId} newMajor={newMajor}
-        onClearFilter={() => { setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined) }}
+        onClearFilter={() => { setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined); setNewLocal(null) }}
         onRecovery={journey.state.kind === 'ready' && !isLiveRecovery(recovery) ? memory => openRecovery(memory.result.id) : undefined}
         onSaved={(memory, earned) => {
-          setNewMajor(undefined)
+          setNewMajor(undefined); setNewLocal(null)
           if (earned) setCelebrate(memory)
         }} />}
-      {section === 'cabinet' && <TrophyCabinet history={races.state.history} units={units} onMajor={(major, earned) => {
+      {section === 'cabinet' && <TrophyCabinet history={races.state.history} units={units} onLocalRace={local => { setNewMajor(undefined); setSelectedMajor(null); setSelectedRaceId(null); pick('races'); setNewLocal(local) }} onMajor={(major, earned) => {
         setSelectedMajor(earned ? major.id : null); setSelectedRaceId(null); setNewMajor(earned ? undefined : major.id); pick('races')
       }} onRace={race => { setSelectedMajor(null); setSelectedRaceId(race.result.id); setNewMajor(undefined); pick('races') }} />}
     </>}

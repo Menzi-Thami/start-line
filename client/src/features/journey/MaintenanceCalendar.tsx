@@ -5,13 +5,15 @@ import type { MaintenancePlan } from './types'
 /** A real four-week plan view. Unscheduled dates remain open, never falsely marked "rest" or completed. */
 export function MaintenanceCalendar({ maintenance, today }: { maintenance: MaintenancePlan; today: string }) {
   const weeks = maintenance.weeks
-  const initial = Math.max(0, weeks.findIndex(week => today >= week.weekStart && today <= addDays(week.weekStart, 6)))
+  const currentWeek = Math.max(0, weeks.findIndex(week => today >= week.weekStart && today <= addDays(week.weekStart, 6)))
+  const initial = weeks[currentWeek]?.sessions.some(session => session.date >= today)
+    ? currentWeek : Math.min(currentWeek + 1, weeks.length - 1)
   const [index, setIndex] = useState(initial)
   const [selected, setSelected] = useState(today)
   const week = weeks[index]
   if (!week) return <p className="field-help">Your easy-running days will appear when the schedule refreshes.</p>
   const days = Array.from({ length: 7 }, (_, day) => addDays(week.weekStart, day))
-  const chosen = days.includes(selected) ? selected : (days.includes(today) ? today : days[0]!)
+  const chosen = days.includes(selected) ? selected : (days.includes(today) ? today : week.sessions.find(session => session.date >= today)?.date ?? days[0]!)
   const sessions = week.sessions.filter(session => session.date === chosen)
   const move = (next: number) => { setIndex(next); setSelected(weeks[next]!.weekStart) }
   return <section className="maintenance-calendar" aria-label="Easy-running calendar">

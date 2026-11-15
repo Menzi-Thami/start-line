@@ -110,7 +110,7 @@ function RaceMemoryEditor({ memory, initialMajor, initialLocal, majors, store, t
       }
     }).catch(() => { /* Results can be recorded without imported evidence. */ })
     return () => { current = false }
-  }, [auth])
+  }, [auth, initialLocal, memory, today])
   const next = (event: FormEvent) => {
     event.preventDefault()
     if (!name.trim() || !date || date > today || date < '1900-01-01' || !Number.isFinite(Number(distance)) || Number(distance) < .1 || Number(distance) > 400) {

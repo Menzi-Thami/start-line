@@ -263,6 +263,59 @@ public sealed class JourneyTests(JourneyFactory factory) : IClassFixture<Journey
         Kinds(pending).ShouldBeEmpty();
     }
 
+    [Theory]
+    [InlineData(SavedPlanStatus.Active)]
+    [InlineData(SavedPlanStatus.Archived)]
+    public async Task A_saved_finish_can_be_corrected_after_its_Strava_recording_is_purged(SavedPlanStatus status)
+    {
+        var (client, runnerId) = await Runner();
+        var plan = await PastPlan(runnerId, status);
+        var activity = await RaceRecording(runnerId, ActivityOrigin.Strava(267, StartLineApiFactory.Now, false));
+        var saved = await Json(await PutResult(client, plan, new
+        {
+            outcome = "Finished",
+            finishTime = "00:52:30",
+            distanceKm = 10.15,
+            activityId = activity.Id,
+            timeKind = "RecordedElapsed",
+        }));
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
+            await db.Activities.Where(a => a.Id == activity.Id).ExecuteDeleteAsync();
+        }
+
+        (await client.GetAsync(Url($"/api/v1/me/activities/{activity.Id}"))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        var corrected = await Json(await PutResult(client, plan, new
+        {
+            outcome = "Finished",
+            finishTime = "00:52:00",
+            distanceKm = 10.15,
+            activityId = activity.Id,
+            timeKind = "OfficialChip",
+            expectedVersion = saved.GetProperty("version").GetString(),
+        }));
+        corrected.GetProperty("id").GetGuid().ShouldBe(saved.GetProperty("id").GetGuid());
+        corrected.GetProperty("activityId").GetGuid().ShouldBe(activity.Id);
+        corrected.GetProperty("timeKind").GetString().ShouldBe("OfficialChip");
+        var chapter = await Chapter(client, plan);
+        chapter.GetProperty("raceResult").GetProperty("finishTime").GetString().ShouldBe("00:52:00");
+        chapter.GetProperty("raceResult").GetProperty("distanceKm").GetDouble().ShouldBe(10.15);
+        Kinds(chapter).ShouldBe(["RaceFinished"]);
+
+        var expired = await RaceRecording(runnerId, ActivityOrigin.Strava(268, StartLineApiFactory.Now.AddDays(-8), false));
+        (await PutResult(client, plan, new
+        {
+            outcome = "Finished",
+            finishTime = "00:52:00",
+            activityId = expired.Id,
+            expectedVersion = corrected.GetProperty("version").GetString(),
+        })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        (await client.DeleteAsync(Url($"/api/v1/me/journey/plans/{plan}/race-result"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await PutResult(client, plan, new { outcome = "Finished", finishTime = "00:52:00", activityId = activity.Id })).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        Kinds(await Chapter(client, plan)).ShouldBeEmpty();
+    }
+
     [Fact]
     public async Task A_stale_version_is_refused_with_a_conflict_and_a_plain_retry_is_idempotent()
     {

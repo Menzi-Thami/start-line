@@ -178,6 +178,27 @@
 }
 .journey-grid:has(> .journey-side:empty) { grid-template-columns: minmax(0, 1fr); }
 .journey-side:empty { display: none; }
+.journey-panel.is-race { max-width: 760px; margin-inline: auto; }
+.journey-grid.is-race { grid-template-columns: minmax(0, 1fr); }
+.journey-race-summary { scroll-margin-top: 7rem; margin-bottom: var(--space-4); }
+.journey-race-summary:focus, .journey-main:focus { outline: none; }
+.race-result-event { margin: .5rem 0 1rem; font: 400 clamp(1.8rem, 6vw, 2.8rem)/1.1 var(--font-display); overflow-wrap: anywhere; }
+.is-saved > .race-result-title { font: 700 clamp(2rem, 7vw, 3rem)/1.15 var(--font-body); letter-spacing: -.04em; }
+.is-saved:has(> .race-result-source) > .race-result-title { font-size: clamp(3rem, 12vw, 4.75rem); }
+.race-result-source { margin: .3rem 0 1.25rem; color: var(--muted); font-size: var(--text-sm); }
+.race-result-details, .race-result-alternatives { margin-top: var(--space-3); border-top: 1px solid var(--line); }
+.race-result-details > summary, .race-result-alternatives > summary, .journey-training > summary, .journey-recovery-details > summary { padding-block: .8rem; min-height: var(--tap); cursor: pointer; font-weight: 600; }
+.journey-training { margin-top: 0; }
+.journey-training > summary { font-size: var(--text-md); }
+.journey-training > summary span { display: block; margin-top: .35rem; font-size: var(--text-sm); font-weight: 400; color: var(--muted); }
+.journey-training .journey-main { margin-top: var(--space-4); scroll-margin-top: 7rem; }
+.journey-rest > p:not(.plan-kicker) { color: var(--ink-2); }
+.journey-recovery-details[open] { margin-top: var(--space-3); }
+.journey-recovery-details[open] > summary { margin-bottom: var(--space-4); }
+.recovery-preferences > summary { min-height: var(--tap); padding-block: .8rem; cursor: pointer; font-weight: 600; }
+.race-result .achievement-share { margin-block: var(--space-3); padding-block: 0; border: 0; }
+.race-result .achievement-share .journey-actions .button { flex: 1 1 8rem; min-width: 0; padding-inline: .8rem; font-size: var(--text-sm); }
+.journey-race-summary .race-match-found { padding: 0; border: 0; background: transparent; }
 .journey-badges { display: flex; flex-wrap: wrap; gap: .5rem; padding: 0; margin: var(--space-4) 0 0; list-style: none; }
 .journey-badges li { display: inline-flex; flex-direction: column; padding: .4rem .8rem; border-radius: 999px; border: 1px solid var(--line-strong); font-size: var(--text-sm); font-weight: 700; }
 .journey-badges li.is-earned { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }

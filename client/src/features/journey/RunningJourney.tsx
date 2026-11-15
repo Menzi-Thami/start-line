@@ -178,7 +178,6 @@ export function RunningJourney({ units, today, runDays = [], onArchived }: { uni
                           const result = await actions.saveRaceResult(opened.chapter.planId, body)
                           setDetail(previous => request.current === requestId && previous?.owner === auth && previous.kind === 'ready' && previous.chapter.planId === opened.chapter.planId
                             ? { ...previous, chapter: { ...previous.chapter, raceResult: result } } : previous)
-                          if (request.current === requestId && recoveryWelcome(result.outcome)) setOfferPlan(opened.chapter.planId)
                           if (request.current === requestId && result.outcome === 'Finished' && opened.chapter.raceResult?.outcome !== 'Finished') {
                             setReplay({ owner: auth, kind: 'race', chapter: { ...opened.chapter, raceResult: result } })
                           }

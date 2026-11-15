@@ -1,7 +1,9 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { formatDate, formatDistance, formatDuration, toTimeSpan, type Units } from '../../lib/format'
 import type { Activity, ActivitySummary } from '../../lib/types'
-import { raceMatches } from './race-match'
+import { raceMatches, verifyRaceRecording } from './race-match'
+import { RaceFinishShare } from './RaceFinishShare'
+import { useRaceRecording } from './useRaceRecording'
 import { clockSeconds, formatClock, OUTCOME_WORDS, versusGoalWords } from './journey-model'
 import type { PlanChapter, RaceOutcome, RaceResult, RaceTimeKind, SaveRaceResult } from './types'
 
@@ -11,7 +13,7 @@ interface Props {
   chapter: RaceResultContext
   today: string
   units: Units
-  /** Recorded runs around race day, to link one if the runner wants. Never picked for them. */
+  /** Existing runs are matched and loaded automatically; a finish is saved only after confirmation. */
   runs?: readonly ActivitySummary[]
   /** Load the original evidence so elapsed (not moving) time is used when suggesting a finish. */
   onLoadActivity?: (id: string) => Promise<Activity>
@@ -42,8 +44,7 @@ const draftFrom = (chapter: RaceResultContext, today: string, outcome: RaceOutco
 }
 
 /**
- * "How did race day go?": the runner says whether they finished, didn't finish or didn't start, with their time if they
- * like. A race date passing is never taken as a finish, and a recorded run is never matched to the race by itself.
+ * Existing recordings fill the result automatically. A race date passing is never taken as a finish.
  * A synced recording can be proposed with one tap to confirm, but never marks a runner as a finisher without consent.
  * Saving can be edited or undone, and a failed save keeps everything typed.
  */
@@ -66,28 +67,23 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
     return () => { mounted.current = false }
   }, [])
   const raceDay = draft.date
-  const candidates = runs.filter(run => run.kind !== 'Other' && run.localDate === raceDay)
+  const candidates = [...new Map(runs.map(run => [run.id, run])).values()].filter(run => run.kind !== 'Other' && run.localDate === raceDay)
   const suggestions = !saved && chapter.raceDate && chapter.raceDate <= today ? raceMatches(chapter, runs) : []
   // Even two near-identical recordings can be separate runs. Ask the runner to choose, never infer a duplicate.
   const suggested = suggestions.length === 1 ? suggestions[0] : suggestions.find(run => run.id === selectedRecording)
   const found = suggestions.length > 0 && !!onLoadActivity
+  const preview = useRaceRecording(chapter, mode === 'ask' ? suggested : undefined, onLoadActivity)
+  // A result can arrive from another screen/device while this component is already asking or showing a blank
+  // draft. Always show that saved result. Preserve deliberate edits of an existing version for conflict handling.
+  const view = saved && !(mode === 'form' && draft.expectedVersion !== null) ? 'saved' : mode === 'saved' ? 'ask' : mode
 
   const fromRecording = async (run: ActivitySummary, review = false, linkOnly = false) => {
     if (busy || !onLoadActivity) return
     setBusy(true)
     setError(null)
     try {
-      const activity = await onLoadActivity(run.id)
+      const activity = verifyRaceRecording(chapter, run, !linkOnly && preview.activity?.id === run.id ? preview.activity : await onLoadActivity(run.id), linkOnly)
       if (!mounted.current) return
-      if (activity.id !== run.id || activity.localDate !== run.localDate
-        || activity.kind !== run.kind
-        || !Number.isFinite(activity.elapsedSeconds) || activity.elapsedSeconds < 60 || activity.elapsedSeconds > 48 * 3600
-        || !Number.isFinite(activity.movingSeconds) || activity.movingSeconds < 0
-        || activity.elapsedSeconds < activity.movingSeconds
-        || !Number.isFinite(activity.distanceKm) || activity.distanceKm < 0.1 || activity.distanceKm > 400
-        || (!linkOnly && !raceMatches(chapter, [{ ...run, ...activity }]).length)) {
-        throw new Error('That recording could not be verified. You can enter your result manually.')
-      }
       const seconds = Math.round(activity.elapsedSeconds)
       const next = {
         ...(linkOnly ? draft : draftFrom(chapter, today, 'Finished')),
@@ -189,24 +185,27 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
     }
   }
 
-  if (mode === 'saved' && saved) {
+  if (view === 'saved' && saved) {
     const clock = formatClock(saved.finishTime)
     const versus = versusGoalWords(saved)
     return (
       <section className="race-result is-saved" aria-labelledby={`${id}-saved`}>
-        <p className="plan-kicker">Race result · {formatDate(saved.raceDate, 'dayMonth')}</p>
+        <p className="plan-kicker">{OUTCOME_WORDS[saved.outcome]} · {formatDate(saved.raceDate, 'dayMonth')}</p>
+        <p className="race-result-event">{chapter.raceName}</p>
         <h3 id={`${id}-saved`} className="race-result-title">
-          {saved.outcome === 'Finished' ? (formatClock(saved.finishTime) ? `Finished in ${formatClock(saved.finishTime)}` : 'Finished') : saved.outcome === 'DidNotFinish' ? 'You started, and that took courage' : 'You didn’t start this one'}
+          {saved.outcome === 'Finished' ? (clock ? <><span className="visually-hidden">Finished in</span>{' '}{clock}</> : 'Finished') : saved.outcome === 'DidNotFinish' ? 'You started, and that took courage' : 'You didn’t start this one'}
         </h3>
+        {clock && <p className="race-result-source">{saved.timeKind === 'OfficialChip' ? 'Official chip time' : saved.timeKind === 'RecordedElapsed' ? 'Recording elapsed time' : 'Finish time'}</p>}
         <dl className="race-result-facts">
-          <div><dt>Result</dt><dd>{OUTCOME_WORDS[saved.outcome]}</dd></div>
-          {clock && <div><dt>{saved.timeKind === 'OfficialChip' ? 'Official chip time' : saved.timeKind === 'RecordedElapsed' ? 'Recording elapsed time' : 'Finish time'}</dt><dd className="mono">{clock}</dd></div>}
-          {saved.distanceKm != null && <div><dt>{saved.outcome === 'DidNotFinish' ? 'Distance covered' : 'Distance'}</dt><dd className="mono">{formatDistance(saved.distanceKm, units)}</dd></div>}
-          {saved.activityId && <div><dt>Recording</dt><dd>Linked run</dd></div>}
+          {saved.distanceKm != null && <div><dt>{saved.outcome === 'DidNotFinish' ? 'Distance covered' : saved.timeKind === 'RecordedElapsed' ? 'Recorded distance' : 'Distance'}</dt><dd className="mono">{formatDistance(saved.distanceKm, units)}</dd></div>}
         </dl>
-        {versus && <p className="race-result-versus">{versus}</p>}
+        <p className="field-help">Saved in your Journey.</p>
         {saved.outcome === 'DidNotFinish' && <p>Stopping when your body says so is a good decision. Rest first; the next start line will be there.</p>}
         {saved.outcome === 'DidNotStart' && <p>Not starting is sometimes the right call. Your training still happened, and it still counts.</p>}
+        {saved.outcome === 'Finished' && <RaceFinishShare raceName={chapter.raceName} result={saved} units={units} />}
+        <details className="race-result-details">
+        <summary>Race details &amp; corrections</summary>
+        {versus && <p className="race-result-versus">{versus}</p>}
         {saved.note && <p className="race-result-note">“{saved.note}”</p>}
         <div className="journey-actions">
           {saved.outcome === 'Finished' && onCelebrate && <button type="button" className="button" onClick={(event) => onCelebrate(event.currentTarget)}>Replay race celebration</button>}
@@ -221,11 +220,12 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
           </div>
         )}
         {error && <p className="field-error" role="alert">{error}</p>}
+        </details>
       </section>
     )
   }
 
-  if (mode === 'later') {
+  if (view === 'later') {
     return (
       <section className="race-result is-later" aria-label="Race result">
         <p>No rush. Your race result is here whenever you want to add it.</p>
@@ -234,15 +234,14 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
     )
   }
 
-  if (mode === 'ask') {
+  if (view === 'ask') {
     return (
       <section className="race-result is-ask" aria-labelledby={`${id}-ask`}>
-        <p className="plan-kicker">{chapter.raceDate ? formatDate(chapter.raceDate, 'dayMonth') : 'Race day'}</p>
+        <p className="plan-kicker">{chapter.raceDate ? formatDate(chapter.raceDate, 'dayMonth') : 'Race day'} · {chapter.raceName}</p>
         {found && (
           <div className="race-match-found" aria-label="Race recording found">
-            <p className="plan-kicker">FINISH LINE · RECORDING FOUND</p>
             <h3 className="race-result-title">We found your {chapter.raceName}.</h3>
-            <p>Already in Taperday{suggested ? ` from ${suggested.source.kind === 'Strava' ? 'Strava' : 'your uploaded runs'}` : ''}. No need to type the result again.{suggested?.source.recordedOnGarmin ? ' Recorded on Garmin.' : ''}</p>
+            <p className="field-help">{suggested?.source.kind === 'Strava' ? 'From Strava.' : 'Already in your runs.'} No need to type the result again.</p>
             {suggestions.length > 1 && (
               <label className="field" htmlFor={`${id}-match`}>
                 <span className="field-label">More than one recording matches. Choose your race recording</span>
@@ -252,30 +251,41 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
                 </select>
               </label>
             )}
-            {suggested && <dl className="race-match-stats">
-              <div><dt>Recorded distance</dt><dd className="mono">{formatDistance(suggested.distanceKm, units)}</dd></div>
-              <div><dt>Moving time</dt><dd className="mono">{formatDuration(suggested.movingSeconds)}</dd></div>
+            {preview.activity && <dl className="race-match-stats">
+              <div><dt>Recording elapsed time</dt><dd className="mono">{formatClock(toTimeSpan(Math.round(preview.activity.elapsedSeconds)))}</dd></div>
+              <div><dt>Recorded distance</dt><dd className="mono">{formatDistance(preview.activity.distanceKm, units)}</dd></div>
             </dl>}
-            <p className="field-help">We use the recording’s full elapsed time when you confirm. Your official chip time may be different.</p>
+            {preview.loading && <p role="status">Loading your recorded result…</p>}
+            {preview.error && <><p className="field-error" role="alert">{preview.error}</p><button type="button" className="button" onClick={preview.retry}>Try recording again</button></>}
+            <p className="field-help">Your official chip time may be different. Confirm this was your race to save it.</p>
             <div className="journey-actions">
-              <button type="button" className="button button-primary" disabled={busy || !suggested} onClick={() => suggested && void fromRecording(suggested)}>
+              <button type="button" className="button button-primary" disabled={busy || !preview.activity} onClick={() => suggested && void fromRecording(suggested)}>
                 {busy ? 'Checking your run…' : 'Confirm my recorded finish'}
               </button>
-              <button type="button" className="button" disabled={busy || !suggested} onClick={() => suggested && void fromRecording(suggested, true)}>Review details</button>
+              <button type="button" className="button button-quiet" disabled={busy || !preview.activity} onClick={() => suggested && void fromRecording(suggested, true)}>Review details</button>
             </div>
             {suggested?.source.kind === 'Strava' && suggested.source.viewUrl && (
               <a className="race-match-source" href={suggested.source.viewUrl} target="_blank" rel="noopener noreferrer">View recording on Strava</a>
             )}
           </div>
         )}
-        <h3 id={`${id}-ask`} className="race-result-title">{found ? 'Not your race?' : 'How did race day go?'}</h3>
-        <p className="field-help">{found ? 'Your recording is a suggestion, not an automatic result. Only you can confirm the finish.' : 'Only you know. Taperday never assumes a race was run because its date has passed.'}</p>
+        {!found && <><h3 id={`${id}-ask`} className="race-result-title">Your race result</h3><p className="field-help">Your recorded run will appear here when available. You can also add a result.</p></>}
+        {found && <span id={`${id}-ask`} className="visually-hidden">Your race result</span>}
+        {found ? <details className="race-result-alternatives"><summary>Add a different result</summary>
         <div className="race-result-choices">
           <button type="button" className="button button-primary" disabled={busy} onClick={() => begin('Finished')}>I finished</button>
           <button type="button" className="button" disabled={busy} onClick={() => begin('DidNotFinish')}>I didn’t finish</button>
           <button type="button" className="button" disabled={busy} onClick={() => begin('DidNotStart')}>I didn’t start</button>
           <button type="button" className="button button-quiet" disabled={busy} onClick={() => setMode('later')}>I’ll add it later</button>
         </div>
+        </details> : <>
+          <button type="button" className="button button-primary" disabled={busy} onClick={() => begin('Finished')}>I finished</button>
+          <details className="race-result-alternatives"><summary>Other race outcomes</summary><div className="race-result-choices">
+            <button type="button" className="button" disabled={busy} onClick={() => begin('DidNotFinish')}>I didn’t finish</button>
+            <button type="button" className="button" disabled={busy} onClick={() => begin('DidNotStart')}>I didn’t start</button>
+            <button type="button" className="button button-quiet" disabled={busy} onClick={() => setMode('later')}>I’ll add it later</button>
+          </div></details>
+        </>}
         {error && <p className="field-error" role="alert">{error}</p>}
       </section>
     )

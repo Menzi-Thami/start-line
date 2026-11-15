@@ -39,4 +39,14 @@ describe('race recording suggestions', () => {
   it('does not guess when there is no known race date or distance', () => {
     expect(raceMatches({ raceDate: null, distanceKm: null }, [candidate()])).toEqual([])
   })
+  it('suggests a half-marathon recording with a modest GPS shortfall, without accepting a substantially shorter run', () => {
+    const half = { raceDate: marathon.raceDate, distanceKm: 21.1 }
+    expect(raceMatches(half, [candidate({ distanceKm: 20.3 })])).toHaveLength(1)
+    expect(raceMatches(half, [candidate({ distanceKm: 19.9 })])).toEqual([])
+    expect(raceMatches(half, [candidate({ distanceKm: 22.2 })])).toEqual([])
+  })
+  it('collapses repeated imports of the same activity ID while retaining different recordings for a choice', () => {
+    expect(raceMatches(marathon, [candidate(), candidate()])).toHaveLength(1)
+    expect(raceMatches(marathon, [candidate(), candidate({ id: 'other' })])).toHaveLength(2)
+  })
 })

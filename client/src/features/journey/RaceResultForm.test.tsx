@@ -120,6 +120,16 @@ describe('Race result from an existing Strava recording', () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ activityId: upload.id, finishTime: '04:39:12' }))
   })
 
+  it('keeps a repeated import as one recording choice when reviewing its details', async () => {
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run, run]} onLoadActivity={async () => detail} onSave={vi.fn()} onDelete={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Review details' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const select = screen.getByRole('combobox', { name: 'Link a recorded run (optional)' }) as HTMLSelectElement
+    expect([...select.options].map(option => option.value)).toEqual(['', run.id])
+    expect(select).toHaveValue(run.id)
+    expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('40')
+  })
+
   it('offers manual entry when a recording expired or became unavailable', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn()
@@ -150,7 +160,8 @@ describe('Race result from an existing Strava recording', () => {
     const onSave = vi.fn()
     const { unmount } = render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run]} onLoadActivity={() => new Promise(done => { resolve = done })} onSave={onSave} onDelete={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
-    expect(screen.getByRole('button', { name: 'I finished' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Confirm my recorded finish' })).toBeDisabled()
+    expect(screen.getByRole('status')).toHaveTextContent('Loading your recorded result')
     unmount()
     await act(async () => resolve(detail))
     expect(onSave).not.toHaveBeenCalled()
@@ -179,5 +190,80 @@ describe('Race result from an existing Strava recording', () => {
     render(<RaceResultForm chapter={marathon} today={today} units="km" runs={[{ ...run, distanceKm }]} onLoadActivity={vi.fn()} onSave={onSave} onDelete={vi.fn()} />)
     expect(screen.queryByRole('heading', { name: /We found your/ })).not.toBeInTheDocument()
     expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('loads the Hoka Half’s actual elapsed time and short GPS distance automatically, saving only on confirmation', async () => {
+    const half = { ...marathon, raceName: 'Hoka Half', distanceKm: 21.1 }
+    const recording = { ...run, distanceKm: 20.3, movingSeconds: 7200 }
+    const onSave = vi.fn(async () => raceResult({ finishTime: '02:06:15', distanceKm: 20.3, activityId: run.id, timeKind: 'RecordedElapsed' }))
+    render(<RaceResultForm chapter={half} today="2026-11-14" units="km" runs={[recording, recording]} onLoadActivity={async () => ({ ...detail, ...recording, elapsedSeconds: 7575 })} onSave={onSave} onDelete={vi.fn()} />)
+    expect(await screen.findByText('2:06:15')).toBeVisible()
+    expect(screen.getByText('20.3 km')).toBeVisible()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(onSave).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ finishTime: '02:06:15', distanceKm: 20.3, activityId: run.id, timeKind: 'RecordedElapsed' }))
+  })
+
+  it.each(['ask', 'form', 'later'])('shows an arriving saved result instead of an old %s view, even when its recording expired', async initialMode => {
+    const user = userEvent.setup()
+    const props = { chapter: marathon, today: '2026-11-14', units: 'km' as const, onSave: vi.fn(), onDelete: vi.fn() }
+    const { rerender } = render(<RaceResultForm {...props} />)
+    if (initialMode === 'form') await user.click(screen.getByRole('button', { name: 'I finished' }))
+    if (initialMode === 'later') {
+      await user.click(screen.getByText('Other race outcomes'))
+      await user.click(screen.getByRole('button', { name: 'I’ll add it later' }))
+    }
+    rerender(<RaceResultForm {...props} chapter={{ ...marathon, raceResult: raceResult({ finishTime: '02:06:15', distanceKm: 20.3, activityId: run.id, timeKind: 'RecordedElapsed' }) }} />)
+    expect(screen.getByRole('heading', { name: 'Finished in 2:06:15' })).toBeVisible()
+    expect(screen.getByText('20.3 km')).toBeVisible()
+    expect(screen.getByText('Recording elapsed time')).toBeVisible()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'I finished' })).not.toBeInTheDocument()
+    expect(props.onSave).not.toHaveBeenCalled()
+    await user.click(screen.getByText('Race details & corrections'))
+    await user.click(screen.getByRole('button', { name: 'Edit result' }))
+    expect(screen.getByRole('textbox', { name: 'Hours' })).toHaveValue('2')
+    expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('6')
+    expect(screen.getByLabelText('Distance (km)')).toHaveValue('20.3')
+  })
+
+  it('retries an unavailable preview without inventing a finish or asking for the metrics', async () => {
+    const load = vi.fn().mockRejectedValueOnce(new Error('Recording temporarily unavailable')).mockResolvedValue(detail)
+    const save = vi.fn(async () => raceResult())
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run]} onLoadActivity={load} onSave={save} onDelete={vi.fn()} />)
+    expect(await screen.findByRole('alert')).toHaveTextContent('temporarily unavailable')
+    expect(screen.getByRole('button', { name: 'Confirm my recorded finish' })).toBeDisabled()
+    expect(save).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Try recording again' }))
+    expect(await screen.findByText('4:40:12')).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(load).toHaveBeenCalledTimes(2)
+  })
+
+  it('discards a late preview after choosing another recording and confirms only the selected run', async () => {
+    const second = { ...run, id: 'second-recording' }
+    const pending = new Map<string, (activity: Activity) => void>()
+    const load = vi.fn((id: string) => new Promise<Activity>(resolve => { pending.set(id, resolve) }))
+    const save = vi.fn(async () => raceResult())
+    const user = userEvent.setup()
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run, second]} onLoadActivity={load} onSave={save} onDelete={vi.fn()} />)
+    const choice = screen.getByRole('combobox', { name: /Choose your race recording/ })
+    await user.selectOptions(choice, run.id)
+    await waitFor(() => expect(pending.has(run.id)).toBe(true))
+    await user.selectOptions(choice, second.id)
+    await waitFor(() => expect(pending.has(second.id)).toBe(true))
+    await act(async () => pending.get(run.id)!(detail))
+    expect(screen.queryByText('4:40:12')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Confirm my recorded finish' })).toBeDisabled()
+    await act(async () => pending.get(second.id)!({ ...detail, id: second.id, elapsedSeconds: 17000 }))
+    expect(await screen.findByText('4:43:20')).toBeVisible()
+    expect(save).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    expect(save).toHaveBeenCalledTimes(1)
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ activityId: second.id, finishTime: '04:43:20' }))
   })
 })

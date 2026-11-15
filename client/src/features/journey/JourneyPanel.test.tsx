@@ -50,7 +50,7 @@ describe('Finish Line on the plan', () => {
     expect(act.celebrated).toHaveBeenCalledWith('award-training')
     // Training complete, race still ahead: no race badge, and race day is next.
     expect(screen.getByText('Training done. The race is still ahead.')).toBeInTheDocument()
-    expect(screen.getByText(/Race finisher · from your race result/)).toBeInTheDocument()
+    expect(screen.queryByText(/Race finisher/)).not.toBeInTheDocument()
     expect(screen.queryByText('How did race day go?')).not.toBeInTheDocument()
   })
 
@@ -62,13 +62,22 @@ describe('Finish Line on the plan', () => {
     expect(screen.getByRole('dialog', { name: 'YOU DID IT.' })).toBeInTheDocument()
   })
 
+  it('returns focus to the visible race summary when closing a training celebration after race day', async () => {
+    show(journeyOf([chapter({ training: recap({ raceDatePassed: true }), achievements: [trainingAward()] })]), '2026-11-16')
+    expect(screen.getByRole('dialog', { name: 'YOU DID IT.' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.querySelector('.journey-race-summary')).toHaveFocus()
+    expect(document.querySelector('.journey-training')).not.toHaveAttribute('open')
+  })
+
   it('tells an unfinished plan honestly, with no badge and no measured distance invented', () => {
     show(journeyOf([chapter({ training: recap({ confirmedRuns: 0, allConfirmed: false, raceDatePassed: true, recordedKm: null, recordedRuns: 0, longestRecordedKm: null, longestRecordedOn: null }), weeks: null })]), '2026-11-16')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Your training chapter.' })).toBeInTheDocument()
-    expect(screen.getByText(/Training complete · not every run confirmed/)).toBeInTheDocument()
-    expect(screen.getByText('Not enough evidence')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'How did race day go?' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Your race result' })).toBeVisible()
+    expect(screen.queryByText(/Training complete · not every run confirmed/)).not.toBeInTheDocument()
+    expect(screen.getByText('Not enough evidence')).not.toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'How did race day go?' })).not.toBeInTheDocument()
   })
 
   it('saves a finish the runner reports, with their time, and never links a run for them', async () => {
@@ -91,6 +100,7 @@ describe('Finish Line on the plan', () => {
     const act = show(journeyOf([chapter({ training: recap({ raceDatePassed: true }) })]), '2026-11-16', actions({
       saveRaceResult: vi.fn(() => new Promise<RaceResult>((_, reject) => { fail = reject })),
     }))
+    await user.click(screen.getByText('Other race outcomes'))
     await user.click(screen.getByRole('button', { name: 'I didn’t finish' }))
     await user.clear(screen.getByLabelText('Distance covered (km, optional)'))
     await user.type(screen.getByLabelText('Distance covered (km, optional)'), '14')
@@ -113,6 +123,7 @@ describe('Finish Line on the plan', () => {
   it('offers optional recovery after a finish, and "Not now" creates nothing', async () => {
     const user = userEvent.setup()
     const act = show(journeyOf([chapter({ raceResult: raceResult() })]), '2026-11-16')
+    await user.click(screen.getByText('Plan my recovery'))
     expect(screen.getByText('2:50 faster than your 1:55:00 goal.')).toBeInTheDocument()
     expect(screen.getByText(/half marathon, recovery usually takes about 7–14 days/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Not now' }))
@@ -123,8 +134,12 @@ describe('Finish Line on the plan', () => {
   it('starts recovery from the race the runner reported, with their choices', async () => {
     const user = userEvent.setup()
     const act = show(journeyOf([chapter({ raceResult: raceResult() })]), '2026-11-16')
+    await user.click(screen.getByText('Plan my recovery'))
+    await user.click(screen.getByText('Adjust recovery preferences'))
     await user.click(screen.getByLabelText(/All out/))
     await user.click(screen.getByLabelText('Mostly rest'))
+    await user.click(screen.getByText('Adjust recovery preferences'))
+    expect(screen.queryByLabelText(/All out/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Start my recovery' }))
     await waitFor(() => expect(act.startRecovery).toHaveBeenCalledWith(expect.objectContaining({
       planId: PLAN_ID, distanceKm: 21.1, raceDate: '2026-11-15', effort: 'AllOut', preference: 'Rest',
@@ -134,9 +149,12 @@ describe('Finish Line on the plan', () => {
   it('turns red flags into safety advice before anything else', async () => {
     const user = userEvent.setup()
     show(journeyOf([chapter({ raceResult: raceResult() })]), '2026-11-16')
+    await user.click(screen.getByText('Plan my recovery'))
     await user.click(screen.getByText('Anything worrying?'))
     await user.click(screen.getByLabelText('Chest pain or a racing heart'))
     expect(screen.getByRole('alert')).toHaveTextContent(/call emergency services/)
+    await user.click(screen.getByText('Anything worrying?'))
+    expect(screen.getByRole('alert')).toBeVisible()
   })
 })
 

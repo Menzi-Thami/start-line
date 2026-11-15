@@ -4,6 +4,7 @@ import { AchievementShare } from './AchievementShare'
 import { distanceBadge, formatClock } from './journey-model'
 import type { CardContent } from './share-card'
 import type { MajorDefinition, MarathonMajor, RaceHistory, RaceMemory } from './types'
+import { SA_RACES, southAfricanFinish, type SouthAfricanRace } from './sa-races'
 
 const LANDMARKS: Record<MarathonMajor, string> = {
   Tokyo: 'M29 55h42M32 60h36M38 55v28M62 55v28M37 70h26M48 43h4v10',
@@ -26,8 +27,9 @@ function Medal({ major, earned }: { major: MarathonMajor; earned: boolean }) {
   </svg>
 }
 
-export function TrophyCabinet({ history, units, onMajor, onRace }: {
+export function TrophyCabinet({ history, units, onMajor, onRace, onLocalRace }: {
   history: RaceHistory; units: Units; onMajor: (major: MajorDefinition, earned: boolean) => void; onRace: (race: RaceMemory) => void
+  onLocalRace?: (race: SouthAfricanRace) => void
 }) {
   const finishes = useMemo(() => history.races.filter(race => race.result.outcome === 'Finished' && !race.needsReview), [history.races])
   const earned = new Set(finishes.filter(race => race.majorEligible).map(race => race.major))
@@ -54,6 +56,18 @@ export function TrophyCabinet({ history, units, onMajor, onRace }: {
       <dl className="cabinet-totals"><div><dt>Race finishes</dt><dd>{finishes.length}</dd></div><div><dt>Major events</dt><dd>{earnedCount}<span>/{history.majors.length}</span></dd></div><div><dt>Original six</dt><dd>{originalCount}<span>/{original.length}</span></dd></div></dl>
     </header>
     {history.races.some(race => race.needsReview) && <p className="journey-state" role="status">Some older races have more than one saved result. Review them in Your races and remove the incorrect copies. They earn no cabinet trophies until resolved.</p>}
+    <div className="cabinet-collection-head"><h3>South African finish lines</h3><p className="field-help">From local favourites to ultras. These are places for your confirmed finishes, not automatically awarded medals.</p></div>
+    <ul className="cabinet-grid" aria-label="South African race collection">
+      {SA_RACES.map(event => {
+        const finish = southAfricanFinish(event, finishes)
+        return <li key={event.id}><button type="button" className={`cabinet-slot${finish ? ' is-earned' : ''}`}
+          disabled={!finish && !onLocalRace} onClick={() => finish ? onRace(finish) : onLocalRace?.(event)}>
+          <span className="cabinet-local-icon" aria-hidden="true">{finish ? '★' : '◇'}</span>
+          <strong>{event.name}</strong><span className="cabinet-slot-status">{event.place} · {formatDistance(event.distanceKm, units)}</span>
+          <span className="cabinet-slot-action">{finish ? `Finished · ${finish.result.raceDate.slice(0, 4)} · View result` : 'Link a recorded finish'}</span>
+        </button></li>
+      })}
+    </ul>
     <div className="cabinet-collection-head"><h3>Marathon Majors</h3><p className="field-help">One medal per event. Every edition you finish stays with it.</p></div>
     <ul className="cabinet-grid" aria-label="Marathon Majors collection">
       {history.majors.map(major => {

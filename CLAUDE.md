@@ -36,8 +36,9 @@ scripts/check.sh                   # every check, before any merge (backend, cli
 ```
 `UseAppHost=false` is set because locked-down Windows devices block the generated .exe.
 
-**Before merging any PR, run `scripts/check.sh` locally and merge only when it passes.** CI doesn't run on pull
-requests (the free Actions minutes are kept for deploys; see `docs/deploy.md`), and every merge to `main` deploys.
+**Before merging any PR, run `scripts/check.sh` locally and merge only when it passes.** CI also runs on pull requests,
+with backend/frontend checks, Chromium journeys and the additional browser-engine connection suite. Shipping follows
+[docs/how-we-ship.md](docs/how-we-ship.md): pushes to staging deploy staging; production requires the explicit release workflow.
 
 ## Layout
 - `Domain/Running` — `Distance`, `Pace`, `RaceTimePredictor` (Riegel), `TrainingPaces` (zones from goal).

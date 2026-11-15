@@ -1,6 +1,6 @@
 # Testing safely before a merge
 
-Automated tests must never use Taperday's production database, a database holding real runner data, or a connection copied from production App Service settings. Run tests before merging: every merge to `main` deploys the app and may apply database migrations.
+Automated tests must never use Taperday's production database, a database holding real runner data, or a connection copied from production App Service settings. Run tests before merging: staging deploys on a push, and the explicit production release workflow deploys the app and may apply database migrations.
 
 ## Use an isolated database
 

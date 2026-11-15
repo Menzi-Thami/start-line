@@ -1029,10 +1029,10 @@ export function App() {
           />
         )}
 
-        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
+        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account') && (state.kind === 'signed-out' || state.kind === 'off') && (
           <div className="empty signed-out-prompt">
             <TaperdayRunner pose="crouch" size={40} className="signed-out-runner" />
-            <p><strong>{view === 'journey' ? 'Your training chapters, races and trophies live in your account.' : view === 'runs' ? 'Your runs live in your account.' : view === 'account' ? 'Your account, connections and reminders.' : 'Your Home: today’s session, your week and your race.'}</strong></p>
+            <p><strong>{view === 'recovery' ? 'Your recovery plan and check-ins live in your account.' : view === 'journey' ? 'Your training chapters, races and trophies live in your account.' : view === 'runs' ? 'Your runs live in your account.' : view === 'account' ? 'Your account, connections and reminders.' : 'Your Home: today’s session, your week and your race.'}</strong></p>
             <p>Sign in to see your saved plans, runs and account. It’s free, and your plan comes with you.</p>
             <div className="submit-row" style={{ marginTop: 'var(--space-3)' }}>
               {state.kind === 'signed-out' && (

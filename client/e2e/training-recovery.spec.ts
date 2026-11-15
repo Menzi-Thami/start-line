@@ -38,7 +38,7 @@ async function setup(page: Page, options: { finished?: boolean; recovering?: boo
       ...(options.future ? [{ id: nextId, name: seed.race.name, raceName: seed.race.name, raceDate: seed.race.date, status: 'Active' }] : [])]
     else if (path === `/api/v1/me/plans/${PLAN_ID}` || path === `/api/v1/me/plans/${PLAN_ID}/coach`) { state.trainingReads++; data = { id: PLAN_ID, name: 'Hoka Half', status: 'Active', inputs, plan: old, coaching: [] } }
     else if (path === `/api/v1/me/plans/${nextId}` || path === `/api/v1/me/plans/${nextId}/coach`) data = { id: nextId, name: seed.race.name, status: 'Active', inputs: { ...inputs, distanceKm: 5, raceName: seed.race.name, raceDate: seed.race.date }, plan: seed, coaching: [] }
-    else if (path === '/api/v1/plans') data = url.searchParams.get('raceDate') === seed.race.date ? seed : old
+    else if (path === '/api/v1/plans') data = request.postDataJSON().raceDate === seed.race.date ? seed : old
     else if (path === '/api/v1/me/journey') data = journeyOf([...(options.future ? [chapter({ planId: nextId, raceName: seed.race.name, raceDate: seed.race.date, lifecycle: 'Active', training: recap({ trainingEnded: false, raceDatePassed: false }) })] : []), training()], { recovery: state.recovery })
     else if (path === `/api/v1/me/journey/plans/${PLAN_ID}`) data = training()
     else if (path === `/api/v1/me/journey/plans/${PLAN_ID}/race-result` && request.method() === 'PUT') {
@@ -64,11 +64,13 @@ async function setup(page: Page, options: { finished?: boolean; recovering?: boo
     else if (path.endsWith('/photo') || path.endsWith('/celebrated')) { await route.fulfill({ status: 204 }); return }
     await route.fulfill({ json: data })
   })
-  await page.clock.install({ time: new Date(options.raceDay ? '2026-11-14T21:59:59Z' : '2026-11-15T08:00:00Z') })
+  await page.clock.install({ time: new Date(options.raceDay ? '2026-11-14T21:59:50Z' : '2026-11-15T08:00:00Z') })
+  if (options.raceDay) await page.clock.pauseAt(new Date('2026-11-14T21:59:59Z'))
   return { state, historyUrl: `${fixture}?${toSearchParams(fromRequest(inputs)!)}` }
 }
 
 async function accessible(page: Page) {
+  await page.evaluate(() => document.fonts.ready)
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
   expect(result.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
@@ -78,6 +80,7 @@ test('race day ends at the runner’s midnight without assuming a result or star
   const { state } = await setup(page, { raceDay: true })
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto(`${fixture}?view=home`)
+  await expect(page.getByRole('heading', { name: 'Welcome back, Naledi', level: 1 })).toBeVisible()
   await expect(page.getByText('Training concluded', { exact: true })).toHaveCount(0)
   await page.clock.runFor(1200)
   await expect(page.getByText('Training concluded', { exact: true })).toBeVisible()
@@ -85,6 +88,7 @@ test('race day ends at the runner’s midnight without assuming a result or star
   await expect(page.getByRole('button', { name: 'Start recovery plan', exact: true })).toHaveCount(0)
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(state.results).toEqual([]); expect(state.starts).toEqual([])
+  await page.clock.resume()
   if (info.project.name === 'desktop') {
     await mkdir(qa, { recursive: true })
     for (const mode of ['light', 'dark']) {
@@ -101,7 +105,7 @@ test('race day ends at the runner’s midnight without assuming a result or star
   await expect(page.getByText('✓ Race finisher', { exact: true })).toHaveCount(0)
 })
 
-test('concluded training → saved recording → separate recovery → Home/Plan/reload → next chapter @phone', async ({ page }) => {
+test('concluded training → saved recording → separate recovery → Home/Plan/reload → next chapter @phone', async ({ page }, info) => {
   const { state } = await setup(page)
   await page.goto(`${fixture}?view=home`)
   await page.getByRole('button', { name: 'Review my race', exact: true }).click()
@@ -125,6 +129,15 @@ test('concluded training → saved recording → separate recovery → Home/Plan
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Open recovery plan', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Good to go', exact: true })).toHaveCount(0)
+  if (info.project.name === 'desktop') {
+    await mkdir(qa, { recursive: true })
+    await page.setViewportSize({ width: 375, height: 812 })
+    for (const mode of ['light', 'dark']) {
+      await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+      await accessible(page)
+      await page.screenshot({ path: `${qa}/home-recovery-375-${mode}.png`, fullPage: true })
+    }
+  }
   await nav.getByRole('button', { name: 'Plan', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
   await page.reload()
@@ -144,6 +157,13 @@ test('recovery has its own days; concluded training is read-only, responsive and
   const { historyUrl } = await setup(page, { recovering: true, future: true })
   await page.goto(`${fixture}?view=recovery`)
   await expect(page.getByRole('button', { name: 'View training plan', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'View training plan', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Parkrun PB', exact: true, level: 2 })).toBeVisible()
+  const navigation = page.getByRole('navigation', { name: 'Main', exact: true })
+  await navigation.getByRole('button', { name: 'Home', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Open recovery plan', exact: true })).toBeVisible()
+  await navigation.getByRole('button', { name: 'Plan', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
   if (info.project.name === 'desktop') await mkdir(qa, { recursive: true })
   for (const width of [375, 820, 1440]) for (const theme of ['light', 'dark']) {
     await page.setViewportSize({ width, height: 900 })

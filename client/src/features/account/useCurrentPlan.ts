@@ -12,13 +12,15 @@ export interface CurrentPlan {
 }
 
 /**
- * The same plan when the answers are the same, compared the way the plan link is written. A recent result is left out:
- * it only feeds the goal outlook, never the plan, and a saved plan doesn't keep it.
+ * The same saved answers, compared the way the plan link is written. Recent performance is retained with the plan:
+ * changing it must enable Save even though it only affects the goal outlook, not the generated workouts.
  */
 export function samePlan(a: GeneratePlanRequest, b: GeneratePlanRequest): boolean {
   const left = fromRequest(a)
   const right = fromRequest(b)
-  const link = (inputs: PlanInputs) => toSearchParams({ ...inputs, recent: undefined }).toString()
+  const link = (inputs: PlanInputs) => toSearchParams({ ...inputs,
+    raceName: inputs.raceSlug ? undefined : inputs.raceName?.trim() || 'Your race',
+  }).toString()
   return left !== null && right !== null && link(left) === link(right)
 }
 

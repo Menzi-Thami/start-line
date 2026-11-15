@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -11,6 +11,7 @@ import type { GeneratePlanRequest, Runner } from '../lib/types'
 import { lastPlanRequest, planFixture, server, stravaOff } from '../test/server'
 import { App } from './App'
 import { AuthContext, type Auth } from './auth-context'
+import { readCheckInCopy, writeCheckInCopy } from '../features/coaching/check-in-storage'
 
 const thandi: Runner = {
   id: 'runner-1',
@@ -243,6 +244,29 @@ describe('their plan from the copy kept on this device', () => {
         return HttpResponse.json(thandi)
       }),
     )
+
+  it.each(['/', '/?km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08'])
+    ('keeps account logging available when reopening a cached plan offline at %s', async url => {
+      const identity = 'tenant:thandi'
+      saveSnapshot(owner, { runner: thandi, current, plan: { id: 'plan-1', plan: planFixture } })
+      writeCheckInCopy(identity, 'plan-1', { entries: [], pending: [] })
+      sleepingAccount()
+      const connection = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+      window.history.replaceState(null, '', url)
+      const user = userEvent.setup()
+      const view = renderApp(signedIn({ account: { id: identity, name: 'Thandi', email: 'thandi@example.com' } }))
+      try {
+        expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+        expect(await screen.findByText(/Offline · showing your saved run entries/)).toBeVisible()
+        await user.click(await screen.findByRole('button', { name: /^Log a run$/ }))
+        fireEvent.change(screen.getByLabelText('Run date'), { target: { value: '2026-10-14' } })
+        await user.type(screen.getByLabelText('Distance (km)', { exact: true }), '7')
+        await user.click(screen.getByRole('button', { name: /^Save check-in$/ }))
+        expect(await screen.findByRole('region', { name: 'Runs waiting to sync' })).toHaveTextContent('Saved on this device')
+        expect(readCheckInCopy(identity, 'plan-1')?.pending).toHaveLength(1)
+        expect(readCheckInCopy(identity, 'plan-1')?.pending[0]?.answers?.distanceKm).toBe(7)
+      } finally { view.unmount(); connection.mockRestore() }
+    })
 
   it('opens a runner who comes back straight on their plan, with no wait', async () => {
     saveSnapshot(owner, { runner: thandi, current, plan: { id: 'plan-1', plan: planFixture } })

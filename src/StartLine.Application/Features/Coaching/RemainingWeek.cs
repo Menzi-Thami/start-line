@@ -26,7 +26,7 @@ internal sealed class ReviewRemainingWeekHandler(IApplicationDbContext db, Curre
         if (saved.Status != SavedPlanStatus.Active) throw new ConflictException("plan_archived", "Only your current plan can be adjusted.");
         var today = CoachCalls.LocalToday(runner, time);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var query = SavedPlanMapping.ToQuery(saved);
         var original = builder.BuildPlan(query, calls, paceDate: today);
         var plan = Domain.Plans.RemainingWeek.Apply(original, saved.Adjustments);
         var week = original.Weeks.FirstOrDefault(w => w.StartDate <= today && today < w.StartDate.AddDays(7));

@@ -609,7 +609,7 @@ export function Home({
         {!current && <BeginnerHomeCard today={today} onOpenProgramme={onOpenBeginner ?? onBuildPlan} />}
         <TickCard plan={plan} today={today} coach={coach} />
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
-        {current && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
+        {current && <CheckInLoadState {...checkIns} />}
         {pendingSyncedRuns.length > 0 && <details className="disclosure home-sync"><summary>{pendingSyncedRuns.length} synced {pendingSyncedRuns.length === 1 ? 'run' : 'runs'} · Add training feedback</summary><p>Your Strava run has synced and counts automatically in your running totals. Log it to say how it fits your plan.</p>
           <ul>{pendingSyncedRuns.map(run => <li key={run.id}>{formatDate(run.localDate)} · {formatDistance(run.distanceKm, units)} from Strava{' '}
             {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}

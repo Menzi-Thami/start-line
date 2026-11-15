@@ -2,6 +2,8 @@ import { createContext, useContext } from 'react'
 import type { SignInProblem } from './sign-in-errors'
 
 export interface Account {
+  /** Stable tenant/subject identity. Used to isolate this device's unsynced manual entries. */
+  id?: string
   name: string
   email: string | null
 }

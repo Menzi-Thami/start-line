@@ -27,17 +27,8 @@ Record device, OS, browser version, date, browser/installed mode and pass/fail n
 
 ## Current evidence and outstanding access
 
-On 28 October 2026 the strict .NET Release build passed without analyzer overrides, and all 922 database-independent backend tests passed. Backend formatting and the pending-model-change check also passed. The prior CA1825 failures were caused by the two theory-data collection expressions; the equivalent xUnit constructors preserve every test case and snapshot.
+Current implementation, browser-engine results, SQL evidence and remaining live checks are recorded in [the follow-up QA report](qa/2026-11-14/app-gaps.md). The complete Chromium suite and disposable SQL validation run independently of any live provider credentials.
 
-The complete frontend suite passed 484 tests in 53 files. TypeScript, frontend lint, production build and dependency audit passed. The desktop/phone Chromium browser suite passed all 17 tests, and the dedicated Android-sized Chromium project passed all 4 tests. Browser runs used the installed official Google Chrome binary with the real API and production client; these are browser-emulation results, not physical Android results.
+Every PR also runs `npm run e2e:connections` in Android-sized Chromium, iPhone-sized WebKit, iPad-sized WebKit and Firefox. See [provider and device validation](integration-validation.md) for the staging configuration report and live verification matrix.
 
-Physical iPhone/Android/iPad checks have **not been run**: no physical-device service or device connection is available in this environment. WebKit installation is blocked by the current network policy, so WebKit results must remain **unrun**, not counted as passed or skipped tests.
-
-SQL integration validation is also **unrun** until a real SQL Server is available. This environment's SQL Server image redirects to `centralus.data.mcr.microsoft.com`; Microsoft's signed SQL package feed redirects to `pmc-geofence.trafficmanager.net`. Both routes were investigated with verification enabled. The package build was stopped after diagnosing the blocked redirect.
-
-The environment draft preserves existing domains and adds `playwright.download.prss.microsoft.com` and `pmc-geofence.trafficmanager.net`; the previously saved Chromium/SQL image/GitHub API destinations are still pending too. Review/save the environment settings and publish the environment to activate the configuration. Then retry the affected downloads before claiming readiness:
-
-1. Pull `mcr.microsoft.com/mssql/server:2022-latest` and use the generated-password SQL startup/readiness pattern in `.github/workflows/ci.yml`. Never log or commit the password.
-2. Set `STARTLINE_TEST_SQL` for an isolated test database and run `dotnet test StartLine.slnx -c Release` without filtering integration tests.
-3. Run `scripts/check.sh` with that database configured. It remains the full premerge check; a successful filtered backend suite does not replace it.
-4. Install WebKit and run `npm run e2e:mobile`. Record each engine's actual outcome separately, then complete the physical-device checklist above.
+No physical iPhone, Android or iPad is connected to this environment. Live provider identities and an owned test inbox/opted-in push device are still required for actual authorization, delivery, installed-device offline reopen and native WhatsApp/Instagram checks. Browser emulation is recorded separately and does not count those checks as passed.

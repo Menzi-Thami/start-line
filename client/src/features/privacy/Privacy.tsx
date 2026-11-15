@@ -255,6 +255,11 @@ export function PrivacyPolicy() {
           connected, never your email or heart rate), so Home opens straight away next time. It’s cleared when you sign out, dropped
           after a week, and Strava runs in it go after seven days, as on Taperday itself.
         </p>
+        <p>
+          Your own run entries and unsynced manual drafts also stay on this device so you can log without a connection. Imported run
+          measurements and access tokens are not copied into those drafts. The app tells you which changes still need to sync.
+          Signing out clears this copy; if drafts are still waiting, you choose whether to discard them first.
+        </p>
       </section>
 
       <section className="section">

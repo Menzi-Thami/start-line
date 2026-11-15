@@ -165,7 +165,7 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
 
   return {
     raceSlug,
-    raceName: raceSlug ? undefined : params.get('name')?.slice(0, 100) || undefined,
+    raceName: raceSlug ? undefined : params.get('name')?.slice(0, 120) || undefined,
     distanceKm: raceSlug ? undefined : distanceKm,
     raceDate: raceSlug ? undefined : raceDate,
     goalSeconds,

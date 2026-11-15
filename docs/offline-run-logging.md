@@ -1,0 +1,15 @@
+# Manual run entries with a poor connection
+
+After a signed-in runner has loaded a plan's check-ins once, that account's own entries are available on the device. A manual check-in, additional run, edit or removal can be saved while disconnected. The visible message says **Saved on this device** and gives the number of changes waiting to sync. These drafts are not yet account history, coaching evidence or achievements.
+
+The app sends the queue when it opens with a connection or receives the browser's online event. **Sync saved runs** retries explicitly. No background worker holds credentials or sends requests after the app closes. Stable planned-session identities and additional-run UUIDs make retries idempotent. A save whose successful response was lost is acknowledged by reading the matching account entry instead of creating another run.
+
+Each queued change remembers the account version it was based on. A changed account entry produces a review state; neither a queued edit nor deletion silently replaces a newer answer. Review shows the device draft beside the last loaded account entry. The runner can keep the device draft and retry against the newly read version, or discard that individual draft. Archived/deleted plans and expired authentication keep the drafts and report the API failure. A global review area keeps drafts accessible after a plan is replaced or removed.
+
+The browser store belongs to the stable Entra tenant/subject identity, not a display name or email hash. Another account cannot read or submit its queue. Signing out clears the device copy; with unsynced entries, the runner first chooses whether to discard them. Choosing another account also warns about unsynced drafts. Clearing browser storage removes device-only entries, as with other unsynced local data.
+
+Only the runner's own check-in answers and entry/source identifiers are retained. Imported activity measurements, recording details, heart rate and provider/access tokens never enter this store. Linking an imported recording requires a connection; manually entered runs work offline. The production service worker continues to cache only the app's own files, not API or sign-in responses. Blocked/full device storage fails an offline save visibly and leaves the form open. An acknowledged account save remains visible even if its device copy cannot be updated.
+
+Account running totals and achievements still come from the server. They update after sync; the UI does not invent durable totals or awards from pending drafts. A fresh device that has never loaded a plan's check-ins needs a connection first. Screens not previously downloaded may also need a connection.
+
+Regression coverage: `offline-check-ins.test.tsx`, `useCheckIns.test.tsx`, `RunVisibility.test.tsx`, `AuthProvider.test.tsx`, SQL `CheckInTests`, and `e2e/offline-check-ins.spec.ts`. The browser fixture interrupts account requests while app files remain reachable; `taperday.spec.ts` separately checks the real production service worker with the browser network disabled.

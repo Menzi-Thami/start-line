@@ -1,11 +1,12 @@
 import { InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { clearSnapshot } from '../lib/home-snapshot'
+import { activateCheckInOwner, clearCheckInCopies, readCheckInCopies } from '../features/coaching/check-in-storage'
 import { AuthContext, accountsOff, type Auth, type AuthConfig } from './auth-context'
 import { describeSignInError, type SignInProblem } from './sign-in-errors'
 import { signInRequest, type SignInKind } from './sign-in-requests'
 
-const toAccount = (info: AccountInfo) => ({ name: info.name || info.username, email: info.username || null })
+const toAccount = (info: AccountInfo) => ({ id: `${info.tenantId}:${info.localAccountId}`, name: info.name || info.username, email: info.username || null })
 
 // Several parts of a page can ask for a token at once. Only the first may start the sign-in redirect: a second one
 // would fail with interaction_in_progress and its raw text would reach the runner.
@@ -58,6 +59,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         if (cancelled) return
         const account = result?.account ?? msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null
         if (account) msal.setActiveAccount(account)
+        activateCheckInOwner(account ? toAccount(account).id : null)
         setInfo(account)
       })
       .catch((failure: unknown) => {
@@ -78,6 +80,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
     // this device remembers is forgotten as active (it stays cached, and comes back if they turn round), so its email
     // isn't locked into Microsoft's page.
     const start = (kind: SignInKind) => {
+      const drafts = Object.values(readCheckInCopies(info ? toAccount(info).id : null)).reduce((sum, copy) => sum + copy.pending.length, 0)
+      if (drafts && !window.confirm('You have unsynced run drafts on this device. Choosing a different account removes them. Continue to sign in?')) return
       msal.setActiveAccount(null)
       void msal.loginRedirect(signInRequest(kind, config.scope, window.location.href))
     }
@@ -92,7 +96,10 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       // Signing out leaves nothing of anyone's on this device: every remembered account (MSAL's logout only removes the one
       // it's given, and an older one would then open as signed in), and the copy of their Home. Then Microsoft ends its session.
       signOut: () => {
+        const drafts = Object.values(readCheckInCopies(info ? toAccount(info).id : null)).reduce((sum, copy) => sum + copy.pending.length, 0)
+        if (drafts && !window.confirm('You have unsynced run drafts on this device. Sign out and discard these drafts?')) return
         clearSnapshot()
+        clearCheckInCopies()
         void (async () => {
           await msal.clearCache().catch(() => undefined)
           await msal.logoutRedirect({ account: info ?? undefined })
@@ -103,7 +110,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         try {
           return (await msal.acquireTokenSilent({ scopes: [config.scope], account: info })).accessToken
         } catch (error) {
-          if (error instanceof InteractionRequiredAuthError && !redirecting) {
+          const unsynced = Object.values(readCheckInCopies(toAccount(info).id)).some(copy => copy.pending.length > 0)
+          if (error instanceof InteractionRequiredAuthError && navigator.onLine && !redirecting && !unsynced) {
             redirecting = true
             // The page is about to leave for Microsoft; nothing useful can be done with a failure to start that here.
             await msal

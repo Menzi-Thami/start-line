@@ -1,0 +1,31 @@
+name: Ops - Staging integration readiness
+
+# Read-only. It neither deploys nor sends messages, syncs activities, registers devices or changes settings.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  configuration:
+    runs-on: ubuntu-latest
+    environment: staging
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - run: node --test scripts/staging-integration-readiness.test.mjs
+      - name: Report staging configuration gaps without exposing values
+        env:
+          INTEGRATION_TEST_EMAIL: ${{ vars.INTEGRATION_TEST_EMAIL }}
+        run: node scripts/staging-integration-readiness.mjs

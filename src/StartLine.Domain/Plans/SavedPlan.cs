@@ -12,8 +12,8 @@ public enum SavedPlanStatus
 }
 
 /// <summary>
-/// What the runner asked for, exactly as they asked for it. The race is stored by slug, not by date,
-/// so when the race calendar learns a new date the saved plan follows it. Sessions are generated
+/// What the runner asked for, exactly as they asked for it. Catalogue races also keep their name, date and distance:
+/// current plans follow the live calendar, while past plans and unavailable catalogue entries use that snapshot. Sessions are generated
 /// from these inputs on read; nothing about the schedule is frozen here yet. A replan is stored the same way: as the
 /// answers that rebuild the plan from a date, never as the rebuilt sessions. <see cref="GeneratorVersion"/> is the
 /// generator version the plan was first built with, so a saved plan keeps its shape when newer versions arrive.
@@ -37,8 +37,13 @@ public sealed record SavedPlanInputs(
     double? RecentWeeklyKm = null,
     int GeneratorVersion = TrainingPlanGenerator.OriginalVersion,
     DateOnly? StartOn = null,
-    RunWalkMode? RunWalk = null)
+    RunWalkMode? RunWalk = null,
+    double? RecentResultKm = null,
+    TimeSpan? RecentResultTime = null,
+    DateOnly? RecentResultDate = null)
 {
+    public bool HasRaceSnapshot => DistanceKm is > 0 && RaceDate is not null;
+
     /// <summary>The latest replan, if the runner has rebuilt the plan after a setback.</summary>
     public PlanReplan? Replan => ReplanFrom is { } from && Setback is { } setback ? new PlanReplan(from, setback, RecentWeeklyKm) : null;
 }
@@ -192,7 +197,7 @@ public sealed class SavedPlan
         return Inputs.RaceSlug is { } slug
             ? string.Equals(slug, inputs.RaceSlug, StringComparison.OrdinalIgnoreCase)
             : inputs.RaceSlug is null
-                && string.Equals(Inputs.RaceName?.Trim(), inputs.RaceName?.Trim(), StringComparison.OrdinalIgnoreCase)
+                && string.Equals(Inputs.RaceName?.Trim() ?? "Your race", inputs.RaceName?.Trim() ?? "Your race", StringComparison.OrdinalIgnoreCase)
                 && Inputs.RaceDate == inputs.RaceDate;
     }
 

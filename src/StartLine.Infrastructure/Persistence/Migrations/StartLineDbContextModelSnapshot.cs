@@ -458,6 +458,12 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<byte[]>("Version")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
                     b.HasIndex("SavedPlanId", "ActivityId")
@@ -944,14 +950,26 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                                 .HasColumnName("RaceDate");
 
                             b1.Property<string>("RaceName")
-                                .HasMaxLength(100)
-                                .HasColumnType("nvarchar(100)")
+                                .HasMaxLength(120)
+                                .HasColumnType("nvarchar(120)")
                                 .HasColumnName("RaceName");
 
                             b1.Property<string>("RaceSlug")
                                 .HasMaxLength(100)
                                 .HasColumnType("nvarchar(100)")
                                 .HasColumnName("RaceSlug");
+
+                            b1.Property<DateOnly?>("RecentResultDate")
+                                .HasColumnType("date")
+                                .HasColumnName("RecentResultDate");
+
+                            b1.Property<double?>("RecentResultKm")
+                                .HasColumnType("float")
+                                .HasColumnName("RecentResultKm");
+
+                            b1.Property<long?>("RecentResultTime")
+                                .HasColumnType("bigint")
+                                .HasColumnName("RecentResultSeconds");
 
                             b1.Property<double?>("RecentWeeklyKm")
                                 .HasColumnType("float")

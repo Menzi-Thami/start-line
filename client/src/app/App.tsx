@@ -29,6 +29,7 @@ import { RemindersSection } from '../features/reminders/Reminders'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
+import { OfflineRunDrafts } from '../features/coaching/OfflineRunDrafts'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { MOVIE_MS } from '../features/builder/plan-theatre'
 import { Hero, RaceTicker } from '../features/home/Hero'
@@ -128,6 +129,7 @@ function finishBuildMovie(signal: AbortSignal): Promise<void> {
 export function App() {
   const today = localToday()
   const auth = useAuth()
+  const owner = auth.account ? ownerOf(auth.account) : null
   const runner = useRunner()
   // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
   const [initial, setInitial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
@@ -167,6 +169,7 @@ export function App() {
   const [races, setRaces] = useState<RacesState>({ kind: 'loading' })
   // A shared link starts building straight away, so it opens in the loading state.
   const [plan, setPlan] = useState<PlanState>(() => (initial ? { kind: 'loading' } : { kind: 'idle' }))
+  const [fromCopy, setFromCopy] = useState<{ plan: TrainingPlan } | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [builderKey, setBuilderKey] = useState(0)
   // True while the wizard is open over a plan (or about to produce one). A built plan replaces the wizard.
@@ -180,7 +183,7 @@ export function App() {
   const finishCelebrating = useCallback(() => setCelebrating(null), [])
   const inflight = useRef<AbortController | null>(null)
   const editingSavedPlan = useRef<string | null>(null)
-  useEffect(() => () => inflight.current?.abort(), [auth.account?.email, auth.account?.name])
+  useEffect(() => () => inflight.current?.abort(), [auth.account?.id, auth.account?.email, auth.account?.name])
 
   // Only sets state once the request settles; callers set the loading state themselves.
   const fetchRaces = useCallback((controller: AbortController) => {
@@ -221,6 +224,19 @@ export function App() {
     }
     if (!beforeShow) window.history.replaceState(window.history.state, '', `?${query}`)
 
+    const stored = owner && !beforeShow ? readSnapshot(owner) : null
+    const cached = stored?.current && stored.plan?.id === stored.current.id && samePlan(toRequest(withDate), stored.current.inputs)
+      ? stored.plan.plan : null
+    const showCached = () => {
+      if (!cached || controller.signal.aborted) return
+      setFromCopy({ plan: cached })
+      setPlan({ kind: 'ready', plan: cached, inputs: withDate })
+      setRevealPlan(false)
+      setEditing(false)
+    }
+    // A reload of the runner's own plan link must retain the cached account identity and offline logging controls.
+    if (cached && !navigator.onLine) { queueMicrotask(showCached); return }
+
     api
       .plan(toRequest(withDate), controller.signal)
       .then(async (result) => {
@@ -235,6 +251,7 @@ export function App() {
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
+        if (cached && error instanceof ApiError && [0, 502, 503, 504].includes(error.status)) { showCached(); return }
         if (error instanceof ApiError && Object.keys(error.fieldErrors).length > 0) {
           setFieldErrors(toFieldErrors(error.fieldErrors))
           setPlan({ kind: 'idle' })
@@ -243,7 +260,7 @@ export function App() {
         }
         setPlan({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.', inputs: withDate })
       })
-  }, [])
+  }, [owner])
 
   const build = (inputs: PlanInputs, playMovie = false) => {
     setFieldErrors({})
@@ -297,7 +314,6 @@ export function App() {
 
   // The runner's last-seen Home, kept on this device, so it shows at once while the account refreshes. Read once per
   // account; each piece is replaced as this visit's answer arrives, and saved again for next time.
-  const owner = auth.account ? ownerOf(auth.account) : null
   const [snapshot, setSnapshot] = useState<{ owner: string; copy: HomeSnapshot | null } | null>(null)
   if (owner && snapshot?.owner !== owner) setSnapshot({ owner, copy: readSnapshot(owner) })
   const copy = owner && snapshot?.owner === owner ? snapshot.copy : null
@@ -321,8 +337,9 @@ export function App() {
   const savePlan = useCallback((plan: { id: string; plan: TrainingPlan }) => owner && saveSnapshot(owner, { plan }), [owner])
 
   // Check-ins live on the runner's saved plan, so they're offered only when that's the plan on screen.
+  const ownPlan = currentPlan.current !== undefined ? currentPlan.current : (copy?.current ?? undefined)
   const savedOnScreen =
-    plan.kind === 'ready' && currentPlan.current && samePlan(toRequest(plan.inputs), currentPlan.current.inputs) ? currentPlan.current.id : null
+    plan.kind === 'ready' && ownPlan && samePlan(toRequest(plan.inputs), ownPlan.inputs) ? ownPlan.id : null
   const checkIns = useCheckIns(savedOnScreen)
   // Sessions a held Strava run completes on that plan: computed by the API on each read, never stored.
   const stravaCompletions = useSyncedCompletions(savedOnScreen, completionsKey(checkIns.entries, runs ?? []))
@@ -331,7 +348,6 @@ export function App() {
 
   // The runner's plan from the copy on this device, opened at once on a return visit while the account loads. It gives
   // way to this visit's plan as soon as that's on screen.
-  const [fromCopy, setFromCopy] = useState<{ plan: TrainingPlan } | null>(null)
 
   // The runner's own plan opens with accepted coaching calls; opening it never accepts a new suggestion. Its note
   // shows on "This week". A plan from a link, or anyone else's, is the plan as written.
@@ -382,7 +398,6 @@ export function App() {
   // straight away; otherwise built afresh from its answers, which needs only the API, never the sleeping database. Signed
   // in without a plan: Home, which offers one. Once per visit, and never over a plan link they opened.
   // The plan this visit found, or until then the one last seen on this device, so the plan opens without waiting.
-  const ownPlan = currentPlan.current !== undefined ? currentPlan.current : (copy?.current ?? undefined)
   const found = ownPlan
   // A runner this device already knows opens from the copy too, plan or no plan, so the waiting film only plays when
   // there's nothing to show yet: a first sign-in here, or a brand new account.
@@ -835,6 +850,7 @@ export function App() {
         <div hidden={view === 'account' || view === 'privacy' || view === 'unsubscribe'}><RemindersSection key={state.runner.id} offer /></div>
       )}
       <main id="main-content" tabIndex={-1} key={view} className={navigated ? 'view-enter' : undefined}>
+        <OfflineRunDrafts activePlanId={view === 'home' ? ownPlan?.id : showPlan ? savedOnScreen : null} />
         <ScreenRecovery>
         <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
         {auth.error && (
@@ -1096,7 +1112,7 @@ export function App() {
               />
             )}
             {showPlan && <InstallCard />}
-            {showPlan && savedOnScreen && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
+            {showPlan && savedOnScreen && <CheckInLoadState {...checkIns} />}
 
             {/* The calendar menu: the runner's own plan subscribes to their personal feed, which follows the plan through
                 every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}

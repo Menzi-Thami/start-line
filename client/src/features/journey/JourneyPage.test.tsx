@@ -53,7 +53,7 @@ describe('permanent race history and trophy cabinet', () => {
       movingSeconds: 15800, paceSecondsPerKm: 373, plannedTitle: null, plannedSessionType: null, pace: null, averageHeartRate: null,
       source: { kind: 'Strava', viewUrl: null, recordedOnGarmin: false, cachedUntil: null } }
     vi.mocked(api.me.activities).mockResolvedValue([recording])
-    vi.spyOn(api.me, 'activity').mockResolvedValue({ ...recording, elapsedSeconds: 16920 } as Activity)
+    vi.spyOn(api.me, 'activity').mockResolvedValue({ ...recording, elapsedSeconds: 16920 } as unknown as Activity)
     vi.spyOn(api.me.journey, 'races').mockResolvedValue({ races: [], majors: majorDefinitions })
     const save = vi.spyOn(api.me.journey, 'saveRace').mockResolvedValue(raceMemory({ eventName: 'Nelson Mandela Marathon', eventDistanceKm: 42.195, major: null }))
     const user = userEvent.setup()

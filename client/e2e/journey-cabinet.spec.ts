@@ -9,15 +9,20 @@ const FIXTURE = 'http://127.0.0.1:5176/e2e/fixtures/journey.html'
 const seedMemories = () => [raceMemory(), raceMemory({ eventName: 'Berlin Marathon', major: 'Berlin', result: raceResult({ id: 'bbbbbbbb-0000-4000-8000-000000000002', planId: null, raceDate: '2026-09-27', finishTime: '03:56:12', distanceKm: 42.3, timeKind: 'OfficialChip' }) }),
   raceMemory({ eventName: 'My first half', eventDistanceKm: 21.1, major: null, majorEligible: false, result: raceResult({ id: 'cccccccc-0000-4000-8000-000000000003', planId: null, raceDate: '2025-10-12', finishTime: '01:54:10', timeKind: 'RecordedElapsed' }) })].sort((a, b) => b.result.raceDate.localeCompare(a.result.raceDate))
 
-async function fixture(page: Page, options: { races?: RaceMemory[]; current?: boolean; failSave?: boolean } = {}) {
+async function fixture(page: Page, options: { races?: RaceMemory[]; current?: boolean; failSave?: boolean; recording?: boolean } = {}) {
   const state = { races: options.races ?? [], current: !!options.current, failSave: !!options.failSave, writes: [] as { id: string; body: SaveRaceMemory }[], revision: 1 }
   const linked = raceResult({ id: 'dddddddd-0000-4000-8000-000000000004', raceDate: '2026-11-12', distanceKm: 10, finishTime: '00:53:24' })
   const training = chapter({ raceName: 'Spring 10K', raceDate: '2026-11-12', distanceKm: 10, raceResult: linked, version: 'plan-v1', lifecycle: 'Recovering' })
+  const recording = { id: 'eeeeeeee-0000-4000-8000-000000000005', localDate: '2026-04-26', startedAt: '2026-04-26T08:00:00Z', kind: 'Run', distanceKm: 42.4,
+    movingSeconds: 14000, paceSecondsPerKm: 330, plannedTitle: null, plannedSessionType: null, pace: null, averageHeartRate: null,
+    source: { kind: 'Strava', viewUrl: null, recordedOnGarmin: false, cachedUntil: null } }
   await page.route('**/api/v1/**', async route => {
     const request = route.request()
     const path = new URL(request.url()).pathname
     let data: unknown = []
     if (path === '/api/v1/me') data = { id: 'synthetic-journey-runner', displayName: 'Naledi', email: 'journey@example.test', timeZone: 'Africa/Johannesburg', units: 'Kilometres', needsPrivacyConsent: false, privacyNoticeVersion: '2026-10-21' }
+    else if (path === '/api/v1/me/activities') data = options.recording ? [recording] : []
+    else if (path === `/api/v1/me/activities/${recording.id}`) data = { ...recording, elapsedSeconds: 14612 }
     else if (path === '/api/v1/me/plans') data = options.current ? [{ id: PLAN_ID, name: 'Spring 10K', raceName: 'Spring 10K', raceDate: '2026-11-12', status: state.current ? 'Active' : 'Archived', createdAt: '2026-08-24T10:00:00Z' }] : []
     else if (path === '/api/v1/me/journey') data = journeyOf(options.current ? [{ ...training, status: state.current ? 'Active' : 'Archived' }] : [], { recovery: options.current ? recovery({ raceDate: '2026-11-12', distanceKm: 10, eventName: 'Spring 10K' }) : null })
     else if (path === `/api/v1/me/journey/plans/${PLAN_ID}/archive`) { expect(request.postDataJSON()).toEqual({ expectedVersion: 'plan-v1' }); state.current = false; await route.fulfill({ status: 204 }); return }
@@ -104,6 +109,26 @@ test('past race save → failed retry → reload → correction → trophy withd
   await expect(page.getByRole('button', { name: /^London A finish still to come Record a finish$/ })).toBeVisible()
   await expect(page.getByRole('list', { name: 'All race finishes', exact: true })).toHaveCount(0)
   expect(state.races).toHaveLength(1)
+})
+
+test('adding a past race reuses the selected recording date and elapsed metrics before explicit confirmation @phone', async ({ page }) => {
+  const state = await fixture(page, { recording: true })
+  await page.goto(`${FIXTURE}?view=journey&section=races`)
+  await page.getByRole('button', { name: 'Add a past race', exact: true }).click()
+  await page.getByRole('combobox', { name: 'Use a recorded run (optional)', exact: true }).selectOption('eeeeeeee-0000-4000-8000-000000000005')
+  await expect(page.getByLabel('Event date', { exact: true })).toHaveValue('2026-04-26')
+  await page.getByLabel('Event collection').selectOption('London')
+  await expect(page.getByLabel('Event distance (km)', { exact: true })).toHaveValue('42.195')
+  await page.getByRole('button', { name: 'Continue to result', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'We found your London Marathon.', exact: true })).toBeVisible()
+  expect(state.writes).toHaveLength(0)
+  await page.getByRole('button', { name: 'Confirm my recorded finish', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'RACE FINISHED.' })).toContainText('4:03:32')
+  expect(state.writes).toHaveLength(1)
+  expect(state.writes[0].body).toMatchObject({ raceDate: '2026-04-26', finishTime: '04:03:32', distanceKm: 42.4, timeKind: 'RecordedElapsed', activityId: 'eeeeeeee-0000-4000-8000-000000000005' })
+  await page.getByRole('button', { name: 'Back to my journey', exact: true }).click()
+  await page.reload()
+  await expect(page.getByRole('list', { name: 'Saved races', exact: true })).toContainText('Recording elapsed time')
 })
 
 test('cabinet uses the Night Run identity, wraps across screen sizes and passes both themes @phone', async ({ page }, info) => {

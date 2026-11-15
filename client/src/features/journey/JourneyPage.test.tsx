@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { accountsOff, AuthContext, type Auth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
+import type { Activity, ActivitySummary } from '../../lib/types'
 import { JourneyPage } from './JourneyPage'
 import { journeyOf, raceResult } from './journey-fixtures'
 import { majorDefinitions, raceMemory } from './race-history-fixtures'
@@ -22,6 +23,31 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks())
 
 describe('permanent race history and trophy cabinet', () => {
+  it('reuses an existing recording’s date and actual elapsed metrics without typing them again', async () => {
+    const recording: ActivitySummary = { id: 'recording', localDate: '2026-04-26', startedAt: '2026-04-26T08:00:00Z', kind: 'Run', distanceKm: 42.4,
+      movingSeconds: 14000, paceSecondsPerKm: 330, plannedTitle: null, plannedSessionType: null, pace: null, averageHeartRate: null,
+      source: { kind: 'Strava', viewUrl: null, recordedOnGarmin: false, cachedUntil: null } }
+    vi.mocked(api.me.activities).mockResolvedValue([recording])
+    vi.spyOn(api.me, 'activity').mockResolvedValue({ ...recording, elapsedSeconds: 14612 } as unknown as Activity)
+    vi.spyOn(api.me.journey, 'races').mockResolvedValue({ races: [], majors: majorDefinitions })
+    const save = vi.spyOn(api.me.journey, 'saveRace').mockResolvedValue(raceMemory())
+    const user = userEvent.setup()
+    show()
+    await user.click(await screen.findByRole('button', { name: 'Add a past race' }))
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'Use a recorded run (optional)' }), recording.id)
+    expect(screen.getByLabelText('Event date')).toHaveValue('2026-04-26')
+    await user.selectOptions(screen.getByLabelText('Event collection'), 'London')
+    expect(screen.getByLabelText('Event distance (km)')).toHaveValue('42.195')
+    await user.click(screen.getByRole('button', { name: 'Continue to result' }))
+    expect(screen.getByRole('heading', { name: 'We found your London Marathon.' })).toBeVisible()
+    expect(save).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    await waitFor(() => expect(save).toHaveBeenCalledWith('test-token', expect.any(String), expect.objectContaining({
+      eventName: 'London Marathon', eventDistanceKm: 42.195, raceDate: '2026-04-26', finishTime: '04:03:32', distanceKm: 42.4,
+      activityId: recording.id, timeKind: 'RecordedElapsed', outcome: 'Finished',
+    })))
+  })
+
   it('holds legacy duplicates for explicit review instead of choosing a trophy-winning outcome', async () => {
     vi.spyOn(api.me.journey, 'races').mockResolvedValue({ races: [raceMemory({ needsReview: true, majorEligible: false }),
       raceMemory({ needsReview: true, majorEligible: false, result: raceResult({ id: 'other-result', outcome: 'DidNotFinish', finishTime: null }) })], majors: majorDefinitions })

@@ -2,6 +2,8 @@
 
 Follow-up to merged PRs #263–265, delivered from `fix/strava-race-detection-finish-story` to `staging`. The implementation was brought up to date with staging commit `7389236` before final verification. No training-generator version or workout prescription changes are part of this work.
 
+The full local check script and all ten GitHub CI jobs passed on `1616abc`. A final client-only shortcut then added selection of an existing recording while entering a past race. That shortcut passed a fresh full frontend run, lint/types/build, and its recording-to-confirmation sequence in six browser profiles. Final-commit CI is linked from [PR #266](https://github.com/Menzi-Thami/start-line/pull/266/checks).
+
 ## Result
 
 - Journey is a permanent main-navigation destination, available after the last current plan is archived. Plan retains its own Progress view.
@@ -24,13 +26,15 @@ All automated accounts, activities and race memories are synthetic. Backend pers
 | EF model/migration consistency | Passed; no pending changes |
 | Synthetic staging-readiness script tests | 4 passed |
 | Frontend lint, TypeScript, production build and dependency audit | Passed; zero vulnerabilities |
-| Full frontend suite | 889 passed across 124 files |
+| Full frontend suite | 889 passed in the full script; 890 passed across 124 files after the recording shortcut |
 | Focused journey frontend tests | 82 passed across 10 files |
 | Focused race SQL sequences, including original concurrent-create regression | 9 passed |
 | New desktop browser journeys | 4 passed before the final whole-app run |
 | New Android Chromium / Firefox journeys | 4 / 4 passed |
 | New iPhone WebKit / iPad WebKit journeys | 4 / 4 passed |
-| Full `scripts/check.sh` / Chromium regression suite | Passed end to end; all 210 browser cases passed in 12.3 minutes |
+| Final recording shortcut | Passed in desktop Chromium, phone Chromium, Android Chromium, iPhone WebKit, iPad WebKit and Firefox; date and actual elapsed metrics reused without typing |
+| Full `scripts/check.sh` / Chromium regression suite | Passed end to end on `1616abc`; all 210 browser cases passed in 12.3 minutes |
+| GitHub CI on `1616abc` | [All ten jobs passed](https://github.com/Menzi-Thami/start-line/actions/runs/43696204021), including 210 Chromium cases and the expanded profile suite; [secret scan passed](https://github.com/Menzi-Thami/start-line/actions/runs/43696203973) |
 | Full GitHub CI | See the accompanying PR's checks for the committed revision |
 
 WebKit uses the existing workspace's extracted runtime libraries. Its `ldconfig` preflight did not see that library directory, so local runs bypassed that host preflight while loading the real browser with `LD_LIBRARY_PATH`; all browser actions, accessibility checks, rendering and image exports still ran. CI installs browser dependencies normally. These are emulated device/browser profiles, not physical devices.
@@ -49,6 +53,7 @@ WebKit uses the existing workspace's extracted runtime libraries. Its `ldconfig`
 | Legacy conflicting duplicate results → no trophy → remove incorrect result → one eligible finish | SQL and frontend review-state tests; chapters retained |
 | Fifty-five historical plans → load all pages → save next plan | SQL paging/retention test; frontend failed-page/retry/refresh test |
 | Confirm recording → elapsed time → edit suggested time → explicit chip-time selection | Existing recording form plus new timing-source regression |
+| Add past race → select existing recording → date filled → explicit confirmation → recorded distance/elapsed saved → reload | New frontend regression and six browser profiles |
 | Expired activity link → correct own result without relinking | SQL legacy-result test |
 | Late read after save/delete; account switch during token acquisition | Frontend request-boundary tests |
 | Local half-marathon finish with no Majors | Finish-focused export unit test; no empty-Majors achievement card |

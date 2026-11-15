@@ -87,13 +87,15 @@ function RaceMemoryEditor({ memory, initialMajor, majors, store, today, units, o
   const [stage, setStage] = useState<'event' | 'result'>('event')
   const [error, setError] = useState<string | null>(null)
   const [runs, setRuns] = useState<ActivitySummary[] | undefined>()
+  const [recordingId, setRecordingId] = useState('')
+  const chosenRecording = runs?.find(run => run.id === recordingId)
   const heading = useRef<HTMLHeadingElement>(null)
   const [confirmRemove, setConfirmRemove] = useState(false)
   const [removing, setRemoving] = useState(false)
   useEffect(() => {
     let current = true
     heading.current?.focus()
-    auth.getToken().then(token => token ? api.me.activities(token) : undefined).then(value => { if (current) setRuns(value) }).catch(() => { /* Results can be recorded without imported evidence. */ })
+    auth.getToken().then(token => current && token ? api.me.activities(token) : undefined).then(value => { if (current) setRuns(value) }).catch(() => { /* Results can be recorded without imported evidence. */ })
     return () => { current = false }
   }, [auth])
   const next = (event: FormEvent) => {
@@ -106,6 +108,17 @@ function RaceMemoryEditor({ memory, initialMajor, majors, store, today, units, o
   return <section className="race-memory-editor" aria-labelledby={`${id}-title`}>
     <h3 id={`${id}-title`} ref={heading} tabIndex={-1}>{memory ? 'Correct your race memory' : 'Save a race to your journey'}</h3>
     {stage === 'event' ? <form aria-label="Race details" onSubmit={next}>
+      {!memory && runs?.some(run => run.kind === 'Run' || run.kind === 'TrailRun') && <label className="field" htmlFor={`${id}-recording`}>
+        <span className="field-label" id={`${id}-recording-label`}>Use a recorded run (optional)</span>
+        <select id={`${id}-recording`} aria-labelledby={`${id}-recording-label`} className="input" value={recordingId} onChange={event => {
+          setRecordingId(event.target.value)
+          const run = runs.find(value => value.id === event.target.value)
+          if (run) setDate(run.localDate)
+        }}><option value="">Choose a recording, or enter the race yourself</option>
+          {runs.filter(run => run.kind === 'Run' || run.kind === 'TrailRun').map(run => <option key={run.id} value={run.id}>{formatDate(run.localDate, 'long')} · {formatDistance(run.distanceKm, units)} · {run.source.kind}</option>)}
+        </select>
+        <span className="field-help">Its date is filled in here. Its actual distance and elapsed time are loaded when you confirm the result.</span>
+      </label>}
       <label className="field"><span className="field-label">Event collection</span><select className="input" value={major} onChange={event => {
         const nextMajor = majors.find(definition => definition.id === event.target.value)
         setMajor(nextMajor?.id ?? '')
@@ -113,7 +126,7 @@ function RaceMemoryEditor({ memory, initialMajor, majors, store, today, units, o
       }}><option value="">Any race</option>{majors.map(definition => <option value={definition.id} key={definition.id}>{definition.name}</option>)}</select></label>
       <label className="field"><span className="field-label">Race name</span><input className="input" value={name} maxLength={120} required onChange={event => { setName(event.target.value); setMajor('') }} /></label>
       <div className="race-event-fields">
-        <label className="field"><span className="field-label">Event date</span><input className="input" type="date" value={date} min="1900-01-01" max={today} required onChange={event => setDate(event.target.value)} /></label>
+        <label className="field"><span className="field-label">Event date</span><input className="input" type="date" value={date} min="1900-01-01" max={today} required onChange={event => { setDate(event.target.value); if (chosenRecording?.localDate !== event.target.value) setRecordingId('') }} /></label>
         <label className="field"><span className="field-label">Event distance (km)</span><input className="input mono" inputMode="decimal" value={distance} required onChange={event => { setDistance(event.target.value); setMajor('') }} /></label>
       </div>
       <p className="field-help">This is the event distance. You can keep a recording’s actual distance and elapsed time separately when confirming the result.</p>
@@ -122,7 +135,7 @@ function RaceMemoryEditor({ memory, initialMajor, majors, store, today, units, o
       <p className="race-memory-editor-event">{name} · {formatDate(date, 'long')} · {formatDistance(Number(distance), units)}</p>
       {runs === undefined && <p className="field-help" role="status">Recordings are unavailable or still loading. You can save the result yourself.</p>}
       <RaceResultForm chapter={{ raceName: name, raceDate: date, distanceKm: Number(distance), startDate: '1900-01-01', raceResult: memory?.result ?? null }}
-        startEditing={!!memory} today={today} units={units} runs={runs}
+        startEditing={!!memory} today={today} units={units} runs={chosenRecording ? [chosenRecording] : runs}
         onLoadActivity={async activityId => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to load this recording.'); return api.me.activity(token, activityId) }}
         onSave={async body => {
           const saved = await store.save(recordId, { eventName: name.trim(), eventDistanceKm: Number(distance), raceDate: body.raceDate ?? date,

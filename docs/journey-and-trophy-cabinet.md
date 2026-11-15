@@ -12,6 +12,8 @@ There is no lifetime count limit on saved plans. Journey reads 20 chapters at a 
 
 A race result can belong to a plan or exist independently. Add a past race for an event run before joining Taperday, or confirm an existing plan's result. Both screens read and change the same stored result. Name, event distance and date are retained independently of the live race catalogue.
 
+Choose an existing recorded run while adding a past race to fill its date without typing it again. Choosing a Major supplies its advertised marathon distance. The selected recording's actual distance and full elapsed time are loaded for explicit result confirmation; moving time is never substituted. Changing the event date clears a recording selected for another day.
+
 The advertised event distance stays separate from the runner's actual distance covered. Times carry one of Unspecified, OfficialChip or RecordedElapsed. Confirming a recording uses its actual elapsed time, never moving time. Editing that suggested time clears the elapsed classification until the runner chooses a source. Older results remain Unspecified; an activity association does not establish official chip timing. Personal best labels compare only saved, explicitly identified chip times at the same standard event distance.
 
 Saving uses a stable client-generated result id; retrying a lost response does not add another result. Updates and removals require the saved row version. A unique runner/event-edition key and recording association protect new results from duplicates. For custom events the identity is the trimmed name, date and event distance; recognised Majors use their event identity across known sponsor aliases. Similar names are not fuzzy-matched into a Major.

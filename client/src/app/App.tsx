@@ -473,6 +473,20 @@ export function App() {
       if (inputs) fetchPlan(inputs)
     }
   }, [fromCopy, latestPlan, view, plan, fetchPlan])
+  useEffect(() => {
+    if ((plan.kind !== 'ready' && plan.kind !== 'error') || !plan.inputs.raceSlug || plan.inputs.raceSnapshot
+      || ownPlan?.inputs.raceSlug !== plan.inputs.raceSlug) return
+    const snapshot = fromRequest(ownPlan.inputs)?.raceSnapshot
+    if (!snapshot) return
+    const inputs = plan.inputs
+    if (plan.kind === 'ready') {
+      queueMicrotask(() => setPlan(current => current.kind === 'ready' && current.inputs === inputs
+        ? { ...current, inputs: { ...inputs, raceSnapshot: snapshot } } : current))
+    } else if (!editingSavedPlan.current) {
+      // An older short link can recover its known race metadata from the runner's authenticated saved plan.
+      fetchPlan({ ...inputs, raceSnapshot: snapshot })
+    }
+  }, [plan, ownPlan, fetchPlan])
   // A shared link builds its plan straight away.
   useEffect(() => {
     if (initial) fetchPlan(initial)

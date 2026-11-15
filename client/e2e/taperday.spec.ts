@@ -124,6 +124,19 @@ test('a shared link builds the plan straight away and survives a reload', async 
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
 })
 
+test('a saved race snapshot still opens and reloads after its catalogue listing disappears @phone', async ({ page }) => {
+  const today = new Date().toISOString().slice(0, 10)
+  const date = new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10)
+  const query = new URLSearchParams({ race: 'synthetic-removed-catalogue-race', km: '10', date, name: 'Saved race 10K',
+    goal: '3120', days: 'tu.th.sa.su', long: 'su', exp: 'regular', now: '25', from: today, v: '2' })
+  await page.goto(`/?${query}`)
+  await expect(page.getByRole('heading', { name: 'Saved race 10K', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Saved race 10K', exact: true })).toBeVisible()
+  expect(new URL(page.url()).searchParams.get('km')).toBe('10')
+  expect(new URL(page.url()).searchParams.get('race')).toBe('synthetic-removed-catalogue-race')
+})
+
 test('installs as an app: the manifest, its icons, and a service worker that opens Taperday with no signal', async ({ page, context, request }) => {
   const manifest = (await (await request.get('/manifest.webmanifest')).json()) as { display: string; start_url: string; icons: { src: string; purpose: string }[] }
   expect(manifest.display).toBe('standalone')

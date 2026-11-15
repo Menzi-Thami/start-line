@@ -1,6 +1,6 @@
 # Saved-plan durability, offline logging and integration validation
 
-Additional work after PR #263, on the same branch. PR #263 was merged by the owner while this follow-up was underway; this work has not been merged or deployed.
+Additional work after PR #263, on the same branch. The owner merged PR #264 during this work; PR #265 contains the final client metadata handoff. Neither PR was merged or deployed by this implementation session.
 
 ## Implementation
 
@@ -15,6 +15,7 @@ Additional work after PR #263, on the same branch. PR #263 was merged by the own
 | Sequence | Coverage |
 |---|---|
 | Catalogue save → archive → remove listing → authenticated reload | SQL/API and application tests; same schedule and race metadata. |
+| Saved race metadata → API → link → reload → availability edit | URL, actual App, builder and real-API browser regressions; live listings still override snapshots. |
 | Current calendar correction → archive | Application checks; active follows correction, archived snapshot stays fixed. |
 | Legacy snapshot backfill, retained original metadata, unrecoverable listing | Actual migration data operations and SQL/API checks; no invented award. |
 | Recent result → preview → save → new client → strength edit → replan → export → remove result | SQL/API plus frontend Save identity regression. |
@@ -27,7 +28,7 @@ Additional work after PR #263, on the same branch. PR #263 was merged by the own
 
 ## Results
 
-Implementation commit: `925f4bb92ff25dab55b3767689f551a453e4313a`, verified on 15 November 2026. Later evidence-only commits keep the same application code.
+Final application code: `28928c46a04d60db1ddd61f73d1476ca45922acd`, verified on 15 November 2026. This includes retained race metadata through API requests, links, authenticated old-link recovery and availability edits. Evidence-only updates do not change that application code.
 
 | Check | Actual result |
 |---|---|
@@ -35,18 +36,19 @@ Implementation commit: `925f4bb92ff25dab55b3767689f551a453e4313a`, verified on 1
 | Backend tests | 1,767 passed: Domain 1,216, Application 169, Architecture 7, disposable SQL integration 375; zero skipped. |
 | Migration/model consistency | Passed; no pending model changes. The new migration ran on a fresh disposable local database. |
 | Frontend lint, forced TypeScript check, production build | Passed. |
-| Full frontend suite | 873 tests in 121 files passed locally and in CI. |
+| Full frontend suite | 877 tests in 121 files passed locally and in CI. |
 | Dependency audit | Zero vulnerabilities. |
 | Staging readiness script | Four synthetic configuration/isolation tests passed; live Azure/provider checks are not substituted. |
-| Chromium end-to-end | All 200 cases passed in CI, across four shards; no failed or flaky cases. |
+| Chromium end-to-end | All 202 cases passed in CI, across four shards; no failed or flaky cases. |
 | Additional engine/profile suite | 104 passed in CI: 26 each on Android Chromium, iPhone WebKit, iPad WebKit and Firefox. |
 | Cached-plan reopen/auth/offline regressions | 46 focused tests passed. |
+| Retained race links and edits | 71 focused tests passed; both new real-API reload cases passed locally on desktop and phone. |
 | Clean phone plan-history sequence | All four source variants passed, including the original strict retained-Strava assertion. |
 | PNG/SVG generation, sharing and cancellation | Passed within the 104-case browser-engine suite; portraits remain 1080 × 1920. Native application destinations remain unrun. |
 | Accessibility/visual checks | Browser WCAG checks passed in light/dark. Device-draft screenshots inspected at desktop, iPhone and Android profiles. |
-| GitHub CI | All ten jobs passed in [run 43679306254](https://github.com/Menzi-Thami/start-line/actions/runs/43679306254). [Secret scan 43679306257](https://github.com/Menzi-Thami/start-line/actions/runs/43679306257) also passed. [Latest PR checks](https://github.com/Menzi-Thami/start-line/pull/264/checks). |
+| GitHub CI | All ten jobs passed in [run 43681690233](https://github.com/Menzi-Thami/start-line/actions/runs/43681690233). [Secret scan 43681690224](https://github.com/Menzi-Thami/start-line/actions/runs/43681690224) also passed. [Latest PR checks](https://github.com/Menzi-Thami/start-line/pull/265/checks). |
 
-An earlier local full run had one phone history-retention failure while the Vite fixtures were being edited. The unchanged test passed all four source variants on a clean server; all 200 cases then passed on clean CI. The final local full check is run with application sources frozen. Initial test-fixture TypeScript errors were corrected; assertions were retained.
+A frozen local scripts/check.sh run passed completely on the prior application revision: 1,767 backend tests, 873 frontend tests and all 200 browser cases. The final client metadata handoff then passed the full 877-test frontend suite, forced types/build/audit, and both new real-API browser cases; clean CI passed the complete 202-case Chromium suite and the 104-case additional-engine suite. An earlier phone history-retention failure did not reproduce on the clean focused run or the subsequent full runs. Initial regression-fixture typing errors were corrected; assertions were retained.
 
 ## Visual evidence
 
@@ -60,6 +62,6 @@ All images contain synthetic run entries. iPhone and Android images come from th
 
 ## Remaining access
 
-No physical iPhone/Android/iPad or remote physical-device service is connected. Dedicated live Entra/Strava test identities, a test inbox and opted-in test push devices have not been supplied. Live authorization, provider delivery, installed-device offline behavior and WhatsApp/Instagram native destination checks therefore remain **unrun**, not passed by browser emulation. The staging configuration workflow is prepared for the existing staging environment; it has not been dispatched from this feature branch or used to deploy anything.
+No physical iPhone/Android/iPad or remote physical-device service is connected. Dedicated live Entra/Strava test identities, a test inbox and opted-in test push devices have not been supplied. Live authorization, provider delivery, installed-device offline behavior and WhatsApp/Instagram native destination checks therefore remain **unrun**, not passed by browser emulation. The staging configuration workflow and direct CLI script are prepared. Dispatching the new workflow with ref staging returned GitHub HTTP 404 because the workflow is not registered on the repository’s default branch yet. No Azure configuration was read or changed, and no provider delivery is counted as passed. The direct script remains available to an operator with read-only Azure access.
 
 The validation request for those account/device identifiers is pending. Automated tests continue to use synthetic accounts and disposable local SQL. See [the live verification matrix](../../integration-validation.md).

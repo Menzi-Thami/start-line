@@ -15,6 +15,19 @@ const custom: PlanInputs = {
 }
 
 describe('plan links', () => {
+  it('retains a saved catalogue snapshot through the API, URL and a reload instead of asking for its details again', () => {
+    const request = { ...toRequest(custom), raceSlug: 'removed-catalogue-race', raceName: 'Stored race', distanceKm: 10, raceDate: '2026-12-13' }
+    const stored = fromRequest(request)!
+    const reopened = fromSearchParams(toSearchParams(stored))!
+    expect(reopened.raceSnapshot).toEqual({ name: 'Stored race', date: '2026-12-13', distanceKm: 10 })
+    expect(toRequest(reopened)).toMatchObject({ raceSlug: request.raceSlug, raceName: request.raceName, distanceKm: 10, raceDate: request.raceDate })
+  })
+
+  it('does not invent fallback race data for an old slug-only link', () => {
+    const inputs = fromSearchParams(new URLSearchParams('race=removed&goal=1470&days=tu.th.sa.su&long=su'))!
+    expect(inputs.raceSnapshot).toBeUndefined()
+    expect(toRequest(inputs)).toMatchObject({ raceSlug: 'removed', raceDate: null, distanceKm: null })
+  })
   it('round-trips every input through the URL', () => {
     const back = fromSearchParams(toSearchParams(custom))
 

@@ -245,6 +245,30 @@ describe('their plan from the copy kept on this device', () => {
       }),
     )
 
+  it('recovers an old catalogue link from the authenticated plan’s retained metadata when its listing has gone', async () => {
+    const slug = 'removed-saved-race'
+    const retained = { ...inputs, raceSlug: slug }
+    const stored = { ...current, inputs: retained, plan: { ...planFixture, race: { ...planFixture.race, slug } }, status: 'Active', coaching: [] }
+    const asked: Record<string, unknown>[] = []
+    server.use(
+      http.get('*/api/v1/me', () => HttpResponse.json(thandi)),
+      http.get('*/api/v1/me/plans', () => HttpResponse.json([summary])),
+      http.get('*/api/v1/me/plans/:id', () => HttpResponse.json(stored)),
+      http.post('*/api/v1/me/plans/:id/coach', () => HttpResponse.json(stored)),
+      http.post('*/api/v1/plans', async ({ request }) => {
+        const body = await request.json() as Record<string, unknown>
+        asked.push(body)
+        return body.distanceKm === 5 && body.raceDate === '2026-12-13'
+          ? HttpResponse.json(stored.plan) : HttpResponse.json({ title: 'Race not found', code: 'not_found' }, { status: 404 })
+      }),
+    )
+    window.history.replaceState(null, '', `/?race=${slug}&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08`)
+    renderApp(signedIn())
+    expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
+    expect(asked.at(-1)).toMatchObject({ raceSlug: slug, raceName: 'Parkrun PB', distanceKm: 5, raceDate: '2026-12-13' })
+    expect(window.location.search).toContain('km=5')
+  })
+
   it.each(['/', '/?km=5&date=2026-12-13&name=Parkrun+PB&goal=1470&days=tu.th.sa.su&long=su&exp=regular&from=2026-10-08'])
     ('keeps account logging available when reopening a cached plan offline at %s', async url => {
       const identity = 'tenant:thandi'

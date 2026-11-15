@@ -19,6 +19,7 @@ export function samePlan(a: GeneratePlanRequest, b: GeneratePlanRequest): boolea
   const left = fromRequest(a)
   const right = fromRequest(b)
   const link = (inputs: PlanInputs) => toSearchParams({ ...inputs,
+    raceSnapshot: undefined,
     raceName: inputs.raceSlug ? undefined : inputs.raceName?.trim() || 'Your race',
   }).toString()
   return left !== null && right !== null && link(left) === link(right)

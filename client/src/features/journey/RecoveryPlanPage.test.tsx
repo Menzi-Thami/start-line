@@ -122,7 +122,9 @@ describe('Recovery as its own state', () => {
   })
 
   it('shows a four-week calendar with tappable days, neutral free days and longer-run details', async () => {
-    show(journeyOf([], { maintenance: maintenance() }), '2026-12-02')
+    const current = maintenance()
+    const weeks = [current.weeks[0]!, ...['2026-12-07', '2026-12-14', '2026-12-21'].map(weekStart => ({ weekStart, sessions: [] }))]
+    show(journeyOf([], { maintenance: maintenance({ weeks }) }), '2026-12-02')
     const user = userEvent.setup()
     const calendar = screen.getByRole('region', { name: 'Easy-running calendar' })
     expect(within(calendar).getByRole('list', { name: 'Choose a day' })).toBeVisible()

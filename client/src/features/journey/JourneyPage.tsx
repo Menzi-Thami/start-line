@@ -33,7 +33,7 @@ export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { toda
     else window.location.assign(`?view=recovery${raceId ? `&race=${encodeURIComponent(raceId)}` : ''}`)
   }
   useEffect(() => {
-    const read = () => { setSection(sectionFromUrl()); setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined); setNewLocal(null); setNewLocal(null) }
+    const read = () => { setSection(sectionFromUrl()); setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined); setNewLocal(null) }
     window.addEventListener('popstate', read)
     return () => window.removeEventListener('popstate', read)
   }, [])
@@ -71,7 +71,7 @@ export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { toda
           setNewMajor(undefined); setNewLocal(null)
           if (earned) setCelebrate(memory)
         }} />}
-      {section === 'cabinet' && <TrophyCabinet history={races.state.history} units={units} onLocalRace={local => { setNewLocal(local); setNewMajor(undefined); setSelectedMajor(null); setSelectedRaceId(null); pick('races'); setNewLocal(local) }} onMajor={(major, earned) => {
+      {section === 'cabinet' && <TrophyCabinet history={races.state.history} units={units} onLocalRace={local => { setNewMajor(undefined); setSelectedMajor(null); setSelectedRaceId(null); pick('races'); setNewLocal(local) }} onMajor={(major, earned) => {
         setSelectedMajor(earned ? major.id : null); setSelectedRaceId(null); setNewMajor(earned ? undefined : major.id); pick('races')
       }} onRace={race => { setSelectedMajor(null); setSelectedRaceId(race.result.id); setNewMajor(undefined); pick('races') }} />}
     </>}

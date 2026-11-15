@@ -48,6 +48,31 @@ describe('permanent race history and trophy cabinet', () => {
     })))
   })
 
+  it('offers the Nelson Mandela Marathon in the cabinet and reuses a matching October Strava marathon', async () => {
+    const recording: ActivitySummary = { id: 'mandela-strava', localDate: '2026-10-18', startedAt: '2026-10-18T05:00:00Z', kind: 'Run', distanceKm: 42.34,
+      movingSeconds: 15800, paceSecondsPerKm: 373, plannedTitle: null, plannedSessionType: null, pace: null, averageHeartRate: null,
+      source: { kind: 'Strava', viewUrl: null, recordedOnGarmin: false, cachedUntil: null } }
+    vi.mocked(api.me.activities).mockResolvedValue([recording])
+    vi.spyOn(api.me, 'activity').mockResolvedValue({ ...recording, elapsedSeconds: 16920 } as Activity)
+    vi.spyOn(api.me.journey, 'races').mockResolvedValue({ races: [], majors: majorDefinitions })
+    const save = vi.spyOn(api.me.journey, 'saveRace').mockResolvedValue(raceMemory({ eventName: 'Nelson Mandela Marathon', eventDistanceKm: 42.195, major: null }))
+    const user = userEvent.setup()
+    show()
+    await user.click(await screen.findByRole('button', { name: 'Trophy cabinet' }))
+    await user.click(await screen.findByRole('button', { name: /Nelson Mandela Marathon.*Link a recorded finish/ }))
+    expect(await screen.findByRole('heading', { name: 'Save a race to your journey' })).toBeVisible()
+    expect(screen.getByRole('textbox', { name: 'Race name' })).toHaveValue('Nelson Mandela Marathon')
+    expect(await screen.findByLabelText('Event date')).toHaveValue('2026-10-18')
+    await user.click(screen.getByRole('button', { name: 'Continue to result' }))
+    expect(await screen.findByRole('heading', { name: 'We found your Nelson Mandela Marathon.' })).toBeVisible()
+    expect(save).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Confirm my recorded finish' }))
+    await waitFor(() => expect(save).toHaveBeenCalledWith('test-token', expect.any(String), expect.objectContaining({
+      eventName: 'Nelson Mandela Marathon', eventDistanceKm: 42.195, raceDate: '2026-10-18',
+      distanceKm: 42.34, finishTime: '04:42:00', activityId: recording.id, outcome: 'Finished', timeKind: 'RecordedElapsed',
+    })))
+  })
+
   it('holds legacy duplicates for explicit review instead of choosing a trophy-winning outcome', async () => {
     vi.spyOn(api.me.journey, 'races').mockResolvedValue({ races: [raceMemory({ needsReview: true, majorEligible: false }),
       raceMemory({ needsReview: true, majorEligible: false, result: raceResult({ id: 'other-result', outcome: 'DidNotFinish', finishTime: null }) })], majors: majorDefinitions })

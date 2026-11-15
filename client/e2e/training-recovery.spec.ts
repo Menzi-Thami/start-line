@@ -286,23 +286,28 @@ test('Home stays simple after recovery and months later, with running details av
   await expect(page.getByRole('heading', { name: 'Finished in 2:06:15', exact: true })).toBeVisible()
 })
 
-test('post-recovery Home is accessible at narrow, phone, tablet and desktop widths in both themes @phone', async ({ page }, info) => {
-  const { state } = await setup(page, { recovering: true })
-  state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
-  await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
-  await page.goto(`${fixture}?view=home`)
-  await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
-  expect(state.detailsReads).toBe(0)
-  if (info.project.name === 'desktop') await mkdir(homeQa, { recursive: true })
-  for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark']) {
+// Give every audit a fresh document at its final size, isolated from earlier
+// layout queries and resizing (which can crash Firefox's native geometry checks).
+for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark']) {
+  test(`post-recovery Home is accessible at ${width}px in ${mode} mode @phone`, async ({ page }, info) => {
+    const { state } = await setup(page, { recovering: true })
+    state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
+    await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
     await page.setViewportSize({ width, height: 900 })
+    await page.goto(`${fixture}?view=home`)
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+    await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
+    expect(state.detailsReads).toBe(0)
     await accessible(page)
-    if (info.project.name === 'desktop' && [375, 1440].includes(width)) await page.screenshot({ path: `${homeQa}/recovered-${width}-${mode}.png`, fullPage: true })
-  }
-  await calmHome(page)
-  expect(state.detailsReads).toBe(0)
-})
+    if (info.project.name === 'desktop' && [375, 1440].includes(width)) {
+      await mkdir(homeQa, { recursive: true })
+      await page.screenshot({ path: `${homeQa}/recovered-${width}-${mode}.png`, fullPage: true })
+    }
+    await calmHome(page)
+    expect(state.detailsReads).toBe(0)
+  })
+}
+
 
 test('ending recovery keeps one next action on Home and recent activities in Runs @phone', async ({ page }, info) => {
   const { state } = await setup(page, { recovering: true })

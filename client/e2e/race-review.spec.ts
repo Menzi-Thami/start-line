@@ -142,7 +142,7 @@ test('native race sharing starts in the tap and includes the prepared image', as
   expect(await page.evaluate(() => Reflect.get(window, 'sharedRace'))).toEqual({ text: 'I finished Hoka Half in 2:06:15 (recording elapsed time)! #Taperday', name: 'taperday-race-finish.png', width: 1080, height: 1920 })
 })
 
-test('the actual app saves the concluded chapter and opens the saved race from Home @phone', async ({ page }) => {
+test('the actual app offers recovery on Home and retains the saved race in Journey after reload @phone', async ({ page }) => {
   const result = raceResult({ raceDate: '2026-11-14', finishTime: '02:06:15', distanceKm: 20.3, timeKind: 'RecordedElapsed', activityId: 'expired-recording' })
   const saved = chapter({ raceName: 'Hoka Half', raceDate: result.raceDate, status: 'Concluded', lifecycle: 'Concluded', raceResult: result,
     training: recap({ scheduledRuns: 10, confirmedRuns: 4, allConfirmed: false, raceDatePassed: true }),
@@ -164,7 +164,11 @@ test('the actual app saves the concluded chapter and opens the saved race from H
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=home')
   await expect(page.getByText('Training concluded', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Review my race', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Start recovery plan', exact: true })).toBeVisible()
+  await expect(page.locator('.journey-home button')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Review my race', exact: true })).toHaveCount(0)
+  await page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Journey', exact: true }).click()
+  await page.getByRole('button', { name: 'View chapter', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Finished in 2:06:15' })).toBeVisible()
   await expect(page.getByRole('tablist', { name: 'Your plan' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Edit plan', exact: true })).toHaveCount(0)
@@ -174,5 +178,6 @@ test('the actual app saves the concluded chapter and opens the saved race from H
   await page.screenshot({ path: shot('app-saved-phone-light'), fullPage: true })
   await page.reload()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: 'View chapter', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Finished in 2:06:15' })).toBeVisible()
 })

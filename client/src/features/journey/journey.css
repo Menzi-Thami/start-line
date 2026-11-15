@@ -171,8 +171,11 @@
 .recovery-plan-header > .runner { color: var(--accent); flex: none; width: clamp(5rem, 15vw, 10rem); height: auto; }
 @media (max-width: 600px) {
   .recovery-plan-header { display: block; position: relative; }
-  .recovery-plan-header > .runner { position: absolute; top: var(--space-5); right: 0; width: 5rem; }
-  .recovery-plan-header .plan-kicker { padding-right: 6rem; }
+  .recovery-plan-header > div { min-width: 0; }
+  .recovery-plan-header > .runner { position: absolute; top: var(--space-4); right: 0; width: 4.2rem; }
+  .recovery-plan-header .plan-kicker { padding-right: 5rem; }
+  /* The runner is Taperday's signature character, but must never cover a long plan heading. */
+  .recovery-plan-header h1 { box-sizing: border-box; padding-right: 5rem; font-size: clamp(2.1rem, 8vw, 3.25rem); overflow-wrap: anywhere; }
 }
 .recovery-plan-calendar { margin-top: var(--space-4); border-top: 1px solid var(--line); }
 .recovery-plan-calendar > summary { min-height: var(--tap); padding-block: var(--space-3); cursor: pointer; font-weight: 600; }

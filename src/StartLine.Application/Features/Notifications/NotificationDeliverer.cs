@@ -144,7 +144,7 @@ internal sealed partial class NotificationDeliverer(IApplicationDbContext db, IP
         if (target != DateOnly.FromDateTime(time.LocalNow(zone)).AddDays(1)) return null;
         try
         {
-            var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), await CoachCalls.ForAsync(db, saved.Id, cancellationToken), saved.Adjustments);
+            var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), await CoachCalls.ForAsync(db, saved.Id, cancellationToken), saved.Adjustments);
             if (delivery.Kind == NotificationKind.FirstRun)
             {
                 // Still the plan's first run, and still tomorrow: a plan edited since it was queued says nothing stale.

@@ -41,6 +41,7 @@ export function chapter(overrides: Partial<PlanChapter> = {}): PlanChapter {
     raceResult: null,
     achievements: [],
     goalTime: '01:55:00',
+    detailsUnavailable: false,
     weeks: Array.from({ length: 12 }, (_, i) => ({ weekStart: addDays('2026-08-24', i * 7), scheduledRuns: 3 + (i % 2), confirmedRuns: 3 + (i % 2), recordedKm: 20 + i })),
     ...overrides,
   }

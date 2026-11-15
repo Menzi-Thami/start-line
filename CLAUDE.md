@@ -96,8 +96,8 @@ verdicts on the same goal**, so it defers to what already judges one and only ad
 (three strong weeks) is `AheadOfGoal` with that very goal, and recorded runs never say it sooner; a fresh plan's
 `low-volume` warning (decided by the plan's own `PlanShape`) caps the build at `Stretch`, and the outlook never re-derives
 reachable volume itself. Otherwise it reads the runner's fitness against the goal, by the same `Fitness` and Riegel as the
-coach: the coach's estimate from recorded runs, or a `RecentResult` the runner gave (in the link and request only, not
-yet saved with a plan). A full build can take a share of the race time off by experience (8%, 5%, 3%), scaled by the
+coach: the coach's estimate from recorded runs, or a `RecentResult` the runner gave (kept in the link, request and saved
+plan). A full build can take a share of the race time off by experience (8%, 5%, 3%), scaled by the
 weeks of building left and the share of the original peak a rebuilt plan keeps; a goal asking up to half of that is
 `OnTrack`, up to all of it `Stretch`, more `AtRisk`. Beyond the marathon only the build is judged. Every threshold is a
 named constant with a test (`GoalOutlookTests`).

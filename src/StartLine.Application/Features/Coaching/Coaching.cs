@@ -74,7 +74,7 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
             throw new NotFoundException("Saved plan", request.Id.ToString());
         }
 
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var query = SavedPlanMapping.ToQuery(saved);
         var calls = await coach.CallsAsync(saved, runner, cancellationToken);
         return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), saved.Status,
             [.. calls.Select(CoachNoteDto.From)]);
@@ -97,7 +97,7 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
             return calls;
         }
 
-        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls, saved.Adjustments, CoachCalls.LocalToday(runner, time));
+        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, CoachCalls.LocalToday(runner, time));
         var call = await DecideThisWeekAsync(saved, runner, plan, calls, recovery, cancellationToken);
         return call is null ? calls : [.. calls, call];
     }
@@ -208,7 +208,7 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
         var fromCheckIn = request.Recovery == RecoveryReadiness.NotReported ? await ReadinessForReview.LatestAsync(db, runner.Id, today, cancellationToken) : null;
         var recovery = fromCheckIn ?? request.Recovery;
         var proposed = await coach.CallsAsync(saved, runner, cancellationToken, preview: true, recovery: recovery);
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var query = SavedPlanMapping.ToQuery(saved);
         var targetDay = today.DayOfWeek == DayOfWeek.Sunday ? today.AddDays(1) : today;
         var targetWeek = targetDay.AddDays(-((int)targetDay.DayOfWeek + 6) % 7);
         var plan = builder.Build(query, proposed, saved.Adjustments, targetWeek);

@@ -73,9 +73,10 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
         builder.ComplexProperty(p => p.Inputs, inputs =>
         {
             inputs.Property(i => i.RaceSlug).HasColumnName("RaceSlug").HasMaxLength(100);
-            inputs.Property(i => i.RaceName).HasColumnName("RaceName").HasMaxLength(100);
+            inputs.Property(i => i.RaceName).HasColumnName("RaceName").HasMaxLength(120);
             inputs.Property(i => i.DistanceKm).HasColumnName("DistanceKm");
             inputs.Property(i => i.RaceDate).HasColumnName("RaceDate");
+            inputs.Ignore(i => i.HasRaceSnapshot);
             // SQL `time` stops at 24 hours; ultra goals don't, so goals are stored as seconds.
             inputs.Property(i => i.GoalTime).HasColumnName("GoalSeconds")
                 .HasConversion(t => (long)t.TotalSeconds, s => TimeSpan.FromSeconds(s));
@@ -93,6 +94,10 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
             inputs.Property(i => i.StartOn).HasColumnName("StartOn");
             // Null is Auto: every plan saved before run/walk, and every plan that left it to the goal.
             inputs.Property(i => i.RunWalk).HasColumnName("RunWalk").HasConversion<string>().HasMaxLength(8);
+            inputs.Property(i => i.RecentResultKm).HasColumnName("RecentResultKm");
+            inputs.Property(i => i.RecentResultTime).HasColumnName("RecentResultSeconds")
+                .HasConversion(t => t.HasValue ? (long?)t.Value.TotalSeconds : null, s => s.HasValue ? TimeSpan.FromSeconds(s.Value) : null);
+            inputs.Property(i => i.RecentResultDate).HasColumnName("RecentResultDate");
         });
     }
 }
@@ -282,6 +287,7 @@ internal sealed class SessionCheckInConfiguration : IEntityTypeConfiguration<Ses
 {
     public void Configure(EntityTypeBuilder<SessionCheckIn> builder)
     {
+        builder.Property(c => c.Version).IsRowVersion();
         builder.ToTable("SessionCheckIns");
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).ValueGeneratedNever();

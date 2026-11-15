@@ -10,13 +10,13 @@ import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { current, today } from './run-history-data'
 
 const planFixture = plan as TrainingPlan
-const auth = { ...accountsOff, enabled: true, getToken: () => Promise.resolve('synthetic-token') }
+const auth = { ...accountsOff, enabled: true, account: { id: 'synthetic-runner', name: 'QA runner', email: null }, getToken: () => Promise.resolve('synthetic-token') }
 const noop = () => {}
 
 function SavedPlan({ runs }: { runs: ActivitySummary[] }) {
   const checkIns = useCheckIns(current.id)
   const synced = useSyncedCompletions(current.id, completionsKey(checkIns.entries, runs))
-  return <><CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} /><PlanView plan={planFixture} today={today} units="km" onUnitsChange={noop} shareUrl="https://example.test/plan" runs={runs}
+  return <><CheckInLoadState {...checkIns} /><PlanView plan={planFixture} today={today} units="km" onUnitsChange={noop} shareUrl="https://example.test/plan" runs={runs}
     canCompleteRuns={checkIns.ready}
     coach={checkIns.ready ? { ...checkIns, synced: synced.get, today, units: 'km' } : undefined} /></>
 }

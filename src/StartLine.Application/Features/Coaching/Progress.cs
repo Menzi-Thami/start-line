@@ -48,7 +48,7 @@ internal sealed class GetProgressStoryHandler(IApplicationDbContext db, CurrentR
         try
         {
             var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-            plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls, saved.Adjustments, today);
+            plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, today);
         }
         catch (Exception e) when (e is NotFoundException or DomainException)
         {

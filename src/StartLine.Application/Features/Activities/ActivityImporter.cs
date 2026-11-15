@@ -153,7 +153,8 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
         foreach (var plan in plans.Where(p => p.Inputs.PlanFrom <= date))
         {
             // Only plans that were running that day: a finished plan, or one whose race has left the calendar, has nothing to say.
-            var raceDate = plan.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug)?.Date : plan.Inputs.RaceDate;
+            var raceDate = plan.Status != SavedPlanStatus.Archived && plan.Inputs.RaceSlug is { } slug
+                ? catalogue.FindBySlug(slug)?.Date ?? plan.Inputs.RaceDate : plan.Inputs.RaceDate;
             if (raceDate is null || raceDate < date)
             {
                 continue;
@@ -161,7 +162,7 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
 
             if (!builtPlans.TryGetValue(plan.Id, out var built))
             {
-                built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), await CoachCalls.ForAsync(db, plan.Id, cancellationToken), plan.Adjustments, date);
+                built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan), await CoachCalls.ForAsync(db, plan.Id, cancellationToken), plan.Adjustments, date);
                 builtPlans[plan.Id] = built;
             }
 

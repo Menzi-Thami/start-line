@@ -33,7 +33,7 @@ public sealed class MyCheckInsController(IDispatcher dispatcher) : ControllerBas
     {
         ArgumentNullException.ThrowIfNull(request);
         return Ok(await dispatcher.Send(
-            new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note, request.ActualSessionType, request.DistanceUnreported, request.ActivityId, IndependentMetrics: request.IndependentMetrics),
+            new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort, request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note, request.ActualSessionType, request.DistanceUnreported, request.ActivityId, IndependentMetrics: request.IndependentMetrics, ExpectedVersion: request.ExpectedVersion, ExpectMissing: request.ExpectMissing),
             cancellationToken));
     }
 
@@ -45,23 +45,23 @@ public sealed class MyCheckInsController(IDispatcher dispatcher) : ControllerBas
         ArgumentNullException.ThrowIfNull(request);
         return Ok(await dispatcher.Send(new SaveCheckInCommand(planId, date, sessionType, request.Status, request.Effort,
             request.Pain, request.PainArea, request.DistanceKm, request.Duration, request.Note, request.ActualSessionType,
-            request.DistanceUnreported, request.ActivityId, id, request.IndependentMetrics), cancellationToken));
+            request.DistanceUnreported, request.ActivityId, id, request.IndependentMetrics, request.ExpectedVersion, request.ExpectMissing), cancellationToken));
     }
 
     [HttpDelete("additional/{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> DeleteAdditional(Guid planId, Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteAdditional(Guid planId, Guid id, CancellationToken cancellationToken, [FromQuery] string? expectedVersion = null)
     {
-        await dispatcher.Send(new DeleteAdditionalRunCommand(planId, id), cancellationToken);
+        await dispatcher.Send(new DeleteAdditionalRunCommand(planId, id, expectedVersion), cancellationToken);
         return NoContent();
     }
 
     [HttpDelete("{date}/{sessionType}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete(Guid planId, DateOnly date, SessionType sessionType, CancellationToken cancellationToken)
+    public async Task<IActionResult> Delete(Guid planId, DateOnly date, SessionType sessionType, CancellationToken cancellationToken, [FromQuery] string? expectedVersion = null)
     {
-        await dispatcher.Send(new DeleteCheckInCommand(planId, date, sessionType), cancellationToken);
+        await dispatcher.Send(new DeleteCheckInCommand(planId, date, sessionType, expectedVersion), cancellationToken);
         return NoContent();
     }
 }
@@ -78,4 +78,4 @@ public sealed record CheckInRequest(
     string? Note = null,
     SessionType? ActualSessionType = null,
     bool DistanceUnreported = false,
-    Guid? ActivityId = null, bool IndependentMetrics = false);
+    Guid? ActivityId = null, bool IndependentMetrics = false, string? ExpectedVersion = null, bool ExpectMissing = false);

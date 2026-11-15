@@ -103,6 +103,6 @@ internal sealed class GetCalendarFeedHandler(IApplicationDbContext db, PlanBuild
         }
 
         var calls = await coach.CallsAsync(saved, runner, cancellationToken);
-        return new CalendarFeedDto(builder.Build(SavedPlanMapping.ToQuery(saved.Inputs), calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), runner.Units);
+        return new CalendarFeedDto(builder.Build(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), runner.Units);
     }
 }

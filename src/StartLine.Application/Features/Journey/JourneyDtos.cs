@@ -21,7 +21,8 @@ public sealed record PlanChapterDto(
     RaceResultDto? RaceResult,
     IReadOnlyList<AchievementDto> Achievements,
     TimeSpan GoalTime,
-    IReadOnlyList<ChapterWeekDto>? Weeks);
+    IReadOnlyList<ChapterWeekDto>? Weeks,
+    bool DetailsUnavailable = false);
 
 /// <summary>
 /// The plan's training, truthfully. Only the runner's own "Done" confirms a run. <c>RecordedKm</c> is the runner's own

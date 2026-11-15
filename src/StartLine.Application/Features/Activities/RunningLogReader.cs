@@ -54,7 +54,7 @@ internal sealed partial class RunningLogReader(IApplicationDbContext db, PlanBui
         try
         {
             var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
-            return [.. builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls, plan.Adjustments).Weeks.SelectMany(w => w.Sessions)];
+            return [.. builder.BuildPlan(SavedPlanMapping.ToQuery(plan), calls, plan.Adjustments).Weeks.SelectMany(w => w.Sessions)];
         }
         catch (Exception e) when (e is NotFoundException or DomainException)
         {

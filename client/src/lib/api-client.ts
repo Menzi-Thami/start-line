@@ -270,11 +270,11 @@ export const api = {
     saveAdditionalRun: (token: string, planId: string, id: string, date: string, sessionType: string, body: CheckInRequest) =>
       request<CheckIn>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/additional/${encodeURIComponent(id)}/${encodeURIComponent(date)}/${encodeURIComponent(sessionType)}`,
         { method: 'PUT', body: JSON.stringify(body) }, token),
-    deleteAdditionalRun: (token: string, planId: string, id: string) =>
-      request<void>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/additional/${encodeURIComponent(id)}`, { method: 'DELETE' }, token),
-    deleteCheckIn: (token: string, planId: string, date: string, sessionType: string) =>
+    deleteAdditionalRun: (token: string, planId: string, id: string, expectedVersion?: string | null) =>
+      request<void>(`/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/additional/${encodeURIComponent(id)}${expectedVersion ? `?expectedVersion=${encodeURIComponent(expectedVersion)}` : ''}`, { method: 'DELETE' }, token),
+    deleteCheckIn: (token: string, planId: string, date: string, sessionType: string, expectedVersion?: string | null) =>
       request<void>(
-        `/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/${encodeURIComponent(date)}/${encodeURIComponent(sessionType)}`,
+        `/api/v1/me/plans/${encodeURIComponent(planId)}/check-ins/${encodeURIComponent(date)}/${encodeURIComponent(sessionType)}${expectedVersion ? `?expectedVersion=${encodeURIComponent(expectedVersion)}` : ''}`,
         { method: 'DELETE' },
         token,
       ),

@@ -121,6 +121,9 @@ public sealed class SessionCheckIn
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    /// <summary>Prevents a queued offline answer overwriting a change made on another device.</summary>
+    public byte[] Version { get; private set; } = [];
+
     public CheckInAnswers Answers => new(Status, Effort, Pain, PainArea, DistanceKm, Duration, Note, ActualSessionType, DistanceUnreported, ActivityId);
 
     /// <summary>

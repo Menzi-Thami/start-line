@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth, type AuthConfig } from './auth-context'
 import { AuthProvider } from './AuthProvider'
+import { readCheckInCopies, writeCheckInCopy } from '../features/coaching/check-in-storage'
 
 type Account = { homeAccountId: string; environment: string; tenantId: string; username: string; localAccountId: string; name: string }
 const account = (id: string): Account => ({ homeAccountId: id, environment: 'e', tenantId: 't', username: `${id}@example.com`, localAccountId: id, name: id })
@@ -92,6 +93,22 @@ describe('starting a sign-in on a device that remembers someone', () => {
 })
 
 describe('one runner per device', () => {
+  it('keeps unsynced drafts when sign-out is cancelled and clears them only after explicit discard', async () => {
+    const user = userEvent.setup()
+    active = remembered
+    await renderWith(false)
+    writeCheckInCopy('t:remembered', 'plan', { entries: [], pending: [{ revision: 'one', key: '2026-10-14|Easy',
+      date: '2026-10-14', sessionType: 'Easy', base: null, answers: { status: 'Done', effort: null, distanceUnreported: false } }] })
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+    await user.click(screen.getByRole('button', { name: 'sign out' }))
+    expect(calls).toEqual([])
+    expect(readCheckInCopies('t:remembered').plan?.pending).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: 'sign out' }))
+    await waitFor(() => expect(calls).toEqual(['clear:all', 'logout:remembered']))
+    expect(readCheckInCopies('t:remembered')).toEqual({})
+    expect(confirm).toHaveBeenCalledTimes(2)
+    confirm.mockRestore()
+  })
   it('signing out forgets every remembered account, not just the one signed in, then ends the Microsoft session', async () => {
     const user = userEvent.setup()
     const older = account('older')

@@ -33,7 +33,7 @@ internal sealed class LifeHappensHandler(IApplicationDbContext db, CurrentRunner
         if (saved.Status != SavedPlanStatus.Active) throw new ConflictException("plan_archived", "Only your current plan can change.");
         var today = CoachCalls.LocalToday(runner, time);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var query = SavedPlanMapping.ToQuery(saved);
         var plan = Domain.Plans.RemainingWeek.Apply(builder.BuildPlan(query, calls, paceDate: today), saved.Adjustments);
         var from = today.AddDays(-7);
         var entries = await db.SessionCheckIns.AsNoTracking()
@@ -83,7 +83,7 @@ internal sealed class RestoreSessionsHandler(IApplicationDbContext db, CurrentRu
         db.SavedPlans.Attach(saved);
         saved.RestoreOriginal(request.Dates, today);
         await db.SaveChangesAsync(cancellationToken);
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var query = SavedPlanMapping.ToQuery(saved);
         var calls = await coach.CallsAsync(saved, runner, cancellationToken);
         return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls, saved.Adjustments, today), saved.Status,
             [.. calls.Select(CoachNoteDto.From)]);

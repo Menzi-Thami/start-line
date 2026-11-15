@@ -67,6 +67,7 @@ jobs:
           cache: npm
           cache-dependency-path: client/package-lock.json
       - run: npm ci
+      - run: node --test ../scripts/staging-integration-readiness.test.mjs
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test -- --testTimeout=30000 --maxWorkers=1
@@ -141,3 +142,51 @@ jobs:
         with:
           name: playwright-report-${{ matrix.shard }}
           path: client/playwright-report
+
+  connections:
+    name: connections (${{ matrix.project }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: android-chromium
+            engine: chromium
+          - project: iphone-webkit
+            engine: webkit
+          - project: ipad-webkit
+            engine: webkit
+          - project: desktop-firefox
+            engine: firefox
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install .NET
+        run: |
+          curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
+          version=$(curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json | jq -r '."latest-sdk"')
+          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$version" --install-dir "$HOME/.dotnet"
+          echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
+          echo "$HOME/.dotnet" >> "$GITHUB_PATH"
+          "$HOME/.dotnet/dotnet" --version
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: client/.nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.engine }}
+      - run: npm run e2e:connections -- --project=${{ matrix.project }}
+        env:
+          CI: true
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: connection-qa-${{ matrix.project }}
+          path: |
+            client/playwright-report
+            client/test-results
+          if-no-files-found: ignore

@@ -14,6 +14,12 @@ Strength workouts and the exercise library use collapsed summaries. A summary sh
 
 Time-wheel keyboard fields become visible on focus, so replacing a selected time works reliably and the typed number remains visible. Delayed wheel events merge with the latest duration instead of overwriting another edited field.
 
+## Race details and performance inputs
+
+Saved catalogue plans keep the resolved race name, date and distance as a fallback. A current plan still follows calendar corrections; archiving captures the latest known details, and a past plan uses its snapshot thereafter. Removing a listing does not remove its chapter. The migration recovers available catalogue metadata for older rows without changing an existing snapshot. A legacy chapter with no recoverable original race details remains visible with an explicit unavailable state, existing results and achievements; its schedule and new awards are not guessed from recordings.
+
+Recent performance distance, time and date remain with the plan across edits, replans and account export. Updating that performance enables Save and updates the goal outlook; it does not change generated workouts. [Manual offline logging](offline-run-logging.md) distinguishes device drafts from acknowledged account history and protects concurrent edits with server versions.
+
 ## Limits
 
 No operation reconstructs a run already physically deleted by an older release, or an original legacy prescription that was overwritten before a snapshot could be captured. Retained manual measurements and check-ins can be shown again; old backups would be needed for actually deleted records. Strava still follows its existing temporary-cache availability: own logged values and completion identity remain, but expired imported measurements are not copied into permanent history. Strength progress is still local to the device.

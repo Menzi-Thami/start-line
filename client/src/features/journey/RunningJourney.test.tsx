@@ -21,6 +21,20 @@ const result = raceResult({ planId: past.planId, finishTime: '04:40:12', raceDat
 afterEach(() => vi.restoreAllMocks())
 
 describe('Past plan race recordings', () => {
+  it('keeps a legacy chapter visible and explains missing details without presenting invented training or a result form', async () => {
+    const unavailable = chapter({ ...past, detailsUnavailable: true, raceDate: null, distanceKm: null, achievements: [],
+      training: { ...past.training, scheduledRuns: 0, confirmedRuns: 0, recordedKm: null } })
+    vi.spyOn(api.me.journey, 'get').mockResolvedValue(journeyOf([unavailable]))
+    vi.spyOn(api.me.journey, 'chapter').mockResolvedValue(unavailable)
+    vi.spyOn(api.me, 'activities').mockResolvedValue([])
+    const user = userEvent.setup()
+    show()
+    expect(await screen.findByText(/This older plan’s race details are unavailable/)).toBeVisible()
+    expect(screen.queryByText('0/0')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'View chapter' }))
+    expect(await screen.findByText(/Its training story cannot be rebuilt/)).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'How did race day go?' })).not.toBeInTheDocument()
+  })
   it('confirms, edits, reloads and undoes an archived chapter result through the authenticated API', async () => {
     let saved: RaceResult | null = null
     const current = () => ({ ...past, raceResult: saved })

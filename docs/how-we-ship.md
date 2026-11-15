@@ -66,3 +66,7 @@ The file names are older than the names shown in Actions. They stay as they are 
 - **Branch protection.** `main` and `staging` accept direct pushes today. Protecting them (Settings → Branches) would enforce rules 1 to 3 and let GitHub merge a pull request by itself when its checks pass.
 
 More detail on accounts, settings and Azure: [deploy.md](deploy.md). Tests: [testing.md](testing.md).
+
+## Provider validation
+
+The read-only **Ops - Staging integration readiness** workflow reports provider configuration gaps and checks staging callbacks/test-preview isolation. It does not configure or deploy anything or establish actual provider delivery. Dedicated test identities and physical-device results belong to [the integration validation matrix](integration-validation.md); PR browser-engine results remain separate evidence.

@@ -87,6 +87,39 @@ public sealed class CheckInTests : IClassFixture<CheckInClockFactory>
         checkIn.GetProperty("duration").GetString().ShouldBe("00:42:10");
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Queued_saves_and_deletes_cannot_overwrite_a_newer_device_answer(bool additional)
+    {
+        using var client = await Runner();
+        var (plan, date, type) = await TenKPlan(client);
+        var extraId = Guid.NewGuid();
+        var path = additional ? $"/api/v1/me/plans/{plan}/check-ins/additional/{extraId}/{date}/{type}"
+            : $"/api/v1/me/plans/{plan}/check-ins/{date}/{type}";
+        var delete = additional ? $"/api/v1/me/plans/{plan}/check-ins/additional/{extraId}" : path;
+        var first = await Json(await client.PutAsJsonAsync(Url(path), new { status = "Done", effort = 5, distanceKm = 7, expectMissing = true }));
+        var originalVersion = first.GetProperty("version").GetString();
+        originalVersion.ShouldNotBeNullOrWhiteSpace();
+        var changed = await Json(await client.PutAsJsonAsync(Url(path), new { status = "Done", effort = 5, distanceKm = 8 }));
+        var latestVersion = changed.GetProperty("version").GetString();
+        latestVersion.ShouldNotBe(originalVersion);
+
+        var stale = await client.PutAsJsonAsync(Url(path), new { status = "Done", effort = 5, distanceKm = 9, expectedVersion = originalVersion });
+        stale.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await Json(stale)).GetProperty("code").GetString().ShouldBe("check_in_changed");
+        (await client.PutAsJsonAsync(Url(path), new { status = "Done", effort = 5, distanceKm = 9, expectMissing = true }))
+            .StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await client.DeleteAsync(Url($"{delete}?expectedVersion={Uri.EscapeDataString(originalVersion!)}")))
+            .StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        var entries = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{plan}/check-ins")));
+        entries.GetArrayLength().ShouldBe(1);
+        entries[0].GetProperty("distanceKm").GetDouble().ShouldBe(8);
+
+        (await client.DeleteAsync(Url($"{delete}?expectedVersion={Uri.EscapeDataString(latestVersion!)}"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await client.DeleteAsync(Url($"{delete}?expectedVersion={Uri.EscapeDataString(latestVersion!)}"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+    }
+
     [Fact]
     public async Task Checking_in_again_replaces_the_answers()
     {

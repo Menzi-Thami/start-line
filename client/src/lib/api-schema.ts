@@ -1020,7 +1020,9 @@ export interface paths {
         post?: never;
         delete: {
             parameters: {
-                query?: never;
+                query?: {
+                    expectedVersion?: string;
+                };
                 header?: never;
                 path: {
                     planId: string;
@@ -1116,7 +1118,9 @@ export interface paths {
         post?: never;
         delete: {
             parameters: {
-                query?: never;
+                query?: {
+                    expectedVersion?: string;
+                };
                 header?: never;
                 path: {
                     planId: string;
@@ -4287,6 +4291,7 @@ export interface components {
             isAdditional: boolean;
             /** Format: double */
             prescribedKm?: null | number;
+            version?: null | string;
         };
         CheckInExportDto: {
             /** Format: uuid */
@@ -4310,6 +4315,9 @@ export interface components {
             activityId?: null | string;
             /** @default false */
             independentMetrics: boolean;
+            expectedVersion?: null | string;
+            /** @default false */
+            expectMissing: boolean;
         };
         /** @enum {unknown} */
         CheckInStatus: "Done" | "CutShort" | "SwappedForEasy" | "Skipped";
@@ -4700,6 +4708,8 @@ export interface components {
             achievements: components["schemas"]["AchievementDto"][];
             goalTime: string;
             weeks: null | components["schemas"]["ChapterWeekDto"][];
+            /** @default false */
+            detailsUnavailable: boolean;
         };
         PlannedVsActualDto: {
             planName: string;

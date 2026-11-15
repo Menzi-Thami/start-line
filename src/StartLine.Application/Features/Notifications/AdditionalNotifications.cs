@@ -39,7 +39,7 @@ internal sealed partial class NotificationReview(IApplicationDbContext db, PlanC
         var pending = proposed.LastOrDefault(p => !existing.Any(e => e.WeekStart == p.WeekStart));
         if (pending is null) return null;
         var today = CoachCalls.LocalToday(runner, time);
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var query = SavedPlanMapping.ToQuery(saved);
         var original = builder.BuildPlan(query, existing, saved.Adjustments, pending.WeekStart);
         if (today.DayOfWeek == DayOfWeek.Sunday)
         {
@@ -86,7 +86,7 @@ internal sealed class AdditionalNotifications(IApplicationDbContext db, Notifica
             var saved = plans.SingleOrDefault(p => p.RunnerId == runner.Id);
             if (saved is null) continue;
             TrainingPlan plan;
-            try { plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), await CoachCalls.ForAsync(db, saved.Id, cancellationToken), saved.Adjustments); }
+            try { plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), await CoachCalls.ForAsync(db, saved.Id, cancellationToken), saved.Adjustments); }
             catch (Exception e) when (e is NotFoundException or Domain.Common.DomainException) { continue; }
 
             // The evening before a new plan's first run, every device that allows notifications hears about it, once.

@@ -54,18 +54,18 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
         var built = new List<(SavedPlan Saved, TrainingPlan Plan, TrainingRecapResult Recap)>();
         foreach (var saved in plans)
         {
-            // A catalogue race that has since gone can't be rebuilt; its chapter waits until it can be.
-            if (saved.Inputs.RaceSlug is { } slug && catalogue.FindBySlug(slug) is null)
+            // Legacy rows without a snapshot cannot be reconstructed honestly. Keep their chapter visible below.
+            if (!saved.Inputs.HasRaceSnapshot && saved.Inputs.RaceSlug is { } slug && catalogue.FindBySlug(slug) is null)
             {
                 continue;
             }
 
-            var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), [.. calls[saved.Id]], saved.Adjustments, today);
+            var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), [.. calls[saved.Id]], saved.Adjustments, today);
             built.Add((saved, plan, TrainingRecap.Evaluate(plan.StartDate, plan.RaceDate, plan.Weeks, checkIns[saved.Id], uploads, today)));
         }
 
         var achievements = await SyncAchievementsAsync(runner.Id, built.Select(b => (b.Saved, b.Recap, results.GetValueOrDefault(b.Saved.Id))).ToList(), cancellationToken);
-        return [.. built.Select(b =>
+        var chapters = built.Select(b =>
         {
             var result = results.GetValueOrDefault(b.Saved.Id);
             var summary = SavedPlanSummaries.Of(b.Saved, catalogue);
@@ -78,6 +78,21 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
                 [.. achievements.Where(a => a.SavedPlanId == b.Saved.Id).OrderBy(a => a.Kind).Select(AchievementDto.From)],
                 b.Saved.Inputs.GoalTime,
                 withWeeks ? [.. b.Recap.WeekBreakdown.Select(w => new ChapterWeekDto(w.WeekStart, w.ScheduledRuns, w.ConfirmedRuns, w.RecordedKm))] : null);
+        }).ToDictionary(c => c.PlanId);
+        // Do not invent a schedule, counts or a new award when a legacy race's details were never retained.
+        var unavailableIds = plans.Where(p => !chapters.ContainsKey(p.Id)).Select(p => p.Id).ToList();
+        var retainedAwards = await db.Achievements.AsNoTracking()
+            .Where(a => a.RunnerId == runner.Id && unavailableIds.Contains(a.SavedPlanId)).ToListAsync(cancellationToken);
+        return [.. plans.Select(saved =>
+        {
+            if (chapters.TryGetValue(saved.Id, out var chapter)) return chapter;
+            var result = results.GetValueOrDefault(saved.Id);
+            return new PlanChapterDto(saved.Id, saved.Name, saved.Inputs.RaceName ?? saved.Name, saved.Inputs.RaceDate,
+                saved.Inputs.DistanceKm, saved.Status, saved.Inputs.PlanFrom, JourneyLifecycle.Archived,
+                new TrainingRecapDto(0, 0, 0, 0, 0, 0, 0, 0, null, 0, null, null, null, false, false, false, 0),
+                result is null ? null : RaceResultDto.From(result, saved.Inputs.GoalTime),
+                [.. retainedAwards.Where(a => a.SavedPlanId == saved.Id).Select(AchievementDto.From)], saved.Inputs.GoalTime,
+                null, DetailsUnavailable: true);
         })];
     }
 

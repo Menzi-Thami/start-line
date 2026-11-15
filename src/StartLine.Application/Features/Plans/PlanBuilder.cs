@@ -74,7 +74,13 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
     {
         if (!string.IsNullOrWhiteSpace(request.RaceSlug))
         {
-            var race = catalogue.FindBySlug(request.RaceSlug) ?? throw new NotFoundException("Race", request.RaceSlug);
+            var race = catalogue.FindBySlug(request.RaceSlug);
+            if (race is null)
+            {
+                if (request.DistanceKm is not > 0 || request.RaceDate is null)
+                    throw new NotFoundException("Race", request.RaceSlug);
+                return SnapshotRace(request);
+            }
             List<PlanWarningDto> caveats = [];
             if (race.DateStatus == DateStatus.Provisional)
             {
@@ -91,9 +97,14 @@ internal sealed class PlanBuilder(IRaceCatalogue catalogue, TimeProvider timePro
             return (race.Distance, race.Date, new RaceSummaryDto(race.Slug, race.Name, race.Date, race.Distance.Kilometres), caveats);
         }
 
+        return SnapshotRace(request);
+    }
+
+    private static (Distance Distance, DateOnly Date, RaceSummaryDto Summary, IReadOnlyList<PlanWarningDto> Caveats) SnapshotRace(GeneratePlanQuery request)
+    {
         var distance = Distance.FromKilometres(request.DistanceKm!.Value);
         var date = request.RaceDate!.Value;
         var name = string.IsNullOrWhiteSpace(request.RaceName) ? "Your race" : request.RaceName.Trim();
-        return (distance, date, new RaceSummaryDto(null, name, date, distance.Kilometres), []);
+        return (distance, date, new RaceSummaryDto(request.RaceSlug, name, date, distance.Kilometres), []);
     }
 }

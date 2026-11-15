@@ -24,6 +24,8 @@ step 'Backend: no model change without a migration'
 dotnet ef migrations has-pending-model-changes --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure --no-build --configuration Release
 
 cd client
+step 'Staging integration readiness: synthetic configuration tests'
+node --test ../scripts/staging-integration-readiness.test.mjs
 step 'Client: install'
 npm ci --silent
 step 'Client: lint'

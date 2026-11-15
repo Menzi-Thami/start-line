@@ -31,11 +31,11 @@ public sealed record SavedPlanExportDto(Guid Id, string Name, SavedPlanStatus St
 
 internal static class SavedPlanMapping
 {
-    public static SavedPlanInputs ToInputs(GeneratePlanQuery q, DateOnly planFrom) => new(
+    public static SavedPlanInputs ToInputs(GeneratePlanQuery q, DateOnly planFrom, RaceSummaryDto? race = null) => new(
         string.IsNullOrWhiteSpace(q.RaceSlug) ? null : q.RaceSlug.Trim(),
-        string.IsNullOrWhiteSpace(q.RaceSlug) ? q.RaceName?.Trim() : null,
-        string.IsNullOrWhiteSpace(q.RaceSlug) ? q.DistanceKm : null,
-        string.IsNullOrWhiteSpace(q.RaceSlug) ? q.RaceDate : null,
+        race?.Name ?? q.RaceName?.Trim(),
+        race?.DistanceKm ?? q.DistanceKm,
+        race?.Date ?? q.RaceDate,
         q.GoalTime,
         [.. q.RunDays.Distinct()],
         q.LongRunDay,
@@ -49,11 +49,26 @@ internal static class SavedPlanMapping
         q.Version ?? TrainingPlanGenerator.OriginalVersion,
         q.StartOn,
         // Auto is the default, so it is stored as null: one way to say it, as in a plan link.
-        q.RunWalk is RunWalkMode.Auto ? null : q.RunWalk);
+        q.RunWalk is RunWalkMode.Auto ? null : q.RunWalk,
+        q.RecentResultKm, q.RecentResultTime, q.RecentResultDate);
 
     public static GeneratePlanQuery ToQuery(SavedPlanInputs i) => new(
         i.RaceSlug, i.RaceName, i.DistanceKm, i.RaceDate, i.GoalTime, i.RunDays, i.LongRunDay, i.CurrentWeeklyKm,
-        i.Experience, i.StrengthDays, i.PlanFrom, i.ReplanFrom, i.Setback, i.RecentWeeklyKm, i.GeneratorVersion, StartOn: i.StartOn, RunWalk: i.RunWalk);
+        i.Experience, i.StrengthDays, i.PlanFrom, i.ReplanFrom, i.Setback, i.RecentWeeklyKm, i.GeneratorVersion,
+        i.RecentResultKm, i.RecentResultTime, i.RecentResultDate, i.StartOn, i.RunWalk);
+
+    public static GeneratePlanQuery ToQuery(SavedPlan plan)
+    {
+        var query = ToQuery(plan.Inputs);
+        // An archived chapter must not move when an organiser changes the live calendar later.
+        return plan.Status == SavedPlanStatus.Archived && plan.Inputs.HasRaceSnapshot ? query with { RaceSlug = null } : query;
+    }
+
+    public static void FreezeRace(SavedPlan plan, IRaceCatalogue catalogue)
+    {
+        if (plan.Status == SavedPlanStatus.Active && plan.Inputs.RaceSlug is { } slug && catalogue.FindBySlug(slug) is { } race)
+            plan.Update(plan.Inputs with { RaceName = race.Name, RaceDate = race.Date, DistanceKm = race.Distance.Kilometres });
+    }
 }
 
 /// <summary>
@@ -80,9 +95,9 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
         var runner = await current.RequireConsentedAsync(cancellationToken);
 
         // Build first: a plan that can't be generated must never be saved.
-        var inputs = SavedPlanMapping.ToInputs(request.Plan, DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime));
-        var plan = builder.Build(SavedPlanMapping.ToQuery(inputs));
-        var name = string.IsNullOrWhiteSpace(request.Name) ? plan.Race.Name : request.Name;
+        var plan = builder.Build(request.Plan);
+        var inputs = SavedPlanMapping.ToInputs(request.Plan, DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime), plan.Race);
+        var name = string.IsNullOrWhiteSpace(request.Name) ? plan.Race.Name[..Math.Min(plan.Race.Name.Length, SavedPlan.MaxNameLength)] : request.Name;
 
         var active = await db.SavedPlans.SingleOrDefaultAsync(p => p.RunnerId == runner.Id && p.Status == SavedPlanStatus.Active, cancellationToken);
         if (request.ExpectedPlanId is { } expected && (active?.Id != expected || !active.IsForSameRace(inputs)))
@@ -97,7 +112,7 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
         {
             // Freeze the runner's original prescription before changing the schedule. Actual answers and links stay intact.
             var calls = await CoachCalls.ForAsync(db, active.Id, cancellationToken);
-            var previous = builder.BuildPlan(SavedPlanMapping.ToQuery(active.Inputs), calls, active.Adjustments)
+            var previous = builder.BuildPlan(SavedPlanMapping.ToQuery(active), calls, active.Adjustments)
                 .Weeks.SelectMany(w => w.Sessions).ToDictionary(s => (s.Date, s.Type));
             var history = await db.SessionCheckIns.Where(c => c.SavedPlanId == active.Id && !c.IsAdditional && c.PrescribedKm == null)
                 .ToListAsync(cancellationToken);
@@ -118,6 +133,7 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
         var saved = SavedPlan.Create(runner.Id, name, inputs);
         if (active is not null)
         {
+            SavedPlanMapping.FreezeRace(active, catalogue);
             active.Archive();
 
             // The archive goes first, or the one-current-plan index would see two at once.
@@ -134,7 +150,7 @@ internal static class SavedPlanSummaries
 {
     public static SavedPlanSummaryDto Of(SavedPlan p, IRaceCatalogue catalogue)
     {
-        var race = p.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug) : null;
+        var race = (p.Status != SavedPlanStatus.Archived || !p.Inputs.HasRaceSnapshot) && p.Inputs.RaceSlug is { } slug ? catalogue.FindBySlug(slug) : null;
         return new SavedPlanSummaryDto(p.Id, p.Name, race?.Name ?? p.Inputs.RaceName ?? "Your race", race?.Date ?? p.Inputs.RaceDate, p.CreatedAt, p.Status,
             p.Inputs.Replan?.From);
     }
@@ -182,7 +198,7 @@ internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner c
             throw new NotFoundException("Saved plan", request.Id.ToString());
         }
 
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var query = SavedPlanMapping.ToQuery(saved);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
         return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls, saved.Adjustments, CoachCalls.LocalToday(runner!, time)), saved.Status, [.. calls.Select(CoachNoteDto.From)]);
     }
@@ -208,6 +224,7 @@ internal sealed class RestoreMyPlanHandler(IApplicationDbContext db, CurrentRunn
 
         foreach (var other in plans.Where(p => p.Id != chosen.Id))
         {
+            SavedPlanMapping.FreezeRace(other, catalogue);
             other.Archive();
         }
 
@@ -259,7 +276,7 @@ internal sealed class ReplanMyPlanHandler(IApplicationDbContext db, CurrentRunne
         saved.Replan(request is { ReplanFrom: { } from, Setback: { } setback } ? new PlanReplan(from, setback, request.RecentWeeklyKm) : null);
 
         // Build first: a replan that can't be generated (the race too close, say) must never be saved.
-        var query = SavedPlanMapping.ToQuery(saved.Inputs);
+        var query = SavedPlanMapping.ToQuery(saved);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
         var plan = builder.Build(query, calls, saved.Adjustments);
         await db.SaveChangesAsync(cancellationToken);
@@ -269,7 +286,7 @@ internal sealed class ReplanMyPlanHandler(IApplicationDbContext db, CurrentRunne
 
 public sealed record DeleteMyPlanCommand(Guid Id) : IRequest<bool>;
 
-internal sealed class DeleteMyPlanHandler(IApplicationDbContext db, CurrentRunner current) : IRequestHandler<DeleteMyPlanCommand, bool>
+internal sealed class DeleteMyPlanHandler(IApplicationDbContext db, CurrentRunner current, IRaceCatalogue catalogue) : IRequestHandler<DeleteMyPlanCommand, bool>
 {
     public async Task<bool> Handle(DeleteMyPlanCommand request, CancellationToken cancellationToken)
     {
@@ -288,7 +305,10 @@ internal sealed class DeleteMyPlanHandler(IApplicationDbContext db, CurrentRunne
             || await db.RaceResults.AnyAsync(r => r.SavedPlanId == saved.Id, cancellationToken)
             || await db.Achievements.AnyAsync(a => a.SavedPlanId == saved.Id, cancellationToken)
             || await db.RecoveryPlans.AnyAsync(r => r.SavedPlanId == saved.Id, cancellationToken))
+        {
+            SavedPlanMapping.FreezeRace(saved, catalogue);
             saved.Archive();
+        }
         else
             db.SavedPlans.Remove(saved);
         await db.SaveChangesAsync(cancellationToken);

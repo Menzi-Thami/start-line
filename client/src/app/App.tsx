@@ -29,6 +29,7 @@ import { RemindersSection } from '../features/reminders/Reminders'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
+import { OfflineRunDrafts } from '../features/coaching/OfflineRunDrafts'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { MOVIE_MS } from '../features/builder/plan-theatre'
 import { Hero, RaceTicker } from '../features/home/Hero'
@@ -835,6 +836,7 @@ export function App() {
         <div hidden={view === 'account' || view === 'privacy' || view === 'unsubscribe'}><RemindersSection key={state.runner.id} offer /></div>
       )}
       <main id="main-content" tabIndex={-1} key={view} className={navigated ? 'view-enter' : undefined}>
+        <OfflineRunDrafts activePlanId={view === 'home' ? ownPlan?.id : showPlan ? savedOnScreen : null} />
         <ScreenRecovery>
         <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
         {auth.error && (
@@ -1096,7 +1098,7 @@ export function App() {
               />
             )}
             {showPlan && <InstallCard />}
-            {showPlan && savedOnScreen && <CheckInLoadState ready={checkIns.ready} failed={checkIns.failed} retry={checkIns.retry} />}
+            {showPlan && savedOnScreen && <CheckInLoadState {...checkIns} />}
 
             {/* The calendar menu: the runner's own plan subscribes to their personal feed, which follows the plan through
                 every change; a plan from a link (or anyone's, signed out) subscribes to that plan's own link. */}

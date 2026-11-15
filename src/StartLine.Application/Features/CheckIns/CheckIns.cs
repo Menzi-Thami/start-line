@@ -30,12 +30,13 @@ public sealed record CheckInDto(
     bool DistanceUnreported = false,
     Guid? ActivityId = null,
     bool IsAdditional = false,
-    double? PrescribedKm = null)
+    double? PrescribedKm = null,
+    string? Version = null)
 {
     public static CheckInDto From(SessionCheckIn c)
     {
         ArgumentNullException.ThrowIfNull(c);
-        return new(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.PainArea, c.DistanceKm, c.Duration, c.Note, c.UpdatedAt, c.Id, c.ActualSessionType, c.DistanceUnreported, c.ActivityId, c.IsAdditional, c.PrescribedKm);
+        return new(c.Date, c.SessionType, c.Status, c.Effort, c.Pain, c.PainArea, c.DistanceKm, c.Duration, c.Note, c.UpdatedAt, c.Id, c.ActualSessionType, c.DistanceUnreported, c.ActivityId, c.IsAdditional, c.PrescribedKm, Convert.ToBase64String(c.Version));
     }
 }
 
@@ -66,7 +67,7 @@ internal static class PlanSessions
         IApplicationDbContext db, PlanBuilder builder, SavedPlan plan, DateOnly date, SessionType type, CancellationToken cancellationToken)
     {
         var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
-        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs), calls, plan.Adjustments, date).Weeks.SelectMany(w => w.Sessions);
+        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan), calls, plan.Adjustments, date).Weeks.SelectMany(w => w.Sessions);
         return sessions.FirstOrDefault(s => s.Date == date && s.Type == type)
             ?? throw new DomainException("That run isn't in your plan on that day. Your plan may have changed: reload it and try again.");
     }
@@ -106,7 +107,7 @@ public sealed record SaveCheckInCommand(
     SessionType? ActualSessionType = null,
     bool DistanceUnreported = false,
     Guid? ActivityId = null,
-    Guid? EntryId = null, bool IndependentMetrics = false) : IRequest<CheckInDto>;
+    Guid? EntryId = null, bool IndependentMetrics = false, string? ExpectedVersion = null, bool ExpectMissing = false) : IRequest<CheckInDto>;
 
 internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInCommand>
 {
@@ -126,6 +127,7 @@ internal sealed class SaveCheckInValidator : AbstractValidator<SaveCheckInComman
         RuleFor(c => c.Duration).Must(d => d > TimeSpan.Zero && d <= SessionCheckIn.MaxDuration).When(c => c.Duration is not null)
             .WithMessage("The time must be more than zero and under 30 hours.");
         RuleFor(c => c.Note).MaximumLength(SessionCheckIn.MaxNoteLength);
+        RuleFor(c => c.ExpectedVersion).MaximumLength(64);
     }
 }
 
@@ -144,6 +146,7 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
         var checkIn = additional
             ? await db.SessionCheckIns.SingleOrDefaultAsync(c => c.Id == request.EntryId && c.SavedPlanId == plan.Id && c.IsAdditional, cancellationToken)
             : await db.SessionCheckIns.SingleOrDefaultAsync(c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType && !c.IsAdditional, cancellationToken);
+        CheckInConcurrency.Require(checkIn, request.ExpectedVersion, request.ExpectMissing);
         PlannedSession? prescribed = null;
         if (additional)
         {
@@ -155,7 +158,7 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
 
             if (checkIn is null)
             {
-                var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan.Inputs));
+                var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan));
                 if (request.Date < built.StartDate || request.Date > built.RaceDate)
                     throw new DomainException("Choose a day within this plan for your additional run.");
             }
@@ -216,13 +219,20 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
 
         if (prescribed is not null)
             checkIn.RememberPrescription(prescribed.DistanceKm);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException) when (request.ExpectMissing)
+        {
+            throw CheckInConcurrency.Changed();
+        }
         return CheckInDto.From(checkIn);
     }
 }
 
 /// <summary>Takes a check-in back. Nothing to take back is fine: the result is the same.</summary>
-public sealed record DeleteCheckInCommand(Guid PlanId, DateOnly Date, SessionType SessionType) : IRequest<bool>;
+public sealed record DeleteCheckInCommand(Guid PlanId, DateOnly Date, SessionType SessionType, string? ExpectedVersion = null) : IRequest<bool>;
 
 internal sealed class DeleteCheckInHandler(IApplicationDbContext db, CurrentRunner current) : IRequestHandler<DeleteCheckInCommand, bool>
 {
@@ -233,6 +243,7 @@ internal sealed class DeleteCheckInHandler(IApplicationDbContext db, CurrentRunn
             c => c.SavedPlanId == plan.Id && c.Date == request.Date && c.SessionType == request.SessionType && !c.IsAdditional, cancellationToken);
         if (checkIn is not null)
         {
+            CheckInConcurrency.Require(checkIn, request.ExpectedVersion);
             db.SessionCheckIns.Remove(checkIn);
             await db.SaveChangesAsync(cancellationToken);
         }
@@ -242,7 +253,7 @@ internal sealed class DeleteCheckInHandler(IApplicationDbContext db, CurrentRunn
 }
 
 /// <summary>Removes only an additional run owned by this plan's runner.</summary>
-public sealed record DeleteAdditionalRunCommand(Guid PlanId, Guid Id) : IRequest<bool>;
+public sealed record DeleteAdditionalRunCommand(Guid PlanId, Guid Id, string? ExpectedVersion = null) : IRequest<bool>;
 
 internal sealed class DeleteAdditionalRunHandler(IApplicationDbContext db, CurrentRunner current) : IRequestHandler<DeleteAdditionalRunCommand, bool>
 {
@@ -252,10 +263,23 @@ internal sealed class DeleteAdditionalRunHandler(IApplicationDbContext db, Curre
         var entry = await db.SessionCheckIns.SingleOrDefaultAsync(c => c.SavedPlanId == plan.Id && c.Id == request.Id && c.IsAdditional, cancellationToken);
         if (entry is not null)
         {
+            CheckInConcurrency.Require(entry, request.ExpectedVersion);
             db.SessionCheckIns.Remove(entry);
             await db.SaveChangesAsync(cancellationToken);
         }
 
         return true;
     }
+}
+
+internal static class CheckInConcurrency
+{
+    public static void Require(SessionCheckIn? entry, string? expected, bool expectMissing = false)
+    {
+        if ((expectMissing && entry is not null)
+            || (expected is not null && (entry is null || !string.Equals(Convert.ToBase64String(entry.Version), expected, StringComparison.Ordinal))))
+            throw Changed();
+    }
+
+    public static ConflictException Changed() => new("check_in_changed", "This run changed on another device. Your device’s draft is kept; review it before syncing again.");
 }

@@ -67,7 +67,8 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
             .When(q => q.PlanFrom is not null)
             .WithMessage("The plan date must be today, or the date a shared plan was first built.");
 
-        When(q => string.IsNullOrWhiteSpace(q.RaceSlug), () =>
+        When(q => string.IsNullOrWhiteSpace(q.RaceSlug)
+            || (catalogue.FindBySlug(q.RaceSlug) is null && (q.DistanceKm is not null || q.RaceDate is not null)), () =>
         {
             RuleFor(q => q.DistanceKm).Cascade(CascadeMode.Stop)
                 .NotNull().WithMessage("Choose a race or enter a distance.")
@@ -79,7 +80,7 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
                 .WithMessage($"The race needs to be at least {MinDaysUntilRace} days away to build a plan.")
                 .Must((q, d) => d <= From(q).AddDays(MaxDaysUntilRace))
                 .WithMessage("Pick a race within the next two years.");
-            RuleFor(q => q.RaceName).MaximumLength(100);
+            RuleFor(q => q.RaceName).MaximumLength(120);
         });
 
         When(q => !string.IsNullOrWhiteSpace(q.RaceSlug), () =>
@@ -168,12 +169,12 @@ internal sealed class GeneratePlanValidator : AbstractValidator<GeneratePlanQuer
     private static DateOnly? RaceDateFor(GeneratePlanQuery q, IRaceCatalogue catalogue) =>
         string.IsNullOrWhiteSpace(q.RaceSlug)
             ? q.RaceDate
-            : catalogue.FindBySlug(q.RaceSlug)?.Date;
+            : catalogue.FindBySlug(q.RaceSlug)?.Date ?? q.RaceDate;
 
     private static double? DistanceFor(GeneratePlanQuery q, IRaceCatalogue catalogue) =>
         string.IsNullOrWhiteSpace(q.RaceSlug)
             ? q.DistanceKm
-            : catalogue.FindBySlug(q.RaceSlug)?.Distance.Kilometres;
+            : catalogue.FindBySlug(q.RaceSlug)?.Distance.Kilometres ?? q.DistanceKm;
 }
 
 internal sealed class GeneratePlanHandler(PlanBuilder builder) : IRequestHandler<GeneratePlanQuery, TrainingPlanDto>

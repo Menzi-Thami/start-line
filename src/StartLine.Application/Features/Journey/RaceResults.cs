@@ -47,7 +47,7 @@ internal sealed class SaveRaceResultHandler(IApplicationDbContext db, CurrentRun
         }
 
         var today = CoachCalls.LocalToday(runner, time);
-        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), paceDate: today);
+        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), paceDate: today);
         var answers = new RaceResultAnswers(r.Outcome, r.RaceDate ?? plan.RaceDate, r.FinishTime, r.DistanceKm, r.ActivityId, r.Note);
 
         var result = await db.RaceResults.SingleOrDefaultAsync(x => x.SavedPlanId == saved.Id, cancellationToken);

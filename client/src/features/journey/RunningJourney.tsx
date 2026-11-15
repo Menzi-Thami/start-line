@@ -129,7 +129,8 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                   <span className={`journey-lifecycle is-${chapter.lifecycle}`}>{LIFECYCLE_WORDS[chapter.lifecycle]}</span>
                 </div>
                 <p className="journey-chapter-facts">
-                  <span className="mono">{chapter.training.confirmedRuns}/{chapter.training.scheduledRuns}</span> runs confirmed
+                  {chapter.detailsUnavailable ? 'This older plan’s race details are unavailable. Your saved results and achievements are retained.'
+                    : <><span className="mono">{chapter.training.confirmedRuns}/{chapter.training.scheduledRuns}</span> runs confirmed</>}
                   {chapter.training.recordedKm !== null && <> · <span className="mono">{formatDistance(chapter.training.recordedKm, units)}</span> recorded</>}
                   {result && <> · {OUTCOME_WORDS[result.outcome]}{formatClock(result.finishTime) && <> in <span className="mono">{formatClock(result.finishTime)}</span></>}</>}
                 </p>
@@ -142,7 +143,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                   <button type="button" className="button" aria-expanded={!!opened && opened.kind === 'ready'} onClick={() => void open(chapter.planId)}>
                     {opened?.kind === 'ready' ? 'Close chapter' : 'View chapter'}
                   </button>
-                  {achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ owner: auth, kind: 'training', chapter, trigger: event.currentTarget })}>Replay finish line</button>}
+                  {!chapter.detailsUnavailable && achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ owner: auth, kind: 'training', chapter, trigger: event.currentTarget })}>Replay finish line</button>}
                 </div>
                 {opened?.kind === 'loading' && <p className="field-help" role="status">Opening…</p>}
                 {opened?.kind === 'error' && <p className="field-error" role="alert">{opened.message}</p>}
@@ -154,7 +155,7 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                         <button type="button" className="button" onClick={() => void open(opened.chapter.planId, true)}>Retry recorded runs</button>
                       </div>
                     )}
-                    {opened.chapter.raceDate && opened.chapter.raceDate <= today && (
+                    {!opened.chapter.detailsUnavailable && opened.chapter.raceDate && opened.chapter.raceDate <= today && (
                       <RaceResultForm
                         key={opened.chapter.planId}
                         chapter={opened.chapter}
@@ -197,7 +198,9 @@ export function RunningJourney({ units, today, runDays = [] }: { units: Units; t
                               onStart={async body => { await actions.startRecovery(body); setOfferPlan(null) }} onDecline={() => setOfferPlan(null)} />
                           : <button type="button" className="button" onClick={() => setOfferPlan(chapter.planId)}>Plan recovery from this race</button>
                       )}
-                    <TrainingStory story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />
+                    {opened.chapter.detailsUnavailable
+                      ? <p role="status">The original race date and distance weren’t saved with this older plan. Its training story cannot be rebuilt from the current catalogue.</p>
+                      : <TrainingStory story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />}
                   </div>
                 )}
               </li>

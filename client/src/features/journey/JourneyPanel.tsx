@@ -75,6 +75,9 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
   }
 
   if (signedIn && journey?.state.kind === 'loading') return null
+  if (chapter?.detailsUnavailable) return <section className="callout" aria-label="Your finish line">
+    <p>This older plan’s race details are unavailable. Your saved results and achievements are retained in your running journey.</p>
+  </section>
   if (signedIn && journey?.state.kind === 'error') {
     return local.visible ? (
       <section className="journey-panel panel" aria-label="Your finish line">

@@ -56,7 +56,7 @@ internal sealed class GetSyncedCompletionsHandler(IApplicationDbContext db, Curr
         try
         {
             var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-            sessions = [.. builder.BuildPlan(SavedPlanMapping.ToQuery(saved.Inputs), calls, saved.Adjustments, today).Weeks.SelectMany(w => w.Sessions)];
+            sessions = [.. builder.BuildPlan(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, today).Weeks.SelectMany(w => w.Sessions)];
         }
         catch (Exception e) when (e is NotFoundException or DomainException)
         {

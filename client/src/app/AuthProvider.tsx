@@ -110,7 +110,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         try {
           return (await msal.acquireTokenSilent({ scopes: [config.scope], account: info })).accessToken
         } catch (error) {
-          if (error instanceof InteractionRequiredAuthError && !redirecting) {
+          if (error instanceof InteractionRequiredAuthError && navigator.onLine && !redirecting) {
             redirecting = true
             // The page is about to leave for Microsoft; nothing useful can be done with a failure to start that here.
             await msal

@@ -1,4 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { useState } from 'react'
+import { InteractionRequiredAuthError } from '@azure/msal-browser'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth, type AuthConfig } from './auth-context'
@@ -29,6 +31,8 @@ const msal = {
     calls.push(`redirect:${request.prompt}${request.domainHint ? `:${request.domainHint}` : ''}`)
     return Promise.resolve()
   }),
+  acquireTokenSilent: vi.fn(() => Promise.resolve({ accessToken: 'synthetic-token' })),
+  acquireTokenRedirect: vi.fn(() => Promise.resolve()),
 }
 
 vi.mock('@azure/msal-browser', async (actual) => ({
@@ -45,12 +49,15 @@ const config = (google: boolean): AuthConfig => ({
 
 function Buttons() {
   const auth = useAuth()
+  const [token, setToken] = useState<string | null | undefined>(undefined)
   return (
     <>
       <p data-testid="who">{auth.loading ? 'loading' : auth.account?.email ?? 'signed out'}</p>
       <button type="button" onClick={auth.signIn}>sign in</button>
       <button type="button" onClick={auth.signUp}>sign up</button>
       <button type="button" onClick={auth.signOut}>sign out</button>
+      <button type="button" onClick={() => void auth.getToken().then(setToken)}>read token</button>
+      {token !== undefined && <output>{token ?? 'no token'}</output>}
       {auth.signInWithGoogle && <button type="button" onClick={auth.signInWithGoogle}>google</button>}
     </>
   )
@@ -93,6 +100,17 @@ describe('starting a sign-in on a device that remembers someone', () => {
 })
 
 describe('one runner per device', () => {
+  it('does not redirect a runner away from offline drafts when their token needs interactive renewal', async () => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    const connection = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    msal.acquireTokenSilent.mockRejectedValueOnce(new InteractionRequiredAuthError('login_required'))
+    try {
+      await user.click(screen.getByRole('button', { name: 'read token' }))
+      expect(await screen.findByText('no token')).toBeInTheDocument()
+      expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+    } finally { connection.mockRestore() }
+  })
   it('keeps unsynced drafts when sign-out is cancelled and clears them only after explicit discard', async () => {
     const user = userEvent.setup()
     active = remembered

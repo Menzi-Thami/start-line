@@ -10,6 +10,7 @@ interface Props {
   /** A searched-for race that's picked, shown even when it's no longer in the results. */
   selectedRace?: Race
   onPick: (race: Race) => void
+  onManual: (name: string) => void
 }
 
 // Each answer remembers the text it was for, so a slow reply to older text never shows against newer text.
@@ -24,7 +25,7 @@ const letters = (text: string) => text.replace(/[^\p{L}\p{N}]/gu, '').length
  * Every other race, found by name or place. The headline races hang on the rack above; this finds the rest of the
  * calendar. Results are radios in the same group as the rack, so keyboards and screen readers pick them the same way.
  */
-export function RaceSearch({ units, selected, selectedRace, onPick }: Props) {
+export function RaceSearch({ units, selected, selectedRace, onPick, onManual }: Props) {
   const id = useId()
   const [text, setText] = useState('')
   const [answer, setAnswer] = useState<Answer | null>(null)
@@ -52,8 +53,8 @@ export function RaceSearch({ units, selected, selectedRace, onPick }: Props) {
   const shown = current && 'races' in current ? current.races : []
   const status = tooShort ? ''
     : !current ? 'Searching…'
-      : failed ? 'Search isn’t available right now. Choose “Another race” to enter it yourself.'
-        : shown.length === 0 ? `No upcoming race matches “${query}”. Choose “Another race” to enter it yourself.`
+      : failed ? 'Search isn’t available right now. You can add this race manually.'
+        : shown.length === 0 ? `No upcoming race matches “${query}”. You can add it manually.`
           : `${shown.length} ${shown.length === 1 ? 'race' : 'races'} found.`
   const pickedElsewhere = selectedRace && selectedRace.slug === selected && !shown.some((r) => r.slug === selected) ? selectedRace : null
 
@@ -75,6 +76,7 @@ export function RaceSearch({ units, selected, selectedRace, onPick }: Props) {
         id={`${id}-q`}
         className="input"
         type="search"
+        maxLength={100}
         inputMode="search"
         autoComplete="off"
         placeholder="Search by race or town, e.g. Knysna"
@@ -83,6 +85,7 @@ export function RaceSearch({ units, selected, selectedRace, onPick }: Props) {
         aria-describedby={`${id}-status`}
       />
       <p id={`${id}-status`} className="field-help" aria-live="polite">{status}</p>
+      {!tooShort && <button type="button" className="button button-quiet" onClick={() => onManual(query)}>Add this race manually</button>}
       {(pickedElsewhere || shown.length > 0) && (
         <div className="race-search-results">
           {pickedElsewhere && row(pickedElsewhere)}

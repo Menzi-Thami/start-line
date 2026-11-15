@@ -123,7 +123,7 @@ test('a fresh Builder cannot skip unanswered steps and retains its draft after v
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/e2e/fixtures/redesign-screens.html?screen=builder&fresh=1')
   await expect(page.getByRole('button', { name: '2 Goal' })).toBeDisabled()
-  await page.getByRole('radio', { name: /^Another race/ }).check()
+  await page.getByRole('radio', { name: /^Add a race manually/ }).check()
   const name = page.getByRole('textbox', { name: 'Name (optional)', exact: true })
   await name.fill('A summer race')
   await page.setViewportSize({ width: 375, height: 430 })

@@ -149,7 +149,7 @@ test('race selection keeps Continue visible and all bibs readable in light and d
 test('custom race date sheet exposes the final day and is not covered by Continue @phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 760 })
   await page.goto('/')
-  await page.getByRole('radio', { name: /Another race/ }).click()
+  await page.getByRole('radio', { name: /Add a race manually/ }).click()
   const raceDate = page.getByLabel('Race date')
   await raceDate.click()
   const sheet = page.getByRole('dialog', { name: 'Choose a date' })

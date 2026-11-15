@@ -65,6 +65,10 @@
 
 /* The race decision is the only long picker: keep Continue within thumb reach
    after a selection, without trapping the rest of the form in a nested scroll. */
+.manual-race-editor { margin-top: var(--space-4); }
+.manual-race-editor > .link-button { margin-bottom: var(--space-3); }
+/* The fixed Continue action already owns this corner; keep the date control clear. */
+.page:has(.manual-race-editor) .back-to-top { display: none; }
 .plan-builder-flow[data-race-step='true'][data-race-selected='true'] {
   padding-bottom: 6.5rem;
 }

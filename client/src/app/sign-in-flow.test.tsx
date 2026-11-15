@@ -258,10 +258,10 @@ describe('their plan from the copy kept on this device', () => {
       try {
         expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
         expect(await screen.findByText(/Offline · showing your saved run entries/)).toBeVisible()
-        await user.click(await screen.findByRole('button', { name: 'Log a run', exact: true }))
+        await user.click(await screen.findByRole('button', { name: /^Log a run$/ }))
         fireEvent.change(screen.getByLabelText('Run date'), { target: { value: '2026-10-14' } })
         await user.type(screen.getByLabelText('Distance (km)', { exact: true }), '7')
-        await user.click(screen.getByRole('button', { name: 'Save check-in', exact: true }))
+        await user.click(screen.getByRole('button', { name: /^Save check-in$/ }))
         expect(await screen.findByRole('region', { name: 'Runs waiting to sync' })).toHaveTextContent('Saved on this device')
         expect(readCheckInCopy(identity, 'plan-1')?.pending).toHaveLength(1)
         expect(readCheckInCopy(identity, 'plan-1')?.pending[0]?.answers?.distanceKm).toBe(7)

@@ -32,7 +32,7 @@ export function useCheckIns(planId: string | null) {
   const [failed, setFailed] = useState<{ planId: string; auth: Auth } | null>(null)
   const [attempt, setAttempt] = useState(0)
   const [offline, setOffline] = useState(!navigator.onLine)
-  const [syncState, setSyncState] = useState<{ auth: Auth; planId: string; busy: boolean; error: string | null } | null>(null)
+  const [syncState, setSyncState] = useState<{ auth: Auth; planId: string; busy: boolean; error: string | null; authRequired?: boolean } | null>(null)
   const mutations = useRef(new Map<string, number>())
   const context = useRef<{ auth: Auth; planId: string | null } | null>({ auth, planId })
   useEffect(() => {
@@ -77,7 +77,7 @@ export function useCheckIns(planId: string | null) {
         setAttempt(value => value + 1)
       }
     } catch (reason) {
-      if (active()) setSyncState({ auth, planId, busy: false, error: reason instanceof Error ? reason.message : 'Your runs couldn’t sync. The device drafts are kept.' })
+      if (active()) setSyncState({ auth, planId, busy: false, error: reason instanceof Error ? reason.message : 'Your runs couldn’t sync. The device drafts are kept.', authRequired: reason instanceof ApiError && reason.status === 401 })
     }
   }, [owner, planId, auth, active, token])
 
@@ -173,6 +173,6 @@ export function useCheckIns(planId: string | null) {
     ready: copy !== null, failed: (failed?.auth === auth && failed.planId === planId) || (offline && !copy && !!planId), retry,
     get, save, remove, entries, saveAdditional, removeAdditional,
     offline, pending: copy?.pending ?? [], accountEntries: copy?.entries ?? [],
-    syncing: sync?.busy ?? false, syncError: sync?.error ?? null, syncNow, resolvePending,
+    syncing: sync?.busy ?? false, syncError: sync?.error ?? null, syncAuthRequired: sync?.authRequired ?? false, syncNow, resolvePending,
   }
 }

@@ -100,11 +100,22 @@ describe('starting a sign-in on a device that remembers someone', () => {
 })
 
 describe('one runner per device', () => {
+  it('keeps unsynced drafts in place when an online token renewal needs explicit sign-in', async () => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    writeCheckInCopy('t:remembered', 'plan', { entries: [], pending: [{ revision: 'one', key: '2026-10-14|Easy',
+      date: '2026-10-14', sessionType: 'Easy', base: null, answers: { status: 'Done', effort: null, distanceUnreported: false } }] })
+    msal.acquireTokenSilent.mockRejectedValueOnce(new InteractionRequiredAuthError('login_required', 'Synthetic token renewal required'))
+    await user.click(screen.getByRole('button', { name: 'read token' }))
+    expect(await screen.findByText('no token')).toBeInTheDocument()
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+    expect(readCheckInCopies('t:remembered').plan?.pending).toHaveLength(1)
+  })
   it('does not redirect a runner away from offline drafts when their token needs interactive renewal', async () => {
     const user = userEvent.setup()
     await renderWith(false)
     const connection = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
-    msal.acquireTokenSilent.mockRejectedValueOnce(new InteractionRequiredAuthError('login_required'))
+    msal.acquireTokenSilent.mockRejectedValueOnce(new InteractionRequiredAuthError('login_required', 'Synthetic token renewal required'))
     try {
       await user.click(screen.getByRole('button', { name: 'read token' }))
       expect(await screen.findByText('no token')).toBeInTheDocument()

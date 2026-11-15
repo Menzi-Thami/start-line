@@ -110,7 +110,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         try {
           return (await msal.acquireTokenSilent({ scopes: [config.scope], account: info })).accessToken
         } catch (error) {
-          if (error instanceof InteractionRequiredAuthError && navigator.onLine && !redirecting) {
+          const unsynced = Object.values(readCheckInCopies(toAccount(info).id)).some(copy => copy.pending.length > 0)
+          if (error instanceof InteractionRequiredAuthError && navigator.onLine && !redirecting && !unsynced) {
             redirecting = true
             // The page is about to leave for Microsoft; nothing useful can be done with a failure to start that here.
             await msal

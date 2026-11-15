@@ -1,4 +1,4 @@
-import { act, render, renderHook, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { afterEach, expect, it, vi } from 'vitest'
 import { AuthContext, accountsOff, type Auth } from '../../app/auth-context'
@@ -225,4 +225,17 @@ it('does not let writes to another plan strand the first load of the current pla
   await act(async () => { release([]); await pending })
   expect(result.current.ready).toBe(true)
   expect(result.current.entries).toEqual([])
+})
+
+it('offers explicit sign-in after a rejected token without discarding or submitting the draft', async () => {
+  const expired = { ...auth, getToken: async () => null, signIn: vi.fn() }
+  writeCheckInCopy(account.id, 'one', { entries: [], pending: [{ key: 'extra', revision: 'one', additionalId: 'extra',
+    date: session.date, sessionType: 'Easy', base: null, answers }] })
+  const save = vi.spyOn(api.me, 'saveAdditionalRun')
+  render(<AuthContext.Provider value={expired}><OfflineRunDrafts activePlanId="another-plan" /></AuthContext.Provider>)
+  const signIn = await screen.findByRole('button', { name: 'Sign in again' })
+  fireEvent.click(signIn)
+  expect(expired.signIn).toHaveBeenCalledOnce()
+  expect(readCheckInCopy(account.id, 'one')?.pending).toHaveLength(1)
+  expect(save).not.toHaveBeenCalled()
 })

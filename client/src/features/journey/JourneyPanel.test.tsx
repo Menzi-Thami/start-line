@@ -62,6 +62,15 @@ describe('Finish Line on the plan', () => {
     expect(screen.getByRole('dialog', { name: 'YOU DID IT.' })).toBeInTheDocument()
   })
 
+  it('returns focus to the visible race summary when closing a training celebration after race day', async () => {
+    show(journeyOf([chapter({ training: recap({ raceDatePassed: true }), achievements: [trainingAward()] })]), '2026-11-16')
+    expect(screen.getByRole('dialog', { name: 'YOU DID IT.' })).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.querySelector('.journey-race-summary')).toHaveFocus()
+    expect(document.querySelector('.journey-training')).not.toHaveAttribute('open')
+  })
+
   it('tells an unfinished plan honestly, with no badge and no measured distance invented', () => {
     show(journeyOf([chapter({ training: recap({ confirmedRuns: 0, allConfirmed: false, raceDatePassed: true, recordedKm: null, recordedRuns: 0, longestRecordedKm: null, longestRecordedOn: null }), weeks: null })]), '2026-11-16')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

@@ -158,7 +158,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
           primaryLabel={film.kind === 'race' ? 'Review my race' : 'See my training story'}
           onPrimary={toStory}
           onClose={closeFilm}
-          returnFocus={() => film.trigger ?? (film.kind === 'race' ? raceRef.current : storyRef.current)}
+          returnFocus={() => film.trigger ?? raceRef.current ?? storyRef.current}
         />
       )}
 

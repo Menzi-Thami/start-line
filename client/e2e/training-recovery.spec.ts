@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { addDays } from '../src/lib/format'
 import { fromRequest, toSearchParams } from '../src/lib/plan-url'
 import type { GeneratePlanRequest, TrainingPlan } from '../src/lib/types'
-import { chapter, journeyOf, PLAN_ID, raceResult, recap, recovery } from '../src/features/journey/journey-fixtures'
+import { chapter, journeyOf, maintenance, PLAN_ID, raceResult, recap, recovery } from '../src/features/journey/journey-fixtures'
 import type { RecoveryPlan, SaveRaceResult, StartRecovery } from '../src/features/journey/types'
 
 const fixture = 'http://127.0.0.1:5176/e2e/fixtures/journey.html'
@@ -24,6 +24,7 @@ async function setup(page: Page, options: { finished?: boolean; recovering?: boo
   const stored = raceResult({ raceDate: old.race.date, finishTime: '02:06:15', distanceKm: 20.3, timeKind: 'RecordedElapsed', activityId: recording.id })
   const state = { result: options.finished || options.recovering ? stored : null as ReturnType<typeof raceResult> | null,
     recovery: options.recovering ? recovery({ eventName: 'Hoka Half', raceDate: old.race.date, distanceKm: 20.3 }) : null as RecoveryPlan | null,
+    maintenance: null as ReturnType<typeof maintenance> | null,
     starts: [] as StartRecovery[], results: [] as SaveRaceResult[], checks: [] as unknown[], trainingReads: 0 }
   const training = () => chapter({ raceName: 'Hoka Half', raceDate: old.race.date, status: 'Concluded', lifecycle: 'Concluded', raceResult: state.result,
     training: recap({ allConfirmed: false, scheduledRuns: 10, confirmedRuns: 4, raceDatePassed: true }), achievements: [] })
@@ -39,7 +40,7 @@ async function setup(page: Page, options: { finished?: boolean; recovering?: boo
     else if (path === `/api/v1/me/plans/${PLAN_ID}` || path === `/api/v1/me/plans/${PLAN_ID}/coach`) { state.trainingReads++; data = { id: PLAN_ID, name: 'Hoka Half', status: 'Active', inputs, plan: old, coaching: [] } }
     else if (path === `/api/v1/me/plans/${nextId}` || path === `/api/v1/me/plans/${nextId}/coach`) data = { id: nextId, name: seed.race.name, status: 'Active', inputs: { ...inputs, distanceKm: 5, raceName: seed.race.name, raceDate: seed.race.date }, plan: seed, coaching: [] }
     else if (path === '/api/v1/plans') data = request.postDataJSON().raceDate === seed.race.date ? seed : old
-    else if (path === '/api/v1/me/journey') data = journeyOf([...(options.future ? [chapter({ planId: nextId, raceName: seed.race.name, raceDate: seed.race.date, lifecycle: 'Active', training: recap({ trainingEnded: false, raceDatePassed: false }) })] : []), training()], { recovery: state.recovery })
+    else if (path === '/api/v1/me/journey') data = journeyOf([...(options.future ? [chapter({ planId: nextId, raceName: seed.race.name, raceDate: seed.race.date, lifecycle: 'Active', training: recap({ trainingEnded: false, raceDatePassed: false }) })] : []), training()], { recovery: state.recovery, maintenance: state.maintenance })
     else if (path === `/api/v1/me/journey/plans/${PLAN_ID}`) data = training()
     else if (path === `/api/v1/me/journey/plans/${PLAN_ID}/race-result` && request.method() === 'PUT') {
       const body = request.postDataJSON() as SaveRaceResult
@@ -56,6 +57,10 @@ async function setup(page: Page, options: { finished?: boolean; recovering?: boo
     } else if (path.endsWith(`/recovery/${recovery().id}`) && request.method() === 'PATCH') {
       expect(request.postDataJSON().action).toBe('Complete')
       state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-15' }; data = state.recovery
+    } else if (path === '/api/v1/me/journey/maintenance' && request.method() === 'POST') {
+      state.maintenance = maintenance(request.postDataJSON()); data = state.maintenance
+    } else if (path === '/api/v1/me/journey/maintenance' && request.method() === 'DELETE') {
+      state.maintenance = null; await route.fulfill({ status: 204 }); return
     } else if (path === '/api/v1/me/journey/races') data = { races: [], majors: [] }
     else if (path === '/api/v1/me/activities') data = [recording]
     else if (path === `/api/v1/me/activities/${recording.id}`) data = recording
@@ -148,6 +153,16 @@ test('concluded training → saved recording → separate recovery → Home/Plan
   expect(state.checks).toHaveLength(1)
   await page.getByRole('button', { name: 'I feel recovered', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: /Keep running comfortably/ }).click()
+  await page.getByRole('button', { name: 'Start easy running', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Your easy-running plan.', exact: true })).toBeVisible()
+  await nav.getByRole('button', { name: 'Home', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Open easy-running plan', exact: true })).toBeVisible()
+  await nav.getByRole('button', { name: 'Plan', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Your easy-running plan.', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Stop maintenance', exact: true }).click()
+  await page.getByRole('button', { name: 'Stop', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
   await nav.getByRole('button', { name: 'Journey', exact: true }).click()
   await expect(page.getByText('Training concluded', { exact: true })).toBeVisible()
   await expect(page.locator('.journey-chapter-facts')).toContainText('Finished in 2:06:15')
@@ -187,6 +202,8 @@ test('recovery has its own days; concluded training is read-only, responsive and
   await accessible(page)
   await page.getByRole('button', { name: 'Hide training plan', exact: true }).click()
   if (info.project.name === 'desktop') {
+    await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+    await accessible(page)
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       await page.screenshot({ path: `${qa}/training-concluded-${width}-dark.png`, fullPage: true })

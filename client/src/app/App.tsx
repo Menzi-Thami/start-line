@@ -311,6 +311,7 @@ export function App() {
   const journey = useJourney(runner.state.kind === 'ready')
   const recovery = journey.state.kind === 'ready' ? journey.state.journey.recovery : null
   const recovering = isLiveRecovery(recovery)
+  const maintaining = journey.state.kind === 'ready' && journey.state.journey.maintenance?.status === 'Active'
   const landing = useRef(false)
   const [landed, setLanded] = useState(false)
   // Someone who has just signed up has no plan to open, so the builder never waits for one.
@@ -515,7 +516,7 @@ export function App() {
     if (item === 'journey') return go('journey')
     if (item === 'account') return go('account')
     if (view === 'beginner' && item === 'plan') return
-    if (recovering && !(view === 'build' && plan.kind === 'ready' && plan.plan.race.date >= today && !editing)) return go('recovery')
+    if ((recovering || maintaining) && !(view === 'build' && plan.kind === 'ready' && plan.plan.race.date >= today && !editing)) return go('recovery')
     const tab = 'week'
     if (view === 'build' && plan.kind === 'ready' && !editing) {
       const url = new URL(window.location.href)
@@ -1258,7 +1259,7 @@ export function App() {
           variant={compact ? 'bar' : 'rail'}
           current={barCurrent}
           // Journey remains available even after the runner archives their last current plan.
-          hasPlan={ownPlan !== null || onPlan || recovering || view === 'recovery'}
+          hasPlan={ownPlan !== null || onPlan || recovering || maintaining || view === 'recovery'}
           onPick={pickFromBar}
           account={state.kind === 'ready' ? { name: state.runner.displayName, photo } : undefined}
         />

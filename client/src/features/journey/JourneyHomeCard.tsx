@@ -38,6 +38,7 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
     return (
       <section className="panel home-card journey-home" aria-label="Easy running">
         <MaintenanceCard maintenance={maintenance} today={today} compact onEnd={() => actions.endMaintenance()} />
+        <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Open easy-running plan</button>
         <button type="button" className="button button-quiet" onClick={onNewRace}>Train for another race</button>
       </section>
     )

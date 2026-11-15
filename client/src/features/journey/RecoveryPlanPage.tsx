@@ -14,9 +14,10 @@ export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onO
 }) {
   const data = journey.state.kind === 'ready' ? journey.state.journey : null
   const existing = data?.recovery ?? null
+  const maintaining = data?.maintenance?.status === 'Active' && !isLiveRecovery(existing)
   const wanted = new URLSearchParams(window.location.search).get('race')
   const chapter = data?.chapters.find(chapter => recoveryWelcome(chapter.raceResult?.outcome) && (!wanted || chapter.raceResult?.id === wanted))
-  const races = useRaceHistory(!chapter?.raceResult && (!existing || !!wanted))
+  const races = useRaceHistory(!maintaining && !chapter?.raceResult && (!existing || !!wanted))
   const [manual, setManual] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const recorded = races.state.kind === 'ready' ? races.state.history.races.filter(race => recoveryWelcome(race.result.outcome) && !race.needsReview) : []
@@ -43,12 +44,12 @@ export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onO
     } : undefined} />
   return <section className="recovery-plan-page" aria-labelledby="recovery-plan-title">
     <header className="recovery-plan-header">
-      <div><p className="plan-kicker">YOUR NEXT CHAPTER</p><h1 id="recovery-plan-title">Your recovery plan.</h1>
-        <p>{recovery ? `${recovery.eventName} · ${formatDate(recovery.raceDate, 'dayMonth')} onwards` : 'Training has concluded. Recovery has its own pace.'}</p></div>
-      <Runner pose="sleep" size={80} />
+      <div><p className="plan-kicker">{maintaining ? 'KEEP RUNNING COMFORTABLY' : 'YOUR NEXT CHAPTER'}</p><h1 id="recovery-plan-title">{maintaining ? 'Your easy-running plan.' : 'Your recovery plan.'}</h1>
+        <p>{maintaining ? 'An easy rhythm, on your own days.' : recovery ? `${recovery.eventName} · ${formatDate(recovery.raceDate, 'dayMonth')} onwards` : 'Training has concluded. Recovery has its own pace.'}</p></div>
+      <Runner pose={maintaining ? 'sprint' : 'sleep'} size={80} />
     </header>
     {journey.state.kind === 'ready' && journey.state.refreshFailed && <p role="status" className="field-help">Showing your saved recovery. Updates couldn’t load. <button type="button" className="button button-quiet" onClick={actions.refresh}>Try again</button></p>}
-    {recovery && <div className="panel"><RecoveryDashboard key={recovery.id} recovery={recovery} today={today}
+    {!maintaining && recovery && <div className="panel"><RecoveryDashboard key={recovery.id} recovery={recovery} today={today}
       onCheckIn={(feeling, redFlags) => actions.checkIn(recovery.id, { feeling, redFlags, date: today })}
       onChange={change => actions.changeRecovery(recovery.id, change)}
       next={!isLiveRecovery(recovery) && !data?.maintenance ? next : undefined} />
@@ -58,20 +59,20 @@ export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onO
         </li>)}
       </ol></details>
     </div>}
-    {!recovery && source?.distanceKm != null && <div className="panel"><RecoveryOffer key={result?.id} today={today} {...source} onStart={actions.startRecovery} /></div>}
+    {!maintaining && !recovery && source?.distanceKm != null && <div className="panel"><RecoveryOffer key={result?.id} today={today} {...source} onStart={actions.startRecovery} /></div>}
     {error && <p role="alert" className="field-error">{error}</p>}
-    {!recovery && !chapter?.raceResult && races.state.kind === 'loading' && <p role="status">Finding your saved race…</p>}
-    {!recovery && !chapter?.raceResult && races.state.kind === 'error' && <section className="panel" role="alert">
+    {!maintaining && !recovery && !chapter?.raceResult && races.state.kind === 'loading' && <p role="status">Finding your saved race…</p>}
+    {!maintaining && !recovery && !chapter?.raceResult && races.state.kind === 'error' && <section className="panel" role="alert">
       <p>{races.state.message}</p><button type="button" className="button" onClick={races.refresh}>Try again</button>
     </section>}
-    {!recovery && !source && races.state.kind === 'ready' && !manual && <section className="panel">
+    {!maintaining && !recovery && !source && races.state.kind === 'ready' && !manual && <section className="panel">
       <h2 className="journey-subtitle">Ready when you are.</h2>
       <p>Review your race to use its saved details for recovery.</p>
       <button type="button" className="button button-primary" onClick={onOpenJourney}>Review my race</button>
       <details className="race-result-alternatives"><summary>Recovery from another race</summary><button type="button" className="button" onClick={() => setManual(true)}>Add a recovery plan</button></details>
     </section>}
-    {!recovery && manual && <div className="panel"><RecoveryOffer today={today} runDays={[]} onStart={actions.startRecovery} onDecline={() => setManual(false)} /></div>}
-    {data?.maintenance?.status === 'Active' && <div className="panel"><MaintenanceCard maintenance={data.maintenance} today={today} onEnd={actions.endMaintenance} onNewRace={onNewRace} /></div>}
+    {!maintaining && !recovery && manual && <div className="panel"><RecoveryOffer today={today} runDays={[]} onStart={actions.startRecovery} onDecline={() => setManual(false)} /></div>}
+    {maintaining && data?.maintenance && <div className="panel"><MaintenanceCard maintenance={data.maintenance} today={today} onEnd={actions.endMaintenance} onNewRace={onNewRace} /></div>}
     <div className="journey-actions">
       <button type="button" className="button button-quiet" onClick={onOpenJourney}>View my journey</button>
       {onOpenTraining && <button type="button" className="button button-quiet" onClick={onOpenTraining}>View training plan</button>}

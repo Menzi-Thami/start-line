@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
-import { chapter, journeyOf, PLAN_ID, raceResult, recovery } from './journey-fixtures'
+import { chapter, journeyOf, maintenance, PLAN_ID, raceResult, recovery } from './journey-fixtures'
 import { JourneyHomeCard } from './JourneyHomeCard'
 import type { Journey } from './types'
 import type { JourneyActions } from './useJourney'
@@ -12,6 +12,13 @@ function show(data: Journey) {
     onOpenPlan={onOpenPlan} onOpenJourney={onOpenJourney} onOpenRecovery={onOpenRecovery} onNewRace={vi.fn()} />)
   return { onOpenPlan, onOpenJourney, onOpenRecovery }
 }
+
+it('opens the independent easy-running plan after training and recovery have ended', async () => {
+  const opened = show(journeyOf([], { maintenance: maintenance() }))
+  await userEvent.click(screen.getByRole('button', { name: 'Open easy-running plan' }))
+  expect(opened.onOpenRecovery).toHaveBeenCalledOnce()
+  expect(opened.onOpenPlan).not.toHaveBeenCalled()
+})
 
 it('shows a saved training chapter after race day and never assumes a race finish or starts recovery', async () => {
   const opened = show(journeyOf([chapter({ status: 'Concluded', lifecycle: 'Concluded' })]))

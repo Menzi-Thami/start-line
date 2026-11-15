@@ -1,6 +1,6 @@
 # Your journey, races and trophy cabinet
 
-Journey is a permanent account destination, available with or without a current training plan. Its URL is `?view=journey`; `section=training`, `section=races` and `section=cabinet` reopen the chosen section. Old `?view=plans` links also open Journey. Training Plan includes This week, Calendar and Progress. The main navigation is Home, Plan, Runs, Journey, Account. Plan opens the independent recovery screen while recovery is running, and is omitted when there is neither training nor recovery.
+Journey is a permanent account destination, available with or without a current training plan. Its URL is `?view=journey`; `section=training`, `section=races` and `section=cabinet` reopen the chosen section. Old `?view=plans` links also open Journey. Training Plan includes This week, Calendar and Progress. The main navigation is Home, Plan, Runs, Journey, Account. Plan opens the independent recovery screen while recovery is running, and stays available for easy-running maintenance after recovery. It is omitted when none of these plans is active.
 
 ## Training chapters
 

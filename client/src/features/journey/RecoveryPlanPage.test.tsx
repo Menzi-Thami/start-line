@@ -15,7 +15,8 @@ function actions(overrides: Partial<JourneyActions> = {}): JourneyActions {
 }
 function show(data: Journey, today: string, act = actions()) {
   render(<RecoveryPlanPage units="km" today={today} journey={{ state: { kind: 'ready', journey: data, refreshFailed: false }, actions: act }} onNewRace={vi.fn()} onOpenJourney={vi.fn()} />)
-  expect(screen.getByRole('heading', { name: 'Your recovery plan.' })).toBeVisible()
+  const maintaining = data.maintenance?.status === 'Active' && !['Active', 'Paused'].includes(data.recovery?.status ?? '')
+  expect(screen.getByRole('heading', { name: maintaining ? 'Your easy-running plan.' : 'Your recovery plan.' })).toBeVisible()
   expect(document.querySelector('.training-story')).not.toBeInTheDocument()
   expect(document.querySelector('.race-result')).not.toBeInTheDocument()
   return act
@@ -117,5 +118,13 @@ describe('Recovery as its own state', () => {
     show(journeyOf([chapter({ raceResult: raceResult() })], { recovery: recovery({ status: 'Completed' }), maintenance: maintenance() }), '2026-12-02')
     expect(screen.getByRole('heading', { name: '3 easy runs a week' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Choose your next chapter.' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Good to go' })).not.toBeInTheDocument()
+  })
+
+  it('keeps the easy-running plan reachable when the earlier recovery is no longer returned', () => {
+    show(journeyOf([], { maintenance: maintenance() }), '2026-12-02')
+    expect(screen.getByRole('heading', { name: '3 easy runs a week' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Stop maintenance' })).toBeVisible()
+    expect(screen.queryByText('Finding your saved race…')).not.toBeInTheDocument()
   })
 })

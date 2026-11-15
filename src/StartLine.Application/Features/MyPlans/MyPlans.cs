@@ -97,6 +97,8 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
 
         // Build first: a plan that can't be generated must never be saved.
         var plan = builder.Build(request.Plan);
+        if (plan.Race.Date < CoachCalls.LocalToday(runner, time))
+            throw new ConflictException("training_concluded", "This race's training has concluded. Your saved chapter stays in Journey; choose a new race to train again.");
         var inputs = SavedPlanMapping.ToInputs(request.Plan, DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime), plan.Race);
         var name = string.IsNullOrWhiteSpace(request.Name) ? plan.Race.Name[..Math.Min(plan.Race.Name.Length, SavedPlan.MaxNameLength)] : request.Name;
 

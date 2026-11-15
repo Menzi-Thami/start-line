@@ -636,7 +636,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
       <WorkoutExport plan={plan} units={units} />
       <details className="disclosure plan-options"><summary>Plan options</summary>
         <div className="plan-actions">
-          {toolbarExtra}
+          {!trainingEnded && toolbarExtra}
           <details className="menu" ref={menuRef}>
             <summary className="button button-quiet">Share</summary>
             <div className="menu-panel">

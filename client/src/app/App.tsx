@@ -1137,7 +1137,7 @@ export function App() {
               />
             )}
             {/* A plan that isn't the runner's saved one (a new race, a new goal) is never saved or lost silently. */}
-            {showPlan && state.kind === 'ready' && currentPlan.current && !savedOnScreen && (
+            {showPlan && plan.plan.race.date >= today && state.kind === 'ready' && currentPlan.current && !savedOnScreen && (
               <ReplacePlanBar
                 key={toSearchParams(plan.inputs).toString()}
                 request={toRequest(plan.inputs)}

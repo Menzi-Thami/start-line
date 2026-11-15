@@ -82,6 +82,28 @@ public sealed class TrainingLifecycleTests(JourneyFactory factory) : IClassFixtu
     }
 
     [Fact]
+    public async Task An_old_plan_link_cannot_duplicate_a_concluded_chapter_or_replace_new_training()
+    {
+        var (client, runner) = await Runner();
+        using var owned = client;
+        var id = await Plan(runner, new(2026, 10, 4));
+        var old = await Json(await client.GetAsync(Url($"/api/v1/me/plans/{id}")));
+        var next = await Json(await NewPlan(client));
+        var rejected = await client.PostAsJsonAsync(Url("/api/v1/me/plans"), new
+        {
+            name = "Old race again",
+            plan = old.GetProperty("inputs"),
+            replaceCurrent = true,
+        });
+        rejected.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await rejected.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString().ShouldBe("training_concluded");
+        var retained = await Json(await client.GetAsync(Url("/api/v1/me/plans")));
+        retained.GetArrayLength().ShouldBe(2);
+        retained.EnumerateArray().Single(p => p.GetProperty("id").GetGuid() == id).GetProperty("status").GetString().ShouldBe("Concluded");
+        retained.EnumerateArray().Single(p => p.GetProperty("id").GetGuid() == next.GetProperty("id").GetGuid()).GetProperty("status").GetString().ShouldBe("Active");
+    }
+
+    [Fact]
     public async Task Offline_training_check_ins_still_sync_to_their_chapter_but_newer_runs_cannot_extend_it()
     {
         var (client, runner) = await Runner();

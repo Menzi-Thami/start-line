@@ -162,6 +162,8 @@ test('recovery has its own days; concluded training is read-only, responsive and
   await expect(page.locator('.is-recovery')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Edit plan', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Log a run', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Make this my plan', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save plan', exact: true })).toHaveCount(0)
   await accessible(page)
   await page.getByRole('button', { name: 'Hide training plan', exact: true }).click()
   if (info.project.name === 'desktop') {

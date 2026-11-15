@@ -14,6 +14,10 @@ Manual events belong to the runner's plan and share link; they do not publish a 
 
 Screenshots show the real production client against the local API, scrolled to the manual fields. The floating Back to top action stays out of this form so it cannot cover the date picker. Colours, typography and race animations remain intact.
 
+Responsive audits open a saved custom plan and select Edit plan → Change race, using a fresh document at each viewport/theme. This keeps the populated-field audit separate from calendar interactions that can crash Firefox inside axe. Creation, date selection, failed build/retry and editing remain covered by the separate real-API journeys; every WCAG tag stays enabled.
+
+Only failure-simulation cases block test-context service workers, so intercepted failure responses reach the page consistently in WebKit. Successful builds and retries still call the real API. Production service-worker behaviour is unchanged.
+
 Coverage:
 
 - `ManualRace.test.tsx`: exact standard distances in kilometres/miles, typed distance overrides, catalogue loading/failure, search-name reuse and focus, invalid input, draft retention and saved decimal distances through URL/edit round trips.

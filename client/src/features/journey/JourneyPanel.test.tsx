@@ -138,6 +138,8 @@ describe('Finish Line on the plan', () => {
     await user.click(screen.getByText('Adjust recovery preferences'))
     await user.click(screen.getByLabelText(/All out/))
     await user.click(screen.getByLabelText('Mostly rest'))
+    await user.click(screen.getByText('Adjust recovery preferences'))
+    expect(screen.queryByLabelText(/All out/)).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Start my recovery' }))
     await waitFor(() => expect(act.startRecovery).toHaveBeenCalledWith(expect.objectContaining({
       planId: PLAN_ID, distanceKm: 21.1, raceDate: '2026-11-15', effort: 'AllOut', preference: 'Rest',
@@ -151,6 +153,8 @@ describe('Finish Line on the plan', () => {
     await user.click(screen.getByText('Anything worrying?'))
     await user.click(screen.getByLabelText('Chest pain or a racing heart'))
     expect(screen.getByRole('alert')).toHaveTextContent(/call emergency services/)
+    await user.click(screen.getByText('Anything worrying?'))
+    expect(screen.getByRole('alert')).toBeVisible()
   })
 })
 

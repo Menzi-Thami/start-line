@@ -85,10 +85,16 @@ test('race review is calm, responsive and accessible in both themes', async ({ p
       if (width === 1440) await page.screenshot({ path: shot(`saved-desktop-${mode}`), fullPage: true })
       await page.locator('.journey-recovery-details > summary').click()
       await expect(page.getByRole('button', { name: 'Start my recovery' })).toBeVisible()
-      await expect(page.getByLabel(/All out/)).toBeHidden()
+      const effort = page.getByRole('radio', { name: /All out/, includeHidden: true })
+      await expect(effort).toBeHidden()
       await page.getByText('Adjust recovery preferences', { exact: true }).click()
-      await expect(page.getByLabel(/All out/)).toBeVisible()
+      await expect(effort).toBeVisible()
       await accessible(page)
+      await effort.check()
+      await page.getByText('Adjust recovery preferences', { exact: true }).click()
+      await expect(effort).toBeHidden()
+      await page.getByText('Adjust recovery preferences', { exact: true }).click()
+      await expect(effort).toBeChecked()
     }
   }
 })

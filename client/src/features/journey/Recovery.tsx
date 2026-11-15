@@ -54,6 +54,7 @@ export function RecoveryOffer({ planId, eventName = '', distanceKm, raceDate, to
   const [preference, setPreference] = useState<RecoveryPreference>('Walk')
   const [feeling, setFeeling] = useState<RecoveryFeeling | null>(null)
   const [flags, setFlags] = useState<RecoveryRedFlag[]>([])
+  const [preferencesOpen, setPreferencesOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const km = Number(distance)
@@ -91,8 +92,9 @@ export function RecoveryOffer({ planId, eventName = '', distanceKm, raceDate, to
         </div>
       )}
       <p className="field-help">Starts gently. Running waits until you feel ready.</p>
-      <details className="recovery-preferences">
+      <details className="recovery-preferences" open={preferencesOpen} onToggle={event => setPreferencesOpen(event.currentTarget.open)}>
       <summary>Adjust recovery preferences</summary>
+      {preferencesOpen && <>
       <fieldset className="journey-choice">
         <legend className="field-label">How hard was it?</legend>
         {EFFORTS.map(option => (
@@ -120,6 +122,7 @@ export function RecoveryOffer({ planId, eventName = '', distanceKm, raceDate, to
           </label>
         ))}
       </fieldset>
+      </>}
       </details>
       <RedFlagPicker flags={flags} onChange={setFlags} />
       {error && <p className="field-error" role="alert">{error}</p>}
@@ -132,10 +135,12 @@ export function RecoveryOffer({ planId, eventName = '', distanceKm, raceDate, to
 }
 
 function RedFlagPicker({ flags, onChange }: { flags: RecoveryRedFlag[]; onChange: (flags: RecoveryRedFlag[]) => void }) {
+  const [open, setOpen] = useState(flags.length > 0)
   return (
-    <details className="recovery-flags" open={flags.length > 0}>
+    <>
+    <details className="recovery-flags" open={open} onToggle={event => setOpen(event.currentTarget.open)}>
       <summary>Anything worrying? <span className="field-help">Pain, swelling, dizziness…</span></summary>
-      <fieldset>
+      {open && <fieldset>
         <legend className="visually-hidden">Warning signs</legend>
         {RED_FLAGS.map(flag => (
           <label key={flag.value} className="session-done">
@@ -144,9 +149,10 @@ function RedFlagPicker({ flags, onChange }: { flags: RecoveryRedFlag[]; onChange
             {flag.label}
           </label>
         ))}
-      </fieldset>
-      {flags.length > 0 && <p className="recovery-safety" role="alert">{SAFETY_WORDS}</p>}
+      </fieldset>}
     </details>
+    {flags.length > 0 && <p className="recovery-safety" role="alert">{SAFETY_WORDS}</p>}
+    </>
   )
 }
 

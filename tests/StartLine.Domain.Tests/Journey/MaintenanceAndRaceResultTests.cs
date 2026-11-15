@@ -30,6 +30,19 @@ public class MaintenanceGeneratorTests
     }
 
     [Fact]
+    public void A_new_maintenance_plan_does_not_schedule_a_long_run_immediately_after_starting()
+    {
+        // Someone can choose easy running the day after a half marathon; the first Sunday
+        // must not prescribe a 40–60 minute longer run.
+        var started = new DateOnly(2026, 11, 15);
+        var days = MaintenanceGenerator.DaysFor(4, [DayOfWeek.Tuesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday]);
+        var weeks = MaintenanceGenerator.Build(days, includeStrength: false, started, started);
+        weeks[0].Sessions.ShouldNotContain(session => session.Date < started.AddDays(2));
+        weeks[0].Sessions.ShouldNotContain(session => session.Kind == MaintenanceSessionKind.LongerEasyRun);
+        weeks[1].Sessions.ShouldContain(session => session.Kind == MaintenanceSessionKind.LongerEasyRun);
+    }
+
+    [Fact]
     public void The_longer_easy_run_is_on_the_last_run_day_and_strength_only_when_asked()
     {
         var days = MaintenanceGenerator.DaysFor(3, [DayOfWeek.Sunday, DayOfWeek.Tuesday, DayOfWeek.Thursday]);

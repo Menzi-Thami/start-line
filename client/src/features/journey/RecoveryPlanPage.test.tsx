@@ -121,6 +121,20 @@ describe('Recovery as its own state', () => {
     expect(screen.queryByRole('button', { name: 'Good to go' })).not.toBeInTheDocument()
   })
 
+  it('shows a four-week calendar with tappable days, neutral free days and longer-run details', async () => {
+    show(journeyOf([], { maintenance: maintenance() }), '2026-12-02')
+    const user = userEvent.setup()
+    const calendar = screen.getByRole('region', { name: 'Easy-running calendar' })
+    expect(within(calendar).getByRole('list', { name: 'Choose a day' })).toBeVisible()
+    expect(within(calendar).getByText('Week 1 of 4')).toBeVisible()
+    await user.click(within(calendar).getByRole('button', { name: /Thu 3 Dec: Easy run/ }))
+    expect(within(calendar).getByText(/Conversational/)).toBeVisible()
+    await user.click(within(calendar).getByRole('button', { name: /Wed 2 Dec: no run scheduled/ }))
+    expect(within(calendar).getByText('Free day. Nothing is scheduled or missed.')).toBeVisible()
+    await user.click(within(calendar).getByRole('button', { name: 'Next easy-running week' }))
+    expect(within(calendar).getByText('Week 2 of 4')).toBeVisible()
+  })
+
   it('keeps the easy-running plan reachable when the earlier recovery is no longer returned', () => {
     show(journeyOf([], { maintenance: maintenance() }), '2026-12-02')
     expect(screen.getByRole('heading', { name: '3 easy runs a week' })).toBeVisible()

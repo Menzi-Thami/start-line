@@ -37,7 +37,7 @@ import { SignInLanding } from '../features/home/SignInLanding'
 import { BrandIntroGate } from '../features/home/BrandIntroGate'
 import { PlanView } from '../features/plan/PlanView'
 import { RunningJourney } from '../features/journey/RunningJourney'
-import { isLiveRecovery, planRunDays } from '../features/journey/journey-model'
+import { isLiveRecovery, isPostTrainingHome, planRunDays } from '../features/journey/journey-model'
 import { useJourney } from '../features/journey/useJourney'
 import { useToday } from '../lib/useToday'
 import { Replan } from '../features/plan/Replan'
@@ -876,7 +876,7 @@ export function App() {
           </div>
         </section>
       )}
-      {state.kind === 'ready' && !state.runner.needsPrivacyConsent && (
+      {state.kind === 'ready' && !state.runner.needsPrivacyConsent && !(view === 'home' && isPostTrainingHome(journey.state.kind === 'ready' ? journey.state.journey : null, ownPlan === undefined ? undefined : ownPlan?.id ?? null, today)) && (
         <div hidden={view === 'account' || view === 'privacy' || view === 'unsubscribe'}><RemindersSection key={state.runner.id} offer /></div>
       )}
       <main id="main-content" tabIndex={-1} key={view} className={navigated ? 'view-enter' : undefined}>

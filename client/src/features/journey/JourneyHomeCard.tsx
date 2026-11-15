@@ -1,5 +1,4 @@
-import { chapterFor, finishStage, formatClock, isLiveRecovery, recentConclusion, recoveryDayNumber, recoveryWelcome } from './journey-model'
-import { MaintenanceCard } from './NextChapter'
+import { chapterFor, finishStage, formatClock, isLiveRecovery, lastTrainingChapter, recentConclusion, recoveryDayNumber, recoveryWelcome } from './journey-model'
 import type { JourneyActions, JourneyState } from './useJourney'
 import './journey.css'
 
@@ -14,14 +13,13 @@ interface Props {
 }
 
 /**
- * Home's journey card, when there is one: recovery (day count, today's idea, a one-tap check-in), the next chapter,
+ * Home's current chapter: a recovery preview, the next chapter,
  * easy-running maintenance, or the race result still to add. Otherwise nothing, and Home is exactly as before.
  */
 export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onOpenJourney, onOpenRecovery, onNewRace }: Props) {
   if (journey.state.kind !== 'ready') return null
   const { recovery, maintenance } = journey.state.journey
   const chapter = chapterFor(journey.state.journey, currentPlanId)
-  const actions = journey.actions
 
   if (isLiveRecovery(recovery)) {
     const day = recovery.days.find(day => day.date === today)
@@ -37,16 +35,17 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
   if (maintenance?.status === 'Active') {
     return (
       <section className="panel home-card journey-home" aria-label="Easy running">
-        <MaintenanceCard maintenance={maintenance} today={today} compact onEnd={() => actions.endMaintenance()} />
+        <p className="plan-kicker">Easy running</p>
+        <h2 className="home-card-heading">Keep running comfortably.</h2>
+        <p>Your easy-running plan is ready whenever you are. Every run is optional.</p>
         <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Open easy-running plan</button>
-        <button type="button" className="button button-quiet" onClick={onNewRace}>Train for another race</button>
       </section>
     )
   }
-  if (recovery?.status === 'Completed' && (!currentPlanId || !recovery.planId || recovery.planId === currentPlanId)) {
+  if ((recovery?.status === 'Completed' || recovery?.status === 'Ended') && (!currentPlanId || !recovery.planId || recovery.planId === currentPlanId)) {
     return (
       <section className="panel home-card journey-home" aria-labelledby="journey-home-next">
-        <p className="plan-kicker">Recovered</p>
+        <p className="plan-kicker">{recovery.status === 'Completed' ? 'Recovered' : 'Recovery ended'}</p>
         <h2 id="journey-home-next" className="home-card-heading">What’s next?</h2>
         <p>Keep running comfortably, train for another race, or take more time. Nothing changes until you choose.</p>
         <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Choose my next chapter</button>
@@ -62,6 +61,16 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
     <div className="journey-actions">
       <button type="button" className="button button-primary" onClick={() => onOpenJourney ? onOpenJourney(concluded.planId) : onOpenPlan()}>Review my race</button>
       {recoveryWelcome(concluded.raceResult?.outcome) && onOpenRecovery && <button type="button" className="button" onClick={() => onOpenRecovery(concluded.raceResult?.id)}>Start recovery plan</button>}
+    </div>
+  </section>
+  const past = !currentPlanId ? lastTrainingChapter(journey.state.journey, today) : null
+  if (past) return <section className="panel home-card journey-home" aria-labelledby="journey-home-saved">
+    <p className="plan-kicker">YOUR STORY STAYS WITH YOU</p>
+    <h2 id="journey-home-saved" className="home-card-heading">Take your time.</h2>
+    <p>Your training chapters and race results are saved in Journey. Start another plan whenever you’re ready.</p>
+    <div className="journey-actions">
+      <button type="button" className="button button-primary" onClick={() => onOpenJourney ? onOpenJourney(past.planId) : onOpenPlan()}>View my journey</button>
+      <button type="button" className="button button-quiet" onClick={onNewRace}>Start a new plan</button>
     </div>
   </section>
   if (!chapter) return null

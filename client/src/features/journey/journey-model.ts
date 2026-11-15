@@ -39,6 +39,15 @@ export const recentConclusion = (journey: Journey | null | undefined, today: str
   journey?.chapters.filter(chapter => chapter.raceDate && chapter.raceDate < today && chapter.raceDate >= addDays(today, -7))
     .sort((a, b) => (b.raceDate ?? '').localeCompare(a.raceDate ?? ''))[0] ?? null
 
+/** Retained chapters still belong to an experienced runner after the race-week reminder has passed. */
+export const lastTrainingChapter = (journey: Journey | null | undefined, today: string): PlanChapter | null =>
+  journey?.chapters.find(chapter => chapter.status === 'Concluded' || chapter.status === 'Archived' || !!chapter.raceDate && chapter.raceDate < today) ?? null
+
+/** Home follows the current chapter; a future training lookup must finish before old history takes its place. */
+export const isPostTrainingHome = (journey: Journey | null | undefined, currentPlanId: string | null | undefined, today: string): boolean =>
+  isLiveRecovery(journey?.recovery) || journey?.maintenance?.status === 'Active'
+  || currentPlanId === null && (!!journey?.recovery || !!lastTrainingChapter(journey, today))
+
 export const achievement = (chapter: PlanChapter | null | undefined, kind: AchievementKind): Achievement | null =>
   chapter?.achievements.find(a => a.kind === kind) ?? null
 

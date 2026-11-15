@@ -6,6 +6,7 @@ import {
   chapterFor,
   clockSeconds,
   isJourneyPayload,
+  isPostTrainingHome,
   distanceBadge,
   finishStage,
   formatClock,
@@ -18,6 +19,14 @@ import {
   weekOf,
 } from './journey-model'
 import { highlights, storyFromChapter } from './journey-story'
+
+it('waits for the current-plan lookup and lets new training replace the past chapter on Home', () => {
+  const data = journeyOf([chapter({ status: 'Concluded', raceDate: '2026-10-04' })], { recovery: recovery({ status: 'Completed' }) })
+  expect(isPostTrainingHome(data, undefined, '2026-12-02')).toBe(false)
+  expect(isPostTrainingHome(data, 'new-training', '2026-12-02')).toBe(false)
+  expect(isPostTrainingHome(data, null, '2026-12-02')).toBe(true)
+  expect(isPostTrainingHome(journeyOf([]), null, '2026-12-02')).toBe(false)
+})
 
 const award = (kind: 'TrainingComplete' | 'RaceFinished', celebratedAt: string | null = null) =>
   ({ id: `${kind}-id`, kind, planId: chapter().planId, earnedOn: '2026-11-14', awardedAt: '2026-11-14T10:00:00Z', celebratedAt })

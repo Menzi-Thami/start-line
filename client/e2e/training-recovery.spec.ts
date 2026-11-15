@@ -10,6 +10,7 @@ import type { RecoveryPlan, SaveRaceResult, StartRecovery } from '../src/feature
 
 const fixture = 'http://127.0.0.1:5176/e2e/fixtures/journey.html'
 const qa = fileURLToPath(new URL('../../docs/qa/2026-11-15/phase-handoff/', import.meta.url))
+const homeQa = fileURLToPath(new URL('../../docs/qa/2026-11-15/home-simplicity/', import.meta.url))
 const nextId = '22222222-2222-4222-8222-222222222222'
 const recording = { id: '33333333-3333-4333-8333-333333333333', localDate: '2026-11-14', startedAt: '2026-11-14T05:00:00Z', kind: 'Run', distanceKm: 20.3,
   movingSeconds: 7200, elapsedSeconds: 7575, paceSecondsPerKm: 355, plannedTitle: null, plannedSessionType: null, pace: null, averageHeartRate: null,
@@ -25,7 +26,7 @@ async function setup(page: Page, options: { finished?: boolean; recovering?: boo
   const state = { result: options.finished || options.recovering ? stored : null as ReturnType<typeof raceResult> | null,
     recovery: options.recovering ? recovery({ eventName: 'Hoka Half', raceDate: old.race.date, distanceKm: 20.3 }) : null as RecoveryPlan | null,
     maintenance: null as ReturnType<typeof maintenance> | null,
-    starts: [] as StartRecovery[], results: [] as SaveRaceResult[], checks: [] as unknown[], trainingReads: 0 }
+    starts: [] as StartRecovery[], results: [] as SaveRaceResult[], checks: [] as unknown[], trainingReads: 0, detailsReads: 0 }
   const training = () => chapter({ raceName: 'Hoka Half', raceDate: old.race.date, status: 'Concluded', lifecycle: 'Concluded', raceResult: state.result,
     training: recap({ allConfirmed: false, scheduledRuns: 10, confirmedRuns: 4, raceDatePassed: true }), achievements: [] })
   await page.route('**/api/v1/**', async route => {
@@ -33,7 +34,9 @@ async function setup(page: Page, options: { finished?: boolean; recovering?: boo
     const url = new URL(request.url())
     const path = url.pathname
     let data: unknown = []
-    if (path === '/api/v1/me') data = { id: 'synthetic-journey-runner', displayName: 'Naledi', email: 'journey@example.test', timeZone: 'Africa/Johannesburg', units: 'Kilometres', needsPrivacyConsent: false, privacyNoticeVersion: '2026-10-21' }
+    if (path === '/api/v1/me/running') { state.detailsReads++; data = [] }
+    else if (path === '/api/v1/me/beginner') { await route.fulfill({ status: 204 }); return }
+    else if (path === '/api/v1/me') data = { id: 'synthetic-journey-runner', displayName: 'Naledi', email: 'journey@example.test', timeZone: 'Africa/Johannesburg', units: 'Kilometres', needsPrivacyConsent: false, privacyNoticeVersion: '2026-10-21' }
     // Deliberately stale Active from an older server/cache: the local race date must still end training.
     else if (path === '/api/v1/me/plans') data = [{ id: PLAN_ID, name: 'Hoka Half', raceName: 'Hoka Half', raceDate: old.race.date, status: 'Active' },
       ...(options.future ? [{ id: nextId, name: seed.race.name, raceName: seed.race.name, raceDate: seed.race.date, status: 'Active' }] : [])]
@@ -81,6 +84,17 @@ async function accessible(page: Page) {
   expect(result.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
 }
 
+async function calmHome(page: Page) {
+  await expect(page.getByRole('region', { name: 'This week', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Latest run', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Today', exact: true })).toHaveCount(0)
+  await expect(page.getByText(/Add training feedback/)).toHaveCount(0)
+  await expect(page.getByText('Something to run towards?', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Couch to 5K', exact: true })).toHaveCount(0)
+  await expect(page.locator('.home-focus > .journey-home')).toHaveCount(1)
+  await expect(page.locator('.home-more')).not.toHaveAttribute('open')
+}
+
 test('race day ends at the runner’s midnight without assuming a result or starting recovery @phone', async ({ page }, info) => {
   const { state } = await setup(page, { raceDay: true })
   await page.setViewportSize({ width: 375, height: 812 })
@@ -94,6 +108,7 @@ test('race day ends at the runner’s midnight without assuming a result or star
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(state.results).toEqual([]); expect(state.starts).toEqual([])
   await page.clock.resume()
+  await calmHome(page)
   if (info.project.name === 'desktop') {
     await mkdir(qa, { recursive: true })
     for (const mode of ['light', 'dark']) {
@@ -134,6 +149,7 @@ test('concluded training → saved recording → separate recovery → Home/Plan
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Open recovery plan', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Good to go', exact: true })).toHaveCount(0)
+  await calmHome(page)
   if (info.project.name === 'desktop') {
     await mkdir(qa, { recursive: true })
     await page.setViewportSize({ width: 375, height: 812 })
@@ -158,6 +174,15 @@ test('concluded training → saved recording → separate recovery → Home/Plan
   await expect(page.getByRole('heading', { name: 'Your easy-running plan.', exact: true })).toBeVisible()
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Open easy-running plan', exact: true })).toBeVisible()
+  await calmHome(page)
+  if (info.project.name === 'desktop') {
+    await mkdir(homeQa, { recursive: true })
+    for (const mode of ['light', 'dark']) {
+      await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+      await accessible(page)
+      await page.screenshot({ path: `${homeQa}/maintenance-375-${mode}.png`, fullPage: true })
+    }
+  }
   await nav.getByRole('button', { name: 'Plan', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your easy-running plan.', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Stop maintenance', exact: true }).click()
@@ -177,6 +202,7 @@ test('recovery has its own days; concluded training is read-only, responsive and
   const navigation = page.getByRole('navigation', { name: 'Main', exact: true })
   await navigation.getByRole('button', { name: 'Home', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Open recovery plan', exact: true })).toBeVisible()
+  await calmHome(page)
   await navigation.getByRole('button', { name: 'Plan', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
   if (info.project.name === 'desktop') await mkdir(qa, { recursive: true })
@@ -209,4 +235,41 @@ test('recovery has its own days; concluded training is read-only, responsive and
       await page.screenshot({ path: `${qa}/training-concluded-${width}-dark.png`, fullPage: true })
     }
   }
+})
+
+test('Home stays simple after recovery and months later, with running details available on request @phone', async ({ page }, info) => {
+  const { state } = await setup(page, { recovering: true })
+  state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
+  await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
+  await page.goto(`${fixture}?view=home`)
+  await expect(page.getByRole('button', { name: 'Choose my next chapter', exact: true })).toBeVisible()
+  await calmHome(page)
+  expect(state.detailsReads).toBe(0)
+  if (info.project.name === 'desktop') await mkdir(homeQa, { recursive: true })
+  for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark']) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+    await accessible(page)
+    if (info.project.name === 'desktop' && [375, 1440].includes(width)) await page.screenshot({ path: `${homeQa}/recovered-${width}-${mode}.png`, fullPage: true })
+  }
+  await page.locator('.home-more > summary').click()
+  await page.locator('.home-insights > summary').click()
+  await expect(page.getByRole('heading', { name: 'Your running', exact: true })).toBeVisible()
+  await expect.poll(() => state.detailsReads).toBeGreaterThan(0)
+  await page.locator('.home-tools > summary').click()
+  await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()
+  state.recovery = null
+  await page.clock.setFixedTime(new Date('2027-02-01T08:00:00Z'))
+  await page.goto(`${fixture}?view=home`)
+  await expect(page.getByRole('heading', { name: 'Take your time.', exact: true })).toBeVisible()
+  await calmHome(page)
+  if (info.project.name === 'desktop') {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+    await page.screenshot({ path: `${homeQa}/saved-history-375-dark.png`, fullPage: true })
+  }
+  await page.getByRole('button', { name: 'View my journey', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Finished in 2:06:15', exact: true })).toBeVisible()
 })

@@ -38,7 +38,7 @@ import { completedTasks, raceChecklistKey, RACE_TASKS } from '../race-week/check
 import { YourWeek } from './YourWeek'
 import { WeeklyChart } from './WeeklyChart'
 import { JourneyHomeCard } from '../journey/JourneyHomeCard'
-import { isLiveRecovery, recentConclusion } from '../journey/journey-model'
+import { isLiveRecovery, isPostTrainingHome, recentConclusion } from '../journey/journey-model'
 import { useJourney } from '../journey/useJourney'
 
 const Calculators = lazy(() => import('./Calculators').then((module) => ({ default: module.Calculators })))
@@ -130,10 +130,11 @@ function useHomePlan(
  * returning to the app and cache expiry; never stored in a lasting client cache.
  */
 /** Every kept run since the runner started, summed once per visit for the All time tile. Null until it arrives. */
-function useAllTime(ownerId: string): { km: number; runs: number; since: string | null } | null {
+function useAllTime(ownerId: string, enabled = true): { km: number; runs: number; since: string | null } | null {
   const auth = useAuth()
   const [total, setTotal] = useState<{ owner: string; km: number; runs: number; since: string | null } | null>(null)
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     auth
       .getToken()
@@ -147,21 +148,22 @@ function useAllTime(ownerId: string): { km: number; runs: number; since: string 
     return () => {
       cancelled = true
     }
-  }, [auth, ownerId])
+  }, [auth, ownerId, enabled])
   return total && total.owner === ownerId ? total : null
 }
 
-function useRunningLog(version: number, activitiesVersion: string, ownerId: string): { log: LoggedRun[] | null; failed: boolean } {
+function useRunningLog(version: number, activitiesVersion: string, ownerId: string, enabled = true): { log: LoggedRun[] | null; failed: boolean } {
   const auth = useAuth()
   const [loaded, setLoaded] = useState<{ ownerId: string; runs: LoggedRun[] } | null>(null)
   const log = loaded?.ownerId === ownerId ? loaded.runs : null
   const [failedVersion, setFailedVersion] = useState<{ ownerId: string; version: number } | null>(null)
   const [refresh, setRefresh] = useState(0)
   useEffect(() => {
+    if (!enabled) return
     const visible = () => { if (document.visibilityState === 'visible') setRefresh(value => value + 1) }
     document.addEventListener('visibilitychange', visible)
     return () => document.removeEventListener('visibilitychange', visible)
-  }, [])
+  }, [enabled])
   useEffect(() => {
     const now = Date.now()
     const expiry = Math.min(...(log ?? []).flatMap(run => run.source === 'Strava' && run.cachedUntil ? [Date.parse(run.cachedUntil)] : []).filter(value => value > now))
@@ -170,6 +172,7 @@ function useRunningLog(version: number, activitiesVersion: string, ownerId: stri
     return () => window.clearTimeout(timer)
   }, [log])
   useEffect(() => {
+    if (!enabled) return
     let cancelled = false
     auth
       .getToken()
@@ -184,7 +187,7 @@ function useRunningLog(version: number, activitiesVersion: string, ownerId: stri
     return () => {
       cancelled = true
     }
-  }, [auth, version, activitiesVersion, refresh, ownerId])
+  }, [auth, version, activitiesVersion, refresh, ownerId, enabled])
   return { log, failed: failedVersion?.ownerId === ownerId && failedVersion.version === version }
 }
 
@@ -432,7 +435,7 @@ function tabToUrl(tab: HomeTab) {
   window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}`)
 }
 
-/** Today's training and weekly progress lead; history, coaching and tools open when requested. */
+/** Home follows the current chapter; after training, details wait until the runner asks for them. */
 export function Home({
   runner,
   units,
@@ -457,19 +460,24 @@ export function Home({
   photo = null,
 }: Props) {
   const auth = useAuth()
-  const current = currentTraining(storedCurrent, today)
+  const training = currentTraining(storedCurrent, today)
+  const localJourney = useJourney(!sharedJourney)
+  const journey = sharedJourney ?? localJourney
+  const data = journey.state.kind === 'ready' ? journey.state.journey : null
+  const afterTraining = isPostTrainingHome(data, training === undefined ? undefined : training?.id ?? null, today) || !!storedCurrent && !training
+  const phasePending = !afterTraining && (training === undefined || training === null && journey.state.kind === 'loading')
+  const current = afterTraining || phasePending ? null : training
   const [reviewOpen, setReviewOpen] = useState(() => new URLSearchParams(window.location.search).get('review') === '1')
   const reviewRef = useRef<HTMLDetailsElement>(null)
   const [toolsOpen, setToolsOpen] = useState(() => tabFromUrl() === 'tools')
   const [toolsOpened, setToolsOpened] = useState(toolsOpen)
   // The "Coaching, insights and tools" row opens by itself for a link straight to the review or the tools.
   const [moreOpen, setMoreOpen] = useState(() => reviewOpen || toolsOpen)
+  const [moreVisited, setMoreVisited] = useState(moreOpen)
   const [insightsVisited, setInsightsVisited] = useState(false)
   const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
   // Recovery, maintenance or a race result to add: shown above Today, and recovery takes Today's place.
-  const localJourney = useJourney(!sharedJourney)
-  const journey = sharedJourney ?? localJourney
   const recovering = journey.state.kind === 'ready' && isLiveRecovery(journey.state.journey.recovery)
   const concluded = !current && journey.state.kind === 'ready' && !!recentConclusion(journey.state.journey, today)
   // Sessions a held Strava run completes, computed by the API on each read; asked for again as check-ins or runs change.
@@ -481,7 +489,7 @@ export function Home({
   const [logVersion, setLogVersion] = useState(0)
   const [requestedRun, setRequestedRun] = useState<ActivitySummary | undefined>(undefined)
   const activitiesVersion = runs.map(run => `${run.id}|${run.localDate}|${run.distanceKm}|${run.kind}|${run.source.kind}|${run.source.cachedUntil ?? ''}`).sort().join(';')
-  const { log, failed: logFailed } = useRunningLog(logVersion, activitiesVersion, runner.id)
+  const { log, failed: logFailed } = useRunningLog(logVersion, activitiesVersion, runner.id, !phasePending && (!afterTraining || moreOpen))
   const coach: SessionCoach | undefined = checkIns.ready
     ? {
         today,
@@ -508,7 +516,7 @@ export function Home({
         },
       }
     : undefined
-  const allTime = useAllTime(runner.id)
+  const allTime = useAllTime(runner.id, !phasePending && (!afterTraining || moreOpen))
   const totals = trainingTotals(log ?? [], today)
   const bars = weeklyBars(log ?? [], today, plan)
   // Weeks in a row with a run, from the kept log. Shown from two weeks up, so it reads as a streak.
@@ -533,7 +541,7 @@ export function Home({
   const fromStrava = runs.some((r) => r.source.kind === 'Strava')
 
   return (
-    <div className="home">
+    <div className={`home${afterTraining ? ' is-after-training' : ''}`}>
       <div className="home-intro">
         <header className="home-hello">
           <Avatar name={runner.displayName} photo={photo} size={48} />
@@ -560,7 +568,13 @@ export function Home({
             {onOpenRacePrep && <button type="button" className="button button-primary" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
           </section>
         )}
-        <JourneyHomeCard journey={journey} today={today} currentPlanId={current?.id ?? null} onOpenPlan={onOpenPlan} onOpenJourney={onOpenJourney} onOpenRecovery={onOpenRecovery} onNewRace={onBuildPlan} />
+        {!phasePending && <JourneyHomeCard journey={journey} today={today} currentPlanId={current?.id ?? null} onOpenPlan={onOpenPlan} onOpenJourney={onOpenJourney} onOpenRecovery={onOpenRecovery} onNewRace={onBuildPlan} />}
+        {(phasePending || afterTraining && journey.state.kind !== 'ready') && <section className="panel home-card journey-home" role={journey.state.kind === 'error' ? 'alert' : 'status'} aria-label={phasePending ? 'Loading your current chapter' : undefined}>
+          <h2 className="home-card-heading">{phasePending ? 'Your day' : 'Your saved chapter'}</h2>
+          <p>{journey.state.kind === 'error' ? journey.state.message : phasePending ? 'Finding your current chapter…' : 'Loading your saved chapter…'}</p>
+          {journey.state.kind === 'error' && <button type="button" className="button" onClick={journey.actions.refresh}>Try again</button>}
+        </section>}
+        {!afterTraining && !phasePending && <>
         <div className="home-top">
           {recovering || concluded ? null : current ? (
             <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={onOpenDay} />
@@ -624,12 +638,15 @@ export function Home({
             {plan && coach && run.localDate >= plan.startDate && run.localDate <= plan.race.date ? <button type="button" className="link-button" onClick={() => setRequestedRun(run)}>Log this run</button> : <button type="button" className="link-button" onClick={() => onOpenRun(run.id)}>View run</button>}
           </li>)}</ul><p className="field-help">Logging adds your effort and feedback to the plan. You do not need to enter the distance again for it to count here.</p></details>}
         {requestedRun && plan && coach && <RunLog key={requestedRun.id} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} />}
+        </>}
 
         {/* Home does one job: today. Everything else waits behind one row. */}
-        <details className="disclosure home-more" open={moreOpen} onToggle={event => setMoreOpen(event.currentTarget.open)}>
-        <summary>Coaching, insights and tools <span className="field-help">Weekly review, how you feel, your totals and running calculators</span></summary>
+        <details className="disclosure home-more" hidden={phasePending} open={moreOpen} onToggle={event => { setMoreOpen(event.currentTarget.open); if (event.currentTarget.open) setMoreVisited(true) }}>
+        <summary>{afterTraining ? 'Your running' : 'Coaching, insights and tools'} <span className="field-help">{afterTraining ? 'Plans, history and tools' : 'Weekly review, how you feel, your totals and running calculators'}</span></summary>
+        {!phasePending && (!afterTraining || moreVisited) && <>
+        {afterTraining && <BeginnerHomeCard today={today} onOpenProgramme={onOpenBeginner ?? onBuildPlan} />}
         {plan && week && progress?.kind !== 'race' && <details ref={reviewRef} className="disclosure home-review" open={reviewOpen} onToggle={event => setReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary><YourWeek plan={plan} week={week} coachNotes={coaching} today={today} units={units} runs={runs} checkInFor={checkIns.ready ? checkIns.get : undefined} syncedFor={coach ? (s) => completedViaStrava(s, coach) : undefined} />{coach?.adjustments && <PlanAdjustment current={plan} units={units} actions={coach.adjustments} />}</details>}
-        <ReadinessCheckIn today={today} onReview={plan && week && progress?.kind !== 'race' ? () => { setReviewOpen(true); requestAnimationFrame(() => reviewRef.current?.scrollIntoView?.({ block: 'start' })) } : undefined} />
+        {!afterTraining && <ReadinessCheckIn today={today} onReview={plan && week && progress?.kind !== 'race' ? () => { setReviewOpen(true); requestAnimationFrame(() => reviewRef.current?.scrollIntoView?.({ block: 'start' })) } : undefined} />}
 
         <section className="section home-section" aria-labelledby="home-training">
           <h2 id="home-training" className="home-heading">
@@ -672,7 +689,10 @@ export function Home({
                   <Tile label="All time" value={amount(allTime.km, units)} unit={units} sub={`${allTime.runs} ${allTime.runs === 1 ? 'run' : 'runs'}${allTime.since ? ` since ${formatDate(allTime.since, 'dayMonth')} ${allTime.since.slice(0, 4)}` : ''}`} />
                 )}
               </div>
-              {log.length === 0 && pendingSyncedRuns.length === 0 && <div className="home-data-state"><p>Your first run starts the story. Upload a run or tick a completed session in your plan to build your totals.</p><button type="button" className="link-button" onClick={onOpenRuns}>Add your runs →</button></div>}
+              {log.length === 0 && pendingSyncedRuns.length === 0 && <div className="home-data-state">
+                <p>{afterTraining ? 'No running totals are available in this view. Your saved training chapters and race results are in Journey.' : 'Your first run starts the story. Upload a run or tick a completed session in your plan to build your totals.'}</p>
+                {afterTraining && onOpenJourney ? <button type="button" className="link-button" onClick={() => onOpenJourney()}>View my journey</button> : <button type="button" className="link-button" onClick={onOpenRuns}>Add your runs →</button>}
+              </div>}
             </>
           )}
           <details className="home-totals-note"><summary>About your totals</summary><p className="field-help">
@@ -756,9 +776,10 @@ export function Home({
           </ScreenRecovery>
         )}
       </details>
+        </>}
         </details>
       </div>
-      <InstallCard />
+      {!afterTraining && !phasePending && <InstallCard />}
     </div>
   )
 }

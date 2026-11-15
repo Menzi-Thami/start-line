@@ -9,6 +9,8 @@ import { server, stravaOff } from '../../test/server'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 import plan5k from '../../test/fixtures/plan-5k.json'
 import { Home } from './Home'
+import { journeyOf } from '../journey/journey-fixtures'
+import type { JourneyActions } from '../journey/useJourney'
 
 const thandi = { id: 'runner-1', displayName: 'Thandi', maxHeartRate: 190 } as Runner
 
@@ -37,7 +39,8 @@ const signedIn = { ...accountsOff, enabled: true, getToken: () => Promise.resolv
 
 const renderHome = (props: Partial<Parameters<typeof Home>[0]> = {}, { signIn = false } = {}) => {
   const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenRuns: vi.fn(), onOpenAccount: vi.fn() }
-  const home = <Home runner={thandi} units="km" today="2026-10-23" current={null} runs={[]} {...handlers} {...props} />
+  const home = <Home runner={thandi} units="km" today="2026-10-23" current={null} runs={[]}
+    journey={{ state: { kind: 'ready', journey: journeyOf([]), refreshFailed: false }, actions: {} as JourneyActions }} {...handlers} {...props} />
   render(signIn ? <AuthContext.Provider value={signedIn}>{home}</AuthContext.Provider> : home)
   const user = userEvent.setup()
   return { ...handlers, user, openTab: async (name: 'Today' | 'Tools') => { const more = screen.getByText(/^Coaching, insights and tools/, { selector: 'summary' }); if (name === 'Tools' && !more.closest('details')?.open) await user.click(more); const summary = screen.getByText(/^Running tools/, { selector: 'summary' }); if ((summary.closest('details')?.open ?? false) !== (name === 'Tools')) await user.click(summary) } }
@@ -456,7 +459,8 @@ it('never shows the previous account’s totals while a different account loads'
     return HttpResponse.json([{ date: '2026-10-22', distanceKm: first ? 10 : 20, source: 'Uploaded' }])
   }))
   const handlers = { onOpenPlan: vi.fn(), onBuildPlan: vi.fn(), onOpenRun: vi.fn(), onOpenRuns: vi.fn(), onOpenAccount: vi.fn() }
-  const view = (id: string) => <AuthContext.Provider value={signedIn}><Home runner={{ ...thandi, id }} units="km" today="2026-10-23" current={null} {...handlers} /></AuthContext.Provider>
+  const view = (id: string) => <AuthContext.Provider value={signedIn}><Home runner={{ ...thandi, id }} units="km" today="2026-10-23" current={null}
+    journey={{ state: { kind: 'ready', journey: journeyOf([]), refreshFailed: false }, actions: {} as JourneyActions }} {...handlers} /></AuthContext.Provider>
   const { rerender } = render(view('one'))
   const running = screen.getByRole('region', { name: 'Your running' })
   expect(await within(running).findAllByText('10')).toHaveLength(2)

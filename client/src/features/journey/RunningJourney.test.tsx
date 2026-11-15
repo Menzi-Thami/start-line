@@ -102,6 +102,7 @@ describe('Past plan race recordings', () => {
     vi.spyOn(api.me.journey, 'get').mockResolvedValue(journeyOf([past]))
     vi.spyOn(api.me.journey, 'chapter').mockResolvedValue(past)
     vi.spyOn(api.me, 'activities').mockRejectedValueOnce(new Error('Unavailable')).mockResolvedValue([run])
+    const load = vi.spyOn(api.me, 'activity').mockResolvedValue({ ...run, elapsedSeconds: 16812 } as unknown as Activity)
     const user = userEvent.setup()
     show()
     await user.click(await screen.findByRole('button', { name: 'View chapter' }))
@@ -110,6 +111,8 @@ describe('Past plan race recordings', () => {
     expect(screen.getByRole('button', { name: 'I finished' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Retry recorded runs' }))
     expect(await screen.findByRole('heading', { name: 'We found your Past marathon.' })).toBeInTheDocument()
+    expect(await screen.findByText('4:40:12')).toBeVisible()
+    expect(load).toHaveBeenCalledWith('test-token', run.id)
   })
 
   it('drops a late chapter response after opening another chapter', async () => {

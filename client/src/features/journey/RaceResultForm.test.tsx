@@ -120,6 +120,16 @@ describe('Race result from an existing Strava recording', () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ activityId: upload.id, finishTime: '04:39:12' }))
   })
 
+  it('keeps a repeated import as one recording choice when reviewing its details', async () => {
+    render(<RaceResultForm chapter={marathon} today="2026-11-14" units="km" runs={[run, run]} onLoadActivity={async () => detail} onSave={vi.fn()} onDelete={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Review details' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const select = screen.getByRole('combobox', { name: 'Link a recorded run (optional)' }) as HTMLSelectElement
+    expect([...select.options].map(option => option.value)).toEqual(['', run.id])
+    expect(select).toHaveValue(run.id)
+    expect(screen.getByRole('textbox', { name: 'Minutes' })).toHaveValue('40')
+  })
+
   it('offers manual entry when a recording expired or became unavailable', async () => {
     const user = userEvent.setup()
     const onSave = vi.fn()

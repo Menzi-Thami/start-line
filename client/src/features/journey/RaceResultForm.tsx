@@ -67,7 +67,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
     return () => { mounted.current = false }
   }, [])
   const raceDay = draft.date
-  const candidates = runs.filter(run => run.kind !== 'Other' && run.localDate === raceDay)
+  const candidates = [...new Map(runs.map(run => [run.id, run])).values()].filter(run => run.kind !== 'Other' && run.localDate === raceDay)
   const suggestions = !saved && chapter.raceDate && chapter.raceDate <= today ? raceMatches(chapter, runs) : []
   // Even two near-identical recordings can be separate runs. Ask the runner to choose, never infer a duplicate.
   const suggested = suggestions.length === 1 ? suggestions[0] : suggestions.find(run => run.id === selectedRecording)

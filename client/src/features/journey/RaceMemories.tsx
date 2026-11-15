@@ -8,6 +8,7 @@ import { personalBests, timeSource } from './race-history-model'
 import { RaceResultForm } from './RaceResultForm'
 import type { MajorDefinition, MarathonMajor, RaceMemory } from './types'
 import type { SouthAfricanRace } from './sa-races'
+import { RecordedRaceSuggestions } from './RecordedRaceSuggestions'
 import type { RaceHistoryStore } from './useRaceHistory'
 
 interface Props {
@@ -25,6 +26,7 @@ interface Props {
 
 export function RaceMemories({ store, today, units, selectedMajor, selectedRaceId, newMajor, newLocal, onClearFilter, onSaved, onRecovery }: Props) {
   const [editing, setEditing] = useState<RaceMemory | 'new' | null>(newMajor !== undefined || newLocal ? 'new' : null)
+  const [suggestedLocal, setSuggestedLocal] = useState<SouthAfricanRace | null>(null)
   const [year, setYear] = useState('all')
   const [shown, setShown] = useState(20)
   const title = useRef<HTMLHeadingElement>(null)
@@ -33,7 +35,7 @@ export function RaceMemories({ store, today, units, selectedMajor, selectedRaceI
   const bests = personalBests(races)
   const years = [...new Set(races.map(memory => memory.result.raceDate.slice(0, 4)))].sort().reverse()
   const filtered = races.filter(memory => (year === 'all' || memory.result.raceDate.startsWith(year)) && (!selectedMajor || memory.major === selectedMajor) && (!selectedRaceId || memory.result.id === selectedRaceId))
-  const close = () => { setEditing(null); title.current?.focus() }
+  const close = () => { setEditing(null); setSuggestedLocal(null); title.current?.focus() }
   return <section className="race-memories" aria-labelledby="race-memories-title">
     <header className="journey-section-head">
       <div><p className="plan-kicker">THE FINISH LINES YOU REMEMBER</p><h2 id="race-memories-title" ref={title} tabIndex={-1}>Your races.</h2>
@@ -41,9 +43,10 @@ export function RaceMemories({ store, today, units, selectedMajor, selectedRaceI
       <button type="button" className="button button-primary" onClick={() => setEditing('new')}>Add a past race</button>
     </header>
     {editing && <RaceMemoryEditor key={editing === 'new' ? `new-${newMajor ?? ''}` : editing.result.id}
-      memory={editing === 'new' ? null : editing} initialMajor={editing === 'new' ? newMajor ?? null : editing.major} initialLocal={editing === 'new' ? newLocal : null}
+      memory={editing === 'new' ? null : editing} initialMajor={editing === 'new' ? newMajor ?? null : editing.major} initialLocal={editing === 'new' ? newLocal ?? suggestedLocal : null}
       majors={majors} store={store} today={today} units={units} onCancel={close}
       onSaved={(memory) => { onSaved(memory, memory.result.outcome === 'Finished' && (editing === 'new' || editing.result.outcome !== 'Finished')); close() }} />}
+    <RecordedRaceSuggestions saved={races} today={today} units={units} onPick={race => { setSuggestedLocal(race); setEditing('new') }} />
     <div className="race-history-filters">
       <label className="field"><span className="field-label">Race year</span><select className="input" value={year} onChange={event => { setYear(event.target.value); setShown(20) }}>
         <option value="all">All years</option>{years.map(value => <option key={value}>{value}</option>)}

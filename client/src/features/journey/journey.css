@@ -431,3 +431,9 @@
   .maintenance-calendar-day { min-height: 3.7rem; }
   .maintenance-calendar-grid { gap: .12rem; }
 }
+
+.race-recording-suggestions { margin: var(--space-4) 0; padding: var(--space-4); border: 1px solid var(--accent); background: var(--accent-soft); border-radius: var(--radius-md); }
+.race-recording-suggestions h3 { margin: .4rem 0 .8rem; color: var(--ink); font-size: var(--text-xl); }
+.race-recording-suggestion { display: flex; gap: 1rem; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.race-recording-suggestion p { margin: .3rem 0; color: var(--ink-2); }
+.race-recording-suggestion .button { flex: 0 0 auto; }

@@ -1,9 +1,10 @@
 import type { RaceMemory } from './types'
+import type { ActivitySummary } from '../../lib/types'
 
 // Recognisable South African finish lines, not official race registrations or results.
 // Dates are deliberately not guessed; a runner confirms the event and their recorded activity.
 export const SA_RACES = [
-  { id: 'nelson-mandela', name: 'Nelson Mandela Marathon', distanceKm: 42.195, place: 'KwaZulu-Natal', aliases: ['Mandela Marathon'] },
+  { id: 'nelson-mandela', name: 'Nelson Mandela Marathon', distanceKm: 42.195, place: 'Cape Town', editionDate: '2026-10-18', aliases: ['Mandela Marathon'] },
   { id: 'two-oceans-ultra', name: 'Two Oceans Ultra Marathon', distanceKm: 56, place: 'Cape Town', aliases: ['Two Oceans Marathon', 'Two Oceans Ultra'] },
   { id: 'two-oceans-half', name: 'Two Oceans Half Marathon', distanceKm: 21.0975, place: 'Cape Town', aliases: [] },
   { id: 'comrades', name: 'Comrades Marathon', distanceKm: 90, place: 'KwaZulu-Natal', aliases: ['Comrades'] },
@@ -24,4 +25,21 @@ export function southAfricanFinish(event: SouthAfricanRace, races: readonly Race
   return races.find(race => race.result.outcome === 'Finished' && !race.needsReview
     && race.eventDistanceKm != null && Math.abs(race.eventDistanceKm - event.distanceKm) < 1
     && names.some(name => normalise(name) === normalise(race.eventName)))
+}
+
+/**
+ * Date+distance is only a possible match. Taperday does not store Strava's event title;
+ * never infer participation or award a trophy without the runner confirming the event.
+ */
+export function likelyEditionRecording(event: SouthAfricanRace, runs: readonly ActivitySummary[], saved: readonly RaceMemory[]): ActivitySummary | null {
+  if (!('editionDate' in event)) return null
+  const date = event.editionDate
+  if (saved.some(memory => memory.result.raceDate === date
+    && [event.name, ...event.aliases].some(name => normalise(name) === normalise(memory.eventName)))) return null
+  const matches = runs.filter(run => run.localDate === date && (run.kind === 'Run' || run.kind === 'TrailRun')
+    && Number.isFinite(run.distanceKm) && Number.isFinite(run.movingSeconds) && run.movingSeconds >= 60
+    && Math.abs(run.distanceKm - event.distanceKm) <= Math.max(.4, event.distanceKm * .05)
+    && !saved.some(memory => memory.result.activityId === run.id))
+  // Two recordings can be different runs; do not pick between them.
+  return matches.length === 1 ? matches[0]! : null
 }

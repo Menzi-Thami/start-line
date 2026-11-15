@@ -299,11 +299,19 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const catalogue = races.kind === 'ready' ? races.races : []
   // Races found by searching (or a saved plan's race that isn't a headline one) sit beside the rack's.
   const [searchedRaces, setSearchedRaces] = useState<Race[]>([])
-  const knownRaces = [...catalogue, ...searchedRaces.filter((r) => !catalogue.some((c) => c.slug === r.slug))]
+  const snapshot = initial?.raceSnapshot
+  const retainedRace: Race | undefined = initial?.raceSlug && snapshot ? {
+    slug: initial.raceSlug, name: snapshot.name ?? 'Your saved race', date: snapshot.date, distanceKm: snapshot.distanceKm,
+    location: 'Saved with your plan', summary: 'Race details retained with your plan.', website: null,
+    dateStatus: 'Provisional', distanceConfirmed: false, major: false,
+  } : undefined
+  const retained = retainedRace && !catalogue.some(r => r.slug === retainedRace.slug) && !searchedRaces.some(r => r.slug === retainedRace.slug) ? retainedRace : undefined
+  const knownRaces = [...catalogue, ...searchedRaces.filter((r) => !catalogue.some((c) => c.slug === r.slug)), ...(retained ? [retained] : [])]
   const chosenRace = knownRaces.find((r) => r.slug === draft.race)
   const rememberRace = (race: Race) => setSearchedRaces((current) => (current.some((r) => r.slug === race.slug) ? current : [...current, race]))
   // A plan built for a searched-for race comes back with only its slug: look the race up so its date and distance show.
-  const lookUp = races.kind === 'ready' && draft.race !== OTHER && draft.race !== '' && !chosenRace ? draft.race : null
+  const lookUp = races.kind === 'ready' && draft.race !== OTHER && draft.race !== ''
+    && !catalogue.some(r => r.slug === draft.race) && !searchedRaces.some(r => r.slug === draft.race) ? draft.race : null
   useEffect(() => {
     if (!lookUp) return
     const controller = new AbortController()
@@ -371,6 +379,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     const currentKm = Number(draft.currentKm)
     onSubmit({
       raceSlug: draft.race === OTHER ? undefined : draft.race,
+      ...(initial?.raceSnapshot && chosenRace && draft.race === initial.raceSlug
+        ? { raceSnapshot: { name: chosenRace.name, date: chosenRace.date, distanceKm: chosenRace.distanceKm } } : {}),
       raceName: draft.race === OTHER ? draft.otherName.trim() || undefined : undefined,
       distanceKm: draft.race === OTHER ? toKilometres(Number(draft.otherKm), units) : undefined,
       raceDate: draft.race === OTHER ? draft.otherDate : undefined,
@@ -532,7 +542,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       <RaceSearch
                         units={units}
                         selected={draft.race}
-                        selectedRace={searchedRaces.find((r) => r.slug === draft.race)}
+                        selectedRace={searchedRaces.find((r) => r.slug === draft.race) ?? retained}
                         onPick={(race) => {
                           rememberRace(race)
                           pickRace(race.slug)

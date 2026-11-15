@@ -7,6 +7,8 @@ export interface PlanInputs {
   raceName?: string
   distanceKm?: number
   raceDate?: string
+  /** Resolved metadata retained by a saved plan. Live catalogue details still take precedence on the API. */
+  raceSnapshot?: { name?: string; date: string; distanceKm: number }
   goalSeconds: number
   runDays: DayOfWeek[]
   longRunDay: DayOfWeek
@@ -92,6 +94,11 @@ export function toSearchParams(inputs: PlanInputs): URLSearchParams {
   const p = new URLSearchParams()
   if (inputs.raceSlug) {
     p.set('race', inputs.raceSlug)
+    if (inputs.raceSnapshot) {
+      p.set('km', String(inputs.raceSnapshot.distanceKm))
+      p.set('date', inputs.raceSnapshot.date)
+      if (inputs.raceSnapshot.name) p.set('name', inputs.raceSnapshot.name)
+    }
   } else {
     if (inputs.distanceKm) p.set('km', String(inputs.distanceKm))
     if (inputs.raceDate) p.set('date', inputs.raceDate)
@@ -165,6 +172,8 @@ export function fromSearchParams(params: URLSearchParams): PlanInputs | null {
 
   return {
     raceSlug,
+    ...(raceSlug && distanceKm && raceDate && ISO_DATE.test(raceDate)
+      ? { raceSnapshot: { name: params.get('name')?.slice(0, 120) || undefined, date: raceDate, distanceKm } } : {}),
     raceName: raceSlug ? undefined : params.get('name')?.slice(0, 120) || undefined,
     distanceKm: raceSlug ? undefined : distanceKm,
     raceDate: raceSlug ? undefined : raceDate,
@@ -189,6 +198,8 @@ export function fromRequest(request: GeneratePlanRequest): PlanInputs | null {
   if (!goalSeconds) return null
   return {
     raceSlug: request.raceSlug ?? undefined,
+    ...(request.raceSlug && request.distanceKm && request.raceDate
+      ? { raceSnapshot: { name: request.raceName ?? undefined, date: request.raceDate, distanceKm: request.distanceKm } } : {}),
     raceName: request.raceName ?? undefined,
     distanceKm: request.distanceKm ?? undefined,
     raceDate: request.raceDate ?? undefined,
@@ -220,9 +231,9 @@ function recentFromRequest(request: GeneratePlanRequest): RecentResultInputs | u
 export function toRequest(inputs: PlanInputs): GeneratePlanRequest {
   return {
     raceSlug: inputs.raceSlug ?? null,
-    raceName: inputs.raceSlug ? null : (inputs.raceName ?? null),
-    distanceKm: inputs.raceSlug ? null : (inputs.distanceKm ?? null),
-    raceDate: inputs.raceSlug ? null : (inputs.raceDate ?? null),
+    raceName: inputs.raceSlug ? inputs.raceSnapshot?.name ?? null : (inputs.raceName ?? null),
+    distanceKm: inputs.raceSlug ? inputs.raceSnapshot?.distanceKm ?? null : (inputs.distanceKm ?? null),
+    raceDate: inputs.raceSlug ? inputs.raceSnapshot?.date ?? null : (inputs.raceDate ?? null),
     goalTime: toTimeSpan(inputs.goalSeconds),
     runDays: inputs.runDays,
     longRunDay: inputs.longRunDay,

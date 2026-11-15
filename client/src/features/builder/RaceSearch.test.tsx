@@ -16,6 +16,27 @@ const builder = (initial: PlanInputs | null = null) =>
   render(<BuilderForm races={{ kind: 'ready', races: racesFixture }} onRetryRaces={vi.fn()} initial={initial} units="km" busy={false} serverErrors={{}} today="2026-11-09" onSubmit={vi.fn()} />)
 
 describe('finding a race that isn’t on the rack', () => {
+  it('keeps saved race details while changing availability after its catalogue listing is removed', async () => {
+    server.use(http.get('*/api/v1/races/:slug', () => new HttpResponse(null, { status: 404 })))
+    const onSubmit = vi.fn()
+    const initial: PlanInputs = { raceSlug: knysna.slug, raceSnapshot: { name: knysna.name, date: knysna.date, distanceKm: knysna.distanceKm },
+      goalSeconds: 4 * 3600, runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'], longRunDay: 'Sunday', experience: 'Regular',
+      strengthDays: [], planFrom: '2026-11-09', version: 2 }
+    const user = userEvent.setup()
+    render(<BuilderForm races={{ kind: 'ready', races: [] }} onRetryRaces={vi.fn()} initial={initial} units="km" busy={false}
+      serverErrors={{}} today="2026-11-09" onSubmit={onSubmit} />)
+    expect(await screen.findByText(/Knysna Forest Marathon, Saturday 3 July 2027/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Change days' }))
+    const days = within(screen.getByRole('group', { name: 'Which days can you run?' }))
+    await user.click(days.getByRole('checkbox', { name: 'Tuesday' }))
+    await user.click(days.getByRole('checkbox', { name: 'Wednesday' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await user.click(screen.getByRole('button', { name: 'Build my plan' }))
+    expect(onSubmit).toHaveBeenCalledOnce()
+    expect(onSubmit.mock.calls[0]![0]).toMatchObject({ raceSlug: knysna.slug, raceSnapshot: initial.raceSnapshot, version: 2, planFrom: initial.planFrom })
+    expect(onSubmit.mock.calls[0]![0].runDays).toContain('Wednesday')
+  })
   it('searches as the runner types and picks a result as their race', async () => {
     const asked: string[] = []
     server.use(http.get('*/api/v1/races/search', ({ request }) => {

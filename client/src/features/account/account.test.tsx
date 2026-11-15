@@ -109,7 +109,7 @@ function accountApi(start: { runner: Runner | null; plans?: SavedPlanSummary[]; 
     }),
     http.get('*/api/v1/me/plans/:id', ({ request }) =>
       authorised(request)
-        ? HttpResponse.json({ ...savedPlanBody, plan: {} })
+        ? HttpResponse.json({ ...savedPlanBody, plan: planFixture })
         : unauthorised(),
     ),
   )

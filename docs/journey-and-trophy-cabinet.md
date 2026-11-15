@@ -1,8 +1,10 @@
 # Your journey, races and trophy cabinet
 
-Journey is a permanent account destination, available with or without a current training plan. Its URL is `?view=journey`; `section=training`, `section=races` and `section=cabinet` reopen the chosen section. Old `?view=plans` links also open Journey. Plan still includes This week, Calendar and Progress. The main navigation is Home, Plan, Runs, Journey, Account, with Plan omitted between training chapters.
+Journey is a permanent account destination, available with or without a current training plan. Its URL is `?view=journey`; `section=training`, `section=races` and `section=cabinet` reopen the chosen section. Old `?view=plans` links also open Journey. Training Plan includes This week, Calendar and Progress. The main navigation is Home, Plan, Runs, Journey, Account. Plan opens the independent recovery screen while recovery is running, and is omitted when there is neither training nor recovery.
 
 ## Training chapters
+
+Training automatically concludes after the runner's local race day. It is saved as a `Concluded` chapter, regardless of whether the result is known or recovery has started. Recovery no longer changes the training chapter's lifecycle. Home links straight to its saved race review; missing results still need appropriate confirmation. See [plan history](plan-history.md) for midnight, offline check-in and historical-link behavior.
 
 Replacing a plan retains the previous chapter. **Archive training plan** explicitly clears the current plan while keeping the chapter, logged runs, race result, achievements and recovery. It does not complete missed sessions, assume a race finish or stop recovery. A version check protects a plan changed on another device.
 

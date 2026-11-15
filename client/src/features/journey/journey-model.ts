@@ -34,6 +34,11 @@ export function finishStage(chapter: PlanChapter, today: string): FinishStage {
 export const chapterFor = (journey: Journey | null | undefined, planId: string | null | undefined) =>
   planId ? journey?.chapters?.find(chapter => chapter.planId === planId) ?? null : null
 
+/** The recent training chapter that ended, independently of whether its race was run. */
+export const recentConclusion = (journey: Journey | null | undefined, today: string): PlanChapter | null =>
+  journey?.chapters.filter(chapter => chapter.raceDate && chapter.raceDate < today && chapter.raceDate >= addDays(today, -7))
+    .sort((a, b) => (b.raceDate ?? '').localeCompare(a.raceDate ?? ''))[0] ?? null
+
 export const achievement = (chapter: PlanChapter | null | undefined, kind: AchievementKind): Achievement | null =>
   chapter?.achievements.find(a => a.kind === kind) ?? null
 

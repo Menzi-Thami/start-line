@@ -7,7 +7,7 @@ import { PlanLocked } from '../features/account/PlanLocked'
 import { SignUpPitch } from '../features/account/SignUpPitch'
 import { StartListCelebration } from '../features/account/StartListCelebration'
 import { useCalendarLink } from '../features/account/useCalendarLink'
-import { samePlan, sameRace, useCurrentPlan } from '../features/account/useCurrentPlan'
+import { currentTraining, samePlan, sameRace, useCurrentPlan } from '../features/account/useCurrentPlan'
 import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { FeedbackBox } from '../features/account/FeedbackBox'
@@ -37,7 +37,9 @@ import { SignInLanding } from '../features/home/SignInLanding'
 import { BrandIntroGate } from '../features/home/BrandIntroGate'
 import { PlanView } from '../features/plan/PlanView'
 import { RunningJourney } from '../features/journey/RunningJourney'
-import { planRunDays } from '../features/journey/journey-model'
+import { isLiveRecovery, planRunDays } from '../features/journey/journey-model'
+import { useJourney } from '../features/journey/useJourney'
+import { useToday } from '../lib/useToday'
 import { Replan } from '../features/plan/Replan'
 import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
 import { StravaWelcome } from '../features/sync/StravaWelcome'
@@ -57,6 +59,7 @@ const AccountPage = lazy(() => import('../features/account/AccountPage').then((m
 const ActivityPage = lazy(() => import('../features/activities/ActivityPage').then((module) => ({ default: module.ActivityPage })))
 const MyRuns = lazy(() => import('../features/activities/MyRuns').then((module) => ({ default: module.MyRuns })))
 const JourneyPage = lazy(() => import('../features/journey/JourneyPage').then((module) => ({ default: module.JourneyPage })))
+const RecoveryPlanPage = lazy(() => import('../features/journey/RecoveryPlanPage').then((module) => ({ default: module.RecoveryPlanPage })))
 const CouchTo5K = lazy(() => import('../features/beginner/CouchTo5K').then((module) => ({ default: module.CouchTo5K })))
 
 type PlanState =
@@ -65,7 +68,7 @@ type PlanState =
   | { kind: 'ready'; plan: TrainingPlan; inputs: PlanInputs }
   | { kind: 'error'; message: string; inputs: PlanInputs }
 
-type View = 'home' | 'build' | 'beginner' | 'runs' | 'journey' | 'account' | 'onboarding' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
+type View = 'home' | 'build' | 'beginner' | 'runs' | 'journey' | 'recovery' | 'account' | 'onboarding' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
 
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
@@ -105,7 +108,7 @@ const viewFromUrl = (): View => {
   const view = new URLSearchParams(window.location.search).get('view')
   // Old saved-plan links now open the permanent journey, including when there is no current plan.
   if (view === 'plans') return 'journey'
-  return view === 'home' || view === 'beginner' || view === 'runs' || view === 'journey' || view === 'account' || view === 'onboarding' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
+  return view === 'home' || view === 'beginner' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account' || view === 'onboarding' || view === 'privacy' || view === 'unsubscribe' || view === 'sign-in' ? view : 'build'
 }
 
 /** Wait for the full five-scene story without delaying reduced-motion users.
@@ -128,10 +131,10 @@ function finishBuildMovie(signal: AbortSignal): Promise<void> {
 }
 
 export function App() {
-  const today = localToday()
   const auth = useAuth()
   const owner = auth.account ? ownerOf(auth.account) : null
   const runner = useRunner()
+  const today = useToday(runner.state.kind === 'ready' ? runner.state.runner.timeZone : undefined)
   // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
   const [initial, setInitial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
   const [view, setView] = useState<View>(viewFromUrl)
@@ -304,7 +307,10 @@ export function App() {
   // The runner's runs (uploaded and synced), bests and Strava status, shown inside the plan. Loaded when the plan
   // view opens, so a new upload or a run that just arrived from Strava appears.
   const synced = useSyncedRuns(runner.state.kind === 'ready' && (view === 'build' || view === 'home'))
-  const currentPlan = useCurrentPlan(runner.state.kind === 'ready')
+  const currentPlan = useCurrentPlan(runner.state.kind === 'ready', today)
+  const journey = useJourney(runner.state.kind === 'ready')
+  const recovery = journey.state.kind === 'ready' ? journey.state.journey.recovery : null
+  const recovering = isLiveRecovery(recovery)
   const landing = useRef(false)
   const [landed, setLanded] = useState(false)
   // Someone who has just signed up has no plan to open, so the builder never waits for one.
@@ -336,7 +342,8 @@ export function App() {
   const savePlan = useCallback((plan: { id: string; plan: TrainingPlan }) => owner && saveSnapshot(owner, { plan }), [owner])
 
   // Check-ins live on the runner's saved plan, so they're offered only when that's the plan on screen.
-  const ownPlan = currentPlan.current !== undefined ? currentPlan.current : (copy?.current ?? undefined)
+  const copiedCurrent = copy?.current && copy.plan?.id === copy.current.id && copy.plan.plan.race.date < today ? null : copy?.current
+  const ownPlan = currentTraining(currentPlan.current !== undefined ? currentPlan.current : (copiedCurrent ?? undefined), today)
   const savedOnScreen =
     plan.kind === 'ready' && ownPlan && samePlan(toRequest(plan.inputs), ownPlan.inputs) ? ownPlan.id : null
   const checkIns = useCheckIns(savedOnScreen)
@@ -422,7 +429,7 @@ export function App() {
     // A runner coming back with their plan kept on this device opens straight on it, as opening it from Home would show
     // it, while the account loads. Only before this visit has found their plan: after that, Home opens it for real.
     const copied =
-      latestPlan === undefined && copy?.current && copy.plan?.id === copy.current.id
+      latestPlan === undefined && found && copy?.current && copy.plan?.id === copy.current.id
         ? { inputs: fromRequest(copy.current.inputs), plan: copy.plan.plan }
         : null
     const own = found ? fromRequest(found.inputs) : null
@@ -508,6 +515,7 @@ export function App() {
     if (item === 'journey') return go('journey')
     if (item === 'account') return go('account')
     if (view === 'beginner' && item === 'plan') return
+    if (recovering && !(view === 'build' && plan.kind === 'ready' && plan.plan.race.date >= today && !editing)) return go('recovery')
     const tab = 'week'
     if (view === 'build' && plan.kind === 'ready' && !editing) {
       const url = new URL(window.location.href)
@@ -541,7 +549,7 @@ export function App() {
     setOpenRun(null)
     // The build view keeps the plan link in the URL; the others get a plain view parameter.
     const query =
-      next === 'home' || next === 'beginner' || next === 'runs' || next === 'journey' || next === 'account' || next === 'onboarding' || next === 'privacy' || next === 'sign-in'
+      next === 'home' || next === 'beginner' || next === 'runs' || next === 'journey' || next === 'recovery' || next === 'account' || next === 'onboarding' || next === 'privacy' || next === 'sign-in'
         ? `?view=${next}`
         : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
@@ -555,6 +563,15 @@ export function App() {
     setOpenRun({ id, uploaded })
     moveTo(`?view=runs&run=${encodeURIComponent(id)}`, true)
     window.scrollTo?.({ top: 0 })
+  }
+
+  const openRecovery = (raceId?: string) => {
+    go('recovery')
+    if (raceId) window.history.replaceState(null, '', `?view=recovery&race=${encodeURIComponent(raceId)}`)
+  }
+  const openChapter = (planId?: string) => {
+    go('journey')
+    if (planId) window.history.replaceState(null, '', `?view=journey&section=training&chapter=${encodeURIComponent(planId)}`)
   }
 
   const openOwnDay = (date: string) => {
@@ -746,7 +763,7 @@ export function App() {
   // Strength is part of Plan, so training always has one navigation destination.
   const onPlan = view === 'build' && plan.kind === 'ready' && !editing
   const barCurrent: TabBarItem | null =
-    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
+    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
   const showBar =
     !(plan.kind === 'loading' && showBuilder) &&
@@ -927,7 +944,7 @@ export function App() {
           </section>
         )}
 
-        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
+        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
           <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
         )}
 
@@ -938,13 +955,15 @@ export function App() {
             units={units}
             today={today}
             current={ownPlan}
+            journey={journey}
             runs={runs ?? copy?.runs}
             bests={synced.bests ?? copy?.bests}
             strava={synced.strava ?? copy?.strava}
             initialPlan={copy?.plan}
             onPlanLoaded={savePlan}
             onOpenPlan={() => openOwnPlan()}
-            onOpenJourney={() => go('journey')}
+            onOpenJourney={openChapter}
+            onOpenRecovery={openRecovery}
             onOpenRacePrep={() => { setPreparationRequest({ mode: 'race', date: null }); openOwnPlan() }}
             onOpenDay={openOwnDay}
             onBuildPlan={startFresh}
@@ -964,8 +983,9 @@ export function App() {
         )}
 
         {view === 'journey' && state.kind === 'ready' && (
-          <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} />
+          <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} onOpenRecovery={openRecovery} />
         )}
+        {view === 'recovery' && state.kind === 'ready' && <RecoveryPlanPage key={state.runner.id} units={units} today={today} journey={journey} onNewRace={startFresh} onOpenJourney={() => openChapter()} onOpenTraining={ownPlan ? () => openOwnPlan() : undefined} />}
         {view === 'runs' && state.kind === 'ready' && (
           compact ? (
             openRun ? (
@@ -1158,6 +1178,8 @@ export function App() {
                 ) : undefined}
                 journeyPlanId={savedOnScreen && state.kind === 'ready' ? savedOnScreen : null}
                 onNewRace={startFresh}
+                onOpenJourney={() => openChapter()}
+                onOpenRecovery={() => openRecovery()}
                 onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                 // The bar's Home does this job wherever the bar is shown.
                 onBack={state.kind === 'ready' && !showBar ? () => go('home') : undefined}
@@ -1236,7 +1258,7 @@ export function App() {
           variant={compact ? 'bar' : 'rail'}
           current={barCurrent}
           // Journey remains available even after the runner archives their last current plan.
-          hasPlan={ownPlan !== null || onPlan}
+          hasPlan={ownPlan !== null || onPlan || recovering || view === 'recovery'}
           onPick={pickFromBar}
           account={state.kind === 'ready' ? { name: state.runner.displayName, photo } : undefined}
         />

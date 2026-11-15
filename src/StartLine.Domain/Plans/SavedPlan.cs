@@ -9,6 +9,9 @@ public enum SavedPlanStatus
 
     /// <summary>A past plan: replaced by a newer one. Kept read-only, with the runs that were matched to it.</summary>
     Archived,
+
+    /// <summary>Race day has ended. The training prescription is history, independently of race results or recovery.</summary>
+    Concluded,
 }
 
 /// <summary>
@@ -201,8 +204,20 @@ public sealed class SavedPlan
     /// <summary>Replaced by a newer plan: it becomes a past plan.</summary>
     public void Archive() => Status = SavedPlanStatus.Archived;
 
+    /// <summary>End training after its local race day. This confirms no sessions and awards no race finish.</summary>
+    public bool Conclude(DateOnly today)
+    {
+        if (Status != SavedPlanStatus.Active || Inputs.RaceDate is not { } raceDate || today <= raceDate) return false;
+        Status = SavedPlanStatus.Concluded;
+        return true;
+    }
+
     /// <summary>A past plan made current again. The caller archives whichever plan was current.</summary>
-    public void Restore() => Status = SavedPlanStatus.Active;
+    public void Restore()
+    {
+        if (Status == SavedPlanStatus.Concluded) throw new DomainException("This training plan has concluded. Choose a new race to train again.");
+        Status = SavedPlanStatus.Active;
+    }
 
     public void Rename(string name)
     {

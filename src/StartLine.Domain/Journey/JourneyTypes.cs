@@ -36,6 +36,9 @@ public enum JourneyLifecycle
 
     /// <summary>A past plan with no race result or recovery: kept as history.</summary>
     Archived,
+
+    /// <summary>The training plan has ended after race day. Race confirmation and recovery have separate lifecycles.</summary>
+    Concluded,
 }
 
 /// <summary>A recovery's distance band. Decides how long each phase lasts.</summary>

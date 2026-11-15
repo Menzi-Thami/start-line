@@ -1,11 +1,14 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { accountsOff, AuthContext } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { Activity, ActivitySummary } from '../../lib/types'
 import { chapter, journeyOf, raceResult, recovery } from './journey-fixtures'
 import { RunningJourney } from './RunningJourney'
+import { RecoveryPlanPage } from './RecoveryPlanPage'
+import { useJourney } from './useJourney'
 import type { PlanChapter, RaceResult } from './types'
 
 const auth = { ...accountsOff, enabled: true, account: { name: 'Test Runner', email: 'runner@example.test' }, getToken: () => Promise.resolve('test-token') }
@@ -79,12 +82,19 @@ describe('Past plan race recordings', () => {
   it('starts recovery from the saved historical race without re-entering its name, date or distance', async () => {
     const saved = { ...past, raceResult: result }
     const started = recovery({ planId: past.planId, eventName: past.raceName, raceDate: result.raceDate, distanceKm: result.distanceKm! })
-    vi.spyOn(api.me.journey, 'get').mockResolvedValueOnce(journeyOf([saved])).mockResolvedValue(journeyOf([saved], { recovery: started }))
+    let hasStarted = false
+    vi.spyOn(api.me.journey, 'get').mockImplementation(async () => journeyOf([saved], { recovery: hasStarted ? started : null }))
     vi.spyOn(api.me.journey, 'chapter').mockResolvedValue(saved)
     vi.spyOn(api.me, 'activities').mockResolvedValue([])
-    const start = vi.spyOn(api.me.journey, 'startRecovery').mockResolvedValue(started)
+    const start = vi.spyOn(api.me.journey, 'startRecovery').mockImplementation(async () => { hasStarted = true; return started })
     const user = userEvent.setup()
-    show()
+    function Flow() {
+      const [recoveryPage, setRecoveryPage] = useState(false)
+      const journey = useJourney(true)
+      return recoveryPage ? <RecoveryPlanPage journey={journey} today="2026-11-14" units="km" onNewRace={vi.fn()} onOpenJourney={vi.fn()} />
+        : <RunningJourney units="km" today="2026-11-14" onOpenRecovery={() => setRecoveryPage(true)} />
+    }
+    render(<AuthContext.Provider value={auth}><Flow /></AuthContext.Provider>)
     await user.click(await screen.findByRole('button', { name: 'View chapter' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await user.click(await screen.findByText('Race details & corrections'))
@@ -92,6 +102,8 @@ describe('Past plan race recordings', () => {
     expect(await screen.findByRole('dialog', { name: 'RACE FINISHED.' })).toBeInTheDocument()
     await user.keyboard('{Escape}')
     await user.click(screen.getByRole('button', { name: 'Plan recovery from this race' }))
+    expect(screen.getByRole('heading', { name: 'Your recovery plan.' })).toBeVisible()
+    expect(document.querySelector('.training-story')).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: 'Distance (km)' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Start my recovery' }))
     expect(start).toHaveBeenCalledWith('test-token', expect.objectContaining({ planId: past.planId, eventName: past.raceName, raceDate: result.raceDate, distanceKm: result.distanceKm }))

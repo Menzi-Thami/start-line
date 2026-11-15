@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useAuth, type Auth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
@@ -6,7 +6,6 @@ import type { ActivitySummary, DayOfWeek } from '../../lib/types'
 import { FinishLineFilm } from './FinishLineFilm'
 import { storyFromChapter } from './journey-story'
 import { achievement, distanceBadge, formatClock, isLiveRecovery, OUTCOME_WORDS, recoveryWelcome } from './journey-model'
-import { RecoveryDashboard, RecoveryOffer } from './Recovery'
 import { RaceResultForm } from './RaceResultForm'
 import { TrainingStory } from './TrainingStory'
 import type { JourneyLifecycle, PlanChapter } from './types'
@@ -23,6 +22,7 @@ const LIFECYCLE_WORDS: Record<JourneyLifecycle, string> = {
   Recovering: 'Recovering',
   Recovered: 'Recovered',
   Archived: 'Past plan',
+  Concluded: 'Training concluded',
 }
 
 type Detail = { owner: Auth } & ({ kind: 'loading'; planId: string } | { kind: 'ready'; chapter: PlanChapter; runs: ActivitySummary[] | null } | { kind: 'error'; planId: string; message: string })
@@ -31,16 +31,14 @@ type Detail = { owner: Auth } & ({ kind: 'loading'; planId: string } | { kind: '
  * The runner's running journey: every plan they've finished or moved on from, newest first, with its training story,
  * race result and achievements. Account-backed, so it's the same on every device and survives building a new plan.
  */
-export function RunningJourney({ units, today, runDays = [], onArchived }: { units: Units; today: string; runDays?: DayOfWeek[]; onArchived?: () => void }) {
+export function RunningJourney({ units, today, onArchived, onOpenRecovery }: { units: Units; today: string; runDays?: DayOfWeek[]; onArchived?: () => void; onOpenRecovery?: (raceId?: string) => void }) {
   const auth = useAuth()
   const { state, actions } = useJourney(true)
   const [loaded, setDetail] = useState<Detail | null>(null)
   const detail = loaded?.owner === auth ? loaded : null
   const [chosen, setReplay] = useState<{ owner: Auth; kind: 'training' | 'race'; chapter: PlanChapter; trigger?: HTMLElement } | null>(null)
   const replay = chosen?.owner === auth ? chosen : null
-  const [offerPlan, setOfferPlan] = useState<string | null>(null)
   const journeyRef = useRef<HTMLDivElement>(null)
-  const [manual, setManual] = useState(false)
   const [paging, setPaging] = useState(false)
   const [pageError, setPageError] = useState<string | null>(null)
   const request = useRef(0)
@@ -69,6 +67,19 @@ export function RunningJourney({ units, today, runDays = [], onArchived }: { uni
       setDetail({ kind: 'error', planId, owner: auth, message: reason instanceof Error ? reason.message : 'This plan couldn’t open.' })
     }
   }
+
+  const openRecovery = (raceId?: string) => {
+    if (onOpenRecovery) onOpenRecovery(raceId)
+    else window.location.assign(`?view=recovery${raceId ? `&race=${encodeURIComponent(raceId)}` : ''}`)
+  }
+  const wanted = new URLSearchParams(window.location.search).get('chapter')
+  const openedFromLink = useRef<string | null>(null)
+  const openLink = useEffectEvent((id: string) => { void open(id, true) })
+  useEffect(() => {
+    if (state.kind !== 'ready' || !wanted || openedFromLink.current === wanted || !state.journey.chapters.some(chapter => chapter.planId === wanted)) return
+    openedFromLink.current = wanted
+    openLink(wanted)
+  }, [state, wanted])
 
   if (state.kind === 'off') return null
   if (state.kind === 'loading') return <p className="field-help" role="status">Loading your running journey…</p>
@@ -120,6 +131,7 @@ export function RunningJourney({ units, today, runDays = [], onArchived }: { uni
         <ol className="journey-chapters" aria-label="Your plans">
           {chapters.map(chapter => {
             const result = chapter.raceResult
+            const concluded = chapter.status === 'Concluded' || chapter.status === 'Active' && !!chapter.raceDate && chapter.raceDate < today
             const opened = detail && (detail.kind === 'ready' ? detail.chapter.planId : detail.planId) === chapter.planId ? detail : null
             const recovery = state.journey.recovery?.planId === chapter.planId ? state.journey.recovery : null
             return (
@@ -127,9 +139,9 @@ export function RunningJourney({ units, today, runDays = [], onArchived }: { uni
                 <div className="journey-chapter-head">
                   <div>
                     <p className="journey-chapter-name">{chapter.raceName}</p>
-                    <p className="field-help">{chapter.raceDate ? formatDate(chapter.raceDate, 'long') : 'No race date'} · {chapter.status === 'Active' ? 'Current plan' : 'Past plan'}</p>
+                    <p className="field-help">{chapter.raceDate ? formatDate(chapter.raceDate, 'long') : 'No race date'} · {chapter.status === 'Active' && !concluded ? 'Current plan' : 'Past plan'}</p>
                   </div>
-                  <span className={`journey-lifecycle is-${chapter.lifecycle}`}>{LIFECYCLE_WORDS[chapter.lifecycle]}</span>
+                  <span className={`journey-lifecycle is-${concluded ? 'Concluded' : chapter.lifecycle}`}>{LIFECYCLE_WORDS[concluded ? 'Concluded' : chapter.lifecycle]}</span>
                 </div>
                 <p className="journey-chapter-facts">
                   {chapter.detailsUnavailable ? 'This older plan’s race details are unavailable. Your saved results and achievements are retained.'
@@ -148,7 +160,7 @@ export function RunningJourney({ units, today, runDays = [], onArchived }: { uni
                   </button>
                   {!chapter.detailsUnavailable && achievement(chapter, 'TrainingComplete') && <button type="button" className="button button-quiet" onClick={(event) => setReplay({ owner: auth, kind: 'training', chapter, trigger: event.currentTarget })}>Replay finish line</button>}
                 </div>
-                {chapter.status === 'Active' && chapter.version && onArchived && (
+                {chapter.status === 'Active' && !concluded && chapter.version && onArchived && (
                   <ArchiveChapter planId={chapter.planId} version={chapter.version} onArchived={onArchived} />
                 )}
                 {opened?.kind === 'loading' && <p className="field-help" role="status">Opening…</p>}
@@ -188,21 +200,11 @@ export function RunningJourney({ units, today, runDays = [], onArchived }: { uni
                           await actions.deleteRaceResult(opened.chapter.planId)
                           setDetail(previous => request.current === requestId && previous?.owner === auth && previous.kind === 'ready' && previous.chapter.planId === opened.chapter.planId
                             ? { ...previous, chapter: { ...previous.chapter, raceResult: null } } : previous)
-                          if (request.current === requestId) setOfferPlan(null)
                         }}
                         onCelebrate={opened.chapter.raceResult?.outcome === 'Finished' ? trigger => setReplay({ owner: auth, kind: 'race', chapter: opened.chapter, trigger }) : undefined}
                       />
                     )}
-                    {recovery ? <RecoveryDashboard recovery={recovery} today={today}
-                      onCheckIn={(feeling, redFlags) => actions.checkIn(recovery.id, { feeling, redFlags, date: today })}
-                      onChange={body => actions.changeRecovery(recovery.id, body)} />
-                      : recoveryWelcome(opened.chapter.raceResult?.outcome) && !isLiveRecovery(state.journey.recovery) && (
-                        offerPlan === chapter.planId
-                          ? <RecoveryOffer key={`${chapter.planId}:${opened.chapter.raceResult?.version}`} planId={chapter.planId} eventName={chapter.raceName}
-                              distanceKm={opened.chapter.raceResult?.distanceKm ?? chapter.distanceKm} raceDate={opened.chapter.raceResult?.raceDate} today={today} runDays={runDays}
-                              onStart={async body => { await actions.startRecovery(body); setOfferPlan(null) }} onDecline={() => setOfferPlan(null)} />
-                          : <button type="button" className="button" onClick={() => setOfferPlan(chapter.planId)}>Plan recovery from this race</button>
-                      )}
+                    {(recovery || recoveryWelcome(opened.chapter.raceResult?.outcome) && !isLiveRecovery(state.journey.recovery)) && <button type="button" className="button" onClick={() => openRecovery(opened.chapter.raceResult?.id)}>{recovery ? 'Open recovery plan' : 'Plan recovery from this race'}</button>}
                     {opened.chapter.detailsUnavailable
                       ? <p role="status">The original race date and distance weren’t saved with this older plan. Its training story cannot be rebuilt from the current catalogue.</p>
                       : <TrainingStory story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />}
@@ -219,11 +221,8 @@ export function RunningJourney({ units, today, runDays = [], onArchived }: { uni
         finally { setPaging(false) }
       }}>{paging ? 'Loading older chapters…' : 'Load older chapters'}</button>}
       {pageError && <p className="field-error" role="alert">{pageError}</p>}
-      {!isLiveRecovery(state.journey.recovery) && (
-        manual
-          ? <RecoveryOffer today={today} runDays={runDays} onStart={async (body) => { await actions.startRecovery(body); setManual(false) }} onDecline={() => setManual(false)} />
-          : <button type="button" className="link-button journey-link" onClick={() => setManual(true)}>Ran a race outside Taperday? Plan your recovery</button>
-      )}
+      {!isLiveRecovery(state.journey.recovery) && <button type="button" className="link-button journey-link" onClick={() => openRecovery()}>Ran a race outside Taperday? Plan your recovery</button>}
+
     </div>
   )
 }

@@ -11,8 +11,8 @@ const seedMemories = () => [raceMemory(), raceMemory({ eventName: 'Berlin Marath
 
 async function fixture(page: Page, options: { races?: RaceMemory[]; current?: boolean; failSave?: boolean; recording?: boolean } = {}) {
   const state = { races: options.races ?? [], current: !!options.current, failSave: !!options.failSave, writes: [] as { id: string; body: SaveRaceMemory }[], revision: 1 }
-  const linked = raceResult({ id: 'dddddddd-0000-4000-8000-000000000004', raceDate: '2026-11-12', distanceKm: 10, finishTime: '00:53:24' })
-  const training = chapter({ raceName: 'Spring 10K', raceDate: '2026-11-12', distanceKm: 10, raceResult: linked, version: 'plan-v1', lifecycle: 'Recovering' })
+  const linked = raceResult({ id: 'dddddddd-0000-4000-8000-000000000004', raceDate: '2026-11-15', distanceKm: 10, finishTime: '00:53:24' })
+  const training = chapter({ raceName: 'Spring 10K', raceDate: '2026-11-15', distanceKm: 10, raceResult: linked, version: 'plan-v1', lifecycle: 'Recovering' })
   const recording = { id: 'eeeeeeee-0000-4000-8000-000000000005', localDate: '2026-04-26', startedAt: '2026-04-26T08:00:00Z', kind: 'Run', distanceKm: 42.4,
     movingSeconds: 14000, paceSecondsPerKm: 330, plannedTitle: null, plannedSessionType: null, pace: null, averageHeartRate: null,
     source: { kind: 'Strava', viewUrl: null, recordedOnGarmin: false, cachedUntil: null } }
@@ -23,8 +23,8 @@ async function fixture(page: Page, options: { races?: RaceMemory[]; current?: bo
     if (path === '/api/v1/me') data = { id: 'synthetic-journey-runner', displayName: 'Naledi', email: 'journey@example.test', timeZone: 'Africa/Johannesburg', units: 'Kilometres', needsPrivacyConsent: false, privacyNoticeVersion: '2026-10-21' }
     else if (path === '/api/v1/me/activities') data = options.recording ? [recording] : []
     else if (path === `/api/v1/me/activities/${recording.id}`) data = { ...recording, elapsedSeconds: 14612 }
-    else if (path === '/api/v1/me/plans') data = options.current ? [{ id: PLAN_ID, name: 'Spring 10K', raceName: 'Spring 10K', raceDate: '2026-11-12', status: state.current ? 'Active' : 'Archived', createdAt: '2026-08-24T10:00:00Z' }] : []
-    else if (path === '/api/v1/me/journey') data = journeyOf(options.current ? [{ ...training, status: state.current ? 'Active' : 'Archived' }] : [], { recovery: options.current ? recovery({ raceDate: '2026-11-12', distanceKm: 10, eventName: 'Spring 10K' }) : null })
+    else if (path === '/api/v1/me/plans') data = options.current ? [{ id: PLAN_ID, name: 'Spring 10K', raceName: 'Spring 10K', raceDate: '2026-11-15', status: state.current ? 'Active' : 'Archived', createdAt: '2026-08-24T10:00:00Z' }] : []
+    else if (path === '/api/v1/me/journey') data = journeyOf(options.current ? [{ ...training, status: state.current ? 'Active' : 'Archived' }] : [], { recovery: options.current ? recovery({ raceDate: '2026-11-15', distanceKm: 10, eventName: 'Spring 10K' }) : null })
     else if (path === `/api/v1/me/journey/plans/${PLAN_ID}/archive`) { expect(request.postDataJSON()).toEqual({ expectedVersion: 'plan-v1' }); state.current = false; await route.fulfill({ status: 204 }); return }
     else if (path === '/api/v1/me/journey/races') data = { races: state.races, majors: majorDefinitions }
     else if (path.includes('/api/v1/me/journey/races/') && request.method() === 'PUT') {
@@ -66,8 +66,8 @@ test('Journey remains reachable after archiving the last plan, with its result a
   await expect(page.getByText(/Recovery continues/)).toBeVisible()
   await page.getByRole('button', { name: 'Keep chapter and archive', exact: true }).click()
   const navigation = page.getByRole('navigation', { name: 'Main', exact: true })
-  await expect(navigation.getByRole('button')).toHaveCount(4)
-  for (const [index, name] of ['Home', 'Runs', 'Journey', 'Account'].entries()) await expect(navigation.getByRole('button').nth(index)).toHaveAccessibleName(name)
+  await expect(navigation.getByRole('button')).toHaveCount(5)
+  for (const [index, name] of ['Home', 'Plan', 'Runs', 'Journey', 'Account'].entries()) await expect(navigation.getByRole('button').nth(index)).toHaveAccessibleName(name)
   await expect(page.getByText(/Past plan/)).toBeVisible()
   await expect(page.locator('.journey-chapter-facts')).toContainText('Finished in 53:24')
   expect(state.current).toBe(false)

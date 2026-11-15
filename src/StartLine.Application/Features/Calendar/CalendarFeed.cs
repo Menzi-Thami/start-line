@@ -79,7 +79,7 @@ internal sealed class ResetMyCalendarLinkHandler(IApplicationDbContext db, Curre
 /// </summary>
 public sealed record GetCalendarFeedQuery(string Token) : IRequest<CalendarFeedDto>;
 
-internal sealed class GetCalendarFeedHandler(IApplicationDbContext db, PlanBuilder builder, PlanCoach coach, TimeProvider time)
+internal sealed class GetCalendarFeedHandler(IApplicationDbContext db, PlanBuilder builder, PlanCoach coach, TimeProvider time, TrainingLifecycle lifecycle)
     : IRequestHandler<GetCalendarFeedQuery, CalendarFeedDto>
 {
     public async Task<CalendarFeedDto> Handle(GetCalendarFeedQuery request, CancellationToken cancellationToken)
@@ -95,6 +95,7 @@ internal sealed class GetCalendarFeedHandler(IApplicationDbContext db, PlanBuild
             throw new NotFoundException("Calendar", "link");
         }
 
+        await lifecycle.ConcludeAsync(runner, cancellationToken);
         var saved = await db.SavedPlans.AsNoTracking()
             .SingleOrDefaultAsync(p => p.RunnerId == runner.Id && p.Status == SavedPlanStatus.Active, cancellationToken);
         if (saved is null)

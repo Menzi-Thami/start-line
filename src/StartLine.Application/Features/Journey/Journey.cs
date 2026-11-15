@@ -20,7 +20,7 @@ namespace StartLine.Application.Features.Journey;
 /// told truthfully (<see cref="TrainingRecap"/>), its race result, recovery and badges. Badges are kept in step on every
 /// read, so plans that already qualify are awarded the first time they're read, even past plans.
 /// </summary>
-internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time)
+internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builder, IRaceCatalogue catalogue, TimeProvider time, TrainingLifecycle lifecycle)
 {
     /// <summary>How long a finished recovery is still shown on the journey.</summary>
     public const int RecentRecoveryDays = 30;
@@ -29,10 +29,11 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
 
     public async Task<IReadOnlyList<PlanChapterDto>> ChaptersAsync(Runner runner, Guid? onlyPlan, bool withWeeks, CancellationToken cancellationToken, int page = 0)
     {
+        await lifecycle.ConcludeAsync(runner, cancellationToken);
         var today = CoachCalls.LocalToday(runner, time);
         var plans = await db.SavedPlans.AsNoTracking()
             .Where(p => p.RunnerId == runner.Id && (onlyPlan == null || p.Id == onlyPlan))
-            .OrderBy(p => p.Status).ThenByDescending(p => p.UpdatedAt).ThenByDescending(p => p.Id)
+            .OrderBy(p => p.Status == SavedPlanStatus.Active ? 0 : 1).ThenByDescending(p => p.UpdatedAt).ThenByDescending(p => p.Id)
             .Skip(page * ChapterPageSize).Take(ChapterPageSize)
             .ToListAsync(cancellationToken);
         if (plans.Count == 0)
@@ -46,8 +47,6 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
         var calls = (await db.CoachWeeks.AsNoTracking().Where(w => planIds.Contains(w.SavedPlanId)).OrderBy(w => w.WeekStart).ToListAsync(cancellationToken))
             .ToLookup(w => w.SavedPlanId, w => w.ToDecision());
         var results = await db.RaceResults.AsNoTracking().Where(r => r.SavedPlanId != null && planIds.Contains(r.SavedPlanId.Value)).ToDictionaryAsync(r => r.SavedPlanId!.Value, cancellationToken);
-        var recoveries = (await db.RecoveryPlans.AsNoTracking().Where(r => r.RunnerId == runner.Id && r.SavedPlanId != null).ToListAsync(cancellationToken))
-            .ToDictionary(r => r.SavedPlanId!.Value);
         // Uploaded files only: a synced Strava copy is never evidence for anything kept.
         var uploads = await db.Activities.AsNoTracking()
             .Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.Kind != ActivityKind.Other)
@@ -72,10 +71,9 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
         {
             var result = results.GetValueOrDefault(b.Saved.Id);
             var summary = SavedPlanSummaries.Of(b.Saved, catalogue);
-            var recovery = recoveries.GetValueOrDefault(b.Saved.Id);
             return new PlanChapterDto(
                 b.Saved.Id, b.Saved.Name, summary.RaceName, b.Plan.RaceDate, b.Plan.RaceDistance.Kilometres, b.Saved.Status, b.Plan.StartDate,
-                TrainingRecap.Lifecycle(b.Recap, b.Saved.Status == SavedPlanStatus.Archived, result?.Outcome, recovery?.Status),
+                b.Saved.Status == SavedPlanStatus.Concluded ? JourneyLifecycle.Concluded : TrainingRecap.Lifecycle(b.Recap, b.Saved.Status == SavedPlanStatus.Archived, result?.Outcome, null),
                 TrainingRecapDto.From(b.Recap),
                 result is null ? null : RaceResultDto.From(result, b.Saved.Inputs.GoalTime),
                 [.. achievements.Where(a => a.SavedPlanId == b.Saved.Id).OrderBy(a => a.Kind).Select(AchievementDto.From)],
@@ -155,7 +153,7 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
             }
 
             var withdraw = existing.Where(a => a.SavedPlanId == saved.Id && !earned.ContainsKey(a.Kind)
-                && (a.Kind == AchievementKind.RaceFinished || saved.Status == SavedPlanStatus.Active)).Select(a => a.Id).ToList();
+                && (a.Kind == AchievementKind.RaceFinished || saved.Status != SavedPlanStatus.Archived)).Select(a => a.Id).ToList();
             if (withdraw.Count > 0)
             {
                 await db.Achievements.Where(a => withdraw.Contains(a.Id)).ExecuteDeleteAsync(cancellationToken);

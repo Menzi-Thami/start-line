@@ -60,12 +60,13 @@ internal static class CoachCalls
 /// </summary>
 public sealed record CoachMyPlanCommand(Guid Id) : IRequest<SavedPlanDto>;
 
-internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, PlanCoach coach, TimeProvider time)
+internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, PlanCoach coach, TimeProvider time, TrainingLifecycle lifecycle)
     : IRequestHandler<CoachMyPlanCommand, SavedPlanDto>
 {
     public async Task<SavedPlanDto> Handle(CoachMyPlanCommand request, CancellationToken cancellationToken)
     {
         var runner = await current.FindAsync(cancellationToken);
+        if (runner is not null) await lifecycle.ConcludeAsync(runner, cancellationToken);
         var saved = runner is null
             ? null
             : await db.SavedPlans.AsNoTracking().SingleOrDefaultAsync(p => p.Id == request.Id && p.RunnerId == runner.Id, cancellationToken);

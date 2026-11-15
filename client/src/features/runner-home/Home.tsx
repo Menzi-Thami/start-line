@@ -10,7 +10,7 @@ import { planProgress } from '../../lib/plan-day'
 import { ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CoachNote, LoggedRun, PersonalBest, PlanWeek, Runner, Session, StravaStatus, TrainingPlan } from '../../lib/types'
 import { Avatar } from '../account/Avatar'
-import type { CurrentPlan } from '../account/useCurrentPlan'
+import { currentTraining, type CurrentPlan } from '../account/useCurrentPlan'
 import { PlanAdjustment } from '../coaching/PlanAdjustment'
 import { RunLog } from '../coaching/RunLog'
 import { SavedRun } from '../coaching/SavedRun'
@@ -38,7 +38,7 @@ import { completedTasks, raceChecklistKey, RACE_TASKS } from '../race-week/check
 import { YourWeek } from './YourWeek'
 import { WeeklyChart } from './WeeklyChart'
 import { JourneyHomeCard } from '../journey/JourneyHomeCard'
-import { isLiveRecovery } from '../journey/journey-model'
+import { isLiveRecovery, recentConclusion } from '../journey/journey-model'
 import { useJourney } from '../journey/useJourney'
 
 const Calculators = lazy(() => import('./Calculators').then((module) => ({ default: module.Calculators })))
@@ -53,7 +53,9 @@ interface Props {
   bests?: PersonalBest[]
   strava?: StravaStatus
   onOpenPlan: () => void
-  onOpenJourney?: () => void
+  onOpenJourney?: (planId?: string) => void
+  onOpenRecovery?: (raceId?: string) => void
+  journey?: ReturnType<typeof useJourney>
   /** Race week: straight to the race-day checklist and pacing in the plan. */
   onOpenRacePrep?: () => void
   onOpenDay?: (date: string) => void
@@ -435,12 +437,14 @@ export function Home({
   runner,
   units,
   today,
-  current,
+  current: storedCurrent,
   runs = [],
   bests,
   strava,
   onOpenPlan,
   onOpenJourney,
+  onOpenRecovery,
+  journey: sharedJourney,
   onOpenRacePrep,
   onOpenDay,
   onBuildPlan,
@@ -453,6 +457,7 @@ export function Home({
   photo = null,
 }: Props) {
   const auth = useAuth()
+  const current = currentTraining(storedCurrent, today)
   const [reviewOpen, setReviewOpen] = useState(() => new URLSearchParams(window.location.search).get('review') === '1')
   const reviewRef = useRef<HTMLDetailsElement>(null)
   const [toolsOpen, setToolsOpen] = useState(() => tabFromUrl() === 'tools')
@@ -463,8 +468,10 @@ export function Home({
   const { plan, coaching, failed: planFailed, retry: retryPlan } = useHomePlan(current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(current?.id ?? null)
   // Recovery, maintenance or a race result to add: shown above Today, and recovery takes Today's place.
-  const journey = useJourney(true)
+  const localJourney = useJourney(!sharedJourney)
+  const journey = sharedJourney ?? localJourney
   const recovering = journey.state.kind === 'ready' && isLiveRecovery(journey.state.journey.recovery)
+  const concluded = !current && journey.state.kind === 'ready' && !!recentConclusion(journey.state.journey, today)
   // Sessions a held Strava run completes, computed by the API on each read; asked for again as check-ins or runs change.
   const synced = useSyncedCompletions(current?.id ?? null, completionsKey(checkIns.entries, runs))
   useEffect(() => {
@@ -542,7 +549,7 @@ export function Home({
       <div className="home-panel home-focus" id="home-panel-today">
         {current && planFailed && <div className="home-data-state" role="alert"><p>{plan ? 'Your plan couldn’t refresh. Showing the last plan loaded on this device.' : 'Your plan couldn’t load. You can try again.'}</p><button type="button" className="button" onClick={retryPlan}>Retry plan</button></div>}
         {/* Race week: the countdown and the checklist come first; everything else can wait. */}
-        {plan && progress && progress.daysToGo >= 0 && progress.daysToGo <= 7 && (
+        {!recovering && plan && progress && progress.daysToGo >= 0 && progress.daysToGo <= 7 && (
           <section className="panel home-card home-race-week" aria-labelledby="home-race-week">
             <p className="plan-kicker">Race week</p>
             <h2 id="home-race-week" className="home-card-heading">
@@ -553,9 +560,9 @@ export function Home({
             {onOpenRacePrep && <button type="button" className="button button-primary" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
           </section>
         )}
-        <JourneyHomeCard journey={journey} today={today} currentPlanId={current?.id ?? null} onOpenPlan={onOpenPlan} onOpenJourney={onOpenJourney} onNewRace={onBuildPlan} />
+        <JourneyHomeCard journey={journey} today={today} currentPlanId={current?.id ?? null} onOpenPlan={onOpenPlan} onOpenJourney={onOpenJourney} onOpenRecovery={onOpenRecovery} onNewRace={onBuildPlan} />
         <div className="home-top">
-          {recovering ? null : current ? (
+          {recovering || concluded ? null : current ? (
             <TodayCard plan={plan} failed={planFailed} today={today} units={units} runs={runs} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={onOpenDay} />
           ) : (
             <section className="panel home-card home-today" aria-labelledby="home-goal">
@@ -608,7 +615,7 @@ export function Home({
         <LatestRun runs={runs} strava={strava} units={units} today={today} onOpenRun={onOpenRun} onOpenRuns={onOpenRuns} />
         </div>
         {current && <FirstWeek hasRuns={(log?.length ?? 0) > 0 || runs.length > 0} strava={strava} onOpenRuns={onOpenRuns} onOpenAccount={onOpenAccount} />}
-        {!current && <BeginnerHomeCard today={today} onOpenProgramme={onOpenBeginner ?? onBuildPlan} />}
+        {!current && !recovering && !concluded && <BeginnerHomeCard today={today} onOpenProgramme={onOpenBeginner ?? onBuildPlan} />}
         <TickCard plan={plan} today={today} coach={coach} />
         <StravaNudge strava={strava} onOpenAccount={onOpenAccount} />
         {current && <CheckInLoadState {...checkIns} />}

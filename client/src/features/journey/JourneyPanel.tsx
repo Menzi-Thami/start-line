@@ -2,19 +2,13 @@ import { useRef, useState } from 'react'
 import { formatDistance, type Units } from '../../lib/format'
 import type { Activity, ActivitySummary, DayOfWeek, TrainingPlan } from '../../lib/types'
 import { FinishLineFilm } from './FinishLineFilm'
-import { achievement, chapterFor, finishStage, formatClock, isLiveRecovery, owedCelebration, recoveryFor, recoveryWelcome } from './journey-model'
-import { MaintenanceCard, NextChapter } from './NextChapter'
+import { achievement, chapterFor, finishStage, formatClock, isLiveRecovery, owedCelebration, recoveryWelcome } from './journey-model'
 import { RaceResultForm } from './RaceResultForm'
-import { RecoveryDashboard, RecoveryOffer } from './Recovery'
 import { storyFromChapter, storyFromLocal, type LocalSummary } from './journey-story'
 import { TrainingStory } from './TrainingStory'
 import type { Achievement } from './types'
 import type { JourneyActions, JourneyState } from './useJourney'
 import './journey.css'
-
-const DECLINED = (planId: string) => `taperday:recovery-declined:${planId}`
-const readDeclined = (planId: string) => { try { return localStorage.getItem(DECLINED(planId)) === '1' } catch { return false } }
-const writeDeclined = (planId: string, value: boolean) => { try { if (value) localStorage.setItem(DECLINED(planId), '1'); else localStorage.removeItem(DECLINED(planId)) } catch { /* Only means the offer shows again. */ } }
 
 const LOCAL_SEEN = (plan: TrainingPlan) => `taperday:finish-line:v1:${plan.race.name}|${plan.race.date}|${plan.startDate}`
 const localSeen = (plan: TrainingPlan) => { try { return localStorage.getItem(LOCAL_SEEN(plan)) === 'seen' } catch { return true } }
@@ -34,6 +28,7 @@ interface Props {
   onLoadActivity?: (id: string) => Promise<Activity>
   runDays: DayOfWeek[]
   onNewRace?: () => void
+  onOpenRecovery?: () => void
   onOpenRacePrep?: () => void
   onSignIn?: () => void
 }
@@ -43,16 +38,13 @@ interface Props {
  * chapter. Signed in, everything comes from the account and is the same on every device; signed out, only this
  * device's ticks are known, so it says so and offers nothing it can't keep.
  */
-export function JourneyPanel({ plan, today, units, planId, journey, local, runs, onLoadActivity, runDays, onNewRace, onOpenRacePrep, onSignIn }: Props) {
+export function JourneyPanel({ plan, today, units, planId, journey, local, runs, onLoadActivity, onOpenRecovery, onOpenRacePrep, onSignIn }: Props) {
   const signedIn = !!planId && !!journey && journey.state.kind !== 'off'
   const ready = journey?.state.kind === 'ready' ? journey.state.journey : null
   const chapter = chapterFor(ready, planId)
-  const recovery = recoveryFor(ready, planId)
   const [chosen, setFilm] = useState<Film | null>(null)
   const [dismissed, setDismissed] = useState<readonly string[]>([])
   const [seenHere] = useState(() => localSeen(plan))
-  const [declined, setDeclined] = useState(() => (planId ? readDeclined(planId) : false))
-  const [manualOffer, setManualOffer] = useState(false)
   const storyRef = useRef<HTMLDivElement>(null)
   const raceRef = useRef<HTMLDivElement>(null)
   const trainingDetails = useRef<HTMLDetailsElement>(null)
@@ -95,7 +87,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
   }
 
   const stage = chapter ? finishStage(chapter, today) : null
-  const show = signedIn ? !!chapter && (stage !== 'training' || isLiveRecovery(recovery)) : local.visible
+  const show = signedIn ? !!chapter && stage !== 'training' : local.visible
   if (!show) return null
 
   const story = chapter ? storyFromChapter(chapter, local.provisional) : storyFromLocal(plan, local)
@@ -103,8 +95,6 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
   const trainingAward = achievement(chapter, 'TrainingComplete')
   const raceAward = achievement(chapter, 'RaceFinished')
   const earned = signedIn ? !!trainingAward : local.earned
-  const liveRecovery = isLiveRecovery(recovery) ? recovery : null
-  const finishedRecovery = recovery && !liveRecovery ? recovery : null
   const metrics = film?.kind === 'race' && result
     ? [formatClock(result.finishTime) && { value: formatClock(result.finishTime)!, label: 'Finish time' }, result.distanceKm != null && { value: formatDistance(result.distanceKm, units), label: 'Distance' }].filter(Boolean) as { value: string; label: string }[]
     : [
@@ -112,15 +102,6 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
         { value: `${story.weeks}`, label: 'Weeks' },
         story.recordedKm !== null ? { value: formatDistance(story.recordedKm, units), label: 'Recorded distance' } : null,
       ].filter(Boolean) as { value: string; label: string }[]
-
-  const next = journey && (
-    <NextChapter
-      runDays={runDays}
-      onMaintenance={(body) => journey.actions.startMaintenance(body)}
-      onNewRace={onNewRace}
-      onMoreRecovery={recovery ? () => void journey.actions.changeRecovery(recovery.id, { action: recovery.status === 'Completed' || recovery.status === 'Ended' ? 'Restart' : 'Extend', extendDays: 7, expectedVersion: recovery.version }) : undefined}
-    />
-  )
 
   const raceStage = stage === 'race-day' || stage === 'race-result-needed' || stage === 'race-recorded'
   const training = <TrainingStory
@@ -199,57 +180,11 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
             </section>
           )}
 
-          {signedIn && journey && liveRecovery && (
-            <div className="panel">
-              <RecoveryDashboard
-                recovery={liveRecovery}
-                today={today}
-                onCheckIn={(feeling, redFlags) => journey.actions.checkIn(liveRecovery.id, { feeling, redFlags, date: today })}
-                onChange={(change) => journey.actions.changeRecovery(liveRecovery.id, change)}
-              />
-            </div>
-          )}
-
-          {signedIn && journey && chapter && !recovery && recoveryWelcome(result?.outcome) && (!declined || manualOffer) && (
-            <section className="panel journey-rest" aria-label="After your race">
-              <p className="plan-kicker">Next · recovery</p>
-              <h3 className="journey-subtitle">Rest comes first.</h3>
-              <p>Take it easy. A gentle recovery plan is here whenever you want it.</p>
-              <details className="journey-recovery-details">
-              <summary>Plan my recovery</summary>
-              <RecoveryOffer
-                planId={chapter.planId}
-                eventName={chapter.raceName}
-                distanceKm={result?.distanceKm ?? chapter.distanceKm}
-                raceDate={result?.raceDate ?? chapter.raceDate}
-                today={today}
-                runDays={runDays}
-                onStart={(body) => journey.actions.startRecovery(body)}
-                onDecline={() => { if (planId) writeDeclined(planId, true); setDeclined(true); setManualOffer(false) }}
-              />
-              </details>
-            </section>
-          )}
-          {signedIn && chapter && !recovery && recoveryWelcome(result?.outcome) && declined && !manualOffer && (
-            <section className="panel" aria-label="Recovery">
-              <p>No recovery plan. Rest as you like; it’s here if you want one.</p>
-              <button type="button" className="button" onClick={() => { setManualOffer(true); if (planId) writeDeclined(planId, false) }}>Plan my recovery</button>
-            </section>
-          )}
-
-          {signedIn && journey && finishedRecovery && !ready?.maintenance && (
-            <div className="panel">
-              <RecoveryDashboard recovery={finishedRecovery} today={today} onCheckIn={() => Promise.resolve()} onChange={(change) => journey.actions.changeRecovery(finishedRecovery.id, change)} next={next} />
-            </div>
-          )}
-          {signedIn && journey && !recovery && result && !recoveryWelcome(result.outcome) && !ready?.maintenance && <div className="panel">{next}</div>}
-          {signedIn && journey && !recovery && result && recoveryWelcome(result.outcome) && declined && !manualOffer && !ready?.maintenance && <div className="panel">{next}</div>}
-
-          {signedIn && journey && ready?.maintenance && ready.maintenance.status === 'Active' && (
-            <div className="panel">
-              <MaintenanceCard maintenance={ready.maintenance} today={today} onEnd={() => journey.actions.endMaintenance()} onNewRace={onNewRace} />
-            </div>
-          )}
+          {signedIn && result && recoveryWelcome(result.outcome) && <section className="panel journey-rest" aria-label="Recovery plan">
+            <p className="plan-kicker">Next · recovery</p><h3 className="journey-subtitle">Recovery has its own plan.</h3>
+            <p>Your training chapter stays here. Take your next days gently.</p>
+            <button type="button" className="button" onClick={() => onOpenRecovery ? onOpenRecovery() : window.location.assign(`?view=recovery&race=${encodeURIComponent(result.id)}`)}>{isLiveRecovery(ready?.recovery) ? 'Open recovery plan' : 'Start recovery plan'}</button>
+          </section>}
         </div>
         {raceStage && <details className="journey-training panel" ref={trainingDetails}>
           <summary>Training story <span>{story.confirmedRuns} confirmed runs · {story.weeks} weeks</span></summary>

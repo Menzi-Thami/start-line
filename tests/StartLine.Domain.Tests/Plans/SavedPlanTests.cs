@@ -22,6 +22,39 @@ public sealed class SavedPlanTests
         SavedPlan.Create(Guid.NewGuid(), "Comrades", Catalogue()).Status.ShouldBe(SavedPlanStatus.Active);
     }
 
+    [Theory]
+    [InlineData(-1, false)]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    public void Training_concludes_only_after_race_day(int offset, bool concluded)
+    {
+        var raceDate = new DateOnly(2026, 11, 14);
+        var plan = SavedPlan.Create(Guid.NewGuid(), "Hoka Half", Custom("Hoka Half", raceDate));
+        var id = plan.Id;
+        plan.Conclude(raceDate.AddDays(offset)).ShouldBe(concluded);
+        plan.Status.ShouldBe(concluded ? SavedPlanStatus.Concluded : SavedPlanStatus.Active);
+        plan.Id.ShouldBe(id);
+        plan.Inputs.RaceDate.ShouldBe(raceDate);
+    }
+
+    [Fact]
+    public void Concluded_training_stays_immutable_and_cannot_become_current_again()
+    {
+        var plan = SavedPlan.Create(Guid.NewGuid(), "Hoka Half", Custom("Hoka Half", new(2026, 11, 14)));
+        plan.Conclude(new(2026, 11, 15)).ShouldBeTrue();
+        plan.Conclude(new(2026, 11, 16)).ShouldBeFalse();
+        Should.Throw<DomainException>(() => plan.Update(Custom("Another race", new(2027, 1, 1))));
+        Should.Throw<DomainException>(() => plan.Restore());
+    }
+
+    [Fact]
+    public void A_missing_race_date_does_not_invent_a_conclusion()
+    {
+        var plan = SavedPlan.Create(Guid.NewGuid(), "Legacy race", Catalogue());
+        plan.Conclude(new(2030, 1, 1)).ShouldBeFalse();
+        plan.Status.ShouldBe(SavedPlanStatus.Active);
+    }
+
     [Fact]
     public void The_same_race_is_the_same_catalogue_race_or_the_same_named_race_on_the_same_day()
     {

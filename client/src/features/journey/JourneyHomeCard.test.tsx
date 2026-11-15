@@ -15,7 +15,7 @@ function show(data: Journey) {
 
 it('opens the independent easy-running plan after training and recovery have ended', async () => {
   const opened = show(journeyOf([], { maintenance: maintenance() }))
-  await userEvent.click(screen.getByRole('button', { name: 'Open easy-running plan' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Open easy running' }))
   expect(opened.onOpenRecovery).toHaveBeenCalledOnce()
   expect(opened.onOpenPlan).not.toHaveBeenCalled()
 })
@@ -34,6 +34,8 @@ it('reuses a confirmed finish when opening its independent recovery plan', async
   const result = raceResult({ finishTime: '02:06:15', distanceKm: 20.3, timeKind: 'RecordedElapsed' })
   const opened = show(journeyOf([chapter({ status: 'Concluded', lifecycle: 'Concluded', raceResult: result })]))
   expect(screen.getByText(/2:06:15.*Recording elapsed time/)).toBeVisible()
+  expect(screen.getAllByRole('button')).toHaveLength(1)
+  expect(screen.queryByRole('button', { name: 'Review my race' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Start recovery plan' }))
   expect(opened.onOpenRecovery).toHaveBeenCalledWith(result.id)
   expect(opened.onOpenPlan).not.toHaveBeenCalled()

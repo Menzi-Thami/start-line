@@ -38,7 +38,7 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
         <p className="plan-kicker">Easy running</p>
         <h2 className="home-card-heading">Keep running comfortably.</h2>
         <p>Your easy-running plan is ready whenever you are. Every run is optional.</p>
-        <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Open easy-running plan</button>
+        <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Open easy running</button>
       </section>
     )
   }
@@ -48,7 +48,7 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
         <p className="plan-kicker">{recovery.status === 'Completed' ? 'Recovered' : 'Recovery ended'}</p>
         <h2 id="journey-home-next" className="home-card-heading">What’s next?</h2>
         <p>Keep running comfortably, train for another race, or take more time. Nothing changes until you choose.</p>
-        <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Choose my next chapter</button>
+        <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Choose what's next</button>
       </section>
     )
   }
@@ -59,8 +59,9 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
     <p>Your training chapter is saved in Journey.</p>
     {concluded.raceResult?.outcome === 'Finished' && concluded.raceResult.finishTime && <p className="mono">{formatClock(concluded.raceResult.finishTime)} · {concluded.raceResult.timeKind === 'RecordedElapsed' ? 'Recording elapsed time' : concluded.raceResult.timeKind === 'OfficialChip' ? 'Official chip time' : 'Finish time'}</p>}
     <div className="journey-actions">
-      <button type="button" className="button button-primary" onClick={() => onOpenJourney ? onOpenJourney(concluded.planId) : onOpenPlan()}>Review my race</button>
-      {recoveryWelcome(concluded.raceResult?.outcome) && onOpenRecovery && <button type="button" className="button" onClick={() => onOpenRecovery(concluded.raceResult?.id)}>Start recovery plan</button>}
+      {recoveryWelcome(concluded.raceResult?.outcome) && onOpenRecovery
+        ? <button type="button" className="button button-primary" onClick={() => onOpenRecovery(concluded.raceResult?.id)}>Start recovery plan</button>
+        : <button type="button" className="button button-primary" onClick={() => onOpenJourney ? onOpenJourney(concluded.planId) : onOpenPlan()}>Review my race</button>}
     </div>
   </section>
   const past = !currentPlanId ? lastTrainingChapter(journey.state.journey, today) : null

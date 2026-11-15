@@ -76,10 +76,31 @@ it('keeps recovery first even when the runner has already saved future training'
   expect(coach).not.toHaveBeenCalled()
 })
 
+it.each(['Finished', 'DidNotFinish'] as const)('offers one recovery action for a confirmed %s, using the saved race', async outcome => {
+  const result = raceResult({ outcome })
+  const opened = show(journeyOf([chapter({ status: 'Concluded', lifecycle: 'Concluded', raceResult: result })]))
+  expectQuietHome()
+  expect(document.querySelectorAll('.journey-home button')).toHaveLength(1)
+  expect(screen.queryByRole('button', { name: 'Review my race' })).not.toBeInTheDocument()
+  await opened.user.click(screen.getByRole('button', { name: 'Start recovery plan' }))
+  expect(opened.onOpenRecovery).toHaveBeenCalledWith(result.id)
+})
+
+it.each([
+  { status: 'Paused' as const, seekCare: false, safetyMessage: null },
+  { status: 'Active' as const, seekCare: true, safetyMessage: 'Stop exercise and seek medical advice.' },
+])('keeps recovery safety and pause state visible without bringing training prompts back: %o', state => {
+  show(journeyOf([], { recovery: recovery(state) }))
+  expectQuietHome()
+  expect(screen.getByRole('button', { name: 'Open recovery plan' })).toBeVisible()
+  if (state.seekCare) expect(screen.getByRole('alert')).toHaveTextContent(state.safetyMessage!)
+  else expect(screen.getByRole('heading', { name: 'Recovery paused' })).toBeVisible()
+})
+
 it.each(['Completed', 'Ended'] as const)('keeps %s recovery focused on the next chapter after race week has passed', async status => {
   const opened = show(journeyOf([chapter({ status: 'Concluded' })], { recovery: recovery({ status }) }), { today: '2026-12-02' })
   expectQuietHome()
-  await opened.user.click(screen.getByRole('button', { name: 'Choose my next chapter' }))
+  await opened.user.click(screen.getByRole('button', { name: "Choose what's next" }))
   expect(opened.onOpenRecovery).toHaveBeenCalledOnce()
 })
 
@@ -89,7 +110,7 @@ it('keeps maintenance to one plan action, with its schedule and choices on its o
   expect(screen.getByRole('heading', { name: 'Keep running comfortably.' })).toBeVisible()
   expect(screen.queryByRole('list', { name: 'Coming up' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Train for another race' })).not.toBeInTheDocument()
-  await opened.user.click(screen.getByRole('button', { name: 'Open easy-running plan' }))
+  await opened.user.click(screen.getByRole('button', { name: 'Open easy running' }))
   expect(opened.onOpenRecovery).toHaveBeenCalledOnce()
 })
 

@@ -79,20 +79,23 @@ async function setup(page: Page, options: { finished?: boolean; recovering?: boo
 
 async function accessible(page: Page) {
   await page.evaluate(() => document.fonts.ready)
-  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
   const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
   expect(result.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
 }
 
 async function calmHome(page: Page) {
-  await expect(page.getByRole('region', { name: 'This week', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('region', { name: 'Latest run', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('region', { name: 'Today', exact: true })).toHaveCount(0)
-  await expect(page.getByText(/Add training feedback/)).toHaveCount(0)
-  await expect(page.getByText('Something to run towards?', { exact: true })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Couch to 5K', exact: true })).toHaveCount(0)
-  await expect(page.locator('.home-focus > .journey-home')).toHaveCount(1)
-  await expect(page.locator('.home-more')).not.toHaveAttribute('open')
+  // Assert one atomic DOM state, including hidden leftovers.
+  const home = await page.evaluate(() => {
+    const root = document.querySelector('.home')!
+    return {
+      oldPanels: root.querySelectorAll('.home-top, .home-sync, .home-strava-invite, .first-week, #home-goal, #beginner-home-heading').length,
+      repeatQuestions: /Add training feedback|Something to run towards\?|Couch to 5K/.test(root.textContent ?? ''),
+      chapters: root.querySelectorAll('.home-focus > .journey-home').length,
+      detailsOpen: root.querySelector('.home-more')?.hasAttribute('open'),
+    }
+  })
+  expect(home).toEqual({ oldPanels: 0, repeatQuestions: false, chapters: 1, detailsOpen: false })
 }
 
 test('race day ends at the runner’s midnight without assuming a result or starting recovery @phone', async ({ page }, info) => {
@@ -140,12 +143,28 @@ test('concluded training → saved recording → separate recovery → Home/Plan
   await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
   await expect(page.locator('.race-result, .training-story')).toHaveCount(0)
   await expect(page.getByLabel('Distance (km)', { exact: true })).toHaveCount(0)
+  const nav = page.getByRole('navigation', { name: 'Main', exact: true })
+  await nav.getByRole('button', { name: 'Home', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Start recovery plan', exact: true })).toBeVisible()
+  await calmHome(page)
+  await expect(page.locator('.journey-home button')).toHaveCount(1)
+  expect(state.starts).toHaveLength(0)
+  if (info.project.name === 'desktop') {
+    await mkdir(homeQa, { recursive: true })
+    await page.setViewportSize({ width: 375, height: 812 })
+    for (const mode of ['light', 'dark']) {
+      await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+      await accessible(page)
+      await page.screenshot({ path: `${homeQa}/race-confirmed-375-${mode}.png`, fullPage: true })
+    }
+  }
+  await page.getByRole('button', { name: 'Start recovery plan', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Start my recovery', exact: true }).dblclick()
   await expect(page.getByRole('button', { name: 'Good to go', exact: true })).toBeVisible()
   expect(state.starts).toHaveLength(1)
   expect(state.starts[0]).toMatchObject({ planId: PLAN_ID, eventName: 'Hoka Half', raceDate: '2026-11-14', distanceKm: 20.3 })
   expect(state.recovery?.id).not.toBe(PLAN_ID)
-  const nav = page.getByRole('navigation', { name: 'Main', exact: true })
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Open recovery plan', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Good to go', exact: true })).toHaveCount(0)
@@ -173,7 +192,7 @@ test('concluded training → saved recording → separate recovery → Home/Plan
   await page.getByRole('button', { name: 'Start easy running', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your easy-running plan.', exact: true })).toBeVisible()
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Open easy-running plan', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open easy running', exact: true })).toBeVisible()
   await calmHome(page)
   if (info.project.name === 'desktop') {
     await mkdir(homeQa, { recursive: true })
@@ -242,16 +261,9 @@ test('Home stays simple after recovery and months later, with running details av
   state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
   await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
   await page.goto(`${fixture}?view=home`)
-  await expect(page.getByRole('button', { name: 'Choose my next chapter', exact: true })).toBeVisible()
-  await calmHome(page)
+  await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
   expect(state.detailsReads).toBe(0)
-  if (info.project.name === 'desktop') await mkdir(homeQa, { recursive: true })
-  for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark']) {
-    await page.setViewportSize({ width, height: 900 })
-    await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
-    await accessible(page)
-    if (info.project.name === 'desktop' && [375, 1440].includes(width)) await page.screenshot({ path: `${homeQa}/recovered-${width}-${mode}.png`, fullPage: true })
-  }
+  await calmHome(page)
   await page.locator('.home-more > summary').click()
   await page.locator('.home-insights > summary').click()
   await expect(page.getByRole('heading', { name: 'Your running', exact: true })).toBeVisible()
@@ -272,4 +284,51 @@ test('Home stays simple after recovery and months later, with running details av
   }
   await page.getByRole('button', { name: 'View my journey', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Finished in 2:06:15', exact: true })).toBeVisible()
+})
+
+test('post-recovery Home is accessible at narrow, phone, tablet and desktop widths in both themes @phone', async ({ page }, info) => {
+  const { state } = await setup(page, { recovering: true })
+  state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
+  await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
+  await page.goto(`${fixture}?view=home`)
+  await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
+  expect(state.detailsReads).toBe(0)
+  if (info.project.name === 'desktop') await mkdir(homeQa, { recursive: true })
+  for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark']) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+    await accessible(page)
+    if (info.project.name === 'desktop' && [375, 1440].includes(width)) await page.screenshot({ path: `${homeQa}/recovered-${width}-${mode}.png`, fullPage: true })
+  }
+  await calmHome(page)
+  expect(state.detailsReads).toBe(0)
+})
+
+test('ending recovery keeps one next action on Home and recent activities in Runs @phone', async ({ page }, info) => {
+  const { state } = await setup(page, { recovering: true })
+  state.recovery = { ...state.recovery!, status: 'Ended', endedOn: '2026-11-18' }
+  await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto(`${fixture}?view=home`)
+  await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
+  await calmHome(page)
+  await expect(page.locator('.journey-home button')).toHaveCount(1)
+  expect(state.detailsReads).toBe(0)
+  if (info.project.name === 'desktop') {
+    await mkdir(homeQa, { recursive: true })
+    for (const mode of ['light', 'dark']) {
+      await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+      await accessible(page)
+      await page.screenshot({ path: `${homeQa}/recovery-ended-375-${mode}.png`, fullPage: true })
+    }
+  }
+  const nav = page.getByRole('navigation', { name: 'Main', exact: true })
+  await nav.getByRole('button', { name: 'Runs', exact: true }).click()
+  await expect(page).toHaveURL(/view=runs/)
+  await expect(page.getByText('20.3 km', { exact: true }).first()).toBeVisible()
+  await nav.getByRole('button', { name: 'Home', exact: true }).click()
+  await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
+  await calmHome(page)
+  await page.getByRole('button', { name: "Choose what's next", exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
 })

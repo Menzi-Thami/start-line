@@ -57,9 +57,9 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
     return (
       <section className="panel home-card journey-home" aria-labelledby="journey-home-race">
         <p className="plan-kicker">{chapter.raceName}</p>
-        <h2 id="journey-home-race" className="home-card-heading">How did race day go?</h2>
-        <p>{stage === 'race-day' ? 'When you’ve run it, tell us how it went.' : 'Add your result when you’re ready. Taperday never assumes a race was run.'}</p>
-        <button type="button" className="button button-primary" onClick={onOpenPlan}>Add my race result</button>
+        <h2 id="journey-home-race" className="home-card-heading">Your race result</h2>
+        <p>We’ll look for your recorded run and fill in the details.</p>
+        <button type="button" className="button button-primary" onClick={onOpenPlan}>Review my race</button>
       </section>
     )
   }

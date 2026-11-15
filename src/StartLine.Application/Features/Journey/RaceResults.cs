@@ -41,7 +41,11 @@ internal sealed class SaveRaceResultHandler(IApplicationDbContext db, CurrentRun
         var runner = await current.RequireConsentedAsync(cancellationToken);
         var saved = await OwnJourney.PlanAsync(db, runner, request.PlanId, cancellationToken);
         var r = request.Result;
-        if (r.ActivityId is { } activityId
+        var result = await db.RaceResults.SingleOrDefaultAsync(x => x.SavedPlanId == saved.Id, cancellationToken);
+        RequireVersion(r.ExpectedVersion, result);
+        // A confirmed result outlives Strava's rolling cache. Retain its existing link when correcting the result;
+        // attaching a different recording still requires visible evidence owned by this runner.
+        if (r.ActivityId is { } activityId && result?.ActivityId != activityId
             && !await db.Activities.Visible(time.GetUtcNow()).AnyAsync(a => a.Id == activityId && a.RunnerId == runner.Id, cancellationToken))
         {
             throw new NotFoundException("Activity", activityId.ToString());
@@ -51,8 +55,6 @@ internal sealed class SaveRaceResultHandler(IApplicationDbContext db, CurrentRun
         var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), paceDate: today);
         var answers = new RaceResultAnswers(r.Outcome, r.RaceDate ?? plan.RaceDate, r.FinishTime, r.DistanceKm, r.ActivityId, r.Note);
 
-        var result = await db.RaceResults.SingleOrDefaultAsync(x => x.SavedPlanId == saved.Id, cancellationToken);
-        RequireVersion(r.ExpectedVersion, result);
         var timeKind = r.TimeKind ?? (result is not null && result.FinishTime == answers.FinishTime ? result.TimeKind : RaceTimeKind.Unspecified);
         result = Apply(result, runner.Id, saved.Id, answers, plan.StartDate, today);
         var eventName = history.View(result, saved).EventName;

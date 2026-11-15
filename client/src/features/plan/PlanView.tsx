@@ -34,7 +34,7 @@ import { sessionKey, trainingKm } from './plan-math'
 import { PlanProgress } from './PlanProgress'
 import { finishLineSummary } from './finish-line-model'
 import { JourneyPanel } from '../journey/JourneyPanel'
-import { planRunDays, recoveryDayMap, recoveryFor } from '../journey/journey-model'
+import { chapterFor, planRunDays, recoveryDayMap, recoveryFor } from '../journey/journey-model'
 import { useJourney } from '../journey/useJourney'
 import { OutlookCard } from './OutlookCard'
 import { ProgressInsights } from './ProgressInsights'
@@ -133,6 +133,9 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
 export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, onUnitsChange, shareUrl, today, toolbarExtra, replan, calendar, runs, onOpenRun, bests, strava, onOpenAccount, onOpenRuns, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, progressExtras, journeyPlanId, onNewRace, onSignIn, onLoadActivity }: Props) {
   const journey = useJourney(!!journeyPlanId)
   const journeyData = journey.state.kind === 'ready' ? journey.state.journey : null
+  const completedRace = !!chapterFor(journeyData, journeyPlanId)?.raceResult
+  const [historyOpen, setHistoryOpen] = useState(() => openTab?.id === 'all' || openTab?.id === 'progress' || !!readDayRoute() || ['all', 'progress'].includes(new URLSearchParams(window.location.search).get('planTab') ?? ''))
+  const trainingHistoryId = useId()
   const recoveryDays = recoveryDayMap(recoveryFor(journeyData, journeyPlanId))
   const headingRef = useRef<HTMLHeadingElement>(null)
   const preparationRef = useRef<HTMLDetailsElement>(null)
@@ -446,15 +449,17 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
           <strong>{formatDate(plan.race.date, 'long')}</strong>
         </li>
         <li>{formatDistance(plan.race.distanceKm, units)}</li>
-        <li>
+        {!completedRace && <li>
           Goal <strong>{formatDuration(goalSeconds)}</strong> ({formatPace(plan.goalPaceSecondsPerKm, units)})
-        </li>
-        <li>
+        </li>}
+        {!completedRace && <li>
           {plan.weeks.length} weeks from {formatDate(plan.startDate)}
-        </li>
+        </li>}
       </ul>
 
       {(finishLine.visible || journeyPlanId) && <JourneyPanel key={planKey} plan={plan} today={today} units={units} planId={journeyPlanId} journey={journeyPlanId ? journey : undefined} local={finishLine} runs={runs} onLoadActivity={onLoadActivity} runDays={planRunDays(plan)} onNewRace={onNewRace ?? onEditPlan} onOpenRacePrep={() => setTab('week')} onSignIn={onSignIn} />}
+      {completedRace && <button type="button" className="button button-quiet" aria-expanded={historyOpen} aria-controls={trainingHistoryId} onClick={() => setHistoryOpen(value => !value)}>{historyOpen ? 'Hide training plan' : 'View training plan'}</button>}
+      <div id={trainingHistoryId} hidden={completedRace && !historyOpen}>
       {onEditPlan && <button type="button" className="button button-quiet plan-edit-button" onClick={onEditPlan}>Edit plan</button>}
       {coach && <div ref={runLogRef} hidden={selectedDate !== null}><RunLog key={requestedRun?.id ?? 'new'} plan={plan} coach={coach} runs={runs} initialRun={requestedRun} onClose={() => setRequestedRun(undefined)} showEntries={false} /></div>}
       {coach && earlierEntries.length > 0 && <section aria-label="Earlier logged runs"><details className="disclosure"><summary>Earlier logged runs · {earlierEntries.length}</summary>{earlierEntries.map(entry => <SavedRun key={entry.id} entry={entry} coach={coach} runs={runs} showDate onOpenRun={onOpenRun} />)}</details></section>}
@@ -683,6 +688,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
       </details>
       </div>
 
+      </div>
       </div>
     </section>
   )

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { formatDistance, type Units } from '../../lib/format'
 import type { Activity, ActivitySummary, DayOfWeek, TrainingPlan } from '../../lib/types'
 import { FinishLineFilm } from './FinishLineFilm'
-import { achievement, chapterFor, finishStage, formatClock, isLiveRecovery, owedCelebration, recoveryFor, recoveryWelcome, versusGoalWords } from './journey-model'
+import { achievement, chapterFor, finishStage, formatClock, isLiveRecovery, owedCelebration, recoveryFor, recoveryWelcome } from './journey-model'
 import { MaintenanceCard, NextChapter } from './NextChapter'
 import { RaceResultForm } from './RaceResultForm'
 import { RecoveryDashboard, RecoveryOffer } from './Recovery'
@@ -54,6 +54,8 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
   const [declined, setDeclined] = useState(() => (planId ? readDeclined(planId) : false))
   const [manualOffer, setManualOffer] = useState(false)
   const storyRef = useRef<HTMLDivElement>(null)
+  const raceRef = useRef<HTMLDivElement>(null)
+  const trainingDetails = useRef<HTMLDetailsElement>(null)
 
   // The film plays once per award per runner (the server remembers), or once per device when signed out. Replays are
   // the runner's own choice.
@@ -71,7 +73,12 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
   }
   const toStory = () => {
     closeFilm()
-    window.requestAnimationFrame(() => storyRef.current?.scrollIntoView?.({ block: 'start' }))
+    const target = film?.kind === 'race' ? raceRef : storyRef
+    if (film?.kind !== 'race' && trainingDetails.current) trainingDetails.current.open = true
+    window.requestAnimationFrame(() => {
+      target.current?.focus({ preventScroll: true })
+      target.current?.scrollIntoView?.({ block: 'start' })
+    })
   }
 
   if (signedIn && journey?.state.kind === 'loading') return null
@@ -115,8 +122,14 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
     />
   )
 
+  const raceStage = stage === 'race-day' || stage === 'race-result-needed' || stage === 'race-recorded'
+  const training = <TrainingStory
+    story={story} units={units} raceResult={result}
+    onReplay={earned ? (trigger) => setFilm({ kind: 'training', award: trainingAward, trigger }) : undefined}
+  />
+
   const resultForm = signedIn && chapter && journey && (stage === 'race-day' || stage === 'race-result-needed' || stage === 'race-recorded') && (
-    <div className="panel">
+    <div className="panel journey-race-summary" ref={raceRef} tabIndex={-1}>
       <RaceResultForm
         key={chapter.planId}
         chapter={chapter}
@@ -132,50 +145,41 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
   )
 
   return (
-    <section className="journey-panel" aria-label="Your finish line">
+    <section className={`journey-panel${raceStage ? ' is-race' : ''}`} aria-label="Your finish line">
       {film && (
         <FinishLineFilm
           variant={film.kind}
           heading={film.kind === 'race' ? 'RACE FINISHED.' : 'YOU DID IT.'}
           lede={film.kind === 'race'
-            ? (result && versusGoalWords(result)) ?? `You crossed the finish line of ${plan.race.name}.`
+            ? `You crossed the finish line of ${plan.race.name}.`
             : today < plan.race.date ? 'The training is done. Race day is next.' : 'Every planned training run, confirmed.'}
           raceName={plan.race.name}
           metrics={metrics}
           primaryLabel={film.kind === 'race' ? 'Review my race' : 'See my training story'}
           onPrimary={toStory}
           onClose={closeFilm}
-          returnFocus={() => film.trigger ?? storyRef.current}
+          returnFocus={() => film.trigger ?? (film.kind === 'race' ? raceRef.current : storyRef.current)}
         />
       )}
 
-      <header className="journey-head panel">
+      {!raceStage && <header className="journey-head panel">
         <p className="plan-kicker">Taperday · Finish line</p>
         <h2 className="journey-title">
-          {result?.outcome === 'Finished' ? `You finished ${plan.race.name}.` : earned ? 'Training complete.' : 'Your training chapter.'}
+          {earned ? 'Training complete.' : 'Your training chapter.'}
         </h2>
         <p className="journey-lede">
           {earned
             ? 'Every planned training run is confirmed. That work is yours to keep.'
             : 'Here is what you confirmed along the way. Runs that weren’t logged aren’t counted as done.'}
         </p>
-        <ul className="journey-badges" aria-label="Achievements">
-          <li className={earned ? 'is-earned' : 'is-open'}>{earned ? '✓ ' : ''}Training complete{earned ? '' : ' · not every run confirmed'}</li>
-          <li className={raceAward || result?.outcome === 'Finished' ? 'is-earned' : 'is-open'}>{raceAward || result?.outcome === 'Finished' ? '✓ ' : ''}Race finisher{raceAward || result?.outcome === 'Finished' ? '' : ' · from your race result'}</li>
-        </ul>
-      </header>
+        {earned && <ul className="journey-badges" aria-label="Achievements"><li className="is-earned">✓ Training complete</li></ul>}
+      </header>}
 
-      {!result && resultForm}
+      {journey?.state.kind === 'ready' && journey.state.refreshFailed && <p className="field-help" role="status">Showing your saved journey. Updates couldn’t load. <button type="button" className="button button-quiet" onClick={journey.actions.refresh}>Try again</button></p>}
+      {resultForm}
 
-      <div className="journey-grid">
-        <div className="journey-main panel" ref={storyRef} tabIndex={-1}>
-          <TrainingStory
-            story={story}
-            units={units}
-            raceResult={result}
-            onReplay={earned ? (trigger) => setFilm({ kind: 'training', award: trainingAward, trigger }) : undefined}
-          />
-        </div>
+      <div className={`journey-grid${raceStage ? ' is-race' : ''}`}>
+        {!raceStage && <div className="journey-main panel" ref={storyRef} tabIndex={-1}>{training}</div>}
 
         <div className="journey-side">
           {stage === 'training-complete' && (
@@ -195,8 +199,6 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
             </section>
           )}
 
-          {result && resultForm}
-
           {signedIn && journey && liveRecovery && (
             <div className="panel">
               <RecoveryDashboard
@@ -209,7 +211,12 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
           )}
 
           {signedIn && journey && chapter && !recovery && recoveryWelcome(result?.outcome) && (!declined || manualOffer) && (
-            <div className="panel">
+            <section className="panel journey-rest" aria-label="After your race">
+              <p className="plan-kicker">Next · recovery</p>
+              <h3 className="journey-subtitle">Rest comes first.</h3>
+              <p>Take it easy. A gentle recovery plan is here whenever you want it.</p>
+              <details className="journey-recovery-details">
+              <summary>Plan my recovery</summary>
               <RecoveryOffer
                 planId={chapter.planId}
                 eventName={chapter.raceName}
@@ -220,7 +227,8 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
                 onStart={(body) => journey.actions.startRecovery(body)}
                 onDecline={() => { if (planId) writeDeclined(planId, true); setDeclined(true); setManualOffer(false) }}
               />
-            </div>
+              </details>
+            </section>
           )}
           {signedIn && chapter && !recovery && recoveryWelcome(result?.outcome) && declined && !manualOffer && (
             <section className="panel" aria-label="Recovery">
@@ -243,6 +251,10 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
             </div>
           )}
         </div>
+        {raceStage && <details className="journey-training panel" ref={trainingDetails}>
+          <summary>Training story <span>{story.confirmedRuns} confirmed runs · {story.weeks} weeks</span></summary>
+          <div className="journey-main" ref={storyRef} tabIndex={-1}>{training}</div>
+        </details>}
       </div>
     </section>
   )

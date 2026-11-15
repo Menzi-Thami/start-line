@@ -21,8 +21,9 @@ const scene = params.get('scene') ?? 'training-complete'
 const today = params.get('today') ?? '2026-11-14'
 const longName = params.get('long') === '1'
 const isStravaMarathon = scene === 'strava-marathon' || scene === 'strava-history'
-const raceName = isStravaMarathon ? 'Mandela Marathon' : longName ? 'The Very Long Named Coastal Sunrise Half Marathon and Community Fun Run 2026' : 'Hoka Half Marathon'
-const raceDate = isStravaMarathon ? '2026-10-18' : '2026-11-15'
+const isHoka = scene.startsWith('hoka-')
+const raceName = isHoka ? 'Hoka Half' : isStravaMarathon ? 'Mandela Marathon' : longName ? 'The Very Long Named Coastal Sunrise Half Marathon and Community Fun Run 2026' : 'Hoka Half Marathon'
+const raceDate = isHoka ? '2026-11-14' : isStravaMarathon ? '2026-10-18' : '2026-11-15'
 const raceDistanceKm = isStravaMarathon ? 42.195 : 21.1
 const stravaMarathon: ActivitySummary = {
   id: '33333333-3333-4333-8333-333333333333',
@@ -34,11 +35,16 @@ const stravaMarathon: ActivitySummary = {
 const importedRuns: ActivitySummary[] = params.get('duplicate') === '1'
   ? [stravaMarathon, { ...stravaMarathon, id: '44444444-4444-4444-8444-444444444444', source: { ...stravaMarathon.source, kind: 'Upload', viewUrl: null } }]
   : [stravaMarathon]
+if (isHoka) importedRuns.splice(0, importedRuns.length, { ...stravaMarathon, localDate: raceDate, startedAt: `${raceDate}T05:30:00Z`, distanceKm: 20.3, movingSeconds: 7200 })
 const award = (kind: 'TrainingComplete' | 'RaceFinished', celebratedAt: string | null = null) =>
   ({ id: `award-${kind}`, kind, planId: PLAN_ID, earnedOn: kind === 'RaceFinished' ? raceDate : '2026-11-14', awardedAt: '2026-11-14T10:00:00Z', celebratedAt })
 const seen = '2026-11-14T11:00:00Z'
 
 function initial(): Journey {
+  if (isHoka) {
+    const stored = localStorage.getItem('test:hoka-journey')
+    if (stored) return JSON.parse(stored) as Journey
+  }
   if (scene === 'strava-history') {
     const stored = localStorage.getItem('test:past-marathon-journey')
     if (stored) return JSON.parse(stored) as Journey
@@ -50,6 +56,8 @@ function initial(): Journey {
     training: recap({ scheduledRuns: 30, confirmedRuns: 30, weeks: 12, recordedKm: 182.3, raceDatePassed: true }), raceResult: raceResult({ planId: '22222222-2222-4222-8222-222222222222', raceDate: '2026-04-12', finishTime: '00:48:05', distanceKm: 10, versusGoal: '-00:01:55', goalTime: '00:50:00' }),
     achievements: [{ ...award('TrainingComplete', seen), id: 'past-training' }, { ...award('RaceFinished', seen), id: 'past-race', earnedOn: '2026-04-12' }] })
   switch (scene.replace(/^home-/, '')) {
+    case 'hoka-recording': return journeyOf([{ ...passed, achievements: [], training: recap({ scheduledRuns: 10, confirmedRuns: 4, allConfirmed: false, raceDatePassed: true }) }])
+    case 'hoka-finished': return journeyOf([{ ...finished, training: recap({ scheduledRuns: 10, confirmedRuns: 4, allConfirmed: false, raceDatePassed: true }), raceResult: raceResult({ raceDate, finishTime: '02:06:15', distanceKm: 20.3, timeKind: 'RecordedElapsed', activityId: stravaMarathon.id }), achievements: [award('RaceFinished', seen)] }])
     case 'race-result': return journeyOf([passed])
     case 'strava-marathon': return journeyOf([passed])
     case 'strava-history': return journeyOf([{ ...passed, status: 'Archived', lifecycle: 'Archived', achievements: [] }])
@@ -69,13 +77,21 @@ const plan = { race: { name: raceName, date: raceDate }, startDate: '2026-08-24'
 /** A stand-in for the API: each change is applied as the server would, then the screen reloads from it. */
 function useFakeJourney() {
   const [journey, setJourney] = useState(initial)
+  useEffect(() => { if (isHoka) localStorage.setItem('test:hoka-journey', JSON.stringify(journey)) }, [journey])
+  useEffect(() => {
+    if (!isHoka) return
+    const arrived = () => setJourney(journey => ({ ...journey, chapters: journey.chapters.map(chapter => ({ ...chapter,
+      raceResult: raceResult({ raceDate, finishTime: '02:06:15', distanceKm: 20.3, timeKind: 'RecordedElapsed', activityId: stravaMarathon.id }), achievements: [award('RaceFinished')] })) }))
+    window.addEventListener('test:race-arrived', arrived)
+    return () => window.removeEventListener('test:race-arrived', arrived)
+  }, [])
   const update = (change: (j: Journey) => Journey) => setJourney(j => change(structuredClone(j)))
   const withRecovery = (change: (r: RecoveryPlan) => RecoveryPlan) => { let next!: RecoveryPlan; update(j => { next = change(j.recovery!); return { ...j, recovery: next } }); return Promise.resolve(next ?? journey.recovery!) }
   const actions: JourneyActions = {
     refresh: () => undefined,
     celebrated: (id) => { update(j => ({ ...j, chapters: j.chapters.map(c => ({ ...c, achievements: c.achievements.map(a => a.id === id ? { ...a, celebratedAt: seen } : a) })) })); return Promise.resolve() },
     saveRaceResult: (planId, body) => {
-      const result = raceResult({ outcome: body.outcome, raceDate: body.raceDate ?? '2026-11-15', finishTime: body.finishTime ?? null, distanceKm: body.distanceKm ?? null, activityId: body.activityId ?? null, versusGoal: body.finishTime === '01:52:10' ? '-00:02:50' : null, note: body.note ?? null, version: `v${Date.now()}` })
+      const result = raceResult({ outcome: body.outcome, raceDate: body.raceDate ?? raceDate, finishTime: body.finishTime ?? null, timeKind: body.timeKind ?? 'Unspecified', distanceKm: body.distanceKm ?? null, activityId: body.activityId ?? null, versusGoal: body.finishTime === '01:52:10' ? '-00:02:50' : null, note: body.note ?? null, version: crypto.randomUUID() })
       update(j => ({ ...j, chapters: j.chapters.map(c => c.planId !== planId ? c : {
         ...c, raceResult: result, lifecycle: body.outcome === 'Finished' ? 'RaceCompleted' : 'RaceNotCompleted',
         achievements: [...c.achievements.filter(a => a.kind !== 'RaceFinished'), ...(body.outcome === 'Finished' ? [{ ...award('RaceFinished'), earnedOn: result.raceDate }] : [])],
@@ -172,11 +188,11 @@ export function Harness() {
     return <div className="home"><div className="home-panel home-focus"><JourneyHomeCard journey={{ state, actions }} today={today} currentPlanId={PLAN_ID} onOpenPlan={() => undefined} onNewRace={() => undefined} /></div></div>
   }
   return <div className="plan"><JourneyPanel plan={plan} today={today} units="km" planId={PLAN_ID} journey={{ state, actions }} local={{ total: 38, completed: 38, provisional: 0, distanceKm: 312.5, weeks: 12, allConfirmed: true, trainingEnded: true, racePassed: false, earned: true, visible: true }}
-    runs={isStravaMarathon ? importedRuns : undefined}
-    onLoadActivity={isStravaMarathon ? async id => {
+    runs={isStravaMarathon || isHoka && params.get('cache') !== 'expired' ? importedRuns : undefined}
+    onLoadActivity={isStravaMarathon || isHoka ? async id => {
       const recording = importedRuns.find(run => run.id === id)
       if (!recording) throw new Error('Run not found')
-      return { ...recording, elapsedSeconds: 16812 } as unknown as Activity
+      return { ...recording, elapsedSeconds: isHoka ? 7575 : 16812 } as unknown as Activity
     } : undefined}
     runDays={['Tuesday', 'Thursday', 'Saturday', 'Sunday']} onNewRace={() => undefined} onOpenRacePrep={() => undefined} /></div>
 }

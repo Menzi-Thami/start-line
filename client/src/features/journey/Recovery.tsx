@@ -90,6 +90,9 @@ export function RecoveryOffer({ planId, eventName = '', distanceKm, raceDate, to
             <input id={`${id}-date`} className="input" type="date" max={today} value={date} onChange={e => setDate(e.target.value)} /></label>
         </div>
       )}
+      <p className="field-help">Starts gently. Running waits until you feel ready.</p>
+      <details className="recovery-preferences">
+      <summary>Adjust recovery preferences</summary>
       <fieldset className="journey-choice">
         <legend className="field-label">How hard was it?</legend>
         {EFFORTS.map(option => (
@@ -117,6 +120,7 @@ export function RecoveryOffer({ planId, eventName = '', distanceKm, raceDate, to
           </label>
         ))}
       </fieldset>
+      </details>
       <RedFlagPicker flags={flags} onChange={setFlags} />
       {error && <p className="field-error" role="alert">{error}</p>}
       <div className="journey-actions">

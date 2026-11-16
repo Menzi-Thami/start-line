@@ -945,8 +945,8 @@ export function App() {
           </section>
         )}
 
-        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
-          <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
+        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account') && state.kind === 'loading' && (
+          <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} quietUntilSlow={view === 'home' && !!homeRunner} />
         )}
 
         {view === 'home' && homeRunner && (

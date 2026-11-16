@@ -328,15 +328,16 @@ for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark'])
 }
 
 
-test('ending recovery keeps one next action on Home and recent activities in Runs @phone', async ({ page }, info) => {
+test('ending recovery offers a direct new-race action on Home and keeps recent activities in Runs @phone', async ({ page }, info) => {
   const { state } = await setup(page, { recovering: true })
   state.recovery = { ...state.recovery!, status: 'Ended', endedOn: '2026-11-18' }
   await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto(`${fixture}?view=home`)
   await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
   await calmHome(page)
-  await expect(page.locator('.journey-home button')).toHaveCount(1)
+  await expect(page.locator('.journey-home button')).toHaveCount(2)
   expect(state.detailsReads).toBe(0)
   if (info.project.name === 'desktop') {
     await mkdir(homeQa, { recursive: true })

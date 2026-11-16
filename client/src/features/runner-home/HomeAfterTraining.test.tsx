@@ -100,16 +100,22 @@ it.each([
 it.each(['Completed', 'Ended'] as const)('keeps %s recovery focused on the next chapter after race week has passed', async status => {
   const opened = show(journeyOf([chapter({ status: 'Concluded' })], { recovery: recovery({ status }) }), { today: '2026-12-02' })
   expectQuietHome()
+  expect(screen.getByRole('button', { name: 'Train for another race' })).toBeVisible()
   await opened.user.click(screen.getByRole('button', { name: "Choose what's next" }))
   expect(opened.onOpenRecovery).toHaveBeenCalledOnce()
+  await opened.user.click(screen.getByRole('button', { name: 'Train for another race' }))
+  expect(opened.onBuildPlan).toHaveBeenCalledOnce()
 })
 
-it('keeps maintenance to one plan action, with its schedule and choices on its own page', async () => {
+it('lets runners start another race directly from the easy-running Home card', async () => {
   const opened = show(journeyOf([], { maintenance: maintenance() }))
   expectQuietHome()
   expect(screen.getByRole('heading', { name: 'Keep running comfortably.' })).toBeVisible()
   expect(screen.queryByRole('list', { name: 'Coming up' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Train for another race' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Open easy running' })).toBeVisible()
+  await opened.user.click(screen.getByRole('button', { name: 'Train for another race' }))
+  expect(opened.onBuildPlan).toHaveBeenCalledOnce()
+  expect(opened.onOpenRecovery).not.toHaveBeenCalled()
   await opened.user.click(screen.getByRole('button', { name: 'Open easy running' }))
   expect(opened.onOpenRecovery).toHaveBeenCalledOnce()
 })

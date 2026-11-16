@@ -179,6 +179,7 @@ describe('Home from the copy kept on this device', () => {
     renderApp(signedIn())
 
     expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Main' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
 
     await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS))

@@ -165,6 +165,28 @@ describe('Home from the copy kept on this device', () => {
     expect(await screen.findByRole('heading', { name: 'Welcome back, Thandi refreshed' })).toBeInTheDocument()
   })
 
+  it('offers account retry on a cached Home when the API never answers', async () => {
+    saveSnapshot(ownerOf({ name: 'Thandi', email: 'thandi@example.com' }), { runner: thandi, current: null })
+    server.use(
+      http.get('*/api/v1/me', async () => {
+        await delay('infinite')
+        return HttpResponse.json(thandi)
+      }),
+    )
+    window.history.replaceState(null, '', '/?view=home')
+    vi.useFakeTimers()
+
+    renderApp(signedIn())
+
+    expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+
+    await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS))
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+  })
+
   it('is never shown to someone else signed in on the same device', async () => {
     saveSnapshot(ownerOf({ name: 'Sipho', email: 'sipho@example.com' }), { runner: { ...thandi, displayName: 'Sipho' } })
     server.use(

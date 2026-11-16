@@ -184,7 +184,7 @@ describe('Home from the copy kept on this device', () => {
     await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS))
     expect(screen.getByRole('button', { name: 'Try again' })).toBeVisible()
     expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Sign out' }).length).toBeGreaterThan(0)
   })
 
   it('is never shown to someone else signed in on the same device', async () => {

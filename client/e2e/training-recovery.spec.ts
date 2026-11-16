@@ -256,6 +256,25 @@ test('recovery has its own days; concluded training is read-only, responsive and
   }
 })
 
+test('easy-running Home offers Train for another race without opening maintenance @phone', async ({ page }) => {
+  const { state } = await setup(page, { recovering: true })
+  state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
+  await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
+  await page.goto(`${fixture}?view=home`)
+  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Choose what\'s next', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: /Keep running comfortably/ }).click()
+  await page.getByRole('button', { name: 'Start easy running', exact: true }).click()
+  const nav = page.getByRole('navigation', { name: 'Main', exact: true })
+  await nav.getByRole('button', { name: 'Home', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Open easy running', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Train for another race', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
+  await expect(page).not.toHaveURL(/view=recovery/)
+})
+
 test('Home stays simple after recovery and months later, with running details available on request @phone', async ({ page }, info) => {
   const { state } = await setup(page, { recovering: true })
   state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }

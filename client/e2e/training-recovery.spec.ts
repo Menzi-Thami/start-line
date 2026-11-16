@@ -269,7 +269,13 @@ test('easy-running Home offers Train for another race without opening maintenanc
   const nav = page.getByRole('navigation', { name: 'Main', exact: true })
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Open easy running', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
+  for (const width of [375, 1440]) for (const theme of ['light', 'dark']) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
+    await expect(page.getByRole('button', { name: 'Open easy running', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
+    await accessible(page)
+  }
   await page.getByRole('button', { name: 'Train for another race', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
   await expect(page).not.toHaveURL(/view=recovery/)

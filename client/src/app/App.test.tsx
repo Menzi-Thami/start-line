@@ -167,7 +167,7 @@ describe('building a plan', () => {
     setup()
 
     expect(await screen.findByRole('radio', { name: /Comrades Marathon/ })).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: /Another race/ })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Add a race manually/ })).toBeInTheDocument()
   })
 
   it('shows each race’s date plainly, and a distance still being re-measured as approximate', async () => {
@@ -184,14 +184,14 @@ describe('building a plan', () => {
     onStep(1)
     expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
 
-    await user.click(await screen.findByRole('radio', { name: /Another race/ }))
+    await user.click(await screen.findByRole('radio', { name: /Add a race manually/ }))
     await user.click(screen.getByRole('radio', { name: '5K' }))
     await pickDate(user, 'Race date', '2026-12-13')
     await user.type(screen.getByLabelText(/Name/), 'Parkrun PB')
     await next(user)
 
     onStep(2)
-    expect(screen.queryByRole('radio', { name: /Another race/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('radio', { name: /Add a race manually/ })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'What’s your goal time?' })).toHaveFocus()
     await fillGoal(user, '0', '24', '30')
     await next(user)
@@ -458,7 +458,7 @@ describe('when things go wrong', () => {
     const { user } = setup()
 
     expect(await screen.findByText('We couldn’t load the race list.')).toBeInTheDocument()
-    expect(screen.getByRole('radio', { name: /Another race/ })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Add a race manually/ })).toBeInTheDocument()
 
     server.resetHandlers()
     await user.click(screen.getByRole('button', { name: 'Try again' }))

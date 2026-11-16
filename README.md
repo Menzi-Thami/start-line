@@ -6,7 +6,7 @@ Choose a race, a goal time and the days you can run. Get a week-by-week plan wit
 
 ## What you can do
 
-- **Build for your race.** Choose a race from the calendar or enter your own distance and date. Plans cover 5K, 10K, half marathon, marathon and ultras, with different training profiles for each distance.
+- **Build for your race.** Choose from the calendar or select **Add a race manually** to enter its name, distance and date. Use the 5K, 10K, 15K, half-marathon or marathon shortcuts, or type your own distance. Unlisted races and personal goals work without a catalogue entry.
 - **Fit training around your week.** Choose running days, the long-run day, experience, current mileage and preferred start. Structured training may start later for a distant race; the built plan shows its actual start date.
 - **Understand each workout.** See its purpose, target paces, warm-up, work, recoveries and cool-down. Inspect the plan by week or calendar, with volume charts and calculators for pace, splits, fuelling and heart-rate zones.
 - **Keep a current plan.** Updating the same race saves changes in place. A different race replaces the current plan; the earlier record remains archived server-side. Strength can be added to an existing running plan without resetting its dates, generator version or running schedule. Build the changes, then choose **Save changes**.

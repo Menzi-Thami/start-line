@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
-import { addDays, formatDate, formatDistance, formatDuration, formatPace, toKilometres, type Units } from '../../lib/format'
+import { addDays, formatDate, formatDistance, formatDuration, formatPace, KM_PER_MILE, toKilometres, type Units } from '../../lib/format'
 import { LATEST_PLAN_VERSION, type PlanInputs } from '../../lib/plan-url'
 import { SHORT_DAY, WEEK, type DayOfWeek, type Experience, type Race, type RunWalkMode } from '../../lib/types'
 import { DayChoice, DayPills, DurationInput, FieldError } from './controls'
@@ -18,6 +18,7 @@ import './builder-navigation.css'
 export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } | { kind: 'error'; message: string }
 
 const OTHER = 'other'
+const distanceText = (km: number, units: Units) => String(units === 'mi' ? Math.round(km / KM_PER_MILE * 1000) / 1000 : km)
 
 /** Keep malformed input visible so a minus sign or pasted text can never become valid training data. */
 const decimal = (value: string): number | null => {
@@ -28,6 +29,7 @@ const decimal = (value: string): number | null => {
 const SHORTCUTS = [
   { label: '5K', km: 5 },
   { label: '10K', km: 10 },
+  { label: '15K', km: 15 },
   { label: 'Half', km: 21.0975 },
   { label: 'Marathon', km: 42.195 },
 ] as const
@@ -103,6 +105,8 @@ export interface Gate {
 interface Draft {
   race: string
   otherKm: string
+  /** Preserve saved/preset kilometres when their display value is converted to miles. Typing clears this. */
+  otherExactKm: number | null
   otherDate: string
   otherName: string
   goal: Duration
@@ -125,6 +129,7 @@ function draftFrom(initial: PlanInputs | null, units: Units, today: string): Dra
     return {
       race: '',
       otherKm: '',
+      otherExactKm: null,
       otherDate: '',
       otherName: '',
       goal: { h: '', m: '', s: '' },
@@ -139,10 +144,11 @@ function draftFrom(initial: PlanInputs | null, units: Units, today: string): Dra
       recent: emptyRecent(),
     }
   }
-  const fromKm = (km: number | undefined) => (km ? String(Math.round((units === 'mi' ? km / 1.609344 : km) * 10) / 10) : '')
+  const fromKm = (km: number | undefined) => (km ? distanceText(km, units) : '')
   return {
     race: initial.raceSlug ?? OTHER,
     otherKm: fromKm(initial.distanceKm),
+    otherExactKm: initial.distanceKm ?? null,
     otherDate: initial.raceDate ?? '',
     otherName: initial.raceName ?? '',
     goal: toDuration(initial.goalSeconds),
@@ -160,7 +166,7 @@ function draftFrom(initial: PlanInputs | null, units: Units, today: string): Dra
 
 function validate(draft: Draft, goalSeconds: number, today: string, raceDate: string | null, savedStart?: string, goalLimit?: string | null): FieldErrors {
   const found: FieldErrors = {}
-  if (!draft.race) found.race = 'Choose a race, or pick "another race" and tell us about it.'
+  if (!draft.race) found.race = 'Choose a race, or add one manually.'
   if (draft.race === OTHER) {
     if (decimal(draft.otherKm) === null || Number(draft.otherKm) <= 0) found.distance = 'Enter a distance greater than 0, using digits and a decimal point.'
     if (!draft.otherDate) found.date = 'Enter the race date.'
@@ -258,6 +264,15 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
   const [seenServerErrors, setSeenServerErrors] = useState(serverErrors)
   const titleRef = useRef<HTMLHeadingElement>(null)
+  const manualChoiceRef = useRef<HTMLInputElement>(null)
+  const manualNameRef = useRef<HTMLInputElement>(null)
+  const focusManualName = useRef(false)
+  useEffect(() => {
+    if (draft.race === OTHER && focusManualName.current) {
+      manualNameRef.current?.focus()
+      focusManualName.current = false
+    }
+  }, [draft.race])
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft((d) => ({ ...d, [key]: value }))
   // A different race from the saved plan's starts fresh: a start day already in the past (the old plan's) moves to today,
   // so the runner is never stopped by a date they didn't choose for this race.
@@ -318,7 +333,8 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     api.race(lookUp, controller.signal).then(rememberRace).catch(() => undefined)
     return () => controller.abort()
   }, [lookUp])
-  const targetKm = chosenRace?.distanceKm ?? (draft.race === OTHER && Number(draft.otherKm) > 0 ? toKilometres(Number(draft.otherKm), units) : null)
+  const manualKm = Number(draft.otherKm) > 0 ? draft.otherExactKm ?? toKilometres(Number(draft.otherKm), units) : null
+  const targetKm = chosenRace?.distanceKm ?? (draft.race === OTHER ? manualKm : null)
   const goalSeconds = durationSeconds(draft.goal)
   // Checked as the wheels turn: an elite or impossible goal is flagged at once, and Continue stays on this step.
   const goalLimit = targetKm && goalSeconds > 0 ? goalProblem(targetKm, goalSeconds, units) : null
@@ -382,7 +398,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       ...(initial?.raceSnapshot && chosenRace && draft.race === initial.raceSlug
         ? { raceSnapshot: { name: chosenRace.name, date: chosenRace.date, distanceKm: chosenRace.distanceKm } } : {}),
       raceName: draft.race === OTHER ? draft.otherName.trim() || undefined : undefined,
-      distanceKm: draft.race === OTHER ? toKilometres(Number(draft.otherKm), units) : undefined,
+      distanceKm: draft.race === OTHER ? manualKm ?? undefined : undefined,
       raceDate: draft.race === OTHER ? draft.otherDate : undefined,
       goalSeconds,
       runDays: draft.runDays,
@@ -499,17 +515,18 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                 <>
                   <div className="choice-list" role="radiogroup" aria-label="Race" aria-describedby={errors.race ? 'race-error' : undefined}>
                     <label className="choice choice-other">
-                      <input type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => pickRace(OTHER)} />
-                      <span className="choice-name">Another race — build for your own distance or event</span>
-                      <span className="choice-meta">First 5K, a personal best, a local race or an ultra. Choose your distance and target date.</span>
+                      <input ref={manualChoiceRef} type="radio" name="race" value={OTHER} checked={draft.race === OTHER} onChange={() => pickRace(OTHER)} />
+                      <span className="choice-name">Add a race manually</span>
+                      <span className="choice-meta">Not in the catalogue? Enter its name, date and distance — or set your own running goal.</span>
                     </label>
+                    {draft.race !== OTHER && <>
                     {races.kind === 'loading' && [0, 1, 2].map((i) => <div className="skeleton" key={i} aria-hidden="true" />)}
                     {races.kind === 'loading' && <span className="visually-hidden">Loading races…</span>}
     
                     {races.kind === 'error' && (
                       <div className="error-panel">
                         <strong>We couldn’t load the race list.</strong>
-                        <p>{races.message} You can still enter any race below.</p>
+                        <p>{races.message} You can still add your race manually.</p>
                         <button type="button" className="button button-quiet" onClick={onRetryRaces} style={{ marginTop: 'var(--space-3)' }}>
                           Try again
                         </button>
@@ -543,27 +560,38 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                         units={units}
                         selected={draft.race}
                         selectedRace={searchedRaces.find((r) => r.slug === draft.race) ?? retained}
+                        onManual={(name) => {
+                          focusManualName.current = true
+                          set('otherName', name)
+                          pickRace(OTHER)
+                        }}
                         onPick={(race) => {
                           rememberRace(race)
                           pickRace(race.slug)
                         }}
                       />
                     )}
+                    </>}
                   </div>
                   <FieldError id="race-error" message={errors.race} />
     
                   {draft.race === OTHER && (
-                    <div style={{ marginTop: 'var(--space-4)' }}>
+                    <div className="manual-race-editor">
+                      <button type="button" className="link-button" onClick={() => { pickRace(''); manualChoiceRef.current?.focus() }}>Browse the catalogue instead</button>
+                      <div className="field">
+                        <label className="field-label" htmlFor="race-name">Name <span className="field-help">(optional)</span></label>
+                        <input ref={manualNameRef} id="race-name" className="input" maxLength={100} placeholder="e.g. My local 15K" value={draft.otherName} onChange={(e) => set('otherName', e.target.value)} />
+                      </div>
                       <div className="field">
                         <span className="field-label" id="distance-label">
                           Distance ({units})
                         </span>
                         <div className="pills" role="group" aria-labelledby="distance-label">
                           {SHORTCUTS.map((s) => {
-                            const value = String(Math.round((units === 'mi' ? s.km / 1.609344 : s.km) * 100) / 100)
+                            const value = distanceText(s.km, units)
                             return (
                               <label className="pill" key={s.label}>
-                                <input type="radio" name="distance-shortcut" checked={draft.otherKm === value} onChange={() => set('otherKm', value)} />
+                                <input type="radio" name="distance-shortcut" checked={manualKm === s.km} onChange={() => setDraft(d => ({ ...d, otherKm: value, otherExactKm: s.km }))} />
                                 {s.label}
                               </label>
                             )
@@ -576,11 +604,11 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                           placeholder={`Or type it, e.g. ${units === 'mi' ? '35' : '56'}`}
                           value={draft.otherKm}
                           aria-invalid={errors.distance ? true : undefined}
-                          onChange={(e) => set('otherKm', e.target.value)}
+                          aria-describedby={errors.distance ? 'distance-error' : undefined}
+                          onChange={(e) => setDraft(d => ({ ...d, otherKm: e.target.value, otherExactKm: null }))}
                         />
                         <FieldError id="distance-error" message={errors.distance} />
                       </div>
-                      <div className="row">
                         <div className="field">
                           <label className="field-label" htmlFor="race-date">
                             Race date
@@ -597,13 +625,6 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                           />
                           <FieldError id="date-error" message={errors.date} />
                         </div>
-                        <div className="field">
-                          <label className="field-label" htmlFor="race-name">
-                            Name <span className="field-help">(optional)</span>
-                          </label>
-                          <input id="race-name" className="input" maxLength={100} value={draft.otherName} onChange={(e) => set('otherName', e.target.value)} />
-                        </div>
-                      </div>
                     </div>
                   )}
                 </>

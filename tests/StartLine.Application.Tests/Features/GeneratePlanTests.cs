@@ -142,6 +142,30 @@ public sealed class GeneratePlanTests
         plan.Paces.Count.ShouldBe(6);
     }
 
+    [Theory]
+    [InlineData(5, 5)]
+    [InlineData(10, 10)]
+    [InlineData(15, 15)]
+    [InlineData(15.75, 15.8)]
+    [InlineData(21.0975, 21.1)]
+    [InlineData(42.195, 42.2)]
+    public async Task Unlisted_races_keep_exact_metadata_and_the_existing_rounded_schedule(double distanceKm, double scheduledKm)
+    {
+        var request = CustomRace(distanceKm: distanceKm, goal: TimeSpan.FromMinutes(distanceKm * 6)) with
+        {
+            RaceName = "My neighbourhood race",
+            Version = TrainingPlanGenerator.LatestVersion
+        };
+
+        Validator().Validate(request).IsValid.ShouldBeTrue();
+        var plan = await Handler().Handle(request, CancellationToken.None);
+
+        plan.Race.ShouldBe(new RaceSummaryDto(null, request.RaceName, request.RaceDate!.Value, distanceKm));
+        // Prescriptions keep their existing one-decimal rounding; event metadata stays exact.
+        plan.Weeks.SelectMany(week => week.Sessions).Single(session => session.Type == SessionType.Race)
+            .DistanceKm.ShouldBe(scheduledKm);
+    }
+
     [Fact]
     public async Task A_new_plan_from_the_builder_schedules_runs_from_the_selected_november_start()
     {

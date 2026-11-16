@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test'
 
 test('form fields and navigation remain usable on handheld screens @phone', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('radio', { name: /Another race/ }).check()
-  await expect(page.getByRole('radio', { name: /Another race/ })).toBeChecked()
+  await page.getByRole('radio', { name: /Add a race manually/ }).check()
+  await expect(page.getByRole('radio', { name: /Add a race manually/ })).toBeChecked()
   const distance = page.getByRole('textbox', { name: /^Distance/ })
   await distance.fill('10')
   await distance.focus()

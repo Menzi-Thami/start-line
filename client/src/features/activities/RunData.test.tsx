@@ -21,8 +21,8 @@ function data(overrides: Partial<RunData> = {}): RunData {
     ],
     missing: { runs: 2, withoutHeartRate: 2, withoutElevation: 0, withoutSplits: 0, heartRateConsent: false },
     syncIssues: [
-      { stravaActivityId: 123, reason: 'Strava answered 503', skipped: false, at: '2026-10-27T06:00:00Z' },
-      { stravaActivityId: 456, reason: 'That run is too short to show.', skipped: true, at: '2026-10-26T06:00:00Z' },
+      { stravaActivityId: '123', reason: 'Strava answered 503', skipped: false, at: '2026-10-27T06:00:00Z' },
+      { stravaActivityId: '456', reason: 'That run is too short to show.', skipped: true, at: '2026-10-26T06:00:00Z' },
     ],
     ...overrides,
   }
@@ -51,6 +51,17 @@ describe('Your run data', () => {
     expect(screen.getByText(/you haven’t allowed Taperday to keep heart rate/)).toBeInTheDocument()
     expect(screen.getByText(/That run is too short to show\./)).toBeInTheDocument()
     expect(screen.queryByText(/duplicate/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps adjacent 64-bit Strava IDs distinct and exact in source links', async () => {
+    const ids = ['9007199254740992', '9007199254740993', '9223372036854775807']
+    server.use(http.get('*/api/v1/me/run-data', () => HttpResponse.json(data({ syncIssues: ids.map(id => ({
+      stravaActivityId: id, reason: 'Recording unavailable', skipped: true, at: '2026-10-27T06:00:00Z',
+    })) }))))
+    renderPanel()
+    await userEvent.click(await screen.findByText(/Your run data/))
+    const links = screen.getAllByRole('link', { name: /Strava run,/ })
+    expect(links.map(link => link.getAttribute('href'))).toEqual(ids.map(id => `https://www.strava.com/activities/${id}`))
   })
 
   it('retries runs that failed to arrive from Strava', async () => {

@@ -13,7 +13,7 @@ const summary = (id: string, km: number, kind: 'Upload' | 'Strava', fileName: st
 
 /** The real app with synthetic sign-in, and a run-data API that changes as the runner resolves things. */
 async function mockApi(page: Page) {
-  const state = { runs: [summary('upload', 10.02, 'Upload', 'morning.fit')], retried: false }
+  const state = { runs: [summary('upload', 10.02, 'Upload', 'morning.fit')], retried: false, issues: [{ stravaActivityId: '77', reason: 'Strava answered 503', skipped: false, at: '2026-10-28T06:00:00Z' }] }
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
@@ -29,7 +29,7 @@ async function mockApi(page: Page) {
           sources: { uploads: 1, fit: 1, gpx: 0, tcx: 0, unknownFormat: 0, strava: 1, stravaConnected: true, stravaStatus: 'Active', lastSyncedAt: '2026-10-29T06:00:00Z', stravaPending: 0 },
           totals: [{ period: 'week', from: '2026-10-26', to: '2026-10-29', totalKm: 10.02, runs: 1, tickedKm: 0, tickedRuns: 0, uploadedKm: 10.02, uploadedRuns: 1, stravaKm: 0, stravaRuns: 0, withoutDistance: 0 }],
           missing: { runs: state.runs.length, withoutHeartRate: 0, withoutElevation: 0, withoutSplits: 0, heartRateConsent: true },
-          syncIssues: state.retried ? [] : [{ stravaActivityId: 77, reason: 'Strava answered 503', skipped: false, at: '2026-10-28T06:00:00Z' }],
+          syncIssues: state.retried ? [] : state.issues,
         },
       })
     }
@@ -57,5 +57,20 @@ test('a runner sees what their total is made of and retries a run that failed to
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `run data at ${width}px`).toBeLessThanOrEqual(1)
+  }
+})
+
+test('64-bit Strava activity links keep every digit and remain distinct after reload @phone', async ({ page }) => {
+  const state = await mockApi(page)
+  const ids = ['9007199254740992', '9007199254740993', '9223372036854775807']
+  state.issues = ids.map(id => ({ stravaActivityId: id, reason: 'Recording unavailable', skipped: true, at: '2026-10-28T06:00:00Z' }))
+  await page.goto('http://127.0.0.1:5176/e2e/fixtures/plan-edit.html?view=runs')
+  for (const visit of [0, 1]) {
+    if (visit) await page.reload()
+    const panel = page.locator('details.run-data')
+    await panel.locator('summary').click()
+    const links = panel.locator('a[href^="https://www.strava.com/activities/"]')
+    await expect(links).toHaveCount(3)
+    expect(await links.evaluateAll(items => items.map(item => item.getAttribute('href')))).toEqual(ids.map(id => `https://www.strava.com/activities/${id}`))
   }
 })

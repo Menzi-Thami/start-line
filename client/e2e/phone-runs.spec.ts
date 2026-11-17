@@ -213,7 +213,7 @@ test('a skipped recording gains an explanation when pending work completes even 
   await mockApi(page, false, imports)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
   await expect(page.getByText('Importing recordings · 1 check remaining.')).toBeVisible()
-  imports.issues = [{ stravaActivityId: 12345, skipped: true, at: '2026-10-18T12:00:00Z',
+  imports.issues = [{ stravaActivityId: '12345', skipped: true, at: '2026-10-18T12:00:00Z',
     reason: 'Strava did not share usable time and distance recording samples for this run.' }]
   imports.status = { ...connected, pending: 0 }
   await page.clock.runFor(15_000)

@@ -90,6 +90,26 @@ public sealed class HttpStravaApiTests
         activity.ShouldBe(new StravaActivity(42, 7, "TrailRun", new DateTimeOffset(2026, 10, 18, 4, 30, 0, TimeSpan.Zero), false, false, 312.5, 151.2, 177.0, 820.4, "Garmin fenix 8"));
     }
 
+    [Theory]
+    [InlineData(9007199254740993L)]
+    [InlineData(long.MaxValue)]
+    public async Task Activity_and_athlete_ids_are_read_as_exact_64_bit_integers(long id)
+    {
+        var json = $$$"""{"id":{{{id}}},"id_str":"{{{id}}}","athlete":{"id":{{{id}}},"id_str":"{{{id}}}"},"sport_type":"Run","start_date":"2026-10-18T04:30:00Z"}""";
+        var (api, handler, _) = Api(_ => Ok(json));
+        var activity = await api.GetActivityAsync("token", id, CancellationToken.None);
+        activity!.Id.ShouldBe(id);
+        activity.AthleteId.ShouldBe(id);
+        handler.Requests[0].RequestUri!.AbsolutePath.ShouldBe($"/api/v3/activities/{id}");
+
+        var (listApi, _, _) = Api(_ => Ok($"[{json}]"));
+        var list = await listApi.ListActivitiesAsync("token", Now.AddDays(-42), 1, CancellationToken.None);
+        list.Single().Id.ShouldBe(id);
+
+        var (tokenApi, _, _) = Api(_ => Ok($$$"""{"access_token":"a1","refresh_token":"r1","expires_at":1792400000,"athlete":{"id":{{{id}}},"id_str":"{{{id}}}"}}"""));
+        (await tokenApi.ExchangeCodeAsync("code", CancellationToken.None)).AthleteId.ShouldBe(id);
+    }
+
     [Fact]
     public async Task A_run_strava_no_longer_has_reads_as_null()
     {

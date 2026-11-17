@@ -1,8 +1,13 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using StartLine.Application.Features.Sync;
+using StartLine.Domain.Sync;
+using StartLine.Infrastructure.Persistence;
 using DateTime = System.DateTime;
 
 namespace StartLine.Integration.Tests;
@@ -41,10 +46,10 @@ public sealed class RunDataTests(StravaApiFactory factory) : IClassFixture<Strav
         return client;
     }
 
-    private async Task<(HttpClient Client, long Athlete)> Connected()
+    private async Task<(HttpClient Client, long Athlete)> Connected(long? requestedAthlete = null)
     {
         var client = await SignedUp();
-        var athlete = Interlocked.Increment(ref nextAthlete);
+        var athlete = requestedAthlete ?? Interlocked.Increment(ref nextAthlete);
         var authorize = await Json(await client.PostAsync(Url("/api/v1/me/sync/strava/authorize"), null));
         var state = Uri.UnescapeDataString(new Uri(authorize.GetProperty("authorizeUrl").GetString()!).Query.Split("state=")[1]);
         await Json(await client.PostAsJsonAsync(Url("/api/v1/me/sync/strava"), new { code = FakeStravaApi.CodeFor(athlete), state, scope = "read,activity:read_all" }));
@@ -205,11 +210,45 @@ public sealed class RunDataTests(StravaApiFactory factory) : IClassFixture<Strav
         runs.GetArrayLength().ShouldBe(1);
         runs[0].GetProperty("source").GetProperty("kind").GetString().ShouldBe("Upload");
         var issue = (await RunData(client)).GetProperty("syncIssues").EnumerateArray().Single();
-        issue.GetProperty("stravaActivityId").GetInt64().ShouldBe(stravaId);
+        issue.GetProperty("stravaActivityId").GetString().ShouldBe(stravaId.ToString(CultureInfo.InvariantCulture));
         issue.GetProperty("skipped").GetBoolean().ShouldBeTrue();
         issue.GetProperty("reason").GetString().ShouldBe(SkipReasons.AlreadyUploaded);
         // Skipped isn't failed: the Strava status doesn't count it as a run that couldn't be fetched.
         (await Json(await client.GetAsync(Url("/api/v1/me/sync/strava")))).GetProperty("failed").GetInt32().ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Large_strava_ids_remain_exact_through_connect_webhook_storage_issues_and_export()
+    {
+        var (client, athlete) = await Connected(long.MaxValue);
+        long[] ids = [9007199254740992L, 9007199254740993L, long.MaxValue];
+        foreach (var id in ids)
+        {
+            (await Push(athlete, id)).EnsureSuccessStatusCode();
+        }
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
+            var connection = await db.ProviderConnections.SingleAsync(c => c.ExternalAthleteId == athlete);
+            var jobs = await db.SyncJobs.Where(j => j.RunnerId == connection.RunnerId && j.Kind == SyncJobKind.FetchActivity).ToListAsync();
+            jobs.Select(j => j.ObjectId!.Value).Order().ShouldBe(ids.Order());
+            foreach (var job in jobs)
+            {
+                job.Skip("No recording samples.");
+            }
+
+            await db.SaveChangesAsync();
+        }
+
+        var issues = (await RunData(client)).GetProperty("syncIssues").EnumerateArray().ToArray();
+        issues.Select(issue => issue.GetProperty("stravaActivityId").GetString()).Order()
+            .ShouldBe(ids.Select(id => id.ToString(CultureInfo.InvariantCulture)).Order());
+        var export = await Json(await client.GetAsync(Url("/api/v1/me/export")));
+        export.GetProperty("connections")[0].GetProperty("externalAthleteId").GetString().ShouldBe(athlete.ToString(CultureInfo.InvariantCulture));
+
+        var other = await SignedUp();
+        (await RunData(other)).GetProperty("syncIssues").GetArrayLength().ShouldBe(0);
     }
 
     [Fact]

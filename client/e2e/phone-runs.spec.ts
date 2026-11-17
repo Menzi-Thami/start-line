@@ -33,7 +33,6 @@ async function mockApi(page: Page, hasPlan = false) {
 for (const mode of ['light', 'dark']) {
   test(`Nike runner finds phone help, understands history limits and opens connections in ${mode} mode @phone`, async ({ page }, info) => {
     const errors: string[] = []
-    const deviceViewport = page.viewportSize()!
     page.on('pageerror', error => errors.push(error.message))
     await mockApi(page)
     await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
@@ -49,7 +48,18 @@ for (const mode of ['light', 'dark']) {
     await expect(guide.getByText('Settings → Partners → Strava', { exact: true })).toBeVisible()
     await expect(guide.getByText(/Only runs recorded after linking Nike to Strava will sync/)).toBeVisible()
     await expect(guide.getByRole('button', { name: 'Open my training plan', exact: true })).toHaveCount(0)
-    await page.getByText('Add runs from a file', { exact: true }).click()
+    // Exercise navigation at the real device size, before changing emulation for visual audits.
+    await guide.getByRole('button', { name: 'Open connection settings', exact: true }).click()
+    await expect(page).toHaveURL(/view=account&settings=connections/)
+    const connections = page.getByText('Connections & run sources', { exact: true }).locator('..')
+    await expect(connections).toHaveAttribute('open', '')
+    await expect(connections.getByRole('button', { name: 'Connect with Strava', exact: true })).toBeVisible()
+    await connections.getByText('How do my runs get into Strava?', { exact: true }).click()
+    await expect(connections.getByText('Nike Run Club', { exact: true })).toBeVisible()
+    const nav = page.getByRole('navigation', { name: 'Main', exact: true })
+    await expect(nav).toBeVisible()
+    await nav.getByRole('button', { name: 'Runs', exact: true }).click()
+    await expect(guide).toHaveAttribute('open', '')
     for (const width of [320, 375, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 })
       // Help stays open when the mobile panel moves into the desktop split view.
@@ -73,18 +83,8 @@ for (const mode of ['light', 'dark']) {
         }
       }
     }
-    // Continue the journey at the project's actual device size after the viewport audits.
-    await page.setViewportSize(deviceViewport)
-    await expect(page.locator('.runs-split')).toHaveCount(deviceViewport.width >= 1024 ? 1 : 0)
-    await expect(guide).toHaveAttribute('open', '')
-    await guide.getByRole('button', { name: 'Open connection settings', exact: true }).click()
-    await expect(page).toHaveURL(/view=account&settings=connections/)
-    const connections = page.getByText('Connections & run sources', { exact: true }).locator('..')
-    await expect(connections).toHaveAttribute('open', '')
-    await expect(connections.getByRole('button', { name: 'Connect with Strava', exact: true })).toBeVisible()
-    await connections.getByText('How do my runs get into Strava?', { exact: true }).click()
-    await expect(connections.getByText('Nike Run Club', { exact: true })).toBeVisible()
-    await expect(page.getByRole('navigation', { name: 'Main', exact: true })).toBeVisible()
+    await expect(guide.getByRole('button', { name: 'Open connection settings', exact: true })).toBeVisible()
+    await expect(nav).toBeVisible()
     expect(errors).toEqual([])
   })
 }

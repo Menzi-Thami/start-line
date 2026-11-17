@@ -4566,8 +4566,7 @@ export interface components {
         CoachVerdict: "NotEnoughToGoOn" | "OnTrack" | "Struggling" | "Hurting" | "Thriving";
         ConnectionExportDto: {
             provider: components["schemas"]["SyncProvider"];
-            /** Format: int64 */
-            externalAthleteId: number;
+            externalAthleteId: string;
             scopes: string;
             status: components["schemas"]["ConnectionStatus"];
             /** Format: date-time */
@@ -5717,8 +5716,7 @@ export interface components {
         /** @enum {unknown} */
         SyncedFeedback: "Near" | "Shorter" | "Longer" | "Unmeasured";
         SyncIssueDto: {
-            /** Format: int64 */
-            stravaActivityId: number;
+            stravaActivityId: string;
             reason: string;
             skipped: boolean;
             /** Format: date-time */

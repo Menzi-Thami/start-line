@@ -3,6 +3,24 @@
 Runners connect Strava once and their runs arrive by themselves, judged against the plan exactly like a .FIT upload.
 Uploading stays as the fallback (and for anyone not on Strava).
 
+## Activity and athlete identifiers
+
+Strava announced 64-bit activity and athlete IDs for 1 June 2027, with an additional `id_str` field.
+Taperday uses the supported numeric route: `System.Text.Json` reads `id` directly into C# `long`,
+webhook object/owner IDs remain `long`, and SQL stores them as `bigint`. No JavaScript number or
+floating-point conversion sits between the provider and persistence. The new companion `id_str`
+can be present without changing that exact 64-bit ingestion path.
+
+Browser-facing Strava identifiers are strings: `SyncIssueDto.stravaActivityId` and the account export's
+`ConnectionExportDto.externalAthleteId` use invariant decimal formatting. Source links already use
+strings, while Taperday's own activity IDs remain GUIDs. Consumers of those two fields must preserve
+the string rather than converting it to a JavaScript number. There is no database migration.
+
+Regression coverage uses adjacent IDs `9007199254740992` and `9007199254740993`, plus signed 64-bit
+maximum `9223372036854775807`. Canned provider responses exercise activity reads, listings and OAuth;
+disposable-SQL integration tests exercise connection, webhook storage, issue responses, account export
+and account isolation. Component and phone/desktop browser tests verify distinct exact links after reload.
+
 ## Why Strava, and what it costs
 
 Garmin's own developer program is business-only and closed to new applications, so Strava is the realistic route

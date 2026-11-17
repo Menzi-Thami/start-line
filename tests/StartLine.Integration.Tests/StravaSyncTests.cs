@@ -334,7 +334,7 @@ public sealed class StravaSyncTests(StravaApiFactory factory) : IClassFixture<St
         export.ShouldNotContain($"access-{athlete}");
         export.ShouldNotContain($"refresh-{athlete}");
         var connections = JsonDocument.Parse(export).RootElement.GetProperty("connections");
-        connections[0].GetProperty("externalAthleteId").GetInt64().ShouldBe(athlete);
+        connections[0].GetProperty("externalAthleteId").GetString().ShouldBe(athlete.ToString(CultureInfo.InvariantCulture));
         connections[0].GetProperty("provider").GetString().ShouldBe("Strava");
     }
 

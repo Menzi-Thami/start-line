@@ -49,7 +49,7 @@ public sealed record TotalsBreakdownDto(
 public sealed record MissingDataDto(int Runs, int WithoutHeartRate, int WithoutElevation, int WithoutSplits, bool HeartRateConsent);
 
 /// <summary>A run from Strava that didn't arrive: failed after retries (can be retried) or deliberately skipped (with why).</summary>
-public sealed record SyncIssueDto(long StravaActivityId, string Reason, bool Skipped, DateTimeOffset At);
+public sealed record SyncIssueDto(string StravaActivityId, string Reason, bool Skipped, DateTimeOffset At);
 
 public sealed record RunDataDto(
     RunSourcesDto Sources,
@@ -119,7 +119,7 @@ internal sealed class GetRunDataHandler(IApplicationDbContext db, CurrentRunner 
         var issues = jobs
             .Where(j => j.Failed && j.Kind == SyncJobKind.FetchActivity && j.ObjectId is not null)
             .OrderByDescending(j => j.CreatedAt)
-            .Select(j => new SyncIssueDto(j.ObjectId!.Value, j.LastError ?? "Strava didn't send this run.", j.Skipped, j.CreatedAt))
+            .Select(j => new SyncIssueDto(j.ObjectId!.Value.ToString(CultureInfo.InvariantCulture), j.LastError ?? "Strava didn't send this run.", j.Skipped, j.CreatedAt))
             .ToList();
 
         return new RunDataDto(

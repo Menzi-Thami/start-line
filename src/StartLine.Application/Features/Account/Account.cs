@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -230,12 +231,12 @@ public sealed record CoachExportDto(Guid PlanId, CoachNoteDto Call);
 /// A connected service as exported: what was granted and when, but never the tokens. An export file sitting in a
 /// Downloads folder must not be a working key to someone's Strava.
 /// </summary>
-public sealed record ConnectionExportDto(SyncProvider Provider, long ExternalAthleteId, string Scopes, ConnectionStatus Status, DateTimeOffset ConnectedAt, DateTimeOffset? LastSyncedAt)
+public sealed record ConnectionExportDto(SyncProvider Provider, string ExternalAthleteId, string Scopes, ConnectionStatus Status, DateTimeOffset ConnectedAt, DateTimeOffset? LastSyncedAt)
 {
     public static ConnectionExportDto From(ProviderConnection c)
     {
         ArgumentNullException.ThrowIfNull(c);
-        return new(c.Provider, c.ExternalAthleteId, c.Scopes, c.Status, c.ConnectedAt, c.LastSyncedAt);
+        return new(c.Provider, c.ExternalAthleteId.ToString(CultureInfo.InvariantCulture), c.Scopes, c.Status, c.ConnectedAt, c.LastSyncedAt);
     }
 }
 

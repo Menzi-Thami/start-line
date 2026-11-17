@@ -1,8 +1,8 @@
 # Account connection warm-up
 
-A normal account request keeps the compact account-check line (or stays quiet above an already saved Home). After six seconds, the connection card reuses Taperday's volt runner on a moving track. It displays dependency-check results, concise copy explaining the wait, and optional tips about Strava, Journey, separate recovery and file uploads. It never reports a percentage or claims the account is ready before it responds.
+A normal account request keeps the compact account-check line (or stays quiet above an already saved Home). After six seconds, the connection card reuses Taperday's volt runner on a moving track. It displays dependency-check results, concise copy explaining the wait, and automatic tips about Strava, Journey, separate recovery and file uploads. It never reports a percentage or claims the account is ready before it responds.
 
-Pause/Resume controls stop the runner and track. Reduced-motion users get a still runner without playback controls. Tips change only when Next tip is selected; connection progress does not cycle them. Live status announces actual dependency changes, decorative motion stays outside the accessibility tree, and the tips have a separate polite announcement when manually changed.
+Pause/Resume controls stop the runner, track and tip rotation. Tips rotate every eight seconds with no Next tip button. Reduced-motion users get a still runner while tips continue automatically; Pause/Resume remains available to stop the text. Hidden tabs suspend rotation and receive a full reading interval on return. Live status announces actual dependency changes; decorative motion and automatic tip changes do not produce repeated screen-reader announcements.
 
 The card does not overlay Home, lock scrolling, move focus or change navigation. A saved greeting and navigation remain visible. Home's duplicate chapter-loading placeholder is suppressed only while the account connection already has its own loading state. The normal chapter/recovery UI resumes after the account loads. The existing 60-second account deadline and retry/sign-out behavior remain.
 
@@ -10,7 +10,7 @@ There is no minimum animation duration: the card disappears as soon as the accou
 
 ## Screenshots
 
-Normal motion is paused for consistent screenshots; the tests verify running, pause and resume styles before capture.
+The warm-up is paused for consistent screenshots; the tests verify running, pause and resume styles before capture.
 
 | View | Light | Night Run |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ Normal motion is paused for consistent screenshots; the tests verify running, pa
 
 ## Validation
 
-- `SignInWait.test.tsx`: delayed appearance, quiet saved Home, pause/resume, manual tips retained through health-stage changes, reduced motion, retry/sign-out and health-loop cleanup.
+- `SignInWait.test.tsx`: delayed appearance, quiet saved Home, pause/resume, automatic tip rotation and pause/resume, reduced motion, retry/sign-out and health-loop cleanup.
 - `sign-in-flow.test.tsx`: existing fast account behavior, verified health ordering, cached Home, retry and sign-in regression cases remain; wording now states that the account is still loading after health checks pass.
 - `account-loading-recovery.spec.ts`: real App, controlled pending account request, cached Home and navigation retained, no duplicate chapter spinner, timeout and retry, CSS animation pause/resume, reduced motion, tips, and immediate opening after the pending request resolves without another retry or a film-end delay.
 - Both themes at 320, 375, 820 and 1440px: all WCAG 2 A/AA, 2.1 A/AA and 2.2 AA tags, overflow checks and mobile/desktop screenshots.

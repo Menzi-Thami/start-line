@@ -15,6 +15,8 @@ const NOTE: Record<WakeStep, string> = {
   database: 'Taperday is responding. We’re checking access to your saved data.',
   almost: 'The connection checks passed. We’re still waiting for your account.',
 }
+export const WARMUP_TIP_MS = 8_000
+
 const TIPS = [
   'A free Strava account can bring phone and watch recordings into Taperday.',
   'Your completed training chapters and race results are kept in Journey.',
@@ -29,7 +31,7 @@ interface Props {
   quietUntilSlow?: boolean
 }
 
-/** A real connection wait, with no artificial film duration, progress percentage or automatic tip changes. */
+/** A real connection wait, with automatic tips and no artificial film duration or progress percentage. */
 export function SignInWait({ onRetry, onSignOut, quietUntilSlow = false }: Props) {
   const [slow, setSlow] = useState(false)
   const [paused, setPaused] = useState(false)
@@ -42,11 +44,23 @@ export function SignInWait({ onRetry, onSignOut, quietUntilSlow = false }: Props
     return () => window.clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    if (!slow || paused) return
+    let timer: number | undefined
+    const resumeWhenVisible = () => {
+      window.clearInterval(timer)
+      if (document.visibilityState === 'visible') timer = window.setInterval(() => setTip(value => (value + 1) % TIPS.length), WARMUP_TIP_MS)
+    }
+    resumeWhenVisible()
+    document.addEventListener('visibilitychange', resumeWhenVisible)
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', resumeWhenVisible) }
+  }, [slow, paused])
+
   if (quietUntilSlow && !slow) return null
   if (!slow) return <div className="sign-in-wait"><p className="loading-line" role="status">Checking your account<span className="loading-dots" aria-hidden="true"><i /><i /><i /></span></p></div>
 
   return (
-    <section className="sign-in-wait account-warmup" aria-label="Connecting to Taperday" data-paused={paused || reduced}>
+    <section className="sign-in-wait account-warmup" aria-label="Connecting to Taperday" data-paused={paused} data-reduced-motion={reduced}>
       <div className="account-warmup-heading">
         <div className="account-warmup-visual" aria-hidden="true"><span className="account-warmup-track" /><Runner pose="sprint" size={62} /></div>
         <div>
@@ -60,10 +74,9 @@ export function SignInWait({ onRetry, onSignOut, quietUntilSlow = false }: Props
       {quietUntilSlow && <p className="field-help">Your saved Home stays below while we reconnect.</p>}
       <div className="account-warmup-tip">
         <div className="account-warmup-tip-label"><span>While you wait</span><span aria-hidden="true">{tip + 1}/{TIPS.length}</span></div>
-        <p className="field-help" aria-live="polite" aria-atomic="true">{TIPS[tip]}</p>
+        <p className="field-help" aria-live="off">{TIPS[tip]}</p>
         <div className="account-warmup-controls">
-          <button type="button" className="link-button" onClick={() => setTip(value => (value + 1) % TIPS.length)}>Next tip</button>
-          {!reduced && <button type="button" className="link-button" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? 'Resume animation' : 'Pause animation'}</button>}
+          <button type="button" className="link-button" onClick={() => setPaused(value => !value)}>{paused ? 'Resume warm-up' : 'Pause warm-up'}</button>
         </div>
       </div>
       <div className="submit-row">

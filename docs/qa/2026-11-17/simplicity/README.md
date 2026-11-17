@@ -35,7 +35,7 @@ All application/API responses use synthetic runners and canned recordings. Backe
 | `scripts/check.sh` | Backend format, strict Release build (zero warnings/errors), 1,819 backend tests with no skips, EF consistency, staging-readiness checks, frontend lint/types, 1,008 frontend tests and production build passed; stopped at the required dependency audit before its browser step |
 | Final frontend suite after the lookup/retry regression fix | **1,010 passed across 139 files** |
 | Final frontend lint / TypeScript | Passed |
-| Final desktop `simplicity` and `journey-fallback` browser run | **30 passed**; regenerated every after screenshot with Chromium |
+| Final desktop `simplicity` and offline browser run | **31 passed**; regenerated every after screenshot with Chromium |
 | Affected navigation / coaching / history retests | **8 passed** |
 | Recording stages / historical logging / source expiry / Strava confirmation retests | **9 passed** |
 | Firefox offline edit / reload / reconnect journeys | **2 passed**, both themes, complete Home WCAG audit, one durable write |
@@ -43,7 +43,7 @@ All application/API responses use synthetic runners and canned recordings. Backe
 
 The Home and recording captures check full WCAG 2 A/AA, 2.1 A/AA and 2.2 AA tags and horizontal overflow. Interaction cases cover actual recording identity and origin/filter restoration after reload, keyboard-operable tools with retained drafts, missing IDs, failed current-plan requests and retries from both Home and a fresh device, 320/390/820/2560px, 200% text size and reduced motion. Race confirmation, source expiry, independent recovery, calendar end, pauses, seek-care restrictions and newer-plan precedence retain their real API contracts.
 
-Each Home audit starts in a fresh document at its final width. The offline workflow audits the full Home with the real pending-draft alert, then reopens history before reconnecting. This avoids a Firefox native geometry crash when the target-size rule traverses the expanded history document. **No WCAG rule or audit assertion is disabled.** The editing, persistence and exactly-one-write assertions remain in the Firefox flow.
+The shared screen fixture now calls the same `applyStoredTheme()` initializer as production. Tests assert both the document theme and the theme button state after reload; all 44 image pairs were checked for distinct daylight/Night Run canvases. Each Home audit starts in a fresh document at its final width. The offline workflow audits the full Home with the real pending-draft alert, then reopens history before reconnecting. This avoids a Firefox native geometry crash when the target-size rule traverses the expanded history document. **No WCAG rule or audit assertion is disabled.** The editing, persistence and exactly-one-write assertions remain in the Firefox flow.
 
 ## Limits and readiness
 

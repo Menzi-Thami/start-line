@@ -48,8 +48,11 @@ async function mock(page: Page, scene: typeof scenes[number]) {
 
 for (const mode of ['light', 'dark'] as const) test(`Run detail hierarchy: ${mode} @phone`, async ({ page }, info) => {
   await mock(page, 'synced')
+  await page.addInitScript(value => localStorage.setItem('taperday:theme', value), mode)
   await page.goto(fixture.replace('?view=home', '?view=runs&run=simplicity-run'))
-  await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+  if (baseline) await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+  await expect(page.locator('html')).toHaveAttribute('data-theme', mode)
+  await expect(page.getByRole('button', { name: 'Dark mode', exact: true })).toHaveAttribute('aria-pressed', String(mode === 'dark'))
   await expect(page.getByRole('region', { name: 'Run summary' })).toContainText('8.4 km')
   await page.evaluate(() => document.fonts.ready)
   for (const width of [375, 1440]) {
@@ -164,9 +167,9 @@ for (const mode of ['light', 'dark'] as const) {
 for (const scene of scenes) for (const mode of ['light', 'dark'] as const) {
   test(`simple Home: ${scene}, ${mode} @phone`, async ({ page }, info) => {
     const state = await mock(page, scene)
-    await page.addInitScript(value => { localStorage.setItem('taperday:theme', value); document.documentElement.dataset.theme = value }, mode)
+    await page.addInitScript(value => localStorage.setItem('taperday:theme', value), mode)
     await page.goto(fixture)
-    await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+    if (baseline) await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
     await expect(page.getByRole('heading', { name: 'Welcome back, Naledi' })).toBeVisible()
     await expect(page.getByText('Finding your current chapter…', { exact: true })).toHaveCount(0)
     await page.evaluate(() => document.fonts.ready)
@@ -189,6 +192,9 @@ for (const scene of scenes) for (const mode of ['light', 'dark'] as const) {
       await page.setViewportSize({ width, height: 900 })
       // Start each full audit at its final width in a fresh document; retain every WCAG rule.
       await page.reload()
+      if (baseline) await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+      await expect(page.locator('html')).toHaveAttribute('data-theme', mode)
+      await expect(page.getByRole('button', { name: 'Dark mode', exact: true })).toHaveAttribute('aria-pressed', String(mode === 'dark'))
       await expect(page.getByRole('heading', { name: 'Welcome back, Naledi' })).toBeVisible()
       await page.evaluate(() => document.fonts.ready)
       await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(animation => animation instanceof CSSTransition).map(animation => animation.finished.catch(() => undefined))); if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); scrollTo(0, 0) })

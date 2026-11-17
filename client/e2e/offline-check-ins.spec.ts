@@ -24,6 +24,7 @@ for (const mode of ['light', 'dark'] as const) {
     await page.addInitScript(() => Object.defineProperty(navigator, 'onLine', {
       get: () => localStorage.getItem('qa:offline') !== '1', configurable: true,
     }))
+    await page.addInitScript(value => localStorage.setItem('taperday:theme', value), mode)
     await page.route('**/api/v1/**', async route => {
       if (!accountConnected) return route.abort('internetdisconnected')
       const path = new URL(route.request().url()).pathname
@@ -80,6 +81,7 @@ for (const mode of ['light', 'dark'] as const) {
     await page.reload()
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
     await expect(page.getByRole('region', { name: 'Today', exact: true })).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', mode)
     await status.getByRole('button', { name: 'Review device drafts' }).click()
     await expect(status).toContainText('Device draft: Done · 8 km · 00:42:00')
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)

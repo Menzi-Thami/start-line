@@ -65,6 +65,9 @@ with backend/frontend checks, Chromium journeys and the additional browser-engin
 - `API/Controllers` — thin: bind → dispatch → return.
 
 ## Conventions
+The proposed Home and run-detail refinement has one [simplicity implementation plan](docs/design/taperday-simplicity-plan.md).
+Read it before that work and update its checklist/evidence; it is a planning brief, not a claim that the redesign is implemented.
+
 Read `.claude/rules/engineering-principles.md`. In short: inject `TimeProvider` (no `DateTime.Now` in
 logic), inward-only layer deps, plain-C# domain, typed exceptions (never catch-and-return-null), one
 branch per concern, merge `main` into feature branches. Commits: `feat(scope): …`.

@@ -1,7 +1,7 @@
 import './run-cards.css'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
-import { api } from '../../lib/api-client'
+import { useSyncedRuns } from '../sync/useSyncedRuns'
 import { emptyProgress, uploadAll, type BulkProgress, type BulkResult } from '../../lib/bulk-upload'
 import { formatDate, formatDistance, formatDuration, formatPace, localToday, type Units } from '../../lib/format'
 import type { Activity, ActivitySummary } from '../../lib/types'
@@ -9,6 +9,8 @@ import { KIND_LABEL } from './activity-copy'
 import { BulkSummary } from './BulkSummary'
 import { ExportGuide } from './ExportGuide'
 import { RunDataPanel } from './RunDataPanel'
+import { PhoneRunGuide } from './PhoneRunGuide'
+import { RunImportStatus } from './RunImportStatus'
 
 type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] } | { kind: 'error'; message: string }
 
@@ -17,9 +19,12 @@ interface Props {
   onOpen: (id: string, uploaded?: Activity) => void
   /** The run open beside the list on a desktop, marked in the list. */
   selectedId?: string
+  onOpenConnections: () => void
+  onOpenPlan?: () => void
+  phoneHelp?: { open: boolean; onChange: (open: boolean) => void }
 }
 
-/** Upload runs from a Garmin watch (one, a few, or a whole account export), and every run uploaded so far, newest first. */
+/** Imported recordings, newest first, with phone sync and file upload options. */
 type Range = 'all' | 'week' | 'month'
 
 const RANGES: readonly { id: Range; label: string }[] = [
@@ -54,31 +59,22 @@ const SOURCES: readonly { id: Source; label: string }[] = [
 const fromSource = (runs: readonly ActivitySummary[], source: Source) =>
   source === 'any' ? runs : runs.filter((r) => (source === 'Strava' ? r.source.kind === 'Strava' : r.source.kind !== 'Strava'))
 
-export function MyRuns({ units, onOpen, selectedId }: Props) {
-  const uploadRef = useRef<HTMLDetailsElement>(null)
+export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPlan, phoneHelp }: Props) {
+  const phoneRef = useRef<HTMLDetailsElement>(null)
+  const [localPhoneOpen, setLocalPhoneOpen] = useState(false)
+  const phoneOpen = phoneHelp?.open ?? localPhoneOpen
+  const setPhoneOpen = phoneHelp?.onChange ?? setLocalPhoneOpen
   const auth = useAuth()
-  const [list, setList] = useState<ListState>({ kind: 'loading' })
+  const imports = useSyncedRuns(true, false)
+  const list: ListState = imports.runs ? { kind: 'ready', runs: imports.runs }
+    : imports.error ? { kind: 'error', message: imports.error } : { kind: 'loading' }
+  const fetchRuns = imports.reload
   const [range, setRange] = useState<Range>('all')
   const [source, setSource] = useState<Source>('any')
   const [bulk, setBulk] = useState<{ running: boolean; progress: BulkProgress; result: BulkResult | null; error: string | null } | null>(null)
   const [singleError, setSingleError] = useState<string | null>(null)
   const stop = useRef<AbortController | null>(null)
   const input = useRef<HTMLInputElement>(null)
-
-  // Only sets state when the request settles; callers set the loading state themselves.
-  const fetchRuns = useCallback(() => {
-    const flags = { cancelled: false }
-    auth
-      .getToken()
-      .then((token) => (token ? api.me.activities(token) : Promise.reject(new Error('Sign in to see your runs.'))))
-      .then((runs) => !flags.cancelled && setList({ kind: 'ready', runs }))
-      .catch((error: unknown) => !flags.cancelled && setList({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
-    return () => {
-      flags.cancelled = true
-    }
-  }, [auth])
-
-  useEffect(() => fetchRuns(), [fetchRuns])
 
   const upload = async (files: File[]) => {
     const controller = new AbortController()
@@ -115,11 +111,19 @@ export function MyRuns({ units, onOpen, selectedId }: Props) {
     } finally {
       // The same files can be picked again after fixing whatever went wrong.
       if (input.current) input.current.value = ''
-      fetchRuns()
+      void fetchRuns()
     }
   }
 
   const running = bulk?.running ?? false
+  const openPhoneHelp = () => {
+    const guide = phoneRef.current
+    if (!guide) return
+    setPhoneOpen(true)
+    guide.open = true
+    guide.scrollIntoView?.({ block: 'start' })
+    guide.querySelector('summary')?.focus()
+  }
 
   return (
     <section className="section" aria-labelledby="my-runs-title" style={{ marginTop: 0 }}>
@@ -127,10 +131,13 @@ export function MyRuns({ units, onOpen, selectedId }: Props) {
         Runs
       </h2>
 
-
-      <details ref={uploadRef} className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
+      <RunImportStatus status={imports.strava} error={imports.syncError} busy={imports.syncing} onCheck={() => void imports.refresh()} onConnect={onOpenConnections} />
+      <details ref={phoneRef} className="disclosure phone-runs" open={phoneOpen} onToggle={event => setPhoneOpen(event.currentTarget.open)}><summary>Connect through Strava</summary>
+        <PhoneRunGuide onOpenConnections={onOpenConnections} onOpenPlan={onOpenPlan} />
+      </details>
+      <details className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
         <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Runs you add this way stay on Taperday for good. How to get the file:</p>
-        <ExportGuide />
+        <ExportGuide onPhoneHelp={openPhoneHelp} />
         <label className={running ? 'button button-primary is-busy' : 'button button-primary'}>
           {running ? 'Reading your files…' : 'Upload runs'}
           <input
@@ -157,7 +164,12 @@ export function MyRuns({ units, onOpen, selectedId }: Props) {
         </p>
       </details>
 
-      <RunDataPanel units={units} refreshKey={list.kind === 'ready' ? list.runs.length : 0} />
+      <RunDataPanel units={units} refreshKey={imports.revision} />
+
+      {list.kind === 'ready' && imports.error && <div className="error-panel" role="alert">
+        <p>Your recordings could not refresh. Showing the recordings already loaded. {imports.error}</p>
+        <button type="button" className="link-button" disabled={imports.loading} onClick={() => void fetchRuns()}>Retry recordings</button>
+      </div>}
 
       {list.kind === 'loading' && (
         <div className="choice-list" aria-busy="true" style={{ marginTop: 'var(--space-5)' }}>
@@ -177,8 +189,7 @@ export function MyRuns({ units, onOpen, selectedId }: Props) {
             className="button button-quiet"
             style={{ marginTop: 'var(--space-3)' }}
             onClick={() => {
-              setList({ kind: 'loading' })
-              fetchRuns()
+              void fetchRuns()
             }}
           >
             Try again
@@ -188,8 +199,8 @@ export function MyRuns({ units, onOpen, selectedId }: Props) {
 
       {list.kind === 'ready' && list.runs.length === 0 && (
         <div className="empty" style={{ marginTop: 'var(--space-5)' }}>
-          <p><strong>No runs yet.</strong> Connect Strava in Account, or add a run from your watch.</p>
-          <button type="button" className="button button-primary" style={{ marginTop: 'var(--space-3)' }} onClick={() => { const upload = uploadRef.current; if (!upload) return; upload.open = true; upload.scrollIntoView?.({ block: 'start' }); upload.querySelector('summary')?.focus() }}>Add a run</button>
+          <p><strong>No recordings yet.</strong> Runs recorded on your phone or watch can sync through Strava. You can also upload a saved recording from a file.</p>
+          <button type="button" className="button button-primary" style={{ marginTop: 'var(--space-3)' }} onClick={openPhoneHelp}>See my import options</button>
         </div>
       )}
 

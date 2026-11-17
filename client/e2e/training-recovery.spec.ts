@@ -363,3 +363,39 @@ test('ending recovery offers a direct new-race action on Home and keeps recent a
   await page.getByRole('button', { name: "Choose what's next", exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
 })
+
+for (const phase of ['Concluded', 'Recovering', 'Recovered']) {
+  test(`Home stays the home destination on a fresh device after ${phase}, across reload and navigation @phone`, async ({ page }, info) => {
+    const { state } = await setup(page, { recovering: phase !== 'Concluded' })
+    if (phase === 'Recovered') state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-15' }
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto(fixture)
+    const greeting = page.getByRole('heading', { name: 'Welcome back, Naledi', level: 1, exact: true })
+    const nav = page.getByRole('navigation', { name: 'Main', exact: true })
+    await expect(greeting).toBeVisible()
+    await expect(page).toHaveURL(/view=home/)
+    await expect(nav.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('heading', { name: 'Which race?', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toHaveCount(0)
+    await calmHome(page)
+    expect(state.starts).toEqual([])
+    await page.reload()
+    await expect(greeting).toBeVisible()
+    const action = phase === 'Concluded' ? 'Review my race' : phase === 'Recovering' ? 'Open recovery plan' : "Choose what's next"
+    await expect(page.getByRole('button', { name: action, exact: true })).toBeVisible()
+    await nav.getByRole('button', { name: 'Runs', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Runs', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Taperday', exact: true }).click()
+    await expect(greeting).toBeVisible()
+    await expect(nav.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
+    await expect(page.getByRole('button', { name: action, exact: true })).toBeVisible()
+    expect(state.starts).toEqual([])
+    if (info.project.name === 'desktop') {
+      const shots = fileURLToPath(new URL('../../docs/qa/2026-11-17/phone-runs/', import.meta.url))
+      await mkdir(shots, { recursive: true })
+      await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+      await page.evaluate(() => document.fonts.ready)
+      await page.screenshot({ path: `${shots}/home-preserved-375-${phase.toLowerCase()}.png`, fullPage: true })
+    }
+  })
+}

@@ -457,6 +457,94 @@ public sealed class StravaSyncTests(StravaApiFactory factory) : IClassFixture<St
     }
 
     [Fact]
+    public async Task Catch_up_finds_a_late_upload_older_than_the_newest_recording_without_duplicates()
+    {
+        var (client, athlete) = await Connected();
+        var recent = factory.Strava.AddRun(athlete, Now.AddHours(-1), device: "Strava iPhone");
+        await Push(athlete, "activity", recent, "create");
+        await factory.SyncAsync();
+        (await Runs(client)).GetArrayLength().ShouldBe(1);
+
+        // Nike/watch apps can upload days later; the run's start date is not its upload date.
+        factory.Strava.AddRun(athlete, Now.AddDays(-12), metres: 5000, device: "Nike Run Club");
+        factory.Time.Advance(TimeSpan.FromMinutes(11));
+        await Json(await client.PostAsync(Url("/api/v1/me/sync/strava/catch-up"), null));
+        await factory.SyncAsync();
+        var runs = await Runs(client);
+        runs.GetArrayLength().ShouldBe(2);
+        runs.EnumerateArray().Select(r => r.GetProperty("id").GetGuid()).Distinct().Count().ShouldBe(2);
+
+        factory.Time.Advance(TimeSpan.FromMinutes(11));
+        await Json(await client.PostAsync(Url("/api/v1/me/sync/strava/catch-up"), null));
+        await factory.SyncAsync();
+        (await Runs(client)).GetArrayLength().ShouldBe(2);
+        factory.Strava.Calls.Count(call => call == $"activity {recent}").ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Catch_up_recovers_a_lapsed_recent_run_even_when_a_newer_copy_exists()
+    {
+        var (client, athlete) = await Connected();
+        factory.Strava.AddRun(athlete, Now.AddDays(-20), metres: 5000, device: "COROS PACE 3");
+        await factory.SyncAsync();
+        (await Runs(client)).GetArrayLength().ShouldBe(1);
+
+        factory.Time.Advance(TimeSpan.FromDays(8));
+        var recent = factory.Strava.AddRun(athlete, Now.AddHours(-1), metres: 8000, device: "Apple Watch");
+        await Push(athlete, "activity", recent, "create");
+        await factory.SyncAsync();
+        // The expired cache is deleted before new work. It must be fetched again, not kept past its lifetime.
+        (await Runs(client)).GetArrayLength().ShouldBe(1);
+        await Json(await client.PostAsync(Url("/api/v1/me/sync/strava/catch-up"), null));
+        await factory.SyncAsync();
+        (await Runs(client)).GetArrayLength().ShouldBe(2);
+    }
+
+    [Theory]
+    [InlineData("Strava Android", "Run", "Run")]
+    [InlineData("Nike Run Club", "Run", "Run")]
+    [InlineData("Apple Watch", "Run", "Run")]
+    [InlineData("COROS PACE 3", "TrailRun", "TrailRun")]
+    [InlineData("Zwift", "VirtualRun", "TreadmillRun")]
+    public async Task Recordings_from_phone_apps_and_other_watches_import_their_measured_data(string device, string sport, string kind)
+    {
+        var (client, athlete) = await Connected();
+        var id = factory.Strava.AddRun(athlete, Now.AddHours(-2), metres: 5000, secondsPerKm: 360, sportType: sport, device: device);
+        await factory.SyncAsync();
+        var run = (await Runs(client))[0];
+        run.GetProperty("kind").GetString().ShouldBe(kind);
+        run.GetProperty("distanceKm").GetDouble().ShouldBe(5, tolerance: 0.01);
+        run.GetProperty("movingSeconds").GetDouble().ShouldBe(1800, tolerance: 1);
+        run.GetProperty("source").GetProperty("viewUrl").GetString().ShouldEndWith($"/{id}");
+        run.GetProperty("source").GetProperty("recordedOnGarmin").GetBoolean().ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task A_missing_recording_is_explained_and_a_later_provider_update_clears_the_issue()
+    {
+        var (client, athlete) = await Connected();
+        var id = factory.Strava.AddRun(athlete, Now.AddHours(-2), device: "Phone app");
+        factory.Strava.RemoveStreams(id);
+        await factory.SyncAsync();
+        (await Runs(client)).GetArrayLength().ShouldBe(0);
+        var data = await Json(await client.GetAsync(Url("/api/v1/me/run-data")));
+        data.GetProperty("syncIssues").GetArrayLength().ShouldBe(1);
+        data.GetProperty("syncIssues")[0].GetProperty("skipped").GetBoolean().ShouldBeTrue();
+
+        factory.Time.Advance(TimeSpan.FromMinutes(11));
+        await Json(await client.PostAsync(Url("/api/v1/me/sync/strava/catch-up"), null));
+        await factory.SyncAsync();
+        factory.Strava.Calls.Count(call => call == $"activity {id}").ShouldBe(1);
+
+        factory.Strava.Edit(id, metres: 5000, secondsPerKm: 360);
+        await Push(athlete, "activity", id, "update");
+        await factory.SyncAsync();
+        (await Runs(client)).GetArrayLength().ShouldBe(1);
+        data = await Json(await client.GetAsync(Url("/api/v1/me/run-data")));
+        data.GetProperty("syncIssues").GetArrayLength().ShouldBe(0);
+    }
+
+    [Fact]
     public async Task Personal_bests_include_synced_runs()
     {
         var (client, athlete) = await Connected();

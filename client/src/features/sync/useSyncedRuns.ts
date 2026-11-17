@@ -1,101 +1,157 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAuth } from '../../app/auth-context'
+import { useAuth, type Auth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { ActivitySummary, PersonalBest, StravaStatus } from '../../lib/types'
 import { findNewStravaArrival } from './run-arrival'
 
-/** While Strava has runs in flight, look again this often. */
 export const POLL_MS = 15_000
-
-/** Stop looking after this long even if something is stuck; opening the plan again starts over. */
 export const POLL_FOR_MS = 10 * 60_000
+export const VISIBLE_POLL_MS = 60_000
 
-/**
- * The runner's runs, personal bests and Strava status for the plan view. Opening the plan asks Strava for anything
- * missed (at most every 10 minutes, server side), then polls only while runs are being fetched, and reloads when the
- * tab comes back into view. Failures leave the plan showing without runs rather than breaking it.
- */
-export function useSyncedRuns(enabled: boolean) {
+interface Snapshot {
+  owner: Auth
+  runs?: ActivitySummary[]
+  revision: number
+  bests?: PersonalBest[]
+  strava?: StravaStatus
+  error: string | null
+  syncError: string | null
+  loading: boolean
+  syncing: boolean
+  newArrival: ActivitySummary | null
+}
+const empty = (owner: Auth): Snapshot => ({ owner, revision: 0, error: null, syncError: null, loading: true, syncing: false, newArrival: null })
+const fingerprint = (status: StravaStatus) => `${status.status}|${status.syncedRuns}|${status.lastSyncedAt ?? ''}|${status.pending}|${status.failed}`
+
+/** Account-owned recordings and import progress, shared by Home, Plan and Runs, including runners without a plan. */
+export function useSyncedRuns(enabled: boolean, includeBests = true) {
   const auth = useAuth()
-  const [runs, setRuns] = useState<ActivitySummary[] | undefined>(undefined)
-  const [bests, setBests] = useState<PersonalBest[] | undefined>(undefined)
-  const [strava, setStrava] = useState<StravaStatus | undefined>(undefined)
-  const seen = useRef<string>('')
+  const [loaded, setLoaded] = useState<Snapshot>(() => empty(auth))
+  const active = useRef<Auth | null>(null)
+  const reads = useRef(0)
+  const checks = useRef(0)
   const previousIds = useRef<Set<string> | null>(null)
-  const [newArrival, setNewArrival] = useState<ActivitySummary | null>(null)
-
-  const loadRuns = useCallback(async () => {
-    const token = await auth.getToken()
-    if (!token) return
-    const [list, pbs] = await Promise.all([api.me.activities(token), api.me.bests(token).catch(() => undefined)])
-    const arrival = findNewStravaArrival(previousIds.current, list)
-    previousIds.current = new Set(list.map(run => run.id))
-    if (arrival) setNewArrival(arrival)
-    setRuns(list)
-    if (pbs) setBests(pbs)
+  const seen = useRef('')
+  const current = loaded.owner === auth ? loaded : empty(auth)
+  const update = useCallback((part: Partial<Snapshot>, recordingsChanged = false) => {
+    if (active.current !== auth) return
+    setLoaded(previous => {
+      const owned = previous.owner === auth ? previous : empty(auth)
+      return { ...owned, ...part, revision: owned.revision + (recordingsChanged ? 1 : 0), owner: auth }
+    })
   }, [auth])
 
-  // On open: runs first (the plan shouldn't wait for Strava), then a catch-up if connected.
+  const loadRuns = useCallback(async () => {
+    if (active.current !== auth) return
+    const mine = ++reads.current
+    update({ loading: true, error: null })
+    try {
+      const token = await auth.getToken()
+      if (active.current !== auth || mine !== reads.current) return
+      if (!token) throw new Error('Sign in again to see your runs.')
+      const [runs, bests] = await Promise.all([
+        api.me.activities(token),
+        includeBests ? api.me.bests(token).catch(() => undefined) : Promise.resolve(undefined),
+      ])
+      if (active.current !== auth || mine !== reads.current) return
+      const arrival = findNewStravaArrival(previousIds.current, runs)
+      previousIds.current = new Set(runs.map(run => run.id))
+      update({ runs, ...(bests ? { bests } : {}), error: null, loading: false, ...(arrival ? { newArrival: arrival } : {}) }, true)
+    } catch (error) {
+      if (active.current === auth && mine === reads.current) {
+        update({ error: error instanceof Error ? error.message : 'Your runs could not load. Please try again.', loading: false })
+      }
+    }
+  }, [auth, includeBests, update])
+
+  const checkImports = useCallback(async (catchUp: boolean) => {
+    if (active.current !== auth) return
+    const mine = ++checks.current
+    update({ syncing: true })
+    try {
+      const token = await auth.getToken()
+      if (active.current !== auth || mine !== checks.current) return
+      if (!token) throw new Error('Sign in again to check your imports.')
+      let status = await api.me.strava.status(token)
+      if (active.current !== auth || mine !== checks.current) return
+      if (catchUp && status.connected && status.status === 'Active') status = await api.me.strava.catchUp(token)
+      if (active.current !== auth || mine !== checks.current) return
+      update({ strava: status, syncError: null, syncing: false })
+      return status
+    } catch (error) {
+      if (active.current === auth && mine === checks.current) {
+        update({ syncError: error instanceof Error ? error.message : 'Your import status could not load. Please try again.', syncing: false })
+      }
+    }
+  }, [auth, update])
+
+  const refresh = useCallback(async () => {
+    await checkImports(true)
+    await loadRuns()
+  }, [checkImports, loadRuns])
+
   useEffect(() => {
     if (!enabled) return
-    let cancelled = false
-    const open = async () => {
-      await loadRuns().catch(() => undefined)
-      const token = await auth.getToken()
-      if (!token || cancelled) return
-      let status = await api.me.strava.status(token)
-      if (status.connected && status.status === 'Active') status = await api.me.strava.catchUp(token)
-      if (!cancelled) setStrava(status)
-    }
-    open().catch(() => undefined)
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') loadRuns().catch(() => undefined)
-    }
+    active.current = auth
+    previousIds.current = null
+    seen.current = ''
+    // Keep existing recordings usable immediately; status/catch-up must not block their first read.
+    void loadRuns()
+    void checkImports(true).then(status => {
+      if (status?.connected && status.status === 'Active') void loadRuns()
+    })
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
     document.addEventListener('visibilitychange', onVisible)
     return () => {
-      cancelled = true
+      active.current = null
       document.removeEventListener('visibilitychange', onVisible)
     }
-  }, [enabled, auth, loadRuns])
+  }, [enabled, auth, loadRuns, checkImports, refresh])
 
-  // Once connected, check gently while Taperday is visible. Webhooks import runs
-  // server-side; this read makes their arrival visible without push permission.
-  // A hidden tab waits for visibilitychange rather than polling in the background.
+  // A failed refresh may retain available recordings, but never extend a provider copy's lifetime.
   useEffect(() => {
-    if (!enabled || !strava?.connected || strava.status !== 'Active') return
-    const timer = window.setInterval(() => {
-      if (document.visibilityState !== 'visible') return
-      loadRuns().catch(() => undefined)
-    }, 60_000)
-    return () => window.clearInterval(timer)
-  }, [enabled, strava?.connected, strava?.status, loadRuns])
+    const now = Date.now()
+    const expiry = Math.min(...(current.runs ?? []).flatMap(run =>
+      run.source.kind === 'Strava' && run.source.cachedUntil ? [Date.parse(run.source.cachedUntil)] : []).filter(value => value > now))
+    if (!Number.isFinite(expiry)) return
+    const timer = window.setTimeout(() => {
+      setLoaded(previous => {
+        if (previous.owner !== auth) return previous
+        const expired = new Set((previous.runs ?? []).filter(run => run.source.kind === 'Strava'
+          && run.source.cachedUntil && Date.parse(run.source.cachedUntil) <= Date.now()).map(run => run.id))
+        return { ...previous, revision: previous.revision + 1, runs: previous.runs?.filter(run => !expired.has(run.id)),
+          bests: previous.bests?.filter(best => !expired.has(best.activityId)),
+          newArrival: previous.newArrival && expired.has(previous.newArrival.id) ? null : previous.newArrival }
+      })
+      void loadRuns()
+    }, Math.min(expiry - now + 50, 2_147_483_647))
+    return () => window.clearTimeout(timer)
+  }, [current.runs, auth, loadRuns])
 
-  // While runs are on their way, poll the status and reload the runs whenever more have arrived.
-  const pending = strava?.connected === true && strava.pending > 0
+  // Reconcile missed webhooks on foreground/periodic checks, not only on opening a training plan.
+  useEffect(() => {
+    if (!enabled || !current.strava?.connected || current.strava.status !== 'Active') return
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void refresh()
+    }, VISIBLE_POLL_MS)
+    return () => window.clearInterval(timer)
+  }, [enabled, current.strava?.connected, current.strava?.status, refresh])
+
+  const pending = current.strava?.connected === true && current.strava.status === 'Active' && current.strava.pending > 0
   useEffect(() => {
     if (!enabled || !pending) return
     const started = Date.now()
     const timer = window.setInterval(() => {
-      if (Date.now() - started > POLL_FOR_MS) {
-        window.clearInterval(timer)
-        return
-      }
-      auth
-        .getToken()
-        .then((token) => (token ? api.me.strava.status(token) : undefined))
-        .then(async (status) => {
-          if (!status) return
-          const fingerprint = `${status.syncedRuns}|${status.lastSyncedAt ?? ''}|${status.pending}`
-          if (fingerprint !== seen.current) {
-            seen.current = fingerprint
-            await loadRuns()
-          }
-          setStrava(status)
-        })
-        .catch(() => undefined)
+      if (Date.now() - started >= POLL_FOR_MS) { window.clearInterval(timer); return }
+      if (document.visibilityState !== 'visible') return
+      void checkImports(false).then(status => {
+        if (!status) return
+        const next = fingerprint(status)
+        if (next !== seen.current) { seen.current = next; void loadRuns() }
+      })
     }, POLL_MS)
     return () => window.clearInterval(timer)
-  }, [enabled, pending, auth, loadRuns])
+  }, [enabled, pending, checkImports, loadRuns])
 
-  return { runs, bests, strava, reload: loadRuns, newArrival, dismissArrival: () => setNewArrival(null) }
+  return { ...current, reload: loadRuns, refresh, dismissArrival: () => update({ newArrival: null }) }
 }

@@ -124,12 +124,14 @@ export function RunDataPanel({ units, refreshKey }: Props) {
   const data = state.kind === 'ready' ? state.data : null
   const failed = data?.syncIssues.filter((issue) => !issue.skipped) ?? []
   const attention = failed.length
+  const skipped = data?.syncIssues.filter(issue => issue.skipped).length ?? 0
 
   return (
     <details className="disclosure run-data" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>
         Your run data
         {attention > 0 && <span className="field-error"> · {plural(attention, 'run')} from Strava didn’t arrive</span>}
+        {attention === 0 && skipped > 0 && <span className="field-help"> · {plural(skipped, 'recording')} skipped</span>}
       </summary>
 
       {state.kind === 'loading' && <p className="field-help" role="status">Checking your runs…</p>}

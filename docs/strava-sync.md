@@ -103,7 +103,7 @@ Rate limits (per app, shared by every runner): 200 requests per 15 min and 2,000
 Strava ──push──▶ POST /api/v1/webhooks/strava/{hookSecret}   (anonymous, rate-limited, answers in < 2 s)
                    │ checks subscription id + connected athlete, then only queues
                    ▼
-                 SyncJobs table  ◀── connect (Backfill, Refresh), plan opened (CatchUp)
+                 SyncJobs table  ◀── connect (Backfill, Refresh), Home/Plan/Runs opened or foregrounded (CatchUp)
                    │
                  StravaSyncWorker (sleeps until woken or the next job is due)
                    │ IStravaSync.RunDueAsync: GET activity + streams with that runner's own token
@@ -118,10 +118,22 @@ Strava ──push──▶ POST /api/v1/webhooks/strava/{hookSecret}   (anonymou
   `NeedsReconnect`. Duplicate events for the same run collapse into one job.
 - **Rate limit:** `StravaRateGate` reads Strava's usage headers on every response and stops background work at 90%
   until the next window, leaving room for runners connecting or disconnecting.
-- **Catch-up:** the free plan can miss Strava's 2-second deadline while it wakes up, so opening the plan also asks
-  Strava for anything since the newest synced run (at most every 10 minutes).
+- **Catch-up:** the free hosting plan can miss Strava's 2-second webhook deadline while it wakes up. Home, Plan and
+  Runs (including runners with no training plan) request a scan of the supported six-week recording window on open,
+  foreground and visible periodic checks. The API throttles listing jobs to once per 10 minutes. Recording time is not
+  upload time: using only the newest recording as a cursor missed late phone/watch uploads and expired recent caches.
+  Already held, fresh recordings and uploaded originals are skipped; the existing five-page bound and rate gate remain.
 - **Database:** the worker never polls while idle, so the Azure SQL free offer can still pause.
 - **Backfill:** connecting fetches the last 6 weeks (`StravaCache.Backfill`), enough for the trend and volume charts.
+- **Missing recordings:** totals-only and manually typed activities cannot supply sampled time/distance for analysis.
+  These produce a skipped-import reason in Runs → Your run data rather than disappearing silently. A daily negative
+  cache avoids re-fetching them on every listing; an activity-update webhook bypasses it. A new fetch supersedes old
+  issues for that same runner/provider/activity. No GPS, heart rate or splits are invented.
+- **Client progress:** pending work is checked every 15 seconds (for up to 10 minutes), and visible active connections
+  reconcile every minute. Reads are isolated to the authenticated owner; stale responses cannot replace newer results.
+  A refresh failure retains already loaded recordings with a retry message. Expired provider copies and their displayed
+  bests are removed even if refresh fails; uploaded recordings remain available. Import issue details refresh even when
+  the recordings list stays empty. Account also offers Check for runs and pending progress.
 
 ## Tokens
 

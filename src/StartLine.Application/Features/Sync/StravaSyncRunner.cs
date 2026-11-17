@@ -146,6 +146,9 @@ internal sealed partial class StravaSyncRunner(
         }
 
         var id = job.ObjectId!.Value;
+        // A new fetch supersedes its previous issue; the same run must not accumulate stale warnings.
+        db.SyncJobs.RemoveRange(await db.SyncJobs.Where(j => j.Id != job.Id && j.RunnerId == job.RunnerId &&
+            j.Kind == SyncJobKind.FetchActivity && j.Provider == job.Provider && j.ObjectId == id && j.Failed).ToListAsync(cancellationToken));
         var token = await tokens.AccessTokenAsync(connection, cancellationToken);
         var activity = await strava.GetActivityAsync(token, id, cancellationToken);
         if (activity is null || activity.AthleteId != connection.ExternalAthleteId || !StravaRecording.IsRun(activity.SportType))
@@ -155,10 +158,11 @@ internal sealed partial class StravaSyncRunner(
             return;
         }
 
-        var recording = StravaRecording.From(activity, await strava.GetStreamsAsync(token, id, cancellationToken));
+        var recording = activity.Manual ? null : StravaRecording.From(activity, await strava.GetStreamsAsync(token, id, cancellationToken));
         if (recording is null)
         {
             await DeleteLocalAsync(job.RunnerId, id, cancellationToken);
+            skipReason = activity.Manual ? SkipReasons.ManualEntry : SkipReasons.MissingRecording;
             return;
         }
 
@@ -235,12 +239,9 @@ internal sealed partial class StravaSyncRunner(
     private async Task CatchUpAsync(SyncJob job, CancellationToken cancellationToken)
     {
         var now = time.GetUtcNow();
-        var latest = await db.Activities.Visible(now)
-            .Where(a => a.RunnerId == job.RunnerId && a.Source == ActivitySource.Strava)
-            .MaxAsync(a => (DateTimeOffset?)a.StartedAt, cancellationToken);
-        // From a day before the newest synced run, so an edit or a late upload to Strava is still picked up.
-        var after = latest is { } l && l.AddDays(-1) > now - StravaCache.Backfill ? l.AddDays(-1) : now - StravaCache.Backfill;
-        await ListAsync(job, after, SyncPriority.CatchUp, cancellationToken);
+        // Recording date is not upload date. Scan the supported window so a phone/watch that uploads late, or a
+        // recent copy lost while the worker slept, is found even when a newer recording is already here.
+        await ListAsync(job, now - StravaCache.Backfill, SyncPriority.CatchUp, cancellationToken);
     }
 
     private async Task ListAsync(SyncJob job, DateTimeOffset after, SyncPriority priority, CancellationToken cancellationToken)
@@ -257,6 +258,13 @@ internal sealed partial class StravaSyncRunner(
             .Where(a => a.RunnerId == job.RunnerId)
             .Select(a => new { a.Source, a.ExternalId, a.StartedAt, a.CachedUntil })
             .ToListAsync(cancellationToken);
+        // A totals-only/manual activity will not gain recording samples on the next poll. Use a daily negative cache;
+        // a provider update webhook still fetches it immediately if the source has been fixed.
+        var recentMissing = await db.SyncJobs.AsNoTracking()
+            .Where(j => j.RunnerId == job.RunnerId && j.Provider == job.Provider && j.Kind == SyncJobKind.FetchActivity &&
+                j.Skipped && j.CreatedAt > now - RefreshInterval &&
+                (j.LastError == SkipReasons.MissingRecording || j.LastError == SkipReasons.ManualEntry))
+            .Select(j => j.ObjectId).ToListAsync(cancellationToken);
 
         for (var page = 1; page <= MaxPages; page++)
         {
@@ -267,7 +275,7 @@ internal sealed partial class StravaSyncRunner(
                 var have = cached.FirstOrDefault(c => c.Source == ActivitySource.Strava && c.ExternalId == id);
                 // Only an exact start skips the fetch here: a near one is checked against the distance once fetched.
                 var uploaded = cached.Any(c => c.Source == ActivitySource.Upload && c.StartedAt == run.StartDate.ToUniversalTime());
-                if (uploaded || (have is not null && !StravaCache.IsDueForRefresh(have.CachedUntil, now)))
+                if (uploaded || recentMissing.Contains(run.Id) || (have is not null && !StravaCache.IsDueForRefresh(have.CachedUntil, now)))
                 {
                     continue;
                 }

@@ -147,6 +147,8 @@ test('race selection keeps Continue visible and all bibs readable in light and d
 })
 
 test('custom race date sheet exposes the final day and is not covered by Continue @phone', async ({ page }) => {
+  // November 30 is exactly the 14-day boundary; a wall-clock date eventually moves this sheet to December.
+  await page.clock.install({ time: new Date('2026-11-16T12:00:00Z') })
   await page.setViewportSize({ width: 390, height: 760 })
   await page.goto('/')
   await page.getByRole('radio', { name: /Add a race manually/ }).click()

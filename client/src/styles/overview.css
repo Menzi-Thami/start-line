@@ -274,8 +274,16 @@
   width: auto;
 }
 
-.strava-powered-print {
-  display: none;
+/* Use Strava's original black/white marks rather than recolouring them. */
+.strava-powered-screen { display: none; }
+.strava-powered-print { display: inline; }
+@media screen and (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .strava-powered-screen { display: inline; }
+  :root:not([data-theme='light']) .strava-powered-print { display: none; }
+}
+@media screen {
+  :root[data-theme='dark'] .strava-powered-screen { display: inline; }
+  :root[data-theme='dark'] .strava-powered-print { display: none; }
 }
 
 /* Strava asks for "View on Strava" in bold, underlined or #FC5200; bold and underlined keeps Taperday's palette. */

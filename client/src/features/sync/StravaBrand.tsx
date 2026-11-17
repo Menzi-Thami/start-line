@@ -12,11 +12,11 @@ export function ConnectWithStrava({ onClick, disabled }: { onClick: () => void; 
   )
 }
 
-/** "Powered by Strava", beside data that came from Strava. White on the dark screen, black when printed. */
+/** "Powered by Strava", beside data that came from Strava, using the supplied light/dark marks. */
 export function PoweredByStrava() {
   return (
-    <span className="strava-powered">
-      <img className="strava-powered-screen" src="/strava/api_logo_pwrdBy_strava_horiz_white.svg" width={110} height={11} alt="Powered by Strava" />
+    <span className="strava-powered" role="img" aria-label="Powered by Strava">
+      <img className="strava-powered-screen" src="/strava/api_logo_pwrdBy_strava_horiz_white.svg" width={110} height={11} alt="" aria-hidden="true" />
       <img className="strava-powered-print" src="/strava/api_logo_pwrdBy_strava_horiz_black.svg" width={110} height={11} alt="" aria-hidden="true" />
     </span>
   )

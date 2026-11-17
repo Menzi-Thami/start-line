@@ -149,6 +149,8 @@ export function App() {
   const compact = useMediaQuery('(max-width: 63.99rem)')
   // Bumped when a run is deleted, so the journal beside it on a desktop loads again.
   const [runsVersion, setRunsVersion] = useState(0)
+  // Keep phone setup open when the Runs panel moves between mobile and desktop layouts.
+  const [phoneHelpOpen, setPhoneHelpOpen] = useState(false)
   // Plan navigation can return to the current week from any training detail.
   // The runner's own picture, if they added one; initials show until it arrives, or without one.
   const [photo, setPhoto] = useState<string | null>(null)
@@ -410,6 +412,8 @@ export function App() {
   // there's nothing to show yet: a first sign-in here, or a brand new account.
   const knownHere = copy?.runner !== undefined
   const latestPlan = currentPlan.current
+  // A completed chapter still has a Home on a new device, without relying on a cached profile.
+  const returningAfterPlan = latestPlan === null && journey.state.kind === 'ready' && isPostTrainingHome(journey.state.journey, null, today)
   // Completing Microsoft sign-in must not strand returning runners on the sign-in URL.
   // Wait for the saved-plan lookup; only then decide between their plan and Home.
   useEffect(() => {
@@ -425,7 +429,7 @@ export function App() {
     }
   }, [view, runner.state.kind, latestPlan])
   useEffect(() => {
-    if (landing.current || !(found || knownHere) || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
+    if (landing.current || !(found || knownHere || returningAfterPlan) || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
     landing.current = true
     // A runner coming back with their plan kept on this device opens straight on it, as opening it from Home would show
     // it, while the account loads. Only before this visit has found their plan: after that, Home opens it for real.
@@ -458,7 +462,7 @@ export function App() {
     })
     // build is a fresh function each render; what it does doesn't change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [found, knownHere, initial, view, plan.kind, editing, copy, latestPlan])
+  }, [found, knownHere, returningAfterPlan, initial, view, plan.kind, editing, copy, latestPlan])
 
   // Once the account says which plan is current, the copy gives way to it, as opening the plan from Home would: the same
   // plan is brought up to date by the coach (above), a plan changed on another device is built afresh, and a plan deleted
@@ -993,12 +997,12 @@ export function App() {
             openRun ? (
               <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
             ) : (
-              <MyRuns units={units} onOpen={showRun} />
+              <MyRuns units={units} onOpen={showRun} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
             )
           ) : (
             // On a desktop the journal stays on the left and the open run fills the right.
             <div className="runs-split">
-              <MyRuns key={runsVersion} units={units} onOpen={showRun} selectedId={openRun?.id} />
+              <MyRuns key={runsVersion} units={units} onOpen={showRun} selectedId={openRun?.id} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
               <div className="runs-split-detail">
                 {openRun ? (
                   <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />

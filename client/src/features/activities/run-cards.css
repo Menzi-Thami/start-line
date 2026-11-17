@@ -8,3 +8,12 @@
 @media (min-width: 1100px) { .runs { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (prefers-reduced-motion: no-preference) { .run-feed-open { transition: background-color 200ms; } }
 .run-feed-open > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.phone-run-guide { display: grid; gap: var(--space-3); padding-top: var(--space-3); }
+.phone-runs { scroll-margin-top: calc(var(--masthead-h) + var(--space-6)); }
+.phone-run-guide h3 { font-size: var(--text-lg); margin: var(--space-2) 0 0; }
+.phone-run-guide .export-steps { margin: 0; }
+.phone-run-guide .button { justify-self: start; white-space: normal; }
+.run-import-status { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
+.run-import-status .link-button { justify-self: start; }
+.running-app-guides { width: 100%; }
+.running-app-guides summary { white-space: normal; padding-block: var(--space-2); }

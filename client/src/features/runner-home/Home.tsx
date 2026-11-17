@@ -45,6 +45,8 @@ const Calculators = lazy(() => import('./Calculators').then((module) => ({ defau
 
 interface Props {
   runner: Runner
+  /** Account connection progress is already shown above Home. */
+  accountLoading?: boolean
   units: Units
   today: string
   /** The runner's current plan, null when they have none, undefined while it's being found. */
@@ -458,6 +460,7 @@ export function Home({
   initialPlan,
   onPlanLoaded,
   photo = null,
+  accountLoading = false,
 }: Props) {
   const auth = useAuth()
   const training = currentTraining(storedCurrent, today)
@@ -569,7 +572,7 @@ export function Home({
           </section>
         )}
         {!phasePending && <JourneyHomeCard journey={journey} today={today} currentPlanId={current?.id ?? null} onOpenPlan={onOpenPlan} onOpenJourney={onOpenJourney} onOpenRecovery={onOpenRecovery} onNewRace={onBuildPlan} />}
-        {(phasePending || afterTraining && journey.state.kind !== 'ready') && <section className="panel home-card journey-home" role={journey.state.kind === 'error' ? 'alert' : 'status'} aria-label={phasePending ? 'Loading your current chapter' : undefined}>
+        {!accountLoading && (phasePending || afterTraining && journey.state.kind !== 'ready') && <section className="panel home-card journey-home" role={journey.state.kind === 'error' ? 'alert' : 'status'} aria-label={phasePending ? 'Loading your current chapter' : undefined}>
           <h2 className="home-card-heading">{phasePending ? 'Your day' : 'Your saved chapter'}</h2>
           <p>{journey.state.kind === 'error' ? journey.state.message : phasePending ? 'Finding your current chapter…' : 'Loading your saved chapter…'}</p>
           {journey.state.kind === 'error' && <button type="button" className="button" onClick={journey.actions.refresh}>Try again</button>}

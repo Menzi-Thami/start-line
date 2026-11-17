@@ -957,6 +957,7 @@ export function App() {
         {view === 'home' && homeRunner && (
           <Home
             runner={homeRunner}
+            accountLoading={state.kind === 'loading'}
             photo={photo}
             units={units}
             today={today}

@@ -33,6 +33,7 @@ async function mockApi(page: Page, hasPlan = false) {
 for (const mode of ['light', 'dark']) {
   test(`Nike runner finds phone help, understands history limits and opens connections in ${mode} mode @phone`, async ({ page }, info) => {
     const errors: string[] = []
+    const deviceViewport = page.viewportSize()!
     page.on('pageerror', error => errors.push(error.message))
     await mockApi(page)
     await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
@@ -65,13 +66,17 @@ for (const mode of ['light', 'dark']) {
           if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
           window.scrollTo(0, 0)
         })
-        await page.screenshot({ path: info.outputPath(`phone-run-options-${width}-${mode}.png`), fullPage: true })
+        await page.screenshot({ path: info.outputPath(`phone-run-options-${width}-${mode}.png`), fullPage: width >= 1024 })
         if (info.project.name === 'desktop') {
           await mkdir(qa, { recursive: true })
-          await page.screenshot({ path: `${qa}/phone-${width}-${mode}.png`, fullPage: true })
+          await page.screenshot({ path: `${qa}/phone-${width}-${mode}.png`, fullPage: width >= 1024 })
         }
       }
     }
+    // Continue the journey at the project's actual device size after the viewport audits.
+    await page.setViewportSize(deviceViewport)
+    await expect(page.locator('.runs-split')).toHaveCount(deviceViewport.width >= 1024 ? 1 : 0)
+    await expect(guide).toHaveAttribute('open', '')
     await guide.getByRole('button', { name: 'Open connection settings', exact: true }).click()
     await expect(page).toHaveURL(/view=account&settings=connections/)
     const connections = page.getByText('Connections & run sources', { exact: true }).locator('..')

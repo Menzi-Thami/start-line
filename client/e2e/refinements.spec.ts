@@ -1,7 +1,8 @@
-import { openDisclosure, openHomeMore } from './navigation'
+import { openDisclosure, openHomeLibrary } from './navigation'
 import { screenshotPath } from './screenshots'
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
+import { journeyOf } from '../src/features/journey/journey-fixtures'
 
 const plan = JSON.parse(readFileSync(new URL('../src/test/fixtures/plan-5k.json', import.meta.url), 'utf8'))
 test.use({ baseURL: 'http://127.0.0.1:5176', colorScheme: 'dark' })
@@ -10,6 +11,7 @@ async function mockApi(page: Page, fail = false) {
   const state = { progressRequests: 0 }
   await page.route('**/api/v1/**', route => {
     const path = new URL(route.request().url()).pathname
+    if (path.endsWith('/me/journey')) return route.fulfill({ json: journeyOf([]) })
     if (path.endsWith('/progress')) { state.progressRequests++; return route.fulfill({ json: [] }) }
     if ((fail && (path.endsWith('/coach') || path.endsWith('/running'))) || path.endsWith('/insights')) return route.fulfill({ status: 503, json: { title: 'Synthetic unavailable data', status: 503 } })
     const json = path.endsWith('/coach') ? { id: 'visibility-plan', plan, coaching: [] }
@@ -31,12 +33,11 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     const week = page.getByRole('region', { name: 'This week', exact: true })
     const setup = page.getByRole('region', { name: /Get set up/ })
     await expect(today.getByRole('button', { name: "Open today's workout" })).toBeInViewport()
-    await expect(setup).toBeVisible()
+    await expect(setup).toHaveCount(0)
     const heroBox = (await today.boundingBox())!
     const weekBox = (await week.boundingBox())!
-    expect((await setup.boundingBox())!.y).toBeGreaterThanOrEqual(heroBox.y + heroBox.height)
-    if (width >= 768) { expect(weekBox.x).toBeGreaterThanOrEqual(heroBox.x + heroBox.width); expect(Math.abs(weekBox.y - heroBox.y)).toBeLessThan(2) }
-    else expect(weekBox.y).toBeGreaterThanOrEqual(heroBox.y + heroBox.height)
+    expect(weekBox.y).toBeGreaterThanOrEqual(heroBox.y + heroBox.height)
+    await expect(week.getByRole('button', { name: 'View this week', exact: true })).toBeVisible()
     await expect(page.locator('.home-tiles')).toBeHidden()
     expect(state.progressRequests).toBe(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
@@ -97,11 +98,11 @@ for (const mode of ['no-plan', 'race-week', 'expired', 'error', 'long-name']) {
     await mockApi(page, mode === 'error')
     await page.setViewportSize({ width: 320, height: 900 })
     await page.goto(`/e2e/fixtures/redesign-screens.html?screen=home&mode=${mode}`)
-    if (mode === 'no-plan') await expect(page.getByRole('button', { name: 'Build my plan', exact: true })).toBeVisible()
+    if (mode === 'no-plan') await expect(page.getByRole('button', { name: 'Choose my next challenge', exact: true })).toBeVisible()
     else if (mode === 'error') await expect(page.getByRole('button', { name: 'Retry plan' })).toBeVisible()
-    else await expect(page.getByRole('button', { name: "Open today's workout" })).toBeVisible()
+    else await expect(page.getByRole('button', { name: mode === 'race-week' ? 'Open race day' : "Open today's workout" })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    await openHomeMore(page)
+    await openHomeLibrary(page)
     await expect(page.locator('summary').filter({ hasText: /^Running insights/ })).toBeVisible()
   })
 }

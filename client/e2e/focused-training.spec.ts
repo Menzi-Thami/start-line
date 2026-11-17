@@ -1,4 +1,4 @@
-import { openHomeMore } from './navigation'
+import { openHomeLibrary } from './navigation'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import type { CheckIn } from '../src/lib/types'
@@ -38,7 +38,9 @@ test('training stays focused while all detail remains reachable @phone', async (
   await expect(page.getByRole('region', { name: 'Today', exact: true })).toContainText('Long run')
   await page.evaluate(() => document.fonts.ready)
   await expect(page.getByRole('tablist', { name: 'Home', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Log this workout', exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: "Open today's workout", exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Log a run manually', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Log this workout', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Log a run', exact: true })).toHaveCount(0)
   const navigation = page.getByRole('navigation', { name: 'Main', exact: true })
   await expect(navigation.getByRole('button')).toHaveCount(5)
@@ -52,7 +54,7 @@ test('training stays focused while all detail remains reachable @phone', async (
     await page.screenshot({ path: info.outputPath(`focused-home-${width}.png`) })
   }
   const tools = page.locator('summary').filter({ hasText: /^Running tools/ })
-  await openHomeMore(page)
+  await openHomeLibrary(page)
   await navigation.getByRole('button', { name: 'Plan', exact: true }).click()
   await page.getByRole('tab', { name: 'Progress', exact: true }).click()
   await expect(navigation.getByRole('button', { name: 'Plan', exact: true })).toHaveAttribute('aria-current', 'page')
@@ -60,13 +62,15 @@ test('training stays focused while all detail remains reachable @phone', async (
   await page.reload()
   await expect(navigation.getByRole('button', { name: 'Plan', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('tab', { name: 'Progress', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await page.locator('.plan-weekly-review > summary').click()
+  await expect(page.locator('.plan-weekly-review')).toContainText('Last week')
+  await expect(page.locator('.plan-weekly-review details.readiness > summary')).toBeVisible()
   await navigation.getByRole('button', { name: 'Home', exact: true }).click()
-  await openHomeMore(page)
+  await openHomeLibrary(page)
   await tools.focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()
   await tools.click()
-  await page.locator('summary').filter({ hasText: /^Running insights/ }).click()
   await expect(page.getByRole('region', { name: 'Personal bests', exact: true })).toBeVisible()
   await page.locator('summary').filter({ hasText: /^Running insights/ }).click()
   await navigation.getByRole('button', { name: 'Plan', exact: true }).click()

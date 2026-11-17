@@ -11,14 +11,16 @@ export function RunSummaryHero({ run, units }: { run: Activity; units: Units }) 
     <section className="ra-hero" aria-label="Run summary">
       <div className="ra-hero-top">
         <span className="ra-completed">✓ Run recorded</span>
-        <div className="ra-hero-runner"><Runner pose="sprint" size={104} /></div>
+        <div className="ra-hero-runner"><Runner pose="sprint" size={60} /></div>
       </div>
       <div className="ra-distance">{formatDistance(run.distanceKm, units)}</div>
       <dl className="ra-metrics">
         <div><dt>Moving time</dt><dd>{formatDuration(run.movingSeconds)}</dd></div>
+        <div><dt>Elapsed time</dt><dd>{formatDuration(run.elapsedSeconds)}</dd></div>
         <div><dt>Average pace</dt><dd>{formatPace(run.paceSecondsPerKm, units)}</dd></div>
         {run.averageHeartRate != null && <div><dt>Avg heart rate</dt><dd>{run.averageHeartRate} <small>bpm</small></dd></div>}
       </dl>
+      <p className="field-help ra-time-note">Average pace is based on moving time. Elapsed time includes stops.</p>
     </section>
   )
 }
@@ -63,7 +65,7 @@ export function PaceSplitsVisual({ splits, units, compact = false, onViewAll }: 
 }) {
   const [selected, setSelected] = useState<number | null>(null)
   const valid = splits.filter(validSplit)
-  const full = valid.filter(s => s.distanceKm >= 0.995)
+  const full = valid.filter(s => s.distanceKm >= 0.995 && s.distanceKm <= 1.005)
   const fastest = full.length ? full.reduce((a, b) => a.paceSecondsPerKm <= b.paceSecondsPerKm ? a : b) : null
   const maxSpeed = Math.max(...valid.map(s => 1 / s.paceSecondsPerKm), 0)
   const visible = compact && valid.length > 5 ? valid.slice(0, 5) : valid
@@ -78,8 +80,8 @@ export function PaceSplitsVisual({ splits, units, compact = false, onViewAll }: 
       <div className="ra-split-list">
         {visible.map(split => {
           const fastestFull = fastest === split
-          const width = Math.max(18, Math.min(100, (1 / split.paceSecondsPerKm) / maxSpeed * 100))
-          const partial = split.distanceKm < 0.995
+          const width = Math.min(100, (1 / split.paceSecondsPerKm) / maxSpeed * 100)
+          const partial = Math.abs(split.distanceKm - 1) > 0.005
           return (
             <div key={split.number} className="ra-split-item">
               <button type="button" className={'ra-split-row' + (fastestFull ? ' ra-split-best' : '')}

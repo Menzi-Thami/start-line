@@ -1,6 +1,6 @@
 # Taperday simplicity implementation plan
 
-Status: planning only; application implementation and visual validation are pending.
+Status: implementation in progress in PR #275; final regression and CI validation are running.
 Branch: `feature/taperday-simplicity-plan`. Target: `staging`.
 Baseline inspected: `e09ca85fa6e90bbe5deacc778f0f2dacb42f1124` (PR #272).
 Prepared: 17 November 2026.
@@ -9,7 +9,7 @@ Prepared: 17 November 2026.
 
 This is the single implementation brief and progress tracker for this refinement. A developer should be able to complete it without the original conversation. Continue the branch and PR containing this file; update its checklist and evidence instead of opening a competing redesign or copying the plan elsewhere. If the owner merges this planning document separately, use the same canonical document to track the subsequent implementation.
 
-The current request authorizes a planning PR. It does not make the application implementation complete or authorize merging or deployment. The implementation work below is intentionally unchecked.
+The owner subsequently authorized completing the implementation in this same PR. Merge and deployment remain separate owner actions. This document continues to track the delivered behavior and actual validation evidence.
 
 Read [repository instructions](../../CLAUDE.md), [engineering principles](../../.claude/rules/engineering-principles.md), [testing](../testing.md), and [shipping](../how-we-ship.md). Check the latest branch, open PRs and runtime contracts before coding; the inspected baseline is a reference, not a reason to overwrite later work.
 
@@ -52,7 +52,7 @@ As checked on 17 November, these are independent open draft PRs:
 - [#273](https://github.com/Menzi-Thami/start-line/pull/273), `fix/account-warmup-animation`, head `2abe018501ad574820910d05b4276933a1c9c1f9`: the slow account connection automatically plays the existing runner and rotates tips every eight seconds, with pause/resume, reduced-motion support and no Next tip button. Preserve this behaviour if integrated. It does not resolve a hosting cold start.
 - [#274](https://github.com/Menzi-Thami/start-line/pull/274), `fix/strava-id-precision`, head `2b3c43836b4044206834114e1f22c04b365e9938`: browser-facing Strava identifiers are strings; provider ingestion remains exact C# Int64/SQL bigint. Do not reintroduce JavaScript-number conversions or undo generated API types.
 
-Neither PR is assumed merged. Do not merge, close, overwrite or duplicate them as part of planning. Before implementation, recheck their status, reconcile overlapping changes explicitly, and record the tested combined revision. Any essential dependency must be integrated or identified before implementation is marked ready.
+Rechecked during implementation: both remain open draft PRs at the heads above, and staging remains at the recorded baseline. Their commits were integrated into this branch with merge commits `fc8f289` (#273) and `a9d6e2e` (#274). Neither dependency PR was merged to staging, closed or overwritten. Validation below covers their combined code with this refinement.
 
 Both last reported a required audit failure on [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf), whose expanded range included latest `picomatch@4.0.7` with no patched version then available. Recheck the current advisory and releases; this is dated evidence, not a permanent exemption. Do not lower audit thresholds, suppress the advisory or claim green CI while it fails.
 
@@ -152,9 +152,9 @@ All phases belong to the same brief. Keep completed work and remaining work dist
 
 ### 1. Establish the actual baseline
 
-- [ ] Recheck staging and PRs #273/#274; reconcile dependencies without replacing their work.
-- [ ] Capture the real Home in training, just-synced, concluded-race, recovery, post-recovery and settled states. Record the commit and the current screenshot/source map.
-- [ ] Identify which current selectors, navigation callbacks, API contracts and tests already meet this brief; keep those implementations.
+- [x] Recheck staging and PRs #273/#274; reconcile dependencies without replacing their work.
+- [x] Capture the real Home in training, just-synced, concluded-race, recovery, post-recovery and settled states. Record the commit and the current screenshot/source map.
+- [x] Identify which current selectors, navigation callbacks, API contracts and tests already meet this brief; keep those implementations.
 
 ### 2. Specify and test state selection
 
@@ -164,11 +164,11 @@ All phases belong to the same brief. Keep completed work and remaining work dist
 
 ### 3. Simplify Home and relocate detail
 
-- [ ] Preserve the shell/greeting/navigation and implement the focus-area hierarchy in both themes.
-- [ ] Make workout opening primary, keep manual logging secondary and let real imports appear without a form.
-- [ ] Replace active-training dashboard repetition with a compact preview. Remove post-plan targets, stale coaching/feedback and redundant actions.
-- [ ] Keep a compact recent activity link after training/recovery; retain coaching, tools, history and their deep links in the appropriate destinations.
-- [ ] Verify the actual destinations and labels for every Home state; no blank or unrelated race review page.
+- [x] Preserve the shell/greeting/navigation and implement the focus-area hierarchy in both themes.
+- [x] Make workout opening primary, keep manual logging secondary and let real imports appear without a form.
+- [x] Replace active-training dashboard repetition with a compact preview. Remove post-plan targets, stale coaching/feedback and redundant actions.
+- [x] Keep a compact recent activity link after training/recovery; retain coaching, tools, history and their deep links in the appropriate destinations.
+- [x] Verify the actual destinations and labels for every Home state; no blank or unrelated race review page.
 
 ### 4. Refine recording and race detail
 
@@ -179,10 +179,10 @@ All phases belong to the same brief. Keep completed work and remaining work dist
 
 ### 5. Finish lifecycle integration and historical access
 
-- [ ] Training conclusion retains the old chapter; recovery remains its own dated, readiness-gated plan.
-- [ ] Recovery's calendar ending gives a clean Home without daily tick or Finish recovery chores; no automatic claim of readiness or medical recovery.
-- [ ] Journey keeps plans, independent/plan-linked races and trophies accessible without an active plan. Manual catalogue-free race creation remains available.
-- [ ] Confirm a new challenge, optional maintenance and an old/paused/extended recovery cannot produce conflicting Home priorities or lose history.
+- [x] Training conclusion retains the old chapter; recovery remains its own dated, readiness-gated plan.
+- [x] Recovery's calendar ending gives a clean Home without daily tick or Finish recovery chores; no automatic claim of readiness or medical recovery.
+- [x] Journey keeps plans, independent/plan-linked races and trophies accessible without an active plan. Manual catalogue-free race creation remains available.
+- [x] Confirm a new challenge, optional maintenance and an old/paused/extended recovery cannot produce conflicting Home priorities or lose history.
 
 ### 6. Validate and prepare review
 
@@ -222,7 +222,7 @@ Follow [safe testing](../testing.md). With a disposable local SQL connection and
 
 The implementation PR must link the canonical plan, list completed and outstanding work, include a state-by-state before/after screenshot index, report PNG/SVG/sharing verification, and distinguish browser emulation from physical devices and live authentication/provider delivery. Synthetic tests do not prove production cold-start reliability. Do not turn loading UX into a claim that hosting or account reliability has been fixed; investigate reproducible loading failures separately without billing changes or fabricated progress.
 
-This planning-only revision changes documentation. Check document links, references and whitespace; do not present prior PR counts as tests of a redesigned application. Opening the PR triggers normal CI. Record its actual status, including upstream blockers, without claiming that the implementation checklist has run.
+The initial planning commit was documentation only. Implementation validation is recorded separately in the QA index below; dependency PR counts are not presented as results of this combined revision.
 
 ## Scope boundaries
 
@@ -235,8 +235,8 @@ Existing API contracts should normally suffice. If a real contract gap needs a b
 | Work | Status | Evidence |
 | --- | --- | --- |
 | Canonical brief and repository/PR reconnaissance | Written | Baseline and open dependency heads recorded above; documentation changes only |
-| Application implementation | Not started | Complete ordered checklist and record commits here |
-| Before/after visual QA | Not started | Add state/theme/device screenshot index |
-| Local implementation checks | Not run | Record commands, SHA and actual results |
-| GitHub implementation CI | Not run | Record run URLs and all required job conclusions |
+| Application implementation | Implemented; final validation running | Compact Home, real recording identity, calendar-aware recovery presentation, named detail destinations and simpler recording overview |
+| Before/after visual QA | Captured for ten Home states; final captures running | [Evidence index](../qa/2026-11-17/simplicity/README.md) |
+| Local implementation checks | In progress | Backend: 1,819 tests passed with no skips; strict build passed with zero warnings. Final client/browser suites pending |
+| GitHub implementation CI | Pending implementation push | Keep draft until all required checks pass; unchanged upstream dependency audit currently fails |
 | Merge/deployment | Not authorized | Owner review and explicit action required |

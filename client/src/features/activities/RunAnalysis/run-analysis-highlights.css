@@ -1,12 +1,11 @@
 /* Post-run analysis uses existing Frame / Night Run tokens, never a second palette. */
 .ra-hero,.ra-card{min-width:0;border:1px solid var(--line);border-radius:var(--radius-lg);padding:clamp(1rem,3vw,2rem);margin-block:1rem;background:var(--surface);color:var(--ink)}
-.ra-hero{position:relative;overflow:hidden;background:linear-gradient(120deg,var(--hero-top),var(--hero-mid) 56%,var(--hero-end));isolation:isolate}
-.ra-hero::after{content:"";position:absolute;right:-4rem;top:-6rem;width:18rem;aspect-ratio:1;border:2px solid var(--accent);border-radius:50%;opacity:.12;pointer-events:none}
+.ra-hero{position:relative;overflow:hidden;background:transparent;border:0;border-radius:0;padding-inline:0;isolation:isolate}
 .ra-hero-top{display:flex;justify-content:space-between;align-items:center;gap:1rem}
 .ra-completed{border:1px solid var(--accent);border-radius:999px;padding:.35rem .75rem;color:var(--accent);font-size:var(--text-sm);font-weight:700}
 .ra-hero-mark{font-size:2rem;color:var(--accent);font-weight:900}
 .ra-distance{font-size:clamp(3rem,8vw,5.5rem);line-height:1.1;font-weight:800;font-family:var(--font-body);letter-spacing:-.065em;margin-block:1rem;font-variant-numeric:tabular-nums}
-.ra-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem;margin:0}
+.ra-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin:0}
 .ra-metrics>div{min-width:0;border-top:1px solid var(--line-strong);padding-top:.75rem}
 .ra-metrics dt{color:var(--muted);font-size:var(--text-xs)}
 .ra-metrics dd{font-size:clamp(1.1rem,3vw,1.65rem);font-weight:800;margin:.25rem 0 0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
@@ -58,3 +57,7 @@
 .ra-hero{animation:ra-rise var(--dur-page) var(--ease-out) both}
 .ra-split-fill{transform-origin:left center;animation:ra-split-reveal var(--dur-fill) var(--ease-fill) both}
 @media(prefers-reduced-motion:reduce){.ra-hero,.ra-split-fill{animation:none!important;transition:none!important}}
+
+.ra-time-note{margin-top:var(--space-3)}
+.ra-splits{background:transparent;border-inline:0;border-radius:0;padding-inline:0;box-shadow:none}
+@media(min-width:768px){.ra-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}

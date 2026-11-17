@@ -31,6 +31,7 @@ interface Props {
   /** The run as the upload returned it, so a fresh upload opens without a second request. */
   initial?: Activity
   units: Units
+  backLabel?: string
   onBack: () => void
   onDeleted: () => void
   /** Opens Account, where the runner can add a max heart rate for zones. */
@@ -42,7 +43,7 @@ interface Props {
 /** One run, judged against what it was for: the verdict, the numbers, km by km, heart rate, and any bests worth a mention. */
 type AnalysisTab = 'Overview' | 'Splits' | 'Charts' | 'Details'
 
-export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAccount, onOpenPlanDay }: Props) {
+export function ActivityPage({ id, initial, units, onBack, backLabel, onDeleted, onOpenAccount, onOpenPlanDay }: Props) {
   const auth = useAuth()
   const tabId = useId()
   const [selectedTab, setSelectedTab] = useState<AnalysisTab>('Overview')
@@ -89,7 +90,7 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
 
   const back = (
     <button type="button" className="link-button" onClick={onBack}>
-      ← All runs
+      ← {backLabel ?? 'All runs'}
     </button>
   )
 
@@ -165,16 +166,8 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
         {tabs.map(tab => <button type="button" role="tab" key={tab} id={`${tabId}-tab-${tab}`} aria-controls={`${tabId}-panel-${tab}`} aria-selected={selectedTab === tab} tabIndex={selectedTab === tab ? 0 : -1} className="button button-quiet" onClick={() => setSelectedTab(tab)}>{tab}</button>)}
       </div>
       <div role="tabpanel" id={`${tabId}-panel-Overview`} aria-labelledby={`${tabId}-tab-Overview`} hidden={selectedTab !== 'Overview'} tabIndex={0}>
-      <div className="ra-overview-grid"><div className="ra-overview-main">
       <RunSummaryHero run={run} units={units} />
       {run.splits.length > 0 && <PaceSplitsVisual splits={run.splits} units={units} compact onViewAll={() => { setSelectedTab('Splits'); document.getElementById(`${tabId}-tab-Splits`)?.focus() }} />}
-      </div><div className="ra-overview-side">
-      <PlanExecutionCard run={run} units={units} onOpenPlanDay={onOpenPlanDay} />
-      {!run.plan && <section className="ra-card ra-unplanned"><h3>{verdict.headline}</h3>{verdict.details.map(line => <p key={line}>{line}</p>)}</section>}
-
-
-      <WorkoutStages execution={execution} units={units} />
-      </div></div>
       <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
 
 
@@ -188,6 +181,8 @@ export function ActivityPage({ id, initial, units, onBack, onDeleted, onOpenAcco
       </div>}
       <div role="tabpanel" id={`${tabId}-panel-Details`} aria-labelledby={`${tabId}-tab-Details`} hidden={selectedTab !== 'Details'} tabIndex={0}>
         <h3>Details and coaching</h3>
+        <PlanExecutionCard run={run} units={units} onOpenPlanDay={onOpenPlanDay} />
+        <WorkoutStages execution={execution} units={units} />
       <section className="panel verdict" aria-labelledby="verdict-title" data-pace={run.plan?.pace ?? 'Unplanned'}>
         <h3 id="verdict-title" className="verdict-headline">
           {verdict.headline}

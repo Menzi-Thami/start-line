@@ -1,3 +1,4 @@
+import { openHomeLibrary } from './navigation'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { readFile, mkdir } from 'node:fs/promises'
@@ -92,10 +93,10 @@ async function calmHome(page: Page) {
       oldPanels: root.querySelectorAll('.home-top, .home-sync, .home-strava-invite, .first-week, #home-goal, #beginner-home-heading').length,
       repeatQuestions: /Add training feedback|Something to run towards\?|Couch to 5K/.test(root.textContent ?? ''),
       chapters: root.querySelectorAll('.home-focus > .journey-home').length,
-      detailsOpen: root.querySelector('.home-more')?.hasAttribute('open'),
+      detailDashboards: root.querySelectorAll('.home-more, .home-library').length,
     }
   })
-  expect(home).toEqual({ oldPanels: 0, repeatQuestions: false, chapters: 1, detailsOpen: false })
+  expect(home).toEqual({ oldPanels: 0, repeatQuestions: false, chapters: 1, detailDashboards: 0 })
 }
 
 test('race day ends at the runner’s midnight without assuming a result or starting recovery @phone', async ({ page }, info) => {
@@ -220,9 +221,11 @@ test('recovery has its own days; concluded training is read-only, responsive and
   await expect(page.getByRole('heading', { name: 'Parkrun PB', exact: true, level: 2 })).toBeVisible()
   const navigation = page.getByRole('navigation', { name: 'Main', exact: true })
   await navigation.getByRole('button', { name: 'Home', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Open recovery plan', exact: true })).toBeVisible()
-  await calmHome(page)
+  await expect(page.getByRole('button', { name: "Open today's workout", exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open recovery plan', exact: true })).toHaveCount(0)
   await navigation.getByRole('button', { name: 'Plan', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Parkrun PB', exact: true, level: 2 })).toBeVisible()
+  await page.goto(`${fixture}?view=recovery`)
   await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
   if (info.project.name === 'desktop') await mkdir(qa, { recursive: true })
   for (const width of [375, 820, 1440]) for (const theme of ['light', 'dark']) {
@@ -256,13 +259,13 @@ test('recovery has its own days; concluded training is read-only, responsive and
   }
 })
 
-test('easy-running Home offers Train for another race without opening maintenance @phone', async ({ page }) => {
+test('easy-running Home has one action and keeps race choice in the plan @phone', async ({ page }) => {
   const { state } = await setup(page, { recovering: true })
   state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
   await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
   await page.goto(`${fixture}?view=home`)
-  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Choose what\'s next', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Choose my next challenge', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
   await page.getByRole('button', { name: /Keep running comfortably/ }).click()
   await page.getByRole('button', { name: 'Start easy running', exact: true }).click()
@@ -273,9 +276,10 @@ test('easy-running Home offers Train for another race without opening maintenanc
     await page.setViewportSize({ width, height: 900 })
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
     await expect(page.getByRole('button', { name: 'Open easy running', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toHaveCount(0)
     await accessible(page)
   }
+  await page.getByRole('button', { name: 'Open easy running', exact: true }).click()
   await page.getByRole('button', { name: 'Train for another race', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
   await expect(page).not.toHaveURL(/view=recovery/)
@@ -286,11 +290,10 @@ test('Home stays simple after recovery and months later, with running details av
   state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
   await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
   await page.goto(`${fixture}?view=home`)
-  await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: "Choose my next challenge", exact: true })).toBeVisible()
   expect(state.detailsReads).toBe(0)
   await calmHome(page)
-  await page.locator('.home-more > summary').click()
-  await page.locator('.home-insights > summary').click()
+  await openHomeLibrary(page)
   await expect(page.getByRole('heading', { name: 'Your running', exact: true })).toBeVisible()
   await expect.poll(() => state.detailsReads).toBeGreaterThan(0)
   await page.locator('.home-tools > summary').click()
@@ -300,7 +303,7 @@ test('Home stays simple after recovery and months later, with running details av
   state.recovery = null
   await page.clock.setFixedTime(new Date('2027-02-01T08:00:00Z'))
   await page.goto(`${fixture}?view=home`)
-  await expect(page.getByRole('heading', { name: 'Take your time.', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ready when you are.', exact: true })).toBeVisible()
   await calmHome(page)
   if (info.project.name === 'desktop') {
     await page.setViewportSize({ width: 375, height: 812 })
@@ -321,7 +324,7 @@ for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark'])
     await page.setViewportSize({ width, height: 900 })
     await page.goto(`${fixture}?view=home`)
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
-    await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: "Choose my next challenge", exact: true })).toBeVisible()
     expect(state.detailsReads).toBe(0)
     await accessible(page)
     if (info.project.name === 'desktop' && [375, 1440].includes(width)) {
@@ -340,10 +343,10 @@ test('ending recovery offers a direct new-race action on Home and keeps recent a
   await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto(`${fixture}?view=home`)
-  await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: "Choose my next challenge", exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toHaveCount(0)
   await calmHome(page)
-  await expect(page.locator('.journey-home button')).toHaveCount(2)
+  await expect(page.locator('.journey-home button')).toHaveCount(1)
   expect(state.detailsReads).toBe(0)
   if (info.project.name === 'desktop') {
     await mkdir(homeQa, { recursive: true })
@@ -358,9 +361,9 @@ test('ending recovery offers a direct new-race action on Home and keeps recent a
   await expect(page).toHaveURL(/view=runs/)
   await expect(page.getByText('20.3 km', { exact: true }).first()).toBeVisible()
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
-  await expect(page.getByRole('button', { name: "Choose what's next", exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: "Choose my next challenge", exact: true })).toBeVisible()
   await calmHome(page)
-  await page.getByRole('button', { name: "Choose what's next", exact: true }).click()
+  await page.getByRole('button', { name: "Choose my next challenge", exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
 })
 
@@ -381,7 +384,7 @@ for (const phase of ['Concluded', 'Recovering', 'Recovered']) {
     expect(state.starts).toEqual([])
     await page.reload()
     await expect(greeting).toBeVisible()
-    const action = phase === 'Concluded' ? 'Review my race' : phase === 'Recovering' ? 'Open recovery plan' : "Choose what's next"
+    const action = phase === 'Concluded' ? 'Review my race' : phase === 'Recovering' ? 'Open recovery plan' : "Choose my next challenge"
     await expect(page.getByRole('button', { name: action, exact: true })).toBeVisible()
     await nav.getByRole('button', { name: 'Runs', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Runs', exact: true })).toBeVisible()

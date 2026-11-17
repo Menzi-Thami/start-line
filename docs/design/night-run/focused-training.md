@@ -6,15 +6,15 @@ Taperday keeps Night run's near-black surfaces, volt accent, wordmark and type f
 
 | Destination | Leads with | Detail lives here |
 | --- | --- | --- |
-| Home | Today's workout and one logging action; compact weekly progress | Recent saved activity expands to existing editing/sharing; coaching review, history/personal bests and running tools open separately |
-| Plan | This week's seven compact day rows | Selected-date preview, then a dedicated day screen; Calendar for monthly navigation/full schedule; Progress for distance, goal outlook, insights and paces |
-| Runs | Compact rows of imported activities and existing range filters | A row opens the activity; file-upload guidance opens on demand; Training log links to the plan calendar |
+| Home | Today's prescription or actual recording and one next action; compact active-week preview | Manual logging is secondary; compact recent recording links to Runs; post-plan priority comes from the real Journey/recovery state |
+| Plan | This week's seven compact day rows | Selected-date preview, then a dedicated day screen; Calendar for monthly navigation/full schedule; Progress for the weekly coaching review, distance, goal outlook, insights and paces |
+| Runs | Compact rows of imported activities and existing range filters | A row opens the activity; file-upload guidance opens on demand; Training log links to the plan calendar; named Running insights and Running tools controls retain historical editing, totals, personal bests and calculators |
 | Journey | Training chapters, races and trophy cabinet | Available between plans; chapter stories, versioned archive/result corrections, recovery and portrait sharing |
 | Account | Named settings groups | Profile/picture, connections/run sources, app/calendars, notifications, data/privacy; sign-out belongs here |
 
 Strength is a workout type within Plan. Its prescribed days remain in the agenda and its weekly exercise guide opens from Strength workouts. It does not take a main-navigation or plan-tab slot. Set progress remains device-local and shared by the day and guide views.
 
-Home has no nested Today/Tools navigation or repeated weekly workout list. Legacy `?view=home&tab=tools` links still open running tools. Closing tools preserves calculator inputs and their lazy loading. Desktop places weekly progress and race context beside today's workout; phones follow a single reading order.
+Home has no nested Today/Tools navigation or repeated weekly workout list. Legacy `?view=home&tab=tools` links still open running tools. Closing tools preserves calculator inputs and their lazy loading. Both sizes follow one reading order: greeting, today's priority, a compact preview during active training, then recent activity. Completed plans and recovery schedules do not leave weekly targets or feedback requests on Home.
 
 ## Interaction rules
 
@@ -31,3 +31,5 @@ introduces independent race history, event metadata and paged chapter reads; tra
 notification contracts remain unchanged. See [Journey and trophy cabinet](../../journey-and-trophy-cabinet.md),
 [calendar day behavior](../../calendar-day-summary.md), [plan-history guarantees](../../plan-history.md) and the
 [original QA record](../../qa/2026-10-29/focused-training/verification.md).
+
+The [canonical simplicity tracker](../taperday-simplicity-plan.md) records the follow-up implementation and its [before/after evidence](../../qa/2026-11-17/simplicity/README.md). Recovery uses dated, pause-adjusted days and keeps its independent identity. An ended calendar window offers a next challenge without submitting completion, clearing safety restrictions, or calling the runner recovered. Newer current training takes precedence over older recovery in Home and the Plan navigation. Recording URLs retain their selected ID and return origin, including Runs filters, across refresh.

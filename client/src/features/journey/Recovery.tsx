@@ -191,7 +191,7 @@ export function RecoveryDashboard({ recovery, today, onCheckIn, onChange, next, 
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmEnd, setConfirmEnd] = useState(false)
-  const dayNumber = recoveryDayNumber(recovery.raceDate, today)
+  const dayNumber = recovery.dayNumber ?? recoveryDayNumber(recovery.raceDate, today)
   const day = recovery.days.find(d => d.date === today) ?? null
   const done = isPastRecovery(recovery, today)
   const checkedToday = recovery.checkIns.find(c => c.date === today) ?? null
@@ -237,6 +237,7 @@ export function RecoveryDashboard({ recovery, today, onCheckIn, onChange, next, 
           <h3 id={`${id}-title`} className="recovery-title">{recovery.seekCare ? 'Let’s get that checked' : paused ? 'Recovery paused' : done ? 'Your recovery days are done' : 'Rest is training too.'}</h3>
         </div>
       </div>
+      {done && !paused && !recovery.seekCare && next}
       {recovery.seekCare && <p className="recovery-safety" role="alert">{recovery.safetyMessage ?? SAFETY_WORDS}</p>}
       {paused && <p className="field-help">Nothing is suggested while recovery is paused. Resume whenever you like; it picks up where you left it.</p>}
       {!paused && !recovery.seekCare && day && !done && (

@@ -1,4 +1,4 @@
-import { closePlanDay, openDisclosure, openWeekDay, openRecentRun } from '../../test/user-navigation'
+import { closePlanDay, openDisclosure, openWeekDay, openRecentRun, openHomeLibrary } from '../../test/user-navigation'
 import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -42,6 +42,7 @@ describe('saved runs stay visible throughout the logging journey', () => {
     const name = `Additional run on ${formatDate(date, 'long')}`
     const user = userEvent.setup()
     const { rerender, unmount } = render(<Journey runs={[imported]} />)
+    await openHomeLibrary('insights')
     const running = screen.getByRole('region', { name: 'Your running' })
     await openDisclosure(/^\d+ synced /)
     await user.click(await screen.findByRole('button', { name: 'Log this run' }))

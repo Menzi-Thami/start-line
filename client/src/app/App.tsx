@@ -520,7 +520,7 @@ export function App() {
     if (item === 'journey') return go('journey')
     if (item === 'account') return go('account')
     if (view === 'beginner' && item === 'plan') return
-    if ((recovering || maintaining) && !(view === 'build' && plan.kind === 'ready' && plan.plan.race.date >= today && !editing)) return go('recovery')
+    if (!ownPlan && (recovering || maintaining) && !(view === 'build' && plan.kind === 'ready' && plan.plan.race.date >= today && !editing)) return go('recovery')
     const tab = 'week'
     if (view === 'build' && plan.kind === 'ready' && !editing) {
       const url = new URL(window.location.href)
@@ -566,10 +566,20 @@ export function App() {
   const showRun = (id: string, uploaded?: Activity) => {
     setView('runs')
     setOpenRun({ id, uploaded })
-    moveTo(`?view=runs&run=${encodeURIComponent(id)}`, true)
+    const origin = view === 'runs' && openRun ? new URLSearchParams(window.location.search).get('returnTo') ?? '?view=runs' : window.location.search || '?view=home'
+    moveTo(`?view=runs&run=${encodeURIComponent(id)}${origin ? `&returnTo=${encodeURIComponent(origin)}` : ''}`, true)
     window.scrollTo?.({ top: 0 })
   }
 
+  const returnFromRun = () => {
+    const origin = new URLSearchParams(window.location.search).get('returnTo')
+    const destination = origin?.startsWith('?') ? new URLSearchParams(origin).get('view') : null
+    if (origin && (destination === 'home' || destination === 'journey' || destination === 'runs' || !destination)) {
+      go(destination === 'home' ? 'home' : destination === 'journey' ? 'journey' : destination === 'runs' ? 'runs' : 'build')
+      window.history.replaceState(null, '', origin)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    } else go('runs')
+  }
   const openRecovery = (raceId?: string) => {
     go('recovery')
     if (raceId) window.history.replaceState(null, '', `?view=recovery&race=${encodeURIComponent(raceId)}`)
@@ -749,6 +759,11 @@ export function App() {
     }
     window.scrollTo?.({ top: 0 })
   }
+  const openRunningDetails = (section: 'insights' | 'tools') => {
+    go('home')
+    window.history.replaceState(null, '', `?view=home&tab=${section}&from=runs`)
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  }
   const openStravaConnections = () => {
     go('account')
     window.history.replaceState(null, '', '?view=account&settings=connections')
@@ -768,7 +783,7 @@ export function App() {
   // Strength is part of Plan, so training always has one navigation destination.
   const onPlan = view === 'build' && plan.kind === 'ready' && !editing
   const barCurrent: TabBarItem | null =
-    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
+    view === 'home' ? new URLSearchParams(window.location.search).get('from') === 'runs' ? 'runs' : 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
   const cachedAccount = !!auth.account && knownHere && (state.kind === 'loading' || state.kind === 'error')
   const showBar =
@@ -996,17 +1011,17 @@ export function App() {
         {view === 'runs' && state.kind === 'ready' && (
           compact ? (
             openRun ? (
-              <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
+              <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={returnFromRun} backLabel={new URLSearchParams(window.location.search).has('returnTo') ? 'Back to previous page' : undefined} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
             ) : (
-              <MyRuns units={units} onOpen={showRun} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
+              <MyRuns onOpenInsights={openRunningDetails} units={units} onOpen={showRun} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
             )
           ) : (
             // On a desktop the journal stays on the left and the open run fills the right.
             <div className="runs-split">
-              <MyRuns key={runsVersion} units={units} onOpen={showRun} selectedId={openRun?.id} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
+              <MyRuns onOpenInsights={openRunningDetails} key={runsVersion} units={units} onOpen={showRun} selectedId={openRun?.id} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
               <div className="runs-split-detail">
                 {openRun ? (
-                  <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
+                  <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={returnFromRun} backLabel={new URLSearchParams(window.location.search).has('returnTo') ? 'Back to previous page' : undefined} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
                 ) : (
                   <div className="runs-split-empty panel">
                     <p><strong>Choose a run</strong></p>

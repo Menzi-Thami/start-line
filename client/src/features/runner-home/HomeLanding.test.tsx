@@ -35,7 +35,7 @@ it.each(['Concluded', 'Recovering', 'Recovered'] as const)('keeps Home available
   expect(screen.queryByRole('heading', { name: 'Which race?' })).not.toBeInTheDocument()
   const navigation = screen.getByRole('navigation', { name: 'Main' })
   expect(within(navigation).getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
-  const action = phase === 'Concluded' ? 'Review my race' : phase === 'Recovering' ? 'Open recovery plan' : "Choose what's next"
+  const action = phase === 'Concluded' ? 'Review my race' : phase === 'Recovering' ? 'Open recovery plan' : 'Choose my next challenge'
   expect(screen.getByRole('button', { name: action })).toBeVisible()
   await user.click(within(navigation).getByRole('button', { name: 'Runs' }))
   expect(await screen.findByRole('heading', { name: 'Runs', level: 2 })).toBeVisible()

@@ -336,13 +336,13 @@ describe('a signed-up runner', () => {
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
     // Home, offering a new plan, with nothing of the deleted one left on screen or in the link.
-    expect(await screen.findByRole('heading', { name: 'Something to run towards?' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Ready when you are.' })).toBeInTheDocument()
     expect(db.plans).toHaveLength(0)
     expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
     expect(window.location.search).toBe('?view=home')
 
     // Building a new plan starts from a blank builder, and the wordmark never brings the deleted plan back.
-    await user.click(await screen.findByRole('button', { name: 'Build my plan' }))
+    await user.click(await screen.findByRole('button', { name: 'Choose my next challenge' }))
     expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Taperday' }))
     expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()

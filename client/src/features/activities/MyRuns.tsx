@@ -1,5 +1,5 @@
 import './run-cards.css'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { useSyncedRuns } from '../sync/useSyncedRuns'
 import { emptyProgress, uploadAll, type BulkProgress, type BulkResult } from '../../lib/bulk-upload'
@@ -21,6 +21,7 @@ interface Props {
   selectedId?: string
   onOpenConnections: () => void
   onOpenPlan?: () => void
+  onOpenInsights?: (section: 'insights' | 'tools') => void
   phoneHelp?: { open: boolean; onChange: (open: boolean) => void }
 }
 
@@ -59,7 +60,15 @@ const SOURCES: readonly { id: Source; label: string }[] = [
 const fromSource = (runs: readonly ActivitySummary[], source: Source) =>
   source === 'any' ? runs : runs.filter((r) => (source === 'Strava' ? r.source.kind === 'Strava' : r.source.kind !== 'Strava'))
 
-export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPlan, phoneHelp }: Props) {
+function filtersFromUrl(): { range: Range; source: Source } {
+  const query = new URLSearchParams(window.location.search)
+  const origin = new URLSearchParams(query.get('returnTo')?.replace(/^\?/, '') ?? '')
+  const params = query.has('run') && origin.get('view') === 'runs' ? origin : query
+  const range = params.get('range'), source = params.get('source')
+  return { range: range === 'week' || range === 'month' ? range : 'all', source: source === 'Strava' || source === 'Upload' ? source : 'any' }
+}
+
+export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPlan, onOpenInsights, phoneHelp }: Props) {
   const phoneRef = useRef<HTMLDetailsElement>(null)
   const [localPhoneOpen, setLocalPhoneOpen] = useState(false)
   const phoneOpen = phoneHelp?.open ?? localPhoneOpen
@@ -69,8 +78,24 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
   const list: ListState = imports.runs ? { kind: 'ready', runs: imports.runs }
     : imports.error ? { kind: 'error', message: imports.error } : { kind: 'loading' }
   const fetchRuns = imports.reload
-  const [range, setRange] = useState<Range>('all')
-  const [source, setSource] = useState<Source>('any')
+  const [range, setRange] = useState<Range>(() => filtersFromUrl().range)
+  const [source, setSource] = useState<Source>(() => filtersFromUrl().source)
+  useEffect(() => {
+    const restore = () => { const filters = filtersFromUrl(); setRange(filters.range); setSource(filters.source) }
+    window.addEventListener('popstate', restore)
+    return () => window.removeEventListener('popstate', restore)
+  }, [])
+  const changeFilter = (key: 'range' | 'source', value: string) => {
+    const params = new URLSearchParams(window.location.search)
+    if (value === 'all' || value === 'any') params.delete(key)
+    else params.set(key, value)
+    if (params.has('run')) {
+      const origin = new URLSearchParams(params)
+      origin.delete('run'); origin.delete('returnTo')
+      params.set('returnTo', `?${origin}`)
+    }
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}?${params}`)
+  }
   const [bulk, setBulk] = useState<{ running: boolean; progress: BulkProgress; result: BulkResult | null; error: string | null } | null>(null)
   const [singleError, setSingleError] = useState<string | null>(null)
   const stop = useRef<AbortController | null>(null)
@@ -130,6 +155,10 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
       <h2 className="plan-title" id="my-runs-title">
         Runs
       </h2>
+      {onOpenInsights && <nav className="runs-detail-links" aria-label="Running tools and history">
+        <button type="button" className="link-button" onClick={() => onOpenInsights('insights')}>Running insights</button>
+        <button type="button" className="link-button" onClick={() => onOpenInsights('tools')}>Running tools</button>
+      </nav>}
 
       <RunImportStatus status={imports.strava} error={imports.syncError} busy={imports.syncing} onCheck={() => void imports.refresh()} onConnect={onOpenConnections} />
       <details ref={phoneRef} className="disclosure phone-runs" open={phoneOpen} onToggle={event => setPhoneOpen(event.currentTarget.open)}><summary>Connect through Strava</summary>
@@ -208,7 +237,7 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
         <div className="run-filter-rows">
           <div className="run-filters" role="group" aria-label="Show runs from">
             {RANGES.map((r) => (
-              <button key={r.id} type="button" className="chip-button" aria-pressed={range === r.id} onClick={() => setRange(r.id)}>
+              <button key={r.id} type="button" className="chip-button" aria-pressed={range === r.id} onClick={() => { setRange(r.id); changeFilter('range', r.id) }}>
                 {r.label}
               </button>
             ))}
@@ -216,7 +245,7 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
           {list.runs.some((r) => r.source.kind === 'Strava') && list.runs.some((r) => r.source.kind !== 'Strava') && (
             <div className="run-filters" role="group" aria-label="Show runs by source">
               {SOURCES.map((option) => (
-                <button key={option.id} type="button" className="chip-button" aria-pressed={source === option.id} onClick={() => setSource(option.id)}>
+                <button key={option.id} type="button" className="chip-button" aria-pressed={source === option.id} onClick={() => { setSource(option.id); changeFilter('source', option.id) }}>
                   {option.label}
                 </button>
               ))}

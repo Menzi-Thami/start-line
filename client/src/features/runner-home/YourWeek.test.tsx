@@ -111,20 +111,23 @@ describe('Home with a plan', () => {
     const todayCard = await screen.findByRole('region', { name: 'Today' })
     expect(await within(todayCard).findByText('Fartlek')).toBeInTheDocument()
     expect(todayCard).toHaveTextContent('6.5 km')
-    expect(todayCard).toHaveTextContent('Why: Speed play: practise changing gears by feel')
+    expect(todayCard).toHaveTextContent('Warm up, then 8 × 1 min brisk / 1 min easy.')
+    expect(within(todayCard).getByRole('button', { name: 'Open your plan' })).toBeInTheDocument()
   })
 
-  it('shows the week on Today, with the coach’s call from the coached plan', async () => {
+  it('keeps the coach review in Plan while Home shows a compact weekly preview', async () => {
     renderHome('2026-10-20')
 
-    const panel = await screen.findByRole('region', { name: 'Your week' })
-    expect(within(panel).getByRole('region', { name: 'Coach’s note' })).toHaveTextContent('An easier week')
+    const panel = await screen.findByRole('region', { name: 'This week' })
+    expect(panel).toHaveTextContent('Week 2 of 9')
+    expect(screen.queryByRole('region', { name: 'Coach’s note' })).not.toBeInTheDocument()
+    expect(within(panel).getByRole('button', { name: 'View this week' })).toBeVisible()
   })
 
   it('race day keeps its own card and leaves the week out', async () => {
     renderHome('2026-12-13')
 
-    expect(await screen.findByText(/Race day\. Everything you’ve run was for this/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Race day.' })).toBeVisible()
     expect(screen.queryByRole('region', { name: 'Your week' })).not.toBeInTheDocument()
   })
 })

@@ -45,8 +45,11 @@ export const lastTrainingChapter = (journey: Journey | null | undefined, today: 
 
 /** Home follows the current chapter; a future training lookup must finish before old history takes its place. */
 export const isPostTrainingHome = (journey: Journey | null | undefined, currentPlanId: string | null | undefined, today: string): boolean =>
-  isLiveRecovery(journey?.recovery) || journey?.maintenance?.status === 'Active'
-  || currentPlanId === null && (!!journey?.recovery || !!lastTrainingChapter(journey, today))
+  currentPlanId === null && (!!journey?.recovery || journey?.maintenance?.status === 'Active' || !!lastTrainingChapter(journey, today))
+
+/** A scheduled window can end without the runner declaring themselves recovered. Pauses and safety advice remain visible. */
+export const recoveryOnHome = (recovery: RecoveryPlan | null | undefined, today: string) =>
+  isLiveRecovery(recovery) && (recovery.status === 'Paused' || recovery.seekCare || today <= recovery.endsOn)
 
 export const achievement = (chapter: PlanChapter | null | undefined, kind: AchievementKind): Achievement | null =>
   chapter?.achievements.find(a => a.kind === kind) ?? null

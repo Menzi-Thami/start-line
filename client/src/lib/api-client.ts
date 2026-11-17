@@ -135,10 +135,11 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
 
 async function attempt<T>(path: string, init: RequestInit, token?: string): Promise<T> {
   let response: Response
+  const signal = withTimeout(init)
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       ...init,
-      signal: withTimeout(init),
+      signal,
       headers: {
         Accept: 'application/json',
         // A FormData body sets its own multipart Content-Type, boundary included.
@@ -148,7 +149,10 @@ async function attempt<T>(path: string, init: RequestInit, token?: string): Prom
       },
     })
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    // Only an explicitly cancelled caller should bypass recovery. Safari also uses
+    // AbortError for deadlines and dropped/backgrounded requests.
+    if (init.signal?.aborted) throw error
+    if (signal?.aborted) throw new ApiError('Taperday took too long to respond. Please try again.', 0, {}, 'request_timeout')
     throw new ApiError("We couldn't reach Taperday. It may still be waking up: try again in a moment, or check your connection.", 0)
   }
 
@@ -157,7 +161,16 @@ async function attempt<T>(path: string, init: RequestInit, token?: string): Prom
   }
 
   if (response.ok) {
-    return (await response.json()) as T
+    try {
+      return (await response.json()) as T
+    } catch (error) {
+      if (init.signal?.aborted) throw error
+      if (signal?.aborted) throw new ApiError('Taperday took too long to respond. Please try again.', 0, {}, 'request_timeout')
+      if (error instanceof DOMException && ['AbortError', 'TimeoutError'].includes(error.name)) {
+        throw new ApiError("We couldn't reach Taperday. Please try again.", 0)
+      }
+      throw error
+    }
   }
 
   if (response.status === 401) {
@@ -210,7 +223,7 @@ export const api = {
 
   // Signed-in calls take the access token explicitly, so this module never holds sign-in state.
   me: {
-    get: (token: string) => request<Runner>('/api/v1/me', {}, token),
+    get: (token: string, signal?: AbortSignal) => request<Runner>('/api/v1/me', { signal }, token),
     save: (token: string, body: SaveProfileRequest) =>
       request<Runner>('/api/v1/me', { method: 'PUT', body: JSON.stringify(body) }, token),
     acceptPrivacy: (token: string, body: AcceptPrivacyRequest) =>

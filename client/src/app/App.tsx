@@ -766,9 +766,10 @@ export function App() {
   const barCurrent: TabBarItem | null =
     view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
+  const cachedAccount = !!auth.account && knownHere && (state.kind === 'loading' || state.kind === 'error')
   const showBar =
     !(plan.kind === 'loading' && showBuilder) &&
-    state.kind === 'ready' && view !== 'onboarding'
+    (state.kind === 'ready' || cachedAccount) && view !== 'onboarding'
 
   const gate: Gate | undefined =
     state.kind === 'signed-out'
@@ -945,8 +946,8 @@ export function App() {
           </section>
         )}
 
-        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account') && state.kind === 'loading' && !(view === 'home' && homeRunner) && (
-          <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} />
+        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account') && state.kind === 'loading' && (
+          <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} quietUntilSlow={view === 'home' && !!homeRunner} />
         )}
 
         {view === 'home' && homeRunner && (
@@ -1259,9 +1260,9 @@ export function App() {
           variant={compact ? 'bar' : 'rail'}
           current={barCurrent}
           // Journey remains available even after the runner archives their last current plan.
-          hasPlan={ownPlan !== null || onPlan || recovering || maintaining || view === 'recovery'}
+          hasPlan={!!ownPlan || onPlan || recovering || maintaining || view === 'recovery'}
           onPick={pickFromBar}
-          account={state.kind === 'ready' ? { name: state.runner.displayName, photo } : undefined}
+          account={state.kind === 'ready' ? { name: state.runner.displayName, photo } : cachedAccount && copy?.runner ? { name: copy.runner.displayName, photo: null } : undefined}
         />
       )}
 

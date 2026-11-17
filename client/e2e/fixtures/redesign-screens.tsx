@@ -25,7 +25,7 @@ export function Fixture() {
   return <AuthContext.Provider value={auth}><div style={{ maxWidth: 1200, margin: '0 auto', padding: 16 }}>
     {screen === 'account' ? <AccountPage runner={runner} onSaved={noop} onDeleted={noop} onOpenRuns={noop} />
       : screen === 'builder' ? <><BuilderForm races={{ kind: 'ready', races: races as Race[] }} onRetryRaces={noop} initial={query.has('fresh') ? null : initial} units="km" busy={false} serverErrors={{}} today="2026-10-08" onSubmit={setSubmitted} />{submitted && <output data-testid="builder-submission">{JSON.stringify(submitted)}</output>}</>
-        : screen === 'runs' ? <MyRuns units="km" onOpen={noop} />
+        : screen === 'runs' ? <MyRuns units="km" onOpen={noop} onOpenConnections={noop} />
           : <Home runner={mode === 'long-name' ? { ...runner, displayName: 'A runner with an exceptionally long display name' } : runner} today={mode === 'race-week' ? '2026-12-13' : '2026-10-13'} units="km" current={mode === 'no-plan' ? null : current} initialPlan={mode === 'error' ? undefined : { id: current.id, plan: plan as TrainingPlan }} runs={mode === 'expired' ? [] : [run as ActivitySummary]} onOpenPlan={noop} onOpenDay={noop} onOpenProgress={noop} onBuildPlan={noop} onOpenRun={noop} onOpenRuns={noop} onOpenAccount={noop} />}
   </div></AuthContext.Provider>
 }

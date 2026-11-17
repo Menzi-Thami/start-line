@@ -4,9 +4,11 @@
  * and regions, so the steps say what to look for rather than promising an exact path. Runs added from a file are the runner's own, so they stay on
  * Taperday for good (a run synced from Strava only stays seven days).
  */
-export function ExportGuide() {
+export function ExportGuide({ onPhoneHelp }: { onPhoneHelp: () => void }) {
   return (
     <div className="export-guide">
+      <p className="field-help">Using Nike Run Club or recording on your phone? You can connect a running app instead of exporting files.</p>
+      <button type="button" className="link-button" onClick={onPhoneHelp}>See phone &amp; Nike Run Club help</button>
       <details className="export-way">
         <summary>Garmin</summary>
         <p className="field-help">

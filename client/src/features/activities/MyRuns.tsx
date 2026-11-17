@@ -9,6 +9,7 @@ import { KIND_LABEL } from './activity-copy'
 import { BulkSummary } from './BulkSummary'
 import { ExportGuide } from './ExportGuide'
 import { RunDataPanel } from './RunDataPanel'
+import { PhoneRunGuide } from './PhoneRunGuide'
 
 type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] } | { kind: 'error'; message: string }
 
@@ -17,9 +18,12 @@ interface Props {
   onOpen: (id: string, uploaded?: Activity) => void
   /** The run open beside the list on a desktop, marked in the list. */
   selectedId?: string
+  onOpenConnections: () => void
+  onOpenPlan?: () => void
+  phoneHelp?: { open: boolean; onChange: (open: boolean) => void }
 }
 
-/** Upload runs from a Garmin watch (one, a few, or a whole account export), and every run uploaded so far, newest first. */
+/** Imported recordings, newest first, with phone sync and file upload options. */
 type Range = 'all' | 'week' | 'month'
 
 const RANGES: readonly { id: Range; label: string }[] = [
@@ -54,8 +58,11 @@ const SOURCES: readonly { id: Source; label: string }[] = [
 const fromSource = (runs: readonly ActivitySummary[], source: Source) =>
   source === 'any' ? runs : runs.filter((r) => (source === 'Strava' ? r.source.kind === 'Strava' : r.source.kind !== 'Strava'))
 
-export function MyRuns({ units, onOpen, selectedId }: Props) {
-  const uploadRef = useRef<HTMLDetailsElement>(null)
+export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPlan, phoneHelp }: Props) {
+  const phoneRef = useRef<HTMLDetailsElement>(null)
+  const [localPhoneOpen, setLocalPhoneOpen] = useState(false)
+  const phoneOpen = phoneHelp?.open ?? localPhoneOpen
+  const setPhoneOpen = phoneHelp?.onChange ?? setLocalPhoneOpen
   const auth = useAuth()
   const [list, setList] = useState<ListState>({ kind: 'loading' })
   const [range, setRange] = useState<Range>('all')
@@ -120,6 +127,14 @@ export function MyRuns({ units, onOpen, selectedId }: Props) {
   }
 
   const running = bulk?.running ?? false
+  const openPhoneHelp = () => {
+    const guide = phoneRef.current
+    if (!guide) return
+    setPhoneOpen(true)
+    guide.open = true
+    guide.scrollIntoView?.({ block: 'start' })
+    guide.querySelector('summary')?.focus()
+  }
 
   return (
     <section className="section" aria-labelledby="my-runs-title" style={{ marginTop: 0 }}>
@@ -128,9 +143,12 @@ export function MyRuns({ units, onOpen, selectedId }: Props) {
       </h2>
 
 
-      <details ref={uploadRef} className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
+      <details ref={phoneRef} className="disclosure phone-runs" open={phoneOpen} onToggle={event => setPhoneOpen(event.currentTarget.open)}><summary>I run with my phone</summary>
+        <PhoneRunGuide onOpenConnections={onOpenConnections} onOpenPlan={onOpenPlan} />
+      </details>
+      <details className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
         <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Runs you add this way stay on Taperday for good. How to get the file:</p>
-        <ExportGuide />
+        <ExportGuide onPhoneHelp={openPhoneHelp} />
         <label className={running ? 'button button-primary is-busy' : 'button button-primary'}>
           {running ? 'Reading your files…' : 'Upload runs'}
           <input
@@ -188,8 +206,8 @@ export function MyRuns({ units, onOpen, selectedId }: Props) {
 
       {list.kind === 'ready' && list.runs.length === 0 && (
         <div className="empty" style={{ marginTop: 'var(--space-5)' }}>
-          <p><strong>No runs yet.</strong> Connect Strava in Account, or add a run from your watch.</p>
-          <button type="button" className="button button-primary" style={{ marginTop: 'var(--space-3)' }} onClick={() => { const upload = uploadRef.current; if (!upload) return; upload.open = true; upload.scrollIntoView?.({ block: 'start' }); upload.querySelector('summary')?.focus() }}>Add a run</button>
+          <p><strong>No recordings yet.</strong> Runs recorded on your phone can sync through Strava. You can also upload a saved recording from a file.</p>
+          <button type="button" className="button button-primary" style={{ marginTop: 'var(--space-3)' }} onClick={openPhoneHelp}>See phone &amp; app options</button>
         </div>
       )}
 

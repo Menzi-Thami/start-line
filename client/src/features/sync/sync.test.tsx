@@ -76,9 +76,10 @@ describe('connecting Strava from Account', () => {
 
     await user.click(await screen.findByText('How do my runs get into Strava?'))
 
-    for (const device of ['Garmin', 'Apple Watch or iPhone', 'Android, Samsung, Pixel or Fitbit', 'COROS, Polar, Suunto or Wahoo', 'Just a phone']) {
+    for (const device of ['Nike Run Club', 'Garmin', 'Apple Watch or iPhone', 'Android, Samsung, Pixel or Fitbit', 'COROS, Polar, Suunto or Wahoo', 'Just a phone']) {
       expect(screen.getByText(device)).toBeVisible()
     }
+    expect(screen.getByText(/Only runs recorded after linking Nike to Strava will sync/)).toBeVisible()
   })
 
   it('shows how a connection stands', async () => {

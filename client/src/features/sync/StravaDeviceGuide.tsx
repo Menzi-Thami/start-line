@@ -5,6 +5,10 @@
  */
 const DEVICES = [
   {
+    name: 'Nike Run Club',
+    steps: 'In Nike Run Club, open your profile, then Settings → Partners → Strava. Connect Strava to Taperday here too. Only runs recorded after linking Nike to Strava will sync; older Nike runs are not imported.',
+  },
+  {
     name: 'Garmin',
     steps: 'In the Garmin Connect app, open Settings, then Connected Apps, and connect Strava. Runs sync after each save.',
   },
@@ -16,7 +20,7 @@ const DEVICES = [
   {
     name: 'Android, Samsung, Pixel or Fitbit',
     steps:
-      'In the Strava app, go to Settings, then Applications, Services, and Devices, and connect Health Connect (or Samsung Health). Or record with the Strava app on the phone.',
+      'Record with the Strava app on your phone. If you use Samsung Health on Android, connect Strava under Samsung Health’s Settings → Services; only GPS workouts sync. For another device, check its app’s Strava connections.',
   },
   {
     name: 'COROS, Polar, Suunto or Wahoo',

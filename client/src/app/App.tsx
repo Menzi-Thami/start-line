@@ -149,6 +149,8 @@ export function App() {
   const compact = useMediaQuery('(max-width: 63.99rem)')
   // Bumped when a run is deleted, so the journal beside it on a desktop loads again.
   const [runsVersion, setRunsVersion] = useState(0)
+  // Keep phone setup open when the Runs panel moves between mobile and desktop layouts.
+  const [phoneHelpOpen, setPhoneHelpOpen] = useState(false)
   // Plan navigation can return to the current week from any training detail.
   // The runner's own picture, if they added one; initials show until it arrives, or without one.
   const [photo, setPhoto] = useState<string | null>(null)
@@ -992,12 +994,12 @@ export function App() {
             openRun ? (
               <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
             ) : (
-              <MyRuns units={units} onOpen={showRun} />
+              <MyRuns units={units} onOpen={showRun} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
             )
           ) : (
             // On a desktop the journal stays on the left and the open run fills the right.
             <div className="runs-split">
-              <MyRuns key={runsVersion} units={units} onOpen={showRun} selectedId={openRun?.id} />
+              <MyRuns key={runsVersion} units={units} onOpen={showRun} selectedId={openRun?.id} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
               <div className="runs-split-detail">
                 {openRun ? (
                   <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={() => go('runs')} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />

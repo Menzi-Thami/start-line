@@ -91,6 +91,7 @@ for (const motion of ['no-preference', 'reduce'] as const) {
     await expect(page.getByText('Finding your current chapter…', { exact: true })).toHaveCount(0)
     await expect(greeting).toBeVisible()
     await expect(nav).toBeVisible()
+    expect(await warm.locator('.limb').count()).toBeGreaterThan(0)
     const animationStates = () => warm.locator('.limb').evaluateAll(limbs => limbs.map(limb => ({ name: getComputedStyle(limb).animationName, state: getComputedStyle(limb).animationPlayState })))
     if (motion === 'no-preference') {
       expect((await animationStates()).every(value => value.name !== 'none' && value.state === 'running')).toBe(true)

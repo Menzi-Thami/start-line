@@ -25,8 +25,8 @@ function SavedPlan({ runs }: { runs: ActivitySummary[] }) {
 export function Journey({ runs }: { runs: ActivitySummary[] }) {
   const [view, setView] = useState('home')
   return <AuthContext.Provider value={auth}>
-    <button onClick={() => setView('home')}>Return home</button>
-    <button onClick={() => setView('plan')}>Visit calendar</button>
+    <button className="button button-quiet" onClick={() => setView('home')}>Return home</button>
+    <button className="button button-quiet" onClick={() => setView('plan')}>Visit calendar</button>
     {view === 'home' ? <Home runner={{ id: 'synthetic-runner', displayName: 'QA runner' } as Runner} today={today} units="km" current={current}
       initialPlan={{ id: current.id, plan: planFixture }} runs={runs} onOpenPlan={() => setView('plan')}
       onOpenAccount={noop} onOpenRun={noop} onOpenRuns={noop} onBuildPlan={noop} /> : <SavedPlan runs={runs} />}

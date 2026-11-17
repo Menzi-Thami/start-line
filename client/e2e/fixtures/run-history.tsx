@@ -13,8 +13,8 @@ export function Fixture() {
     movingSeconds: 4000, source: { kind: 'Strava' },
   } as ActivitySummary])
   return <div style={{ maxWidth: 1200, margin: '0 auto', padding: 16 }}>
-    <button onClick={() => setRuns([])}>Expire imported details</button>
-    <button onClick={() => setRuns(current => current.map(run => ({ ...run, distanceKm: run.distanceKm + 1 })))}>Update synced distance</button>
+    <button className="button button-quiet" onClick={() => setRuns([])}>Expire imported details</button>
+    <button className="button button-quiet" onClick={() => setRuns(current => current.map(run => ({ ...run, distanceKm: run.distanceKm + 1 })))}>Update synced distance</button>
     <Journey runs={runs} />
   </div>
 }

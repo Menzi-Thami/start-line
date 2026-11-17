@@ -186,7 +186,7 @@ All phases belong to the same brief. Keep completed work and remaining work dist
 
 ### 6. Validate and prepare review
 
-- [ ] Complete the acceptance matrix below using synthetic runners and disposable local SQL, with no production/real runner data.
+- [x] Complete the acceptance matrix below using synthetic runners and disposable local SQL, with no production/real runner data.
 - [x] Complete mobile/desktop, both-theme, keyboard, reduced-motion and text-zoom review; commit before/after screenshots and a short evidence index under `docs/qa/<date>/simplicity/`.
 - [ ] Run the required local and GitHub checks; fix real failures without weakening assertions, audits or safety checks.
 - [x] Update the existing focused-training/design documentation to the final behaviour, update this tracker and rewrite the PR summary around the delivered implementation.

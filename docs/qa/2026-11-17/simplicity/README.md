@@ -40,11 +40,14 @@ All application/API responses use synthetic runners and canned recordings. Backe
 | Home/wordmark return, recording origin/filters and lookup retry | **4 passed**; the new Home-return assertion failed before the route notification fix |
 | Recording stages / historical logging / source expiry / Strava confirmation retests | **9 passed** |
 | Firefox offline edit / reload / reconnect journeys | **2 passed**, both themes, complete Home WCAG audit, one durable write |
+| iPhone/iPad WebKit offline journeys | **4 passed**, both themes; fixture-only controls now use the existing theme-aware button styles |
 | GitHub checks and secret scan | Actual final SHA, run URL, job results and browser totals are maintained on [PR #275](https://github.com/Menzi-Thami/start-line/pull/275) |
 
 The Home and recording captures check full WCAG 2 A/AA, 2.1 A/AA and 2.2 AA tags and horizontal overflow. Interaction cases cover actual recording identity and origin/filter restoration after reload, keyboard-operable tools with retained drafts, missing IDs, failed current-plan requests and retries from both Home and a fresh device, 320/390/820/2560px, 200% text size and reduced motion. Race confirmation, source expiry, independent recovery, calendar end, pauses, seek-care restrictions and newer-plan precedence retain their real API contracts.
 
 The shared screen fixture now calls the same `applyStoredTheme()` initializer as production. Tests assert both the document theme and the theme button state after reload; all 44 image pairs were checked for distinct daylight/Night Run canvases. Each Home audit starts in a fresh document at its final width. The offline workflow audits the full Home with the real pending-draft alert, then reopens history before reconnecting. This avoids a Firefox native geometry crash when the target-size rule traverses the expanded history document. **No WCAG rule or audit assertion is disabled.** The editing, persistence and exactly-one-write assertions remain in the Firefox flow.
+
+Local WebKit used a task-owned Debian `libGLESv2.so.2` matching the installed GL dispatch version. Its native loader was verified before using a local-only Playwright host-preflight override because the preflight checks `ldconfig` rather than `LD_LIBRARY_PATH`. The actual WebKit engine and every application/WCAG assertion ran; GitHub retains normal browser dependency installation and validation.
 
 ## Limits and readiness
 

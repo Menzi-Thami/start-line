@@ -86,17 +86,17 @@ describe('waiting for a sleeping server after sign-in', () => {
     expect(onSignOut).toHaveBeenCalled()
   })
 
-  it('says how far the wake has got, and shows a loader once only the account is left', async () => {
+  it('follows verified connection checks while the runner stays visible until the account responds', async () => {
     let ready = false
     server.use(http.get('*/health/ready', () => (ready ? new HttpResponse('Healthy') : new HttpResponse(null, { status: 503 }))))
     const { container } = render(<SignInWait onRetry={vi.fn()} onSignOut={vi.fn()} />)
 
-    expect(await screen.findByText(/Taperday’s up. Fetching your training/, {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(await screen.findByText(/Taperday’s up. Checking your account/, {}, { timeout: 3000 })).toBeInTheDocument()
     expect(container.querySelector('.wait-spinner')).not.toBeInTheDocument()
 
     ready = true
-    expect(await screen.findByText(/Almost there/, {}, { timeout: 3000 })).toBeInTheDocument()
-    expect(container.querySelector('.wait-spinner')).toBeInTheDocument()
+    expect(await screen.findByText(/Loading your saved account/, {}, { timeout: 3000 })).toBeInTheDocument()
+    expect(container.querySelector('.runner-sprint')).toBeVisible()
   })
 
   it('follows the wake in order, server then database, and stops when the wait is over', async () => {

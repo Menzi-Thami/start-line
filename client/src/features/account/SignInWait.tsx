@@ -1,33 +1,40 @@
+import './account-warmup.css'
 import { useEffect, useState } from 'react'
+import { useMediaQuery } from '../../lib/use-media-query'
+import { Runner } from '../shared/Runner'
 import { SLOW_AFTER_MS, type WakeStep } from './wait-film'
 import { useWakeStep } from './useWakeStep'
 
 const STATUS: Record<WakeStep, string> = {
   server: 'Connecting to Taperday',
-  database: 'Taperday’s up. Fetching your training',
-  almost: 'Almost there. Opening your page',
+  database: 'Taperday’s up. Checking your account',
+  almost: 'Loading your saved account',
 }
-
 const NOTE: Record<WakeStep, string> = {
-  server: 'This is taking longer than usual. Your page opens as soon as it’s ready.',
-  database: 'Nearly there.',
-  almost: 'Opening your page.',
+  server: 'This is taking longer than usual. We’re waiting for Taperday to respond.',
+  database: 'Taperday is responding. We’re checking access to your saved data.',
+  almost: 'The connection checks passed. We’re still waiting for your account.',
 }
+const TIPS = [
+  'A free Strava account can bring phone and watch recordings into Taperday.',
+  'Your completed training chapters and race results are kept in Journey.',
+  'Recovery has its own plan. Home stays your starting point.',
+  'Have a recording file? Add FIT, GPX or TCX files from Runs.',
+] as const
 
 interface Props {
   onRetry: () => void
   onSignOut: () => void
-  /** Cached Home stays quiet during fast loads, but slow loads must still offer recovery. */
+  /** Saved Home remains visible; only a slow connection needs this explanation. */
   quietUntilSlow?: boolean
 }
 
-/**
- * A compact account status for normal loads. Basic SQL stays available, though the free API can still cold-start.
- * A slow load starts dependency checks and offers retry/sign-out; it never imposes a minimum wait.
- * The runner's decorative film and training tips now belong to plan creation.
- */
+/** A real connection wait, with no artificial film duration, progress percentage or automatic tip changes. */
 export function SignInWait({ onRetry, onSignOut, quietUntilSlow = false }: Props) {
   const [slow, setSlow] = useState(false)
+  const [paused, setPaused] = useState(false)
+  const [tip, setTip] = useState(0)
+  const reduced = useMediaQuery('(prefers-reduced-motion: reduce)')
   const step = useWakeStep(slow)
 
   useEffect(() => {
@@ -35,38 +42,34 @@ export function SignInWait({ onRetry, onSignOut, quietUntilSlow = false }: Props
     return () => window.clearTimeout(timer)
   }, [])
 
-  const almost = slow && step === 'almost'
-
-  // A cached Home already shows the runner's last-known greeting: avoid a flash of
-  // duplicate loading copy on fast starts, but never strand them on a slow start.
   if (quietUntilSlow && !slow) return null
+  if (!slow) return <div className="sign-in-wait"><p className="loading-line" role="status">Checking your account<span className="loading-dots" aria-hidden="true"><i /><i /><i /></span></p></div>
 
   return (
-    <div className="sign-in-wait">
-      <div role="status" aria-live="polite">
-        <p className={`loading-line${almost ? ' is-almost' : ''}`}>
-          {almost && <span className="wait-spinner" aria-hidden="true" />}
-          {slow ? STATUS[step] : 'Checking your account'}
-          {!almost && (
-            <span className="loading-dots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-          )}
-        </p>
-        {slow && <p className="field-help sign-in-wait-note">{NOTE[step]}</p>}
-      </div>
-      {slow && (
-        <div className="submit-row">
-          <button type="button" className="button button-quiet" onClick={onRetry}>
-            Try again
-          </button>
-          <button type="button" className="link-button" onClick={onSignOut}>
-            Sign out
-          </button>
+    <section className="sign-in-wait account-warmup" aria-label="Connecting to Taperday" data-paused={paused || reduced}>
+      <div className="account-warmup-heading">
+        <div className="account-warmup-visual" aria-hidden="true"><span className="account-warmup-track" /><Runner pose="sprint" size={62} /></div>
+        <div>
+          <p className="account-warmup-kicker">A little warm-up</p>
+          <div role="status" aria-live="polite" aria-atomic="true">
+            <h2>{STATUS[step]}</h2>
+            <p className="field-help">{NOTE[step]}</p>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+      {quietUntilSlow && <p className="field-help">Your saved Home stays below while we reconnect.</p>}
+      <div className="account-warmup-tip">
+        <div className="account-warmup-tip-label"><span>While you wait</span><span aria-hidden="true">{tip + 1}/{TIPS.length}</span></div>
+        <p className="field-help" aria-live="polite" aria-atomic="true">{TIPS[tip]}</p>
+        <div className="account-warmup-controls">
+          <button type="button" className="link-button" onClick={() => setTip(value => (value + 1) % TIPS.length)}>Next tip</button>
+          {!reduced && <button type="button" className="link-button" aria-pressed={paused} onClick={() => setPaused(value => !value)}>{paused ? 'Resume animation' : 'Pause animation'}</button>}
+        </div>
+      </div>
+      <div className="submit-row">
+        <button type="button" className="button button-quiet" onClick={onRetry}>Try again</button>
+        <button type="button" className="link-button" onClick={onSignOut}>Sign out</button>
+      </div>
+    </section>
   )
 }

@@ -57,12 +57,16 @@ async function fetchCurrent(getToken: () => Promise<string | null>, today: strin
 export function useCurrentPlan(enabled: boolean, today = localToday()) {
   const auth = useAuth()
   const [loaded, setCurrent] = useState<{ owner: typeof auth; value: CurrentPlan | null | undefined }>({ owner: auth, value: undefined })
+  const [failure, setFailure] = useState<typeof auth | null>(null)
   const current = loaded.owner === auth ? loaded.value : undefined
   const sequence = useRef(0)
 
   const load = useCallback(() => {
     const mine = ++sequence.current
-    return fetchCurrent(auth.getToken, today).then(value => { if (mine === sequence.current) setCurrent({ owner: auth, value }) })
+    return fetchCurrent(auth.getToken, today).then(value => {
+      if (value === undefined) throw new Error('Your current plan could not be checked. Try again.')
+      if (mine === sequence.current) { setCurrent({ owner: auth, value }); setFailure(null) }
+    }).catch(error => { if (mine === sequence.current) setFailure(auth); throw error })
   }, [auth, today])
 
   useEffect(() => {
@@ -70,10 +74,13 @@ export function useCurrentPlan(enabled: boolean, today = localToday()) {
     let cancelled = false
     const requests = sequence
     const mine = ++sequence.current
-    // If it can't load, the app carries on without it: the builder shows, and saving still asks the API, which knows.
+    // A failed lookup is unknown, never evidence that the runner has no saved plan.
     fetchCurrent(auth.getToken, today)
-      .then((found) => { if (!cancelled && mine === sequence.current) setCurrent({ owner: auth, value: found ?? null }) })
-      .catch(() => { if (!cancelled && mine === sequence.current) setCurrent({ owner: auth, value: null }) })
+      .then((found) => {
+        if (found === undefined) throw new Error('Your current plan could not be checked. Try again.')
+        if (!cancelled && mine === sequence.current) { setCurrent({ owner: auth, value: found }); setFailure(null) }
+      })
+      .catch(() => { if (!cancelled && mine === sequence.current) setFailure(auth) })
     return () => {
       cancelled = true
       requests.current++
@@ -86,5 +93,5 @@ export function useCurrentPlan(enabled: boolean, today = localToday()) {
     return () => window.removeEventListener(JOURNEY_CHANGED, refresh)
   }, [enabled, load])
 
-  return { current: enabled ? currentTraining(current, today) : undefined, remember: (saved: CurrentPlan) => { sequence.current++; setCurrent({ owner: auth, value: saved }) }, refresh: () => load().catch(() => undefined) }
+  return { current: enabled ? currentTraining(current, today) : undefined, failed: enabled && failure === auth, remember: (saved: CurrentPlan) => { sequence.current++; setCurrent({ owner: auth, value: saved }); setFailure(null) }, refresh: () => load().catch(() => undefined) }
 }

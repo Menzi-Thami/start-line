@@ -1,6 +1,6 @@
 # Taperday simplicity implementation plan
 
-Status: implementation in progress in PR #275; final regression and CI validation are running.
+Status: application implementation and local QA complete in PR #275. Required dependency audit remains blocked; final GitHub check results are recorded on the PR.
 Branch: `feature/taperday-simplicity-plan`. Target: `staging`.
 Baseline inspected: `e09ca85fa6e90bbe5deacc778f0f2dacb42f1124` (PR #272).
 Prepared: 17 November 2026.
@@ -158,9 +158,9 @@ All phases belong to the same brief. Keep completed work and remaining work dist
 
 ### 2. Specify and test state selection
 
-- [ ] Extend the existing lifecycle presentation model to cover the state/action matrix with explicit pending/error states and local-date inputs.
-- [ ] Test active/newer-plan precedence, race review/correction, multiple recordings, missing IDs, recovery dates/pauses/readiness and the long-settled state.
-- [ ] Confirm no date-only achievement, automatic subjective check-in, first-workout fallback or unrelated-activity fallback is introduced.
+- [x] Extend the existing lifecycle presentation model to cover the state/action matrix with explicit pending/error states and local-date inputs.
+- [x] Test active/newer-plan precedence, race review/correction, multiple recordings, missing IDs, recovery dates/pauses/readiness and the long-settled state.
+- [x] Confirm no date-only achievement, automatic subjective check-in, first-workout fallback or unrelated-activity fallback is introduced.
 
 ### 3. Simplify Home and relocate detail
 
@@ -172,10 +172,10 @@ All phases belong to the same brief. Keep completed work and remaining work dist
 
 ### 4. Refine recording and race detail
 
-- [ ] Apply the simpler result/metric hierarchy to the real activity-scoped page and race review.
-- [ ] Preserve actual-vs-planned measurements, event-vs-recorded distance, time kinds, optional effort and every source's provenance.
-- [ ] Preserve useful analysis, partial splits, accessible chart/table alternatives, unavailable states, existing sharing and expiry behaviour.
-- [ ] Verify manual log, recorded import and reviewed result through save/edit/failure/retry/navigation/reload, including account and plan changes.
+- [x] Apply the simpler result/metric hierarchy to the real activity-scoped page and race review.
+- [x] Preserve actual-vs-planned measurements, event-vs-recorded distance, time kinds, optional effort and every source's provenance.
+- [x] Preserve useful analysis, partial splits, accessible chart/table alternatives, unavailable states, existing sharing and expiry behaviour.
+- [x] Verify manual log, recorded import and reviewed result through save/edit/failure/retry/navigation/reload, including account and plan changes.
 
 ### 5. Finish lifecycle integration and historical access
 
@@ -187,9 +187,9 @@ All phases belong to the same brief. Keep completed work and remaining work dist
 ### 6. Validate and prepare review
 
 - [ ] Complete the acceptance matrix below using synthetic runners and disposable local SQL, with no production/real runner data.
-- [ ] Complete mobile/desktop, both-theme, keyboard, reduced-motion and text-zoom review; commit before/after screenshots and a short evidence index under `docs/qa/<date>/simplicity/`.
+- [x] Complete mobile/desktop, both-theme, keyboard, reduced-motion and text-zoom review; commit before/after screenshots and a short evidence index under `docs/qa/<date>/simplicity/`.
 - [ ] Run the required local and GitHub checks; fix real failures without weakening assertions, audits or safety checks.
-- [ ] Update the existing focused-training/design documentation to the final behaviour, update this tracker and rewrite the PR summary around the delivered implementation.
+- [x] Update the existing focused-training/design documentation to the final behaviour, update this tracker and rewrite the PR summary around the delivered implementation.
 - [ ] Mark implementation ready for review only when required checks pass and the evidence is recorded. Leave merging and deployment to the owner.
 
 ## Regression acceptance matrix
@@ -235,8 +235,17 @@ Existing API contracts should normally suffice. If a real contract gap needs a b
 | Work | Status | Evidence |
 | --- | --- | --- |
 | Canonical brief and repository/PR reconnaissance | Written | Baseline and open dependency heads recorded above; documentation changes only |
-| Application implementation | Implemented; final validation running | Compact Home, real recording identity, calendar-aware recovery presentation, named detail destinations and simpler recording overview |
-| Before/after visual QA | Captured for ten Home states; final captures running | [Evidence index](../qa/2026-11-17/simplicity/README.md) |
-| Local implementation checks | In progress | Backend: 1,819 tests passed with no skips; strict build passed with zero warnings. Final client/browser suites pending |
-| GitHub implementation CI | Pending implementation push | Keep draft until all required checks pass; unchanged upstream dependency audit currently fails |
+| Application implementation | Complete | Compact Home, explicit lookup failure/retry, actual recording identity, calendar-aware recovery, named detail destinations and simpler recording overview |
+| Before/after visual QA | Complete: 44 matched before/after pairs | [Evidence index](../qa/2026-11-17/simplicity/README.md) |
+| Local implementation checks | Complete except required audit | 1,010 frontend tests, 1,819 backend tests, formatting/lint/types/build/EF and affected browser runs passed; see QA index |
+| GitHub implementation CI | Results tracked on [PR #275](https://github.com/Menzi-Thami/start-line/pull/275/checks) | Required audit currently fails on the unchanged advisory; keep draft until every required check passes |
 | Merge/deployment | Not authorized | Owner review and explicit action required |
+
+## Delivered implementation notes
+
+- Home is split into its overview, `TodayFocus`, shared data hooks and a lazily opened `RunningDetails` destination. The overview does not mount its hidden controls while running details are open; calculator drafts remain mounted when their own disclosure closes.
+- `recordingForToday` prefers explicit saved/server associations, excludes skipped/additional runs and expired Strava copies, and requires a unique planned-session association for unlinked uploads. A manual confirmation without an activity ID never acquires another recording automatically.
+- `recoveryOnHome` uses the actual calendar end, pause and seek-care state. Ending a calendar window changes presentation without a completion command or readiness claim. NextChapter still offers more rest/recovery, optional maintenance and a new race.
+- A failed current-plan read remains unknown and exposes Retry current plan on Home, including after sign-in or on a fresh device. A later failure retains a known plan. It cannot silently show an empty account or strand the runner on the opening placeholder.
+- Existing Strava, race confirmation/correction, offline edits, manual and time-only logging, strength, sharing and historical data contracts remain in use. No new API, schema, data provider, training prescription or retention exception was introduced.
+- Browser tests open the actual destination controls. Full WCAG 2/2.1/2.2 tag sets stay enabled; Home audits use a fresh document at each final width. The offline alert is audited on Home after closing running history, then history is reopened before reconnecting. No rule, audit threshold or behavior assertion is disabled.

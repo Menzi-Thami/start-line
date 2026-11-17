@@ -310,7 +310,8 @@ test('Home stays simple after recovery and months later, with running details av
     await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
     await page.screenshot({ path: `${homeQa}/saved-history-375-dark.png`, fullPage: true })
   }
-  await page.getByRole('button', { name: 'View my journey', exact: true }).click()
+  await page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Journey', exact: true }).click()
+  await page.getByRole('button', { name: 'View chapter', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Finished in 2:06:15', exact: true })).toBeVisible()
 })
 

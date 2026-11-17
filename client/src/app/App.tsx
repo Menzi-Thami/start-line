@@ -417,7 +417,7 @@ export function App() {
   // Completing Microsoft sign-in must not strand returning runners on the sign-in URL.
   // Wait for the saved-plan lookup; only then decide between their plan and Home.
   useEffect(() => {
-    if (view !== 'sign-in' || runner.state.kind !== 'ready' || latestPlan === undefined) return
+    if (view !== 'sign-in' || runner.state.kind !== 'ready' || latestPlan === undefined && !currentPlan.failed) return
     if (latestPlan) {
       landing.current = false
       setLanded(true)
@@ -427,9 +427,9 @@ export function App() {
       setView('home')
       window.history.replaceState(null, '', '?view=home')
     }
-  }, [view, runner.state.kind, latestPlan])
+  }, [view, runner.state.kind, latestPlan, currentPlan.failed])
   useEffect(() => {
-    if (landing.current || !(found || knownHere || returningAfterPlan) || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
+    if (landing.current || !(found || knownHere || returningAfterPlan || currentPlan.failed) || initial || view !== 'build' || plan.kind !== 'idle' || editing) return
     landing.current = true
     // A runner coming back with their plan kept on this device opens straight on it, as opening it from Home would show
     // it, while the account loads. Only before this visit has found their plan: after that, Home opens it for real.
@@ -462,7 +462,7 @@ export function App() {
     })
     // build is a fresh function each render; what it does doesn't change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [found, knownHere, returningAfterPlan, initial, view, plan.kind, editing, copy, latestPlan])
+  }, [found, knownHere, returningAfterPlan, initial, view, plan.kind, editing, copy, latestPlan, currentPlan.failed])
 
   // Once the account says which plan is current, the copy gives way to it, as opening the plan from Home would: the same
   // plan is brought up to date by the coach (above), a plan changed on another device is built afresh, and a plan deleted
@@ -977,6 +977,8 @@ export function App() {
             units={units}
             today={today}
             current={ownPlan}
+            currentPlanFailed={currentPlan.failed}
+            onRetryCurrentPlan={() => void currentPlan.refresh()}
             journey={journey}
             runs={runs ?? copy?.runs}
             bests={synced.bests ?? copy?.bests}

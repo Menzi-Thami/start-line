@@ -29,6 +29,7 @@ export interface HomeProps {
   onBuildPlan: () => void; onOpenBeginner?: () => void; onOpenRun: (id: string) => void
   onOpenRuns: () => void; onOpenAccount: () => void; initialPlan?: HomePlan | null
   onPlanLoaded?: (plan: HomePlan) => void; photo?: string | null; accountLoading?: boolean
+  currentPlanFailed?: boolean; onRetryCurrentPlan?: () => void
 }
 function detailFromUrl() {
   const params = new URLSearchParams(window.location.search)
@@ -74,12 +75,13 @@ export function Home(props: HomeProps) {
   const weekRuns = week?.sessions.filter(session => session.type !== 'Strength' && session.type !== 'Race') ?? []
   const doneRuns = weekRuns.filter(session => { const own = coach?.get(session); return own ? own.status !== 'Skipped' : syncedFor(session, coach)?.state === 'Completed' || !!recordingForToday(session, coach, available) }).length
   return <div className={`home home-simple${afterTraining ? ' is-after-training' : ''}`}>
-    <div hidden={details}>
+    {!details && <div>
       <header className="home-hello"><Avatar name={runner.displayName} photo={photo} size={48} /><div>
         <h1 ref={heading} tabIndex={-1} className="home-title">Welcome back, {runner.displayName}</h1><p className="home-lede">{formatDate(today, 'long')}</p>
       </div></header>
       <div className="home-panel home-focus" id="home-panel-today">
-        {!accountLoading && pending && <section className="panel home-card" role="status" aria-label="Loading your current chapter"><h2 className="home-card-heading">Your day</h2><p>Finding your current chapter…</p></section>}
+        {props.currentPlanFailed && <section className="home-data-state" role="alert"><h2 className="home-card-heading">Your current plan</h2><p>We couldn’t check your saved plan. Try again to pick up where you left off.</p><button type="button" className="button button-quiet" onClick={props.onRetryCurrentPlan}>Retry current plan</button></section>}
+        {!props.currentPlanFailed && !accountLoading && pending && <section className="panel home-card" role="status" aria-label="Loading your current chapter"><h2 className="home-card-heading">Your day</h2><p>Finding your current chapter…</p></section>}
         {!pending && journey.state.kind === 'error' && !current && <section className="panel home-card" role="alert"><h2 className="home-card-heading">Your saved chapter</h2><p>{journey.state.message}</p><button type="button" className="button" onClick={journey.actions.refresh}>Try again</button></section>}
         {current && (checkIns.failed || checkIns.offline || !!checkIns.pending?.length) && <CheckInLoadState {...checkIns} />}
         {current && failed && <div className="home-data-state" role="alert"><p>{plan ? 'Your plan couldn’t refresh. Showing the last plan loaded on this device.' : 'Your plan couldn’t load. You can try again.'}</p><button type="button" className="button" onClick={retry}>Retry plan</button></div>}
@@ -94,7 +96,7 @@ export function Home(props: HomeProps) {
         {!pending && <LatestRun runs={available} strava={strava} units={units} today={today} onOpenRun={onOpenRun} onOpenRuns={onOpenRuns} />}
         {!pending && strava?.status === 'NeedsReconnect' && <p className="field-help home-connection-note">Your Strava connection needs attention. <button type="button" className="link-button" onClick={props.onOpenAccount}>Reconnect Strava</button></p>}
       </div>
-    </div>
+    </div>}
     {visitedDetails && <div hidden={!details}><Suspense fallback={<p role="status">Loading your running details…</p>}><RunningDetails {...props} runs={available} onBack={closeDetails} backLabel={new URLSearchParams(window.location.search).get('from') === 'runs' ? '← Back to Runs' : '← Back to Home'} /></Suspense></div>}
   </div>
 }

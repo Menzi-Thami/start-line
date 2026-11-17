@@ -1,4 +1,4 @@
-import AxeBuilder from '@axe-core/playwright'
+import { accessibility } from './accessibility'
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -46,7 +46,7 @@ async function mock(page: Page, scene: typeof scenes[number]) {
   return { writes, run }
 }
 
-for (const mode of ['light', 'dark'] as const) test(`Run detail hierarchy: ${mode} @phone`, async ({ page }) => {
+for (const mode of ['light', 'dark'] as const) test(`Run detail hierarchy: ${mode} @phone`, async ({ page }, info) => {
   await mock(page, 'synced')
   await page.goto(fixture.replace('?view=home', '?view=runs&run=simplicity-run'))
   await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
@@ -54,14 +54,17 @@ for (const mode of ['light', 'dark'] as const) test(`Run detail hierarchy: ${mod
   await page.evaluate(() => document.fonts.ready)
   for (const width of [375, 1440]) {
     await page.setViewportSize({ width, height: 900 })
+    await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(animation => animation instanceof CSSTransition).map(animation => animation.finished.catch(() => undefined))) })
     if (!baseline) {
-      const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
+      const audit = await accessibility(page).analyze()
       expect(audit.violations.map(value => ({ id: value.id, targets: value.nodes.map(node => node.target) }))).toEqual([])
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
       await expect(page.getByRole('heading', { name: 'Plan vs actual' })).toHaveCount(0)
     }
-    mkdirSync(root, { recursive: true })
-    await page.screenshot({ path: `${root}run-detail-${width}-${mode}.png`, fullPage: true, animations: 'disabled' })
+    if (info.project.name === 'desktop') {
+      mkdirSync(root, { recursive: true })
+      await page.screenshot({ path: `${root}run-detail-${width}-${mode}.png`, fullPage: true, animations: 'disabled' })
+    }
   }
 })
 
@@ -120,6 +123,24 @@ test('a missing recording ID is unavailable without substituting a recent record
   await expect(page.getByRole('button', { name: 'Open run details', exact: true })).toBeVisible()
 })
 
+for (const entry of ['Home link', 'fresh device'] as const) test(`failed current-plan lookup stays unknown and retries from ${entry} @phone`, async ({ page }) => {
+  await mock(page, 'training')
+  let failed = true
+  await page.route('**/api/v1/me/plans', async route => {
+    if (failed) await route.fulfill({ status: 503, json: { title: 'Temporarily unavailable' } })
+    else await route.fallback()
+  })
+  await page.goto(entry === 'Home link' ? fixture : fixture.replace('?view=home', ''))
+  await expect(page.getByRole('button', { name: 'Retry current plan', exact: true })).toBeVisible()
+  await expect(page.getByText('Finding your current chapter…', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Choose my next challenge', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Runs', exact: true })).toBeVisible()
+  failed = false
+  await page.getByRole('button', { name: 'Retry current plan', exact: true }).click()
+  await expect(page.getByRole('button', { name: "Open today's workout", exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Retry current plan', exact: true })).toHaveCount(0)
+})
+
 for (const mode of ['light', 'dark'] as const) {
   test(`Home remains usable with reduced motion, wide screens and 200% text: ${mode} @phone`, async ({ page }) => {
     await mock(page, 'training')
@@ -141,7 +162,7 @@ for (const mode of ['light', 'dark'] as const) {
   })
 }
 for (const scene of scenes) for (const mode of ['light', 'dark'] as const) {
-  test(`simple Home: ${scene}, ${mode} @phone`, async ({ page }) => {
+  test(`simple Home: ${scene}, ${mode} @phone`, async ({ page }, info) => {
     const state = await mock(page, scene)
     await page.addInitScript(value => { localStorage.setItem('taperday:theme', value); document.documentElement.dataset.theme = value }, mode)
     await page.goto(fixture)
@@ -166,14 +187,20 @@ for (const scene of scenes) for (const mode of ['light', 'dark'] as const) {
     }
     for (const width of [375, 1440]) {
       await page.setViewportSize({ width, height: 900 })
+      // Start each full audit at its final width in a fresh document; retain every WCAG rule.
+      await page.reload()
+      await expect(page.getByRole('heading', { name: 'Welcome back, Naledi' })).toBeVisible()
+      await page.evaluate(() => document.fonts.ready)
       await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(animation => animation instanceof CSSTransition).map(animation => animation.finished.catch(() => undefined))); if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); scrollTo(0, 0) })
       if (!baseline) {
         expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-        const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
+        const audit = await accessibility(page).analyze()
         expect(audit.violations.map(value => ({ id: value.id, targets: value.nodes.map(node => node.target) }))).toEqual([])
       }
-      mkdirSync(root, { recursive: true })
-      await page.screenshot({ path: `${root}${scene}-${width}-${mode}.png`, fullPage: true })
+      if (info.project.name === 'desktop') {
+        mkdirSync(root, { recursive: true })
+        await page.screenshot({ path: `${root}${scene}-${width}-${mode}.png`, fullPage: true })
+      }
     }
     if (!baseline && scene === 'synced') {
       await page.getByRole('button', { name: 'Open run details', exact: true }).click()

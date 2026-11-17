@@ -6,6 +6,7 @@ import { syncedFor } from '../coaching/strava-completion'
 export function recordingForToday(session: Session, coach: SessionCoach | undefined, runs: readonly ActivitySummary[], now = Date.now()): ActivitySummary | null {
   const own = coach?.get(session)
   if (own?.status === 'Skipped') return null
+  if (own && !own.activityId) return null
   const id = own?.activityId ?? syncedFor(session, coach)?.activityId
   const available = (run: ActivitySummary) => run.source.kind !== 'Strava' || !run.source.cachedUntil || Date.parse(run.source.cachedUntil) > now
   if (id) return runs.find(run => run.id === id && available(run)) ?? null

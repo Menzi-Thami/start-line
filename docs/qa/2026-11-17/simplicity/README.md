@@ -19,10 +19,34 @@ Screens use the real application and synthetic API responses. Before captures us
 | settled | [Before](before/settled-375-light.png) / [After](after/settled-375-light.png) | [Before](before/settled-375-dark.png) / [After](after/settled-375-dark.png) | [Before](before/settled-1440-light.png) / [After](after/settled-1440-light.png) | [Before](before/settled-1440-dark.png) / [After](after/settled-1440-dark.png) |
 | failed | [Before](before/failed-375-light.png) / [After](after/failed-375-light.png) | [Before](before/failed-375-dark.png) / [After](after/failed-375-dark.png) | [Before](before/failed-1440-light.png) / [After](after/failed-1440-light.png) | [Before](before/failed-1440-dark.png) / [After](after/failed-1440-dark.png) |
 
+## Recording details
+
+| Size | Light | Night Run |
+| --- | --- | --- |
+| Phone | [Before](before/run-detail-375-light.png) / [After](after/run-detail-375-light.png) | [Before](before/run-detail-375-dark.png) / [After](after/run-detail-375-dark.png) |
+| Desktop | [Before](before/run-detail-1440-light.png) / [After](after/run-detail-1440-light.png) | [Before](before/run-detail-1440-dark.png) / [After](after/run-detail-1440-dark.png) |
+
 ## Validation record
 
-Final local and GitHub results will replace this in-progress record. Backend strict Release build completed with zero warnings/errors; 1,819 backend tests passed with no skips using disposable local SQL. The first 20 Home browser cases passed both-theme accessibility checks and generated the matched state captures. Navigation and final responsive regressions are running.
+All application/API responses use synthetic runners and canned recordings. Backend tests use the disposable local SQL database. Commands ran against the combined #273/#274 dependencies and this implementation.
 
-The unchanged required dependency audit reports GHSA-fc5q-39xc-vjpf through latest `picomatch@4.0.7`. The audit threshold stays intact. The PR remains draft while any required check fails.
+| Check | Actual result |
+| --- | --- |
+| `scripts/check.sh` | Backend format, strict Release build (zero warnings/errors), 1,819 backend tests with no skips, EF consistency, staging-readiness checks, frontend lint/types, 1,008 frontend tests and production build passed; stopped at the required dependency audit before its browser step |
+| Final frontend suite after the lookup/retry regression fix | **1,010 passed across 139 files** |
+| Final frontend lint / TypeScript | Passed |
+| Final desktop `simplicity` and `journey-fallback` browser run | **30 passed**; regenerated every after screenshot with Chromium |
+| Affected navigation / coaching / history retests | **8 passed** |
+| Recording stages / historical logging / source expiry / Strava confirmation retests | **9 passed** |
+| Firefox offline edit / reload / reconnect journeys | **2 passed**, both themes, complete Home WCAG audit, one durable write |
+| GitHub checks and secret scan | Actual final SHA, run URL, job results and browser totals are maintained on [PR #275](https://github.com/Menzi-Thami/start-line/pull/275) |
 
-Browser projects emulate devices; they do not prove physical-device native sharing, live Strava delivery, or Azure/Entra cold-start reliability. No hosting, billing, retention or schema change is included. Nothing is merged or deployed.
+The Home and recording captures check full WCAG 2 A/AA, 2.1 A/AA and 2.2 AA tags and horizontal overflow. Interaction cases cover actual recording identity and origin/filter restoration after reload, keyboard-operable tools with retained drafts, missing IDs, failed current-plan requests and retries from both Home and a fresh device, 320/390/820/2560px, 200% text size and reduced motion. Race confirmation, source expiry, independent recovery, calendar end, pauses, seek-care restrictions and newer-plan precedence retain their real API contracts.
+
+Each Home audit starts in a fresh document at its final width. The offline workflow audits the full Home with the real pending-draft alert, then reopens history before reconnecting. This avoids a Firefox native geometry crash when the target-size rule traverses the expanded history document. **No WCAG rule or audit assertion is disabled.** The editing, persistence and exactly-one-write assertions remain in the Firefox flow.
+
+## Limits and readiness
+
+The unchanged required audit reports [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) through latest `picomatch@4.0.7`, rechecked during implementation. The audit threshold stays intact. The PR remains draft while any required check fails.
+
+Device profiles and text-size simulation do not establish physical-device native sharing, live Strava delivery or Azure/Entra cold-start reliability. The integrated automatic warm-up improves real waiting feedback and does not promise that hosting cold starts are removed. No hosting, billing, provider retention or schema change is included. Nothing is merged or deployed.

@@ -142,11 +142,15 @@ describe('my runs', () => {
     server.use(http.get('*/api/v1/me/sync/strava', () => HttpResponse.json({ available: true, connected: false })))
     const user = renderApp('/?view=runs')
     await openDisclosure('Add runs from a file')
-    await user.click(await screen.findByRole('button', { name: 'See phone & watch setup' }))
-    const phone = screen.getByText('Connect a phone or watch').closest('details')!
+    await user.click(await screen.findByRole('button', { name: 'See Strava setup' }))
+    const phone = screen.getByText('Connect through Strava').closest('details')!
     expect(phone).toHaveAttribute('open')
     expect(phone.querySelector('summary')).toHaveFocus()
     expect(within(phone).getByText('A free Strava account is enough.')).toBeVisible()
+    expect(within(phone).getByRole('img', { name: 'Powered by Strava' })).toBeVisible()
+    const help = within(phone).getByText('Help connecting my app or watch').closest('details')!
+    expect(help).not.toHaveAttribute('open')
+    await user.click(within(phone).getByText('Help connecting my app or watch'))
     await user.click(within(phone).getByText('Nike Run Club', { exact: true }))
     expect(within(phone).getByText(/Settings → Partners → Strava/)).toBeVisible()
     expect(within(phone).getByText(/Only runs recorded after linking Nike to Strava will sync/)).toBeVisible()

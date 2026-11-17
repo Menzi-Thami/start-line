@@ -1,8 +1,14 @@
 # Phone, watch and automatic import coverage
 
-Runs now offers one collapsed **Connect a phone or watch** guide before file upload. It explicitly says a **free Strava account is enough**, links the phone app, and explains connecting the same account to Taperday. Individual setup rows cover Strava phone recording, Nike Run Club, Garmin, Apple Workout, Samsung Health, Fitbit/Pixel/Google Health, Huawei, COROS, Polar/Suunto/Wahoo, indoor/virtual runs and other apps/files. Account uses the same source guidance. The open outer guide survives mobile/desktop layout changes; export help opens it with keyboard focus below the sticky header.
+Runs leads with **Connect through Strava** before file upload. The short setup shows the official **Powered by Strava** mark and a single connection-settings action. App/watch instructions are optional under **Help connecting my app or watch**. It explicitly says a **free Strava account is enough**, links the phone app, and explains connecting the same account to Taperday. Individual setup rows cover Strava phone recording, Nike Run Club, Garmin, Apple Workout, Samsung Health, Fitbit/Pixel/Google Health, Huawei, COROS, Polar/Suunto/Wahoo, indoor/virtual runs and other apps/files. Account uses the same source guidance. Onboarding also explicitly includes phone recordings and free accounts, rather than referring only to watches. The open outer guide survives mobile/desktop layout changes; export help opens it with keyboard focus below the sticky header.
 
 Known measurements come from the recording. No watch, paid runner subscription or invented recording is required. Missing heart rate/elevation stay missing. Source-specific limits are explicit: Nike only sends newly recorded runs after linking; Apple's connection forwards native Apple Workout activities from the past 30 days, not arbitrary Health entries; Samsung's connection is Android/GPS only; Huawei availability varies by country. Direct native Apple Health/Health Connect access is unavailable in this web app. A compatible FIT, GPX or TCX file remains an alternative. Manual training logging is offered when a current training plan exists, retaining its existing date limits.
+
+## Home stays Home
+
+The existing Home layout, greeting, colours, animation and navigation are preserved. Race review and the recovery preview remain contextual actions within Home; recovery is its own Plan destination and never replaces Home. Concluded training, active recovery and completed recovery each retain the Home navigation item and wordmark return action.
+
+A fresh-device gap was fixed: when there is no current training plan and the saved Journey contains completed training/recovery, opening the root URL now opens Home even without a cached profile. Explicit plan links, new-plan creation and the existing active-training landing behavior are preserved. `HomeLanding.test.tsx` and the fresh-device sequences in `training-recovery.spec.ts` cover all three post-plan states, reload, Runs navigation and the wordmark return. No production Home component or Home layout stylesheet was changed.
 
 ## Reliability changes
 
@@ -16,9 +22,12 @@ Synthetic runners and production fonts. Default synced Runs stays compact; setup
 
 | View | Light | Night Run |
 | --- | --- | --- |
-| Setup, 375px | [Phone](phone-375-light.png) | [Phone](phone-375-dark.png) |
+| Strava setup, provider help closed | [Phone](strava-setup-375-light.png) | [Phone](strava-setup-375-dark.png) |
+| Setup detail, 375px | [Phone](phone-375-light.png) | [Phone](phone-375-dark.png) |
 | Setup, 1440px | [Desktop](phone-1440-light.png) | [Desktop](phone-1440-dark.png) |
 | Synced Runs, 375px | [Phone](synced-375-light.png) | [Phone](synced-375-dark.png) |
+
+Preserved Home: [training concluded](home-preserved-375-concluded.png), [recovering](home-preserved-375-recovering.png), [recovered](home-preserved-375-recovered.png).
 
 Before this expansion: [phone guide at d9a159c](https://github.com/Menzi-Thami/start-line/blob/d9a159c48c3d7424546c9da6bbaab761387eadc1/docs/qa/2026-11-17/phone-runs/phone-375-dark.png). The same PR preserves Night Run colours, typography, runner animation, bottom navigation, uploads, analysis and provider retention.
 

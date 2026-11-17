@@ -8,7 +8,7 @@ export function ExportGuide({ onPhoneHelp }: { onPhoneHelp: () => void }) {
   return (
     <div className="export-guide">
       <p className="field-help">Recording on your phone or watch? You can connect a compatible running app instead of exporting files.</p>
-      <button type="button" className="link-button" onClick={onPhoneHelp}>See phone &amp; watch setup</button>
+      <button type="button" className="link-button" onClick={onPhoneHelp}>See Strava setup</button>
       <details className="export-way">
         <summary>Garmin</summary>
         <p className="field-help">

@@ -59,14 +59,14 @@ async function mockApi(page: Page, hasPlan = false, imports?: Imports) {
 }
 
 for (const mode of ['light', 'dark']) {
-  test(`Nike runner finds phone help, understands history limits and opens connections in ${mode} mode @phone`, async ({ page }, info) => {
+  test(`Strava setup leads with free accounts and keeps app-specific help optional in ${mode} mode @phone`, async ({ page }, info) => {
     const errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
     await mockApi(page)
     await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
     await page.getByText('Add runs from a file', { exact: true }).click()
-    await page.getByRole('button', { name: 'See phone & watch setup', exact: true }).click()
+    await page.getByRole('button', { name: 'See Strava setup', exact: true }).click()
     const guide = page.locator('details.phone-runs')
     await expect(guide).toHaveAttribute('open', '')
     await expect(guide.locator(':scope > summary')).toBeFocused()
@@ -74,6 +74,10 @@ for (const mode of ['light', 'dark']) {
     const header = await page.locator('.masthead').boundingBox()
     expect(focused!.y).toBeGreaterThanOrEqual(header!.y + header!.height)
     await expect(guide.getByText('A free Strava account is enough.', { exact: true })).toBeVisible()
+    await expect(guide.getByRole('img', { name: 'Powered by Strava' })).toBeVisible()
+    const appHelp = guide.locator('details.device-guide')
+    await expect(appHelp).not.toHaveAttribute('open', '')
+    await appHelp.locator(':scope > summary').click()
     await guide.getByText('Nike Run Club', { exact: true }).click()
     await expect(guide.getByText(/Settings → Partners → Strava/)).toBeVisible()
     await expect(guide.getByText(/Only runs recorded after linking Nike to Strava will sync/)).toBeVisible()
@@ -95,10 +99,15 @@ for (const mode of ['light', 'dark']) {
       // Help stays open when the mobile panel moves into the desktop split view.
       await expect(page.locator('.runs-split')).toHaveCount(width >= 1024 ? 1 : 0)
       await expect(guide).toHaveAttribute('open', '')
+      const help = guide.locator('details.device-guide')
+      if (await help.getAttribute('open') === null) await help.locator(':scope > summary').click()
       const nike = guide.locator('[data-run-source=nike]')
       if (!await nike.getAttribute('open').then(value => value !== null)) await nike.locator('summary').click()
       await expect(guide.getByText(/Settings → Partners → Strava/)).toBeVisible()
       await page.evaluate(() => document.fonts.ready)
+      const mark = guide.getByRole('img', { name: 'Powered by Strava' })
+      if (mode === 'dark') { await expect(mark.locator('.strava-powered-screen')).toBeVisible(); await expect(mark.locator('.strava-powered-print')).toBeHidden() }
+      else { await expect(mark.locator('.strava-powered-print')).toBeVisible(); await expect(mark.locator('.strava-powered-screen')).toBeHidden() }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width}px`).toBeLessThanOrEqual(1)
       const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
       expect(audit.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
@@ -124,7 +133,7 @@ for (const mode of ['light', 'dark']) {
 test('phone runner can reach the existing manual training log without a recording @phone', async ({ page }) => {
   await mockApi(page, true)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
-  await page.getByText('Connect a phone or watch', { exact: true }).click()
+  await page.getByText('Connect through Strava', { exact: true }).click()
   await page.getByRole('button', { name: 'Open my training plan', exact: true }).click()
   await page.getByRole('button', { name: 'Log a run', exact: true }).click()
   await expect(page.getByLabel('Run date', { exact: true })).toBeVisible()
@@ -213,4 +222,33 @@ test('a skipped recording gains an explanation when pending work completes even 
   await expect(page.getByRole('heading', { name: 'Runs from Strava that didn’t arrive', exact: true })).toBeVisible()
   await expect(page.getByText(/Strava did not share usable time and distance recording samples/)).toBeVisible()
   await expect(page.getByRole('link', { name: /Strava run,/ })).toHaveAttribute('href', 'https://www.strava.com/activities/12345')
+})
+
+test('Strava setup stays concise with app and watch instructions closed by default @phone', async ({ page }, info) => {
+  await mockApi(page)
+  await page.setViewportSize({ width: 375, height: 900 })
+  await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
+  const guide = page.locator('details.phone-runs')
+  await guide.locator(':scope > summary').click()
+  const help = guide.locator('details.device-guide')
+  await expect(help).not.toHaveAttribute('open', '')
+  await expect(guide.getByText('Nike Run Club', { exact: true })).toBeHidden()
+  await expect(guide.getByText('A free Strava account is enough.', { exact: true })).toBeVisible()
+  await expect(guide.getByRole('button', { name: 'Open connection settings', exact: true })).toBeVisible()
+  for (const mode of ['light', 'dark']) {
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+    await page.evaluate(() => document.fonts.ready)
+    const mark = guide.getByRole('img', { name: 'Powered by Strava' })
+    await expect(mark).toBeVisible()
+    if (mode === 'dark') await expect(mark.locator('.strava-powered-screen')).toBeVisible()
+    else await expect(mark.locator('.strava-powered-print')).toBeVisible()
+    const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
+    expect(audit.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    if (info.project.name === 'desktop') {
+      await mkdir(qa, { recursive: true })
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await page.screenshot({ path: `${qa}/strava-setup-375-${mode}.png`, fullPage: true })
+    }
+  }
 })

@@ -132,7 +132,7 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
       </h2>
 
       <RunImportStatus status={imports.strava} error={imports.syncError} busy={imports.syncing} onCheck={() => void imports.refresh()} onConnect={onOpenConnections} />
-      <details ref={phoneRef} className="disclosure phone-runs" open={phoneOpen} onToggle={event => setPhoneOpen(event.currentTarget.open)}><summary>Connect a phone or watch</summary>
+      <details ref={phoneRef} className="disclosure phone-runs" open={phoneOpen} onToggle={event => setPhoneOpen(event.currentTarget.open)}><summary>Connect through Strava</summary>
         <PhoneRunGuide onOpenConnections={onOpenConnections} onOpenPlan={onOpenPlan} />
       </details>
       <details className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>

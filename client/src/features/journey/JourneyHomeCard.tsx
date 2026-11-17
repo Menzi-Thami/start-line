@@ -38,7 +38,10 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
         <p className="plan-kicker">Easy running</p>
         <h2 className="home-card-heading">Keep running comfortably.</h2>
         <p>Your easy-running plan is ready whenever you are. Every run is optional.</p>
-        <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Open easy running</button>
+        <div className="journey-actions">
+          <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Open easy running</button>
+          <button type="button" className="button button-quiet" onClick={onNewRace}>Train for another race</button>
+        </div>
       </section>
     )
   }
@@ -48,7 +51,10 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
         <p className="plan-kicker">{recovery.status === 'Completed' ? 'Recovered' : 'Recovery ended'}</p>
         <h2 id="journey-home-next" className="home-card-heading">What’s next?</h2>
         <p>Keep running comfortably, train for another race, or take more time. Nothing changes until you choose.</p>
-        <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Choose what's next</button>
+        <div className="journey-actions">
+          <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Choose what's next</button>
+          <button type="button" className="button button-quiet" onClick={onNewRace}>Train for another race</button>
+        </div>
       </section>
     )
   }

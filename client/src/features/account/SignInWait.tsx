@@ -17,6 +17,8 @@ const NOTE: Record<WakeStep, string> = {
 interface Props {
   onRetry: () => void
   onSignOut: () => void
+  /** Cached Home stays quiet during fast loads, but slow loads must still offer recovery. */
+  quietUntilSlow?: boolean
 }
 
 /**
@@ -24,7 +26,7 @@ interface Props {
  * A slow load starts dependency checks and offers retry/sign-out; it never imposes a minimum wait.
  * The runner's decorative film and training tips now belong to plan creation.
  */
-export function SignInWait({ onRetry, onSignOut }: Props) {
+export function SignInWait({ onRetry, onSignOut, quietUntilSlow = false }: Props) {
   const [slow, setSlow] = useState(false)
   const step = useWakeStep(slow)
 
@@ -34,6 +36,10 @@ export function SignInWait({ onRetry, onSignOut }: Props) {
   }, [])
 
   const almost = slow && step === 'almost'
+
+  // A cached Home already shows the runner's last-known greeting: avoid a flash of
+  // duplicate loading copy on fast starts, but never strand them on a slow start.
+  if (quietUntilSlow && !slow) return null
 
   return (
     <div className="sign-in-wait">

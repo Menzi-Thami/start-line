@@ -308,10 +308,11 @@ outside uptime monitor keeps it loaded for free:
 - **Not from a scheduled GitHub Action.** Every run bills at least a minute, so a ping every 5 minutes is about 8,600
   minutes a month, well over a private repo's 2,000 free ones.
 
-The database still pauses after an hour with no queries (`autoPauseDelay: 60`) and took 47 s to resume when measured
-(23 Oct 2026). Building and sharing plans never touch it. A signed-in runner who arrives after a quiet hour sees the
-waiting screen (`SignInWait`), which follows the wake through `live` then `ready` and keeps trying for up to 2½
-minutes (`WAKE_PATIENCE_MS`).
+**Production SQL Basic does not auto-pause.** The earlier 47 s wake measurement (23 Oct 2026) was from the
+previous free serverless database, not the upgraded production tier. Staging still uses the free serverless option.
+The production API remains on App Service F1 and may sleep independently of SQL. A returning runner's account
+request can therefore be slow even when SQL is online. The account-loading UI (`SignInWait`) checks `live` then
+`ready` and offers retries on slow loads; do not diagnose SQL auto-pause from a generic fetch timeout.
 
 ## Reminders (Web Push)
 

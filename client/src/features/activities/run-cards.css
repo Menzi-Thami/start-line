@@ -13,3 +13,7 @@
 .phone-run-guide h3 { font-size: var(--text-lg); margin: var(--space-2) 0 0; }
 .phone-run-guide .export-steps { margin: 0; }
 .phone-run-guide .button { justify-self: start; white-space: normal; }
+.run-import-status { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
+.run-import-status .link-button { justify-self: start; }
+.running-app-guides { width: 100%; }
+.running-app-guides summary { white-space: normal; padding-block: var(--space-2); }

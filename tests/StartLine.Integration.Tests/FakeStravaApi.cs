@@ -13,7 +13,7 @@ namespace StartLine.Integration.Tests;
 /// </summary>
 public sealed class FakeStravaApi : IStravaApi
 {
-    private readonly ConcurrentDictionary<long, (StravaActivity Activity, StravaStreams Streams)> activities = new();
+    private readonly ConcurrentDictionary<long, (StravaActivity Activity, StravaStreams? Streams)> activities = new();
     private readonly ConcurrentDictionary<long, byte> revoked = new();
     private long nextId = 1000;
     private int tokenGeneration;
@@ -57,6 +57,12 @@ public sealed class FakeStravaApi : IStravaApi
     }
 
     public void Delete(long id) => activities.TryRemove(id, out _);
+
+    public void RemoveStreams(long id)
+    {
+        var (activity, _) = activities[id];
+        activities[id] = (activity, null);
+    }
 
     public void Revoke(long athleteId) => revoked[athleteId] = 0;
 

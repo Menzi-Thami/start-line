@@ -1,7 +1,7 @@
 import './run-cards.css'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
-import { api } from '../../lib/api-client'
+import { useSyncedRuns } from '../sync/useSyncedRuns'
 import { emptyProgress, uploadAll, type BulkProgress, type BulkResult } from '../../lib/bulk-upload'
 import { formatDate, formatDistance, formatDuration, formatPace, localToday, type Units } from '../../lib/format'
 import type { Activity, ActivitySummary } from '../../lib/types'
@@ -10,6 +10,7 @@ import { BulkSummary } from './BulkSummary'
 import { ExportGuide } from './ExportGuide'
 import { RunDataPanel } from './RunDataPanel'
 import { PhoneRunGuide } from './PhoneRunGuide'
+import { RunImportStatus } from './RunImportStatus'
 
 type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] } | { kind: 'error'; message: string }
 
@@ -64,28 +65,16 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
   const phoneOpen = phoneHelp?.open ?? localPhoneOpen
   const setPhoneOpen = phoneHelp?.onChange ?? setLocalPhoneOpen
   const auth = useAuth()
-  const [list, setList] = useState<ListState>({ kind: 'loading' })
+  const imports = useSyncedRuns(true, false)
+  const list: ListState = imports.runs ? { kind: 'ready', runs: imports.runs }
+    : imports.error ? { kind: 'error', message: imports.error } : { kind: 'loading' }
+  const fetchRuns = imports.reload
   const [range, setRange] = useState<Range>('all')
   const [source, setSource] = useState<Source>('any')
   const [bulk, setBulk] = useState<{ running: boolean; progress: BulkProgress; result: BulkResult | null; error: string | null } | null>(null)
   const [singleError, setSingleError] = useState<string | null>(null)
   const stop = useRef<AbortController | null>(null)
   const input = useRef<HTMLInputElement>(null)
-
-  // Only sets state when the request settles; callers set the loading state themselves.
-  const fetchRuns = useCallback(() => {
-    const flags = { cancelled: false }
-    auth
-      .getToken()
-      .then((token) => (token ? api.me.activities(token) : Promise.reject(new Error('Sign in to see your runs.'))))
-      .then((runs) => !flags.cancelled && setList({ kind: 'ready', runs }))
-      .catch((error: unknown) => !flags.cancelled && setList({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }))
-    return () => {
-      flags.cancelled = true
-    }
-  }, [auth])
-
-  useEffect(() => fetchRuns(), [fetchRuns])
 
   const upload = async (files: File[]) => {
     const controller = new AbortController()
@@ -122,7 +111,7 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
     } finally {
       // The same files can be picked again after fixing whatever went wrong.
       if (input.current) input.current.value = ''
-      fetchRuns()
+      void fetchRuns()
     }
   }
 
@@ -142,8 +131,8 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
         Runs
       </h2>
 
-
-      <details ref={phoneRef} className="disclosure phone-runs" open={phoneOpen} onToggle={event => setPhoneOpen(event.currentTarget.open)}><summary>I run with my phone</summary>
+      <RunImportStatus status={imports.strava} error={imports.syncError} busy={imports.syncing} onCheck={() => void imports.refresh()} onConnect={onOpenConnections} />
+      <details ref={phoneRef} className="disclosure phone-runs" open={phoneOpen} onToggle={event => setPhoneOpen(event.currentTarget.open)}><summary>Connect a phone or watch</summary>
         <PhoneRunGuide onOpenConnections={onOpenConnections} onOpenPlan={onOpenPlan} />
       </details>
       <details className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
@@ -175,7 +164,12 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
         </p>
       </details>
 
-      <RunDataPanel units={units} refreshKey={list.kind === 'ready' ? list.runs.length : 0} />
+      <RunDataPanel units={units} refreshKey={imports.revision} />
+
+      {list.kind === 'ready' && imports.error && <div className="error-panel" role="alert">
+        <p>Your recordings could not refresh. Showing the recordings already loaded. {imports.error}</p>
+        <button type="button" className="link-button" disabled={imports.loading} onClick={() => void fetchRuns()}>Retry recordings</button>
+      </div>}
 
       {list.kind === 'loading' && (
         <div className="choice-list" aria-busy="true" style={{ marginTop: 'var(--space-5)' }}>
@@ -195,8 +189,7 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
             className="button button-quiet"
             style={{ marginTop: 'var(--space-3)' }}
             onClick={() => {
-              setList({ kind: 'loading' })
-              fetchRuns()
+              void fetchRuns()
             }}
           >
             Try again
@@ -206,8 +199,8 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
 
       {list.kind === 'ready' && list.runs.length === 0 && (
         <div className="empty" style={{ marginTop: 'var(--space-5)' }}>
-          <p><strong>No recordings yet.</strong> Runs recorded on your phone can sync through Strava. You can also upload a saved recording from a file.</p>
-          <button type="button" className="button button-primary" style={{ marginTop: 'var(--space-3)' }} onClick={openPhoneHelp}>See phone &amp; app options</button>
+          <p><strong>No recordings yet.</strong> Runs recorded on your phone or watch can sync through Strava. You can also upload a saved recording from a file.</p>
+          <button type="button" className="button button-primary" style={{ marginTop: 'var(--space-3)' }} onClick={openPhoneHelp}>See my import options</button>
         </div>
       )}
 

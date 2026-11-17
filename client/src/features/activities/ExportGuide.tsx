@@ -7,8 +7,8 @@
 export function ExportGuide({ onPhoneHelp }: { onPhoneHelp: () => void }) {
   return (
     <div className="export-guide">
-      <p className="field-help">Using Nike Run Club or recording on your phone? You can connect a running app instead of exporting files.</p>
-      <button type="button" className="link-button" onClick={onPhoneHelp}>See phone &amp; Nike Run Club help</button>
+      <p className="field-help">Recording on your phone or watch? You can connect a compatible running app instead of exporting files.</p>
+      <button type="button" className="link-button" onClick={onPhoneHelp}>See phone &amp; watch setup</button>
       <details className="export-way">
         <summary>Garmin</summary>
         <p className="field-help">

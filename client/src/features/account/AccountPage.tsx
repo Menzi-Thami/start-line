@@ -110,7 +110,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       <h3 className="account-group-title" id="account-group-running">Running</h3>
       <details ref={connectionsRef} className="settings-group" open={connectionsOpen} onToggle={event => setConnectionsOpen(event.currentTarget.open)}><summary>Connections & run sources</summary>
       <div className="settings-columns">
-      <StravaSection notice={stravaNotice} connecting={stravaConnecting} />
+      <StravaSection key={runner.id} notice={stravaNotice} connecting={stravaConnecting} onOpenRuns={onOpenRuns} />
 
       <RunSources onOpenRuns={onOpenRuns} />
       </div>

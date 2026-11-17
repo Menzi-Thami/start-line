@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -40,13 +40,13 @@ function section(status: StravaStatus, notice?: string) {
   )
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers() })
 
 describe('connecting Strava from Account', () => {
-  it('stays hidden until the Strava app is configured', async () => {
-    const { container } = section(stravaOff)
-
-    await waitFor(() => expect(container).toBeEmptyDOMElement())
+  it('explains when automatic imports are unavailable without offering a broken connection', async () => {
+    section(stravaOff)
+    expect(await screen.findByText(/Automatic Strava imports are currently unavailable/)).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Connect with Strava' })).not.toBeInTheDocument()
   })
 
   it('sends the runner to Strava’s own page with the official button', async () => {
@@ -76,16 +76,46 @@ describe('connecting Strava from Account', () => {
 
     await user.click(await screen.findByText('How do my runs get into Strava?'))
 
-    for (const device of ['Nike Run Club', 'Garmin', 'Apple Watch or iPhone', 'Android, Samsung, Pixel or Fitbit', 'COROS, Polar, Suunto or Wahoo', 'Just a phone']) {
+    for (const device of ['Strava on a phone', 'Nike Run Club', 'Garmin', 'Apple Watch / Apple Workout', 'Samsung Health', 'Fitbit / Pixel Watch / Google Health', 'Huawei Health', 'COROS', 'Polar, Suunto or Wahoo', 'Treadmill or virtual running', 'Another running app or watch']) {
       expect(screen.getByText(device)).toBeVisible()
     }
+    await user.click(screen.getByText('Nike Run Club', { exact: true }))
     expect(screen.getByText(/Only runs recorded after linking Nike to Strava will sync/)).toBeVisible()
+    expect(screen.getByText(/A free Strava account is enough to connect/)).toBeVisible()
   })
 
   it('shows how a connection stands', async () => {
     section(connected)
 
-    expect(await screen.findByText(/14 runs from the last six weeks are in your plan, including ones you keep private on Strava/)).toBeInTheDocument()
+    expect(await screen.findByText(/14 synced recordings are available in Runs, including ones you keep private on Strava/)).toBeInTheDocument()
+  })
+
+  it('checks for missing recordings and updates pending progress without leaving Account', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] })
+    let status = connected
+    let catchUps = 0
+    server.use(
+      http.get('*/api/v1/me/sync/strava', () => HttpResponse.json(status)),
+      http.post('*/api/v1/me/sync/strava/catch-up', () => { catchUps++; status = { ...connected, pending: 2 }; return HttpResponse.json(status) }),
+    )
+    render(<AuthContext.Provider value={auth}><StravaSection /></AuthContext.Provider>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Check for runs' }))
+    expect(catchUps).toBe(1)
+    expect(await screen.findByText(/Fetching 2 more/)).toBeVisible()
+    status = { ...connected, syncedRuns: 16 }
+    await act(async () => vi.advanceTimersByTime(15_000))
+    expect(await screen.findByText(/16 synced recordings are available in Runs/)).toBeVisible()
+    expect(screen.queryByText(/Fetching 2 more/)).not.toBeInTheDocument()
+  })
+
+  it('allows an unavailable status check to be retried', async () => {
+    let checks = 0
+    server.use(http.get('*/api/v1/me/sync/strava', () => ++checks <= 2
+      ? HttpResponse.json({ title: 'Connection unavailable' }, { status: 503 }) : HttpResponse.json(connected)))
+    render(<AuthContext.Provider value={auth}><StravaSection /></AuthContext.Provider>)
+    await userEvent.click(await screen.findByRole('button', { name: 'Check connection again' }))
+    expect(await screen.findByText(/14 synced recordings are available in Runs/)).toBeVisible()
+    expect(checks).toBe(3)
   })
 
   it('asks to connect again when Strava stopped accepting access', async () => {

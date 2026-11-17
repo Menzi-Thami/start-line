@@ -125,7 +125,7 @@ describe('my runs', () => {
     const db = runsApi()
     const user = renderApp()
     await user.click(await screen.findByRole('button', { name: 'Runs' }))
-    expect(await screen.findByText(/Runs recorded on your phone can sync through Strava/)).toBeInTheDocument()
+    expect(await screen.findByText(/Runs recorded on your phone or watch can sync through Strava/)).toBeInTheDocument()
 
     await openDisclosure('Add runs from a file')
     await user.upload(screen.getByLabelText('Upload runs'), fitFile())
@@ -142,11 +142,13 @@ describe('my runs', () => {
     server.use(http.get('*/api/v1/me/sync/strava', () => HttpResponse.json({ available: true, connected: false })))
     const user = renderApp('/?view=runs')
     await openDisclosure('Add runs from a file')
-    await user.click(await screen.findByRole('button', { name: 'See phone & Nike Run Club help' }))
-    const phone = screen.getByText('I run with my phone').closest('details')!
+    await user.click(await screen.findByRole('button', { name: 'See phone & watch setup' }))
+    const phone = screen.getByText('Connect a phone or watch').closest('details')!
     expect(phone).toHaveAttribute('open')
     expect(phone.querySelector('summary')).toHaveFocus()
-    expect(within(phone).getByText('Settings → Partners → Strava')).toBeVisible()
+    expect(within(phone).getByText('A free Strava account is enough.')).toBeVisible()
+    await user.click(within(phone).getByText('Nike Run Club', { exact: true }))
+    expect(within(phone).getByText(/Settings → Partners → Strava/)).toBeVisible()
     expect(within(phone).getByText(/Only runs recorded after linking Nike to Strava will sync/)).toBeVisible()
     expect(within(phone).queryByRole('button', { name: 'Open my training plan' })).not.toBeInTheDocument()
     expect(db.uploads).toHaveLength(0)
@@ -372,7 +374,7 @@ describe('a run', () => {
     await user.click(await screen.findByRole('button', { name: 'Delete run' }))
     await user.click(screen.getByRole('button', { name: 'Yes, delete this run' }))
 
-    expect(await screen.findByText(/Runs recorded on your phone can sync through Strava/)).toBeInTheDocument()
+    expect(await screen.findByText(/Runs recorded on your phone or watch can sync through Strava/)).toBeInTheDocument()
     expect(db.runs).toHaveLength(0)
   })
 

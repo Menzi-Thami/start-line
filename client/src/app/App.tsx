@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { Home } from '../features/runner-home/Home'
 import { ProfileForm } from '../features/account/ProfileForm'
 import { ReplacePlanBar } from '../features/account/ReplacePlanBar'
@@ -70,6 +70,12 @@ type PlanState =
 
 type View = 'home' | 'build' | 'beginner' | 'runs' | 'journey' | 'recovery' | 'account' | 'onboarding' | 'privacy' | 'sign-up' | 'sign-in' | 'unsubscribe'
 
+const routeSearch = () => window.location.search
+const subscribeRoute = (notify: () => void) => {
+  window.addEventListener('popstate', notify)
+  return () => window.removeEventListener('popstate', notify)
+}
+
 /** The run open on the runs view; a fresh upload carries its data so it opens without a second request. */
 type OpenRun = { id: string; uploaded?: Activity }
 
@@ -131,6 +137,7 @@ function finishBuildMovie(signal: AbortSignal): Promise<void> {
 }
 
 export function App() {
+  const locationSearch = useSyncExternalStore(subscribeRoute, routeSearch)
   const auth = useAuth()
   const owner = auth.account ? ownerOf(auth.account) : null
   const runner = useRunner()
@@ -560,6 +567,8 @@ export function App() {
           ? `?${toSearchParams(plan.inputs)}`
           : ''
     moveTo(query, next !== view || openRun !== null)
+    // Legacy detail URLs share Home's view; notify their controls when Home itself is selected again.
+    if (next === 'home' && view === 'home') window.dispatchEvent(new PopStateEvent('popstate'))
     window.scrollTo?.({ top: 0 })
   }
 
@@ -783,7 +792,7 @@ export function App() {
   // Strength is part of Plan, so training always has one navigation destination.
   const onPlan = view === 'build' && plan.kind === 'ready' && !editing
   const barCurrent: TabBarItem | null =
-    view === 'home' ? new URLSearchParams(window.location.search).get('from') === 'runs' ? 'runs' : 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
+    view === 'home' ? new URLSearchParams(locationSearch).get('from') === 'runs' ? 'runs' : 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
   const cachedAccount = !!auth.account && knownHere && (state.kind === 'loading' || state.kind === 'error')
   const showBar =

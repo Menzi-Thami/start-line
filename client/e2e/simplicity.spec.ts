@@ -114,6 +114,15 @@ test('Runs opens real insights and tools with keyboard controls and preserved ca
   await page.getByRole('button', { name: '← Back to Runs', exact: true }).click()
   await openHomeLibrary(page)
   await expect(page.getByRole('region', { name: 'Personal bests', exact: true })).toBeVisible()
+  await nav.getByRole('button', { name: 'Home', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Welcome back, Naledi' })).toBeVisible()
+  await expect(nav.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page.locator('.home-library')).toBeHidden()
+  await openHomeLibrary(page, 'tools')
+  await page.getByRole('button', { name: 'Taperday', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Welcome back, Naledi' })).toBeVisible()
+  await expect(nav.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page.locator('.home-library')).toBeHidden()
 })
 
 test('a missing recording ID is unavailable without substituting a recent recording @phone', async ({ page }) => {

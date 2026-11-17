@@ -37,6 +37,7 @@ All application/API responses use synthetic runners and canned recordings. Backe
 | Final frontend lint / TypeScript | Passed |
 | Final desktop `simplicity` and offline browser run | **31 passed**; regenerated every after screenshot with Chromium |
 | Affected navigation / coaching / history retests | **8 passed** |
+| Home/wordmark return, recording origin/filters and lookup retry | **4 passed**; the new Home-return assertion failed before the route notification fix |
 | Recording stages / historical logging / source expiry / Strava confirmation retests | **9 passed** |
 | Firefox offline edit / reload / reconnect journeys | **2 passed**, both themes, complete Home WCAG audit, one durable write |
 | GitHub checks and secret scan | Actual final SHA, run URL, job results and browser totals are maintained on [PR #275](https://github.com/Menzi-Thami/start-line/pull/275) |

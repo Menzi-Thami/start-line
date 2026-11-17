@@ -243,7 +243,7 @@ Existing API contracts should normally suffice. If a real contract gap needs a b
 
 ## Delivered implementation notes
 
-- Home is split into its overview, `TodayFocus`, shared data hooks and a lazily opened `RunningDetails` destination. The overview does not mount its hidden controls while running details are open; calculator drafts remain mounted when their own disclosure closes.
+- Home is split into its overview, `TodayFocus`, shared data hooks and a lazily opened `RunningDetails` destination. The overview does not mount its hidden controls while running details are open; calculator drafts remain mounted when their own disclosure closes. Selecting Home or the wordmark from a detail bookmark closes that view and updates the active navigation from the actual URL.
 - `recordingForToday` prefers explicit saved/server associations, excludes skipped/additional runs and expired Strava copies, and requires a unique planned-session association for unlinked uploads. A manual confirmation without an activity ID never acquires another recording automatically.
 - `recoveryOnHome` uses the actual calendar end, pause and seek-care state. Ending a calendar window changes presentation without a completion command or readiness claim. NextChapter still offers more rest/recovery, optional maintenance and a new race.
 - A failed current-plan read remains unknown and exposes Retry current plan on Home, including after sign-in or on a fresh device. A later failure retains a known plan. It cannot silently show an empty account or strand the runner on the opening placeholder.

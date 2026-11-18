@@ -221,8 +221,6 @@ export function RunningJourney({ units, today, onArchived, onOpenRecovery }: { u
         finally { setPaging(false) }
       }}>{paging ? 'Loading older chapters…' : 'Load older chapters'}</button>}
       {pageError && <p className="field-error" role="alert">{pageError}</p>}
-      {!isLiveRecovery(state.journey.recovery) && <button type="button" className="link-button journey-link" onClick={() => openRecovery()}>Ran a race outside Taperday? Plan your recovery</button>}
-
     </div>
   )
 }

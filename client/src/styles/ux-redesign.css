@@ -129,10 +129,8 @@
   .runs-split-detail .activity-back, .runs-split-detail > section > .plan-back { display: none; }
 }
 
-/* ---------- Account: settings in four labelled groups ---------- */
-.account-groups { display: grid; gap: var(--space-5); margin-top: var(--space-5); }
-.account-group { display: grid; gap: var(--space-2); }
-.account-group-title { margin: 0; font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+/* ---------- Account: four settings groups, then Sign out ---------- */
+.account-groups { display: grid; gap: var(--space-3); margin-top: var(--space-5); }
 @media (min-width: 64rem) {
   .account-groups { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-6); align-items: start; }
 }

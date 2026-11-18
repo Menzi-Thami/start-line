@@ -35,7 +35,7 @@ describe('the goal step', () => {
   it('fills the goal from a suggestion in one tap', async () => {
     render(<BuilderForm races={{ kind: 'ready', races: racesFixture }} onRetryRaces={vi.fn()} initial={inputs} units="km" busy={false} serverErrors={{}} today="2026-10-28" onSubmit={vi.fn()} />)
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: /Goal/ }))
+    await user.click(screen.getByRole('button', { name: 'Change goal' }))
     const suggestions = screen.getByRole('group', { name: 'Suggested goal times' })
     expect(within(suggestions).getAllByRole('button')).toHaveLength(3)
 

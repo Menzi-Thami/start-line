@@ -12,11 +12,15 @@ import { useJourney } from './useJourney'
 import { useRaceHistory } from './useRaceHistory'
 import './journey.css'
 
-type Section = 'training' | 'races' | 'cabinet'
+// Two sections: training chapters, and races with the trophy cabinet beneath them. Older links to the separate cabinet
+// (section=cabinet) open the combined section.
+type Section = 'training' | 'races'
 const sectionFromUrl = (): Section => {
   const section = new URLSearchParams(window.location.search).get('section')
-  return section === 'races' || section === 'cabinet' ? section : 'training'
+  return section === 'races' || section === 'cabinet' ? 'races' : 'training'
 }
+/** Bring the race list into view after a trophy opens a race, its filter or a new-race form. */
+const showRaceList = () => window.requestAnimationFrame(() => document.getElementById('race-memories-title')?.scrollIntoView?.({ block: 'start' }))
 
 export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { today: string; units: Units; onNewRace: () => void; onArchived: () => void; onOpenRecovery?: (raceId?: string) => void }) {
   const races = useRaceHistory()
@@ -52,7 +56,7 @@ export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { toda
       <Runner pose="victory" size={100} />
     </header>
     <nav className="journey-sections" aria-label="Journey sections">
-      {([['training', 'Training chapters'], ['races', 'Your races'], ['cabinet', 'Trophy cabinet']] as const).map(([id, label]) =>
+      {([['training', 'Training chapters'], ['races', 'Races & trophies']] as const).map(([id, label]) =>
         <button type="button" key={id} aria-current={section === id ? 'page' : undefined} onClick={() => { setSelectedMajor(null); setSelectedRaceId(null); setNewMajor(undefined); setNewLocal(null); pick(id) }}>{label}</button>)}
     </nav>
     {isLiveRecovery(recovery) && <section className="journey-state" aria-label="Your recovery">
@@ -71,9 +75,9 @@ export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { toda
           setNewMajor(undefined); setNewLocal(null)
           if (earned) setCelebrate(memory)
         }} />}
-      {section === 'cabinet' && <TrophyCabinet history={races.state.history} units={units} onLocalRace={local => { setNewMajor(undefined); setSelectedMajor(null); setSelectedRaceId(null); pick('races'); setNewLocal(local) }} onMajor={(major, earned) => {
-        setSelectedMajor(earned ? major.id : null); setSelectedRaceId(null); setNewMajor(earned ? undefined : major.id); pick('races')
-      }} onRace={race => { setSelectedMajor(null); setSelectedRaceId(race.result.id); setNewMajor(undefined); pick('races') }} />}
+      {section === 'races' && <TrophyCabinet history={races.state.history} units={units} onLocalRace={local => { setNewMajor(undefined); setSelectedMajor(null); setSelectedRaceId(null); setNewLocal(local); showRaceList() }} onMajor={(major, earned) => {
+        setSelectedMajor(earned ? major.id : null); setSelectedRaceId(null); setNewMajor(earned ? undefined : major.id); showRaceList()
+      }} onRace={race => { setSelectedMajor(null); setSelectedRaceId(race.result.id); setNewMajor(undefined); showRaceList() }} />}
     </>}
     {celebrate && <FinishLineFilm variant="race" heading="RACE FINISHED." raceName={celebrate.eventName} lede={`You crossed the finish line of ${celebrate.eventName}. This one stays with you.`}
       metrics={[...(celebrate.result.finishTime ? [{ value: formatClock(celebrate.result.finishTime) ?? '', label: celebrate.result.timeKind === 'OfficialChip' ? 'Official chip time' : celebrate.result.timeKind === 'RecordedElapsed' ? 'Recording elapsed time' : 'Finish time' }] : []),

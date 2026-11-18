@@ -122,10 +122,16 @@ describe('reminders in Account', () => {
 
   it('lets the runner dismiss the offer without asking for permission', async () => {
     const { requestPermission } = pushCapableBrowser()
-    section(available, true)
+    const first = section(available, true)
     await userEvent.click(await screen.findByRole('button', { name: 'Not now' }))
     expect(screen.queryByRole('button', { name: 'Enable notifications' })).not.toBeInTheDocument()
     expect(requestPermission).not.toHaveBeenCalled()
+    // Home offers it once: a later visit on this device doesn't ask again. Account keeps the setting.
+    expect(window.localStorage.getItem('taperday:reminder-offer-dismissed')).not.toBeNull()
+    first.unmount()
+    const { container } = section(available, true)
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('does not offer permission when the server has no push setup', async () => {
@@ -141,7 +147,7 @@ describe('reminders in Account', () => {
 
     const toggle = await screen.findByRole('switch', { name: 'Reminders on this device' })
     expect(toggle).not.toBeChecked()
-    expect(screen.getByText(/never marks a planned workout complete for you/)).toBeInTheDocument()
+    expect(screen.getByText('More options', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open')
     expect(screen.getByLabelText('Morning reminder time')).toHaveValue('06:00')
     expect(screen.getByRole('checkbox', { name: 'Include recovery and strength days' })).toBeChecked()
     fireEvent.change(screen.getByLabelText('Morning reminder time'), { target: { value: '06:30' } })

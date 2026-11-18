@@ -21,7 +21,7 @@ type User = ReturnType<typeof userEvent.setup>
 
 const runDays = () => screen.getByRole('group', { name: 'Which days can you run?' })
 const wizard = () => screen.queryByRole('form', { name: 'Build your plan' })
-const onStep = (n: number) => expect(screen.getByText(`Step ${n} of 5`)).toBeInTheDocument()
+const onStep = (n: number) => expect(screen.getByText(`Step ${n} of 4`)).toBeInTheDocument()
 const next = (user: User) => user.click(screen.getByRole('button', { name: 'Continue' }))
 const buildIt = (user: User) => user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
@@ -45,7 +45,6 @@ async function answerEverything(user: User, goal: [string, string, string] = ['1
   await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
   await next(user)
   await fillGoal(user, ...goal)
-  await next(user)
   await next(user)
   await next(user)
 }
@@ -201,9 +200,8 @@ describe('building a plan', () => {
     await next(user)
 
     onStep(4)
-    await next(user)
-
-    onStep(5)
+    // Experience, weekly distance, run/walk, a recent race and strength wait, with their defaults, under More options.
+    expect(screen.getByText('More options', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open')
     expect(screen.getByText(/Parkrun PB: 5 km/)).toBeInTheDocument()
     expect(screen.getByText('Tue, Thu, Sun. Long run on Sunday.')).toBeInTheDocument()
     await buildIt(user)
@@ -333,13 +331,17 @@ describe('building a plan', () => {
     const { user } = setup()
     await user.click(await screen.findByRole('radio', { name: /Cape Town Marathon/ }))
     await next(user)
-    await user.click(screen.getByText('Add a recent race, so the coach can tell you if your goal is realistic'))
+    await fillGoal(user, '4', '0', '0')
+    await next(user)
+    await next(user)
+    await user.click(screen.getByText('More options', { selector: 'summary' }))
 
     const estimate = screen.getByRole('group', { name: 'Your time' })
     await user.type(within(estimate).getByLabelText('Minutes'), '50')
     await user.click(screen.getByRole('button', { name: 'Estimate my goal' }))
     await user.click(await screen.findByRole('button', { name: 'Use this time' }))
 
+    await user.click(screen.getByRole('button', { name: 'Change goal' }))
     const goal = screen.getByRole('group', { name: 'Goal finish time' })
     expect(within(goal).getByLabelText('Hours')).toHaveValue('1')
     expect(within(goal).getByLabelText('Minutes')).toHaveValue('51')
@@ -350,11 +352,10 @@ describe('building a plan', () => {
     await user.click(await screen.findByRole('radio', { name: /Comrades/ }))
     await next(user)
     await fillGoal(user, '11', '0', '0')
-    await user.click(screen.getByText('Add a recent race, so the coach can tell you if your goal is realistic'))
+    await next(user)
+    await next(user)
+    await user.click(screen.getByText('More options', { selector: 'summary' }))
     await user.type(within(screen.getByRole('group', { name: 'Your time' })).getByLabelText('Minutes'), '50')
-    await next(user)
-    await next(user)
-    await next(user)
 
     await buildIt(user)
 
@@ -378,7 +379,6 @@ describe('building a plan', () => {
     expect(screen.getAllByText('Pick the day you want to start.').length).toBeGreaterThan(0)
 
     await pickDate(user, 'Start on', '2026-10-15')
-    await next(user)
     await next(user)
     expect(screen.getByText('Thursday 15 October 2026')).toBeInTheDocument()
     await buildIt(user)
@@ -442,7 +442,7 @@ describe('building a plan', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Edit plan' }))
 
-    onStep(5)
+    onStep(4)
     expect(screen.getByText(/Comrades Marathon, Sunday 13 June 2027/)).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
 
@@ -491,7 +491,7 @@ describe('a shared plan', () => {
     expect(lastPlanRequest.body).toMatchObject({ planFrom: '2026-10-08', strengthDays: ['Monday'], version: null })
   })
 
-  it('offers, above the plan, to put Taperday on an iPhone’s home screen', async () => {
+  it('leaves adding Taperday to the home screen to Account, not above the plan', async () => {
     const iphone = vi
       .spyOn(window.navigator, 'userAgent', 'get')
       .mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1')
@@ -499,10 +499,9 @@ describe('a shared plan', () => {
     window.history.replaceState(null, '', `/${link}`)
     setup()
 
-    const plan = await screen.findByRole('heading', { name: 'Parkrun PB' })
-    const banner = screen.getByRole('region', { name: 'Put Taperday on your home screen' })
-    expect(banner.compareDocumentPosition(plan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(within(banner).getByRole('button', { name: 'Add to home screen' })).toBeInTheDocument()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    expect(screen.queryByRole('region', { name: 'Put Taperday on your home screen' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add to home screen' })).not.toBeInTheDocument()
   })
 
   it('replans from today and keeps the replan in the link', async () => {

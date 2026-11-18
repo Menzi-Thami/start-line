@@ -28,7 +28,7 @@
   line-height: 1.12;
   max-width: 24ch;
 }
-:is(.home, .plan, .runs, .activity, .account-settings) :is(.plan-kicker, .plan-eyebrow, .account-group-title) {
+:is(.home, .plan, .runs, .activity, .account-settings) :is(.plan-kicker, .plan-eyebrow) {
   letter-spacing: .085em;
   line-height: 1.45;
 }
@@ -173,17 +173,8 @@
 }
 .consistency-date { border-radius: .65rem; }
 
-/* 6. Account: editorial profile and comfortably tappable grouped settings. */
-.account-overview.panel {
-  padding: clamp(1.2rem, 3vw, 1.9rem);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--studio-card-radius);
-}
-.account-overview h3 { font-size: clamp(1.35rem, 3vw, 1.9rem); letter-spacing: -.035em; }
-.account-groups { gap: clamp(1rem, 2.8vw, 1.75rem); }
-.account-group { min-width: 0; gap: .7rem; }
-.account-group-title { padding-inline: var(--space-2); }
+/* 6. Account: comfortably tappable settings groups. */
+.account-groups { gap: clamp(.75rem, 2vw, 1rem); }
 .account-settings .settings-group {
   border: 1px solid var(--line);
   border-radius: var(--studio-card-radius);

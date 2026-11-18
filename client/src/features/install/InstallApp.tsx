@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { runningInstalled, useInstallWay, type InstallWay } from '../../lib/install-app'
-import { InstalledWelcome } from './InstalledWelcome'
+import { useInstallWay, type InstallWay } from '../../lib/install-app'
 
 
 /** Safari's Share icon, as it looks in the toolbar, so it's easy to spot. */
@@ -89,7 +88,7 @@ function Guide({ ios, onClose }: { ios: boolean; onClose: () => void }) {
  * One button wherever Taperday isn't on the home screen yet: it installs straight away where the browser allows (Android,
  * desktop Chrome and Edge), and opens the two-tap guide everywhere else.
  */
-export function AddButton({ way, onInstalled, big = false, quiet = false }: { way: InstallWay; onInstalled?: () => void; big?: boolean; quiet?: boolean }) {
+export function AddButton({ way, onInstalled, quiet = false }: { way: InstallWay; onInstalled?: () => void; quiet?: boolean }) {
   const [busy, setBusy] = useState(false)
   const [guide, setGuide] = useState(false)
   if (way.kind === 'installed') return <p className="field-help">It’s on your home screen.</p>
@@ -106,7 +105,7 @@ export function AddButton({ way, onInstalled, big = false, quiet = false }: { wa
   }
   return (
     <>
-      <button type="button" className={big ? 'button install-button' : quiet ? 'button button-quiet' : 'button'} disabled={busy} onClick={add}>
+      <button type="button" className={quiet ? 'button button-quiet' : 'button'} disabled={busy} onClick={add}>
         Add to home screen
       </button>
       {guide && <Guide ios={way.kind === 'ios'} onClose={() => setGuide(false)} />}
@@ -114,33 +113,7 @@ export function AddButton({ way, onInstalled, big = false, quiet = false }: { wa
   )
 }
 
-/**
- * The banner at the top of Home and of a plan: shown wherever adding takes a tap or two (a browser offering install, or
- * an iPhone), every time, until the app is on the home screen. There's no Not now: once it's installed it goes for
- * good, and opening Taperday from the home screen never shows it. Account has the same button.
- */
-export function InstallCard() {
-  const way = useInstallWay()
-  // Opened from the home screen: the install banner's place goes to the first-run welcome instead.
-  if (way.kind === 'installed') return runningInstalled() ? <InstalledWelcome /> : null
-  if (way.kind !== 'prompt' && way.kind !== 'ios') return null
-  return (
-    <section className="panel install-card" aria-labelledby="install-card">
-      <img className="install-icon" src="/home-icon-192.png" alt="" width="64" height="64" />
-      <div className="install-body">
-        <h2 id="install-card" className="home-card-heading">
-          Put Taperday on your home screen
-        </h2>
-        <p className="install-pitch">One tap opens your plan, full screen like an app, with today’s run waiting.</p>
-        <div className="install-actions">
-          <AddButton way={way} big />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/** In Account, always: the same button, for whenever the runner wants it. */
+/** In Account, under Notifications (an iPhone needs Taperday on its home screen for reminders), always available. */
 export function InstallSection() {
   const way = useInstallWay()
   return (

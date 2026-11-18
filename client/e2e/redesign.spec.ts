@@ -151,8 +151,9 @@ for (const width of [320, 768, 1440]) {
       }
       if (screen === 'runs') await expect(page.getByRole('button', { name: /Run analysis/ })).toBeVisible()
       if (screen === 'account') {
-        await expect(page.getByRole('region', { name: 'Account overview' })).toBeVisible()
-        const connections = await openDisclosure(page, 'Connections & run sources')
+        // No overview panel repeating who is signed in: four groups, then Sign out.
+        await expect(page.getByRole('region', { name: 'Account overview' })).toHaveCount(0)
+        const connections = await openDisclosure(page, 'Connections')
         await expect(connections).toHaveAttribute('open', '')
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)

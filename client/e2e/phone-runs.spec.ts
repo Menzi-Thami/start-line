@@ -61,35 +61,41 @@ async function mockApi(page: Page, hasPlan = false, imports?: Imports) {
 // TEMPORARY diagnostic for the Firefox audit crash; removed once the cause is known.
 test('diagnose Firefox audit crash on Add runs @phone', async ({ context, browserName }) => {
   test.skip(browserName !== 'firefox', 'Firefox only')
-  const variants: [string, (builder: AxeBuilder) => AxeBuilder][] = [
-    ['all', b => b],
-    ['no target-size', b => b.disableRules(['target-size'])],
-    ['exclude upload', b => b.exclude('.add-runs-sheet .upload')],
-    ['exclude phone-runs', b => b.exclude('.add-runs-sheet .phone-runs')],
-    ['exclude file label', b => b.exclude('.add-runs-sheet label.button')],
-    ['exclude export help', b => b.exclude('.export-help')],
-    ['exclude runs-tools', b => b.exclude('.runs-tools')],
-    ['exclude sheet', b => b.exclude('.add-runs-sheet')],
-    ['sheet closed', b => b],
+  test.setTimeout(300_000)
+  type Variant = { name: string, theme: 'runtime' | 'init' | 'none', wait?: number, exclude?: string, open?: boolean }
+  const variants: Variant[] = [
+    { name: 'runtime theme (as the test)', theme: 'runtime' },
+    { name: 'no theme change', theme: 'none' },
+    { name: 'theme from storage at load', theme: 'init' },
+    { name: 'runtime theme then 2s', theme: 'runtime', wait: 2000 },
+    { name: 'runtime theme, exclude upload', theme: 'runtime', exclude: '.add-runs-sheet .upload' },
+    { name: 'runtime theme, exclude Strava part', theme: 'runtime', exclude: '.add-runs-sheet .phone-runs' },
+    { name: 'runtime theme, exclude sheet', theme: 'runtime', exclude: '.add-runs-sheet' },
+    { name: 'runtime theme, sheet closed', theme: 'runtime', open: false },
   ]
-  for (const [name, configure] of variants) {
+  for (const variant of variants) for (const mode of ['light', 'dark']) {
     const page = await context.newPage()
     try {
       await mockApi(page)
       await page.setViewportSize({ width: 375, height: 900 })
+      if (variant.theme === 'init') await page.addInitScript(value => localStorage.setItem('taperday:theme', value), mode)
       await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
-      if (name !== 'sheet closed') await page.getByRole('button', { name: 'Add runs', exact: true }).click()
+      if (variant.open !== false) await page.getByRole('button', { name: 'Add runs', exact: true }).click()
       else await page.getByRole('button', { name: 'Add runs', exact: true }).waitFor()
-      await configure(new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])).analyze()
-      console.log(`FIREFOX-DIAG ${name}: ok`)
+      if (variant.theme === 'runtime') await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+      await page.evaluate(() => document.fonts.ready)
+      if (variant.wait) await page.waitForTimeout(variant.wait)
+      let builder = new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+      if (variant.exclude) builder = builder.exclude(variant.exclude)
+      await Promise.race([builder.analyze(), new Promise((_, reject) => setTimeout(() => reject(new Error('hung 30s')), 30_000))])
+      console.log(`FIREFOX-DIAG ${variant.name} [${mode}]: ok`)
     } catch (error) {
-      console.log(`FIREFOX-DIAG ${name}: ${(error as Error).message.split('\n')[0]}`)
+      console.log(`FIREFOX-DIAG ${variant.name} [${mode}]: ${(error as Error).message.split('\n')[0]}`)
     } finally {
       await page.close().catch(() => undefined)
     }
   }
 })
-
 
 for (const mode of ['light', 'dark']) {
   test(`Strava setup leads with free accounts and keeps app-specific help optional in ${mode} mode @phone`, async ({ page }, info) => {

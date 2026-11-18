@@ -1,4 +1,4 @@
-import { closePlanDay, openDisclosure, openWeekDay, openRecentRun, openHomeLibrary } from '../../test/user-navigation'
+import { closePlanDay, openWeekDay } from '../../test/user-navigation'
 import { render, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -31,7 +31,17 @@ function persistence() {
   return { save, entries: () => entries }
 }
 
-describe('saved runs stay visible throughout the logging journey', () => {
+/** Saved and synced runs are logged and edited on their own day in the plan. */
+async function openSavedDay(user: ReturnType<typeof userEvent.setup>, date: string) {
+  await user.click(screen.getByRole('button', { name: 'Visit calendar' }))
+  // The plan reopens where it was left (perhaps the calendar); the day is opened from this week.
+  await closePlanDay()
+  await user.click(await screen.findByRole('tab', { name: 'This week' }, { timeout: 10000 }))
+  return openWeekDay(date)
+}
+
+// Long multi-step journeys (save, navigate, expire, reload) need more than the default five seconds.
+describe('saved runs stay visible throughout the logging journey', { timeout: 30_000 }, () => {
   it.each([
     ['rest day', '2026-10-14'],
     ['strength day', '2026-10-12'],
@@ -42,21 +52,18 @@ describe('saved runs stay visible throughout the logging journey', () => {
     const name = `Additional run on ${formatDate(date, 'long')}`
     const user = userEvent.setup()
     const { rerender, unmount } = render(<Journey runs={[imported]} />)
-    await openHomeLibrary('insights')
-    const running = screen.getByRole('region', { name: 'Your running' })
-    await openDisclosure(/^\d+ synced /)
-    await user.click(await screen.findByRole('button', { name: 'Log this run' }))
+    const day = await openSavedDay(user, date)
+    await user.click(await within(day).findByRole('button', { name: 'Log this run' }))
     await user.click(screen.getByRole('button', { name: 'Save check-in' }))
-    await openRecentRun(date)
-    expect(await within(running).findByText('10 km · 1:00:00', { selector: '.run-result-line' })).toBeVisible()
-    const saved = await within(running).findByRole('article', { name })
+    const saved = await within(day).findByRole('article', { name })
     expect(within(saved).getByText('10 km · 1:00:00')).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Log this run' })).not.toBeInTheDocument()
     expect(persisted.entries()).toHaveLength(1)
     expect(persisted.entries()[0]).toMatchObject({ date, activityId: imported.id, distanceKm: null, distanceUnreported: true })
 
-    await user.click(screen.getByRole('button', { name: 'Visit calendar' }))
-    const week = await openWeekDay(date)
+    // Leave and come back, so the plan reloads the saved entry from the API.
+    await user.click(screen.getByRole('button', { name: 'Return home' }))
+    const week = await openSavedDay(user, date)
     const inCalendar = await within(week).findByRole('article', { name })
     expect(within(inCalendar).getByText('10 km · 1:00:00')).toBeVisible()
     expect(within(week).getAllByRole('article', { name })).toHaveLength(1)
@@ -82,12 +89,10 @@ describe('saved runs stay visible throughout the logging journey', () => {
     await waitFor(() => expect(monthDay).toHaveFocus())
 
     await user.click(screen.getByRole('button', { name: 'Return home' }))
-    await openRecentRun(date)
-    expect(await screen.findByRole('article', { name })).toBeVisible()
+    expect(await within(await openSavedDay(user, date)).findByRole('article', { name })).toBeVisible()
     unmount()
     render(<Journey runs={[]} />)
-    await openRecentRun(date)
-    expect(await screen.findByRole('article', { name })).toBeVisible()
+    expect(await within(await openSavedDay(user, date)).findByRole('article', { name })).toBeVisible()
     expect(persisted.save).toHaveBeenCalledTimes(1)
   })
 
@@ -97,18 +102,15 @@ describe('saved runs stay visible throughout the logging journey', () => {
     const name = 'Additional run on Wednesday 14 October 2026'
     const imported = { id: 'manual-associated', localDate: '2026-10-14', startedAt: '2026-10-14T06:00:00Z', kind: 'Run', distanceKm: 12, movingSeconds: 4000, source: { kind: 'Strava' } } as ActivitySummary
     const { rerender } = render(<Journey runs={[imported]} />)
-    await openDisclosure(/^\d+ synced /)
-    await user.click(await screen.findByRole('button', { name: 'Log this run' }))
+    const day = await openSavedDay(user, '2026-10-14')
+    await user.click(await within(day).findByRole('button', { name: 'Log this run' }))
     await user.selectOptions(screen.getByLabelText('Run details'), '')
     await user.type(screen.getByLabelText('Distance (km)'), '10')
     await user.type(screen.getByLabelText('Hours'), '1')
     await user.click(screen.getByRole('button', { name: 'Save check-in' }))
-    await openRecentRun('2026-10-14')
-    expect(await screen.findByRole('article', { name })).toHaveTextContent('10 km · 1:00:00')
-    expect(await screen.findAllByText('1 run')).toHaveLength(2)
+    expect(await within(day).findByRole('article', { name })).toHaveTextContent('10 km · 1:00:00')
     rerender(<Journey runs={[]} />)
-    await user.click(screen.getByRole('button', { name: 'Visit calendar' }))
-    await openWeekDay('2026-10-14')
+    await openSavedDay(user, '2026-10-14')
     const card = await screen.findByRole('article', { name })
     expect(card).toHaveTextContent('10 km · 1:00:00')
     await user.click(within(card).getByRole('button', { name: 'Change how Additional run went' }))
@@ -135,8 +137,7 @@ describe('saved runs stay visible throughout the logging journey', () => {
     expect(screen.queryByRole('button', { name: 'Log a run' })).not.toBeInTheDocument()
     failed = false
     await user.click(screen.getByRole('button', { name: 'Retry saved runs' }))
-    await openRecentRun('2026-10-14')
-    expect(await screen.findByRole('article', { name: 'Additional run on Wednesday 14 October 2026' })).toHaveTextContent('10 km · 1:00:00')
+    expect(await within(await openSavedDay(user, '2026-10-14')).findByRole('article', { name: 'Additional run on Wednesday 14 October 2026' })).toHaveTextContent('10 km · 1:00:00')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -192,8 +193,7 @@ describe('saved runs stay visible throughout the logging journey', () => {
     )
     const user = userEvent.setup()
     render(<Journey runs={[]} />)
-    await openRecentRun('2026-10-14')
-    const card = await screen.findByRole('article', { name: 'Additional run on Wednesday 14 October 2026' })
+    const card = await within(await openSavedDay(user, '2026-10-14')).findByRole('article', { name: 'Additional run on Wednesday 14 October 2026' })
     await user.click(within(card).getByRole('button', { name: 'Change how Additional run went' }))
     await user.click(within(card).getByRole('button', { name: 'Remove check-in' }))
     expect(await within(card).findByRole('alert')).toBeVisible()

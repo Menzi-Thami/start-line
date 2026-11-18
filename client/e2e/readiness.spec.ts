@@ -1,4 +1,4 @@
-import { openHomeLibrary } from './navigation'
+import { openDisclosure } from './navigation'
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import { today } from '../src/test/run-history-data'
@@ -36,7 +36,10 @@ test('a runner logs how they feel, sees safe guidance and their last two weeks, 
   await mockApi(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-14&km=10')
   const readiness = page.locator('details.readiness')
-  await openHomeLibrary(page, 'review')
+  // The readiness check-in lives in the plan's weekly coaching review (Progress tab).
+  await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()
+  await page.getByRole('tab', { name: 'Progress', exact: true }).click()
+  await openDisclosure(page, 'Weekly coaching review')
   await readiness.locator('> summary').click()
   await readiness.getByRole('button', { name: 'Tired', exact: true }).click()
   await expect(readiness.getByRole('status')).toHaveText('Saved for today.')

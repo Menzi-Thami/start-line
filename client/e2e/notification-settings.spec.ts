@@ -89,7 +89,11 @@ test('push destinations open preparation, weekly review and connection details @
   await expect(page.getByRole('table')).toContainText('24:30')
   await page.locator('.preparation-card').screenshot({ path: info.outputPath('race-preparation.png') })
   await page.goto(`${base}?view=home&review=1`)
-  await expect(page.locator('.home-review')).toHaveAttribute('open', '')
+  // The weekly review lives in the plan's Progress tab; the push link opens it there.
+  await expect(page.getByRole('tab', { name: 'Progress', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await page.locator('.plan-weekly-review > summary').click()
+  await expect(page.getByRole('heading', { name: 'Your week', exact: true })).toBeVisible()
+  await page.locator('summary').filter({ hasText: /^Review and adjust training$/ }).click()
   await expect(page.getByRole('heading', { name: 'Weekly review', exact: true })).toBeVisible()
   await page.goto(`${base}?view=account&settings=connections`)
   const connections = page.locator('details').filter({ has: page.locator('summary', { hasText: 'Connections & run sources' }) })

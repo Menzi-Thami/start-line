@@ -19,6 +19,7 @@ export function RunSummaryHero({ run, units }: { run: Activity; units: Units }) 
         <div><dt>Elapsed time</dt><dd>{formatDuration(run.elapsedSeconds)}</dd></div>
         <div><dt>Average pace</dt><dd>{formatPace(run.paceSecondsPerKm, units)}</dd></div>
         {run.averageHeartRate != null && <div><dt>Avg heart rate</dt><dd>{run.averageHeartRate} <small>bpm</small></dd></div>}
+        {run.elevationGainMetres != null && <div><dt>Elevation gain</dt><dd>{run.elevationGainMetres} <small>m</small></dd></div>}
       </dl>
       <p className="field-help ra-time-note">Average pace is based on moving time. Elapsed time includes stops.</p>
     </section>
@@ -43,7 +44,8 @@ export function PlanExecutionCard({ run, units, onOpenPlanDay }: {
         </dl>
         <div className="ra-coaching">
           <strong>{verdict.headline}</strong>
-          {verdict.details[0] && <p>{verdict.details[0]}</p>}
+          {verdict.details.map(line => <p key={line}>{line}</p>)}
+          {verdict.next && <p>{verdict.next}</p>}
         </div>
       </div>
       {onOpenPlanDay && <button type="button" className="link-button" onClick={() => onOpenPlanDay(run.localDate)}>Open training day →</button>}
@@ -57,28 +59,22 @@ function validSplit(split: Split) {
 }
 
 /** Longer bars represent higher speed; a partial split is not ranked with full kilometres. */
-export function PaceSplitsVisual({ splits, units, compact = false, onViewAll }: {
-  splits: readonly Split[]
-  units: Units
-  compact?: boolean
-  onViewAll?: () => void
-}) {
+export function PaceSplitsVisual({ splits, units }: { splits: readonly Split[]; units: Units }) {
   const [selected, setSelected] = useState<number | null>(null)
   const valid = splits.filter(validSplit)
   const full = valid.filter(s => s.distanceKm >= 0.995 && s.distanceKm <= 1.005)
   const fastest = full.length ? full.reduce((a, b) => a.paceSecondsPerKm <= b.paceSecondsPerKm ? a : b) : null
   const maxSpeed = Math.max(...valid.map(s => 1 / s.paceSecondsPerKm), 0)
-  const visible = compact && valid.length > 5 ? valid.slice(0, 5) : valid
   if (!valid.length) return <section className="ra-card"><h3>Your pace splits</h3><p className="field-help">No recorded splits for this run.</p></section>
   return (
-    <section className="ra-card ra-splits" aria-labelledby={compact ? 'ra-splits-preview-title' : 'ra-splits-full-title'}>
+    <section className="ra-card ra-splits" aria-labelledby="ra-splits-title">
       <div className="ra-heading ra-splits-header">
-        <h3 id={compact ? 'ra-splits-preview-title' : 'ra-splits-full-title'}>Your pace splits</h3>
+        <h3 id="ra-splits-title">Your pace splits</h3>
         {fastest && <span className="ra-fastest">⚡ Fastest: KM {fastest.number} · {formatPace(fastest.paceSecondsPerKm, units)}</span>}
       </div>
       <div className="ra-splits-label" aria-hidden="true"><span>KM</span><span>Pace ({units === 'mi' ? '/mi' : '/km'})</span></div>
       <div className="ra-split-list">
-        {visible.map(split => {
+        {valid.map(split => {
           const fastestFull = fastest === split
           const width = Math.min(100, (1 / split.paceSecondsPerKm) / maxSpeed * 100)
           const partial = Math.abs(split.distanceKm - 1) > 0.005
@@ -98,7 +94,6 @@ export function PaceSplitsVisual({ splits, units, compact = false, onViewAll }: 
           )
         })}
       </div>
-      {compact && valid.length > 5 && onViewAll && <button className="ra-view-all" type="button" onClick={onViewAll}>View all {valid.length} splits →</button>}
     </section>
   )
 }

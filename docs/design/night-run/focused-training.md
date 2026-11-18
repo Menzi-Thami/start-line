@@ -8,7 +8,7 @@ Taperday keeps Night run's near-black surfaces, volt accent, wordmark and type f
 | --- | --- | --- |
 | Home | Today's prescription or actual recording and one next action; compact active-week preview | Manual logging is secondary; compact recent recording links to Runs; post-plan priority comes from the real Journey/recovery state |
 | Plan | This week's seven compact day rows | Selected-date preview, then a dedicated day screen; Calendar for monthly navigation/full schedule; Progress for the weekly coaching review, distance, goal outlook, insights and paces |
-| Runs | Compact rows of imported activities and existing range filters | A row opens the activity; file-upload guidance opens on demand; Training log links to the plan calendar; named Running insights and Running tools controls retain historical editing, totals, personal bests and calculators |
+| Runs | One Add runs button (Strava sync and file uploads, with per-device export help folded inside), running totals, then compact rows of imported activities behind one Filter control | A row opens the activity as one scroll (summary, plan vs actual, splits, pace, stages, bests, shoe, sharing, delete); Share a milestone and Running tools (calculators) are small entries at the foot; old Running insights and Running tools links land on Runs. Progress, trends and personal bests live in Plan › Progress; Your run data lives in Account › Your data |
 | Journey | Training chapters, races and trophy cabinet | Available between plans; chapter stories, versioned archive/result corrections, recovery and portrait sharing |
 | Account | Named settings groups | Profile/picture, connections/run sources, app/calendars, notifications, data/privacy; sign-out belongs here |
 

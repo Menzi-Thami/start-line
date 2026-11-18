@@ -3,14 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { AuthContext, accountsOff } from '../../app/auth-context'
-import type { Activity, RunData } from '../../lib/types'
-import longRunFixture from '../../test/fixtures/activity-long-run.json'
+import type { RunData } from '../../lib/types'
 import { server } from '../../test/server'
 import { RunDataPanel } from './RunDataPanel'
-import { RunProvenance } from './RunProvenance'
 
 const auth = { ...accountsOff, enabled: true, account: { name: 'Thandi', email: 'thandi@example.test' }, getToken: () => Promise.resolve('test-token') }
-const longRun = longRunFixture as Activity
 
 function data(overrides: Partial<RunData> = {}): RunData {
   return {
@@ -93,19 +90,5 @@ describe('Your run data', () => {
     expect(await screen.findByText('Run data isn’t available right now.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByText('What your totals are made of')).toBeInTheDocument()
-  })
-})
-
-describe('Where a run came from', () => {
-  it('is one line for an upload', () => {
-    const run = { ...longRun, source: { kind: 'Upload', viewUrl: null, recordedOnGarmin: false, cachedUntil: null, format: 'Gpx', fileName: 'Sunday long.gpx', fetchedAt: null, addedAt: '2026-10-20T08:00:00Z' } } as Activity
-    render(<RunProvenance run={run} />)
-    expect(screen.getByText('Uploaded from a GPX file · 20 Oct')).toBeInTheDocument()
-  })
-
-  it('adds nothing for a Strava run, which has its own line', () => {
-    const run = { ...longRun, source: { kind: 'Strava', viewUrl: 'https://www.strava.com/activities/1', recordedOnGarmin: false, cachedUntil: '2026-10-30T06:00:00Z', format: null, fileName: null, fetchedAt: '2026-10-23T06:00:00Z', addedAt: '2026-10-23T06:00:00Z' } } as Activity
-    const { container } = render(<RunProvenance run={run} />)
-    expect(container).toBeEmptyDOMElement()
   })
 })

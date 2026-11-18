@@ -1,4 +1,3 @@
-import { openDisclosure } from '../../test/user-navigation'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { zipSync } from 'fflate'
@@ -111,6 +110,13 @@ function renderApp(path = '/') {
   return user
 }
 
+/** Opens the one Add runs button, where Strava sync and file uploads live. */
+async function openAddRuns(user: ReturnType<typeof userEvent.setup>) {
+  const button = await screen.findByRole('button', { name: 'Add runs' })
+  if (button.getAttribute('aria-expanded') !== 'true') await user.click(button)
+  return screen.getByRole('region', { name: 'Add runs' })
+}
+
 const fitFile = () => new File([new Uint8Array([14, 16, 0, 0])], 'run.fit', { type: 'application/octet-stream' })
 
 beforeEach(() => {
@@ -125,9 +131,9 @@ describe('my runs', () => {
     const db = runsApi()
     const user = renderApp()
     await user.click(await screen.findByRole('button', { name: 'Runs' }))
-    expect(await screen.findByText(/Runs recorded on your phone or watch can sync through Strava/)).toBeInTheDocument()
+    expect(await screen.findByText(/Use Add runs to bring in runs from Strava or a file/)).toBeInTheDocument()
 
-    await openDisclosure('Add runs from a file')
+    await openAddRuns(user)
     await user.upload(screen.getByLabelText('Upload runs'), fitFile())
 
     expect(await screen.findByRole('heading', { name: 'Long run', level: 2 }, { timeout: 10000 })).toBeInTheDocument()
@@ -140,15 +146,33 @@ describe('my runs', () => {
     expect(location.get('returnTo')).toBe('?view=runs')
   })
 
-  it('takes a Nike runner from file help to phone guidance and the real connection settings', async () => {
+  it('keeps Strava sync and file uploads behind one Add runs button, closed until asked for', async () => {
+    runsApi([longRun])
+    const user = renderApp('/?view=runs')
+    await screen.findByText('Long run')
+    const button = screen.getByRole('button', { name: 'Add runs' })
+    expect(button).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('region', { name: 'Add runs' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Your run data')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Running insights' })).not.toBeInTheDocument()
+    const sheet = await openAddRuns(user)
+    expect(button).toHaveAttribute('aria-expanded', 'true')
+    expect(within(sheet).getByRole('heading', { name: 'Sync from your phone or watch' })).toBeVisible()
+    expect(within(sheet).getByRole('heading', { name: 'Upload a file' })).toBeVisible()
+    const guide = within(sheet).getByText('How to get a file from your watch or app').closest('details')!
+    expect(guide).not.toHaveAttribute('open')
+    await user.click(within(sheet).getByText('How to get a file from your watch or app'))
+    expect(within(guide).getByText('Garmin')).toBeVisible()
+    await user.click(button)
+    expect(screen.queryByRole('region', { name: 'Add runs' })).not.toBeInTheDocument()
+  })
+
+  it('takes a Nike runner from Add runs to phone guidance and the real connection settings', async () => {
     const db = runsApi()
     server.use(http.get('*/api/v1/me/sync/strava', () => HttpResponse.json({ available: true, connected: false })))
     const user = renderApp('/?view=runs')
-    await openDisclosure('Add runs from a file')
-    await user.click(await screen.findByRole('button', { name: 'See Strava setup' }))
-    const phone = screen.getByText('Connect through Strava').closest('details')!
-    expect(phone).toHaveAttribute('open')
-    expect(phone.querySelector('summary')).toHaveFocus()
+    const sheet = await openAddRuns(user)
+    const phone = within(sheet).getByRole('heading', { name: 'Sync from your phone or watch' }).closest('section')!
     expect(within(phone).getByText('A free Strava account is enough.')).toBeVisible()
     expect(within(phone).getByRole('img', { name: 'Powered by Strava' })).toBeVisible()
     const help = within(phone).getByText('Help connecting my app or watch').closest('details')!
@@ -171,7 +195,10 @@ describe('my runs', () => {
     const uploaded = { ...longRun, source: { ...longRun.source, kind: 'Upload' } } as Activity
     runsApi([uploaded, fromStrava])
     const user = renderApp('/?view=runs')
-    const sources = await screen.findByRole('group', { name: 'Show runs by source' })
+    const filter = await screen.findByRole('button', { name: 'Filter' })
+    expect(screen.queryByRole('group', { name: 'Show runs by source' })).not.toBeInTheDocument()
+    await user.click(filter)
+    const sources = screen.getByRole('group', { name: 'Show runs by source' })
     expect(screen.getAllByText(/Matched to your plan|Not matched to a planned session/).length).toBe(2)
     await user.click(within(sources).getByRole('button', { name: 'Strava' }))
     expect(screen.getAllByText('From Strava')).toHaveLength(1)
@@ -179,13 +206,15 @@ describe('my runs', () => {
     await user.click(within(sources).getByRole('button', { name: 'Uploads' }))
     expect(screen.queryByText('From Strava')).toBeNull()
     expect(screen.getAllByText('Uploaded recording')).toHaveLength(1)
+    await user.click(filter)
+    expect(screen.getByRole('button', { name: 'Filter: Uploads' })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('shows what was wrong with a single file the API couldn’t read', async () => {
     runsApi([], ['Unreadable'])
     const user = renderApp('/?view=runs')
 
-    await openDisclosure('Add runs from a file')
+    await openAddRuns(user)
     await user.upload(await screen.findByLabelText('Upload runs'), fitFile())
 
     expect(await screen.findByRole('alert')).toHaveTextContent('That isn’t a .fit file. Use Export Original.')
@@ -196,7 +225,7 @@ describe('my runs', () => {
     const db = runsApi([], ['Imported', 'Skipped'])
     const user = renderApp('/?view=runs')
 
-    await openDisclosure('Add runs from a file')
+    await openAddRuns(user)
     await user.upload(await screen.findByLabelText('Upload runs'), [fitFile(), new File([new Uint8Array(8)], 'ride.fit')])
 
     expect(await screen.findByText('1 run added.')).toBeInTheDocument()
@@ -212,7 +241,7 @@ describe('my runs', () => {
     const inner = zipSync({ 'a.fit': new Uint8Array(64).fill(1), 'b.fit': new Uint8Array(64).fill(2) })
     const exported = new File([zipSync({ 'DI_CONNECT/DI-Connect-Uploaded-Files/UploadedFiles_0-_Part1.zip': inner, 'summary.json': new Uint8Array(4) })], 'export.zip')
 
-    await openDisclosure('Add runs from a file')
+    await openAddRuns(user)
     await user.upload(await screen.findByLabelText('Upload runs'), exported)
 
     expect(await screen.findByText('2 runs added.')).toBeInTheDocument()
@@ -233,94 +262,76 @@ describe('my runs', () => {
 })
 
 describe('a run', () => {
-  it('shows the headline numbers', async () => {
+  it('shows the headline numbers on one scroll, without tabs or a repeated list of stats', async () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
     await screen.findByRole('heading', { name: 'Long run', level: 2 })
     const summary = screen.getByRole('region', { name: 'Run summary' })
     expect(summary).toHaveTextContent('15.4 km')
-    expect(summary).toHaveTextContent('1:42:12')
+    expect(summary).toHaveTextContent('Moving time1:42:12')
+    expect(summary).toHaveTextContent('Elapsed time1:42:12')
+    expect(summary).toHaveTextContent('Elevation gain55 m')
     expect(summary).toHaveTextContent('6:40/km')
-    await userEvent.click(screen.getByRole('tab', { name: 'Details' }))
-    const details = screen.getByRole('tabpanel', { name: 'Details' })
-    const term = (label: string) => within(details).getByText(label, { selector: 'dt' }).nextElementSibling?.textContent
-    expect(term('Distance')).toBe('15.4 km')
-    expect(term('Moving time')).toBe('1:42:12')
-    expect(term('Pace')).toBe('6:40/km')
-    expect(term('Elevation gain')).toBe('55 m')
-    expect(term('Avg heart rate')).toBe('151 bpm')
-    expect(term('Max heart rate')).toBe('163 bpm')
-    expect(term('Calories')).toBe('1074')
-    expect(term('Elapsed time')).toBe('1:42:12')
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: 'Plan vs actual' })).toHaveLength(1)
+    expect(screen.queryByText('Detailed zone and split evidence')).not.toBeInTheDocument()
+    expect(screen.queryByText(/drift|provenance/i)).not.toBeInTheDocument()
+    for (const name of ['Your pace splits', 'Heart rate', 'Best efforts', 'Delete this run']) expect(screen.getByRole('heading', { name })).toBeVisible()
   })
 
-  it('leads with a verdict on what the run was for, the plan beside it, and the next session', async () => {
+  it('says where an upload came from in one line', async () => {
+    runsApi([{ ...longRun, source: { ...longRun.source, kind: 'Upload', format: 'Gpx', addedAt: '2026-10-20T08:00:00Z' } } as Activity])
+    renderApp(`/?view=runs&run=${longRun.id}`)
+    expect(await screen.findByText('Uploaded from a GPX file · 20 Oct')).toBeInTheDocument()
+  })
+
+  it('says a Strava run is kept for 7 days and links back to Strava', async () => {
+    const fromStrava = { ...longRun, source: { ...longRun.source, kind: 'Strava', viewUrl: 'https://www.strava.com/activities/1', cachedUntil: '2027-01-08T06:00:00Z' } } as Activity
+    runsApi([fromStrava])
+    renderApp(`/?view=runs&run=${longRun.id}`)
+    expect(await screen.findByText('From Strava · kept for 7 days')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Powered by Strava' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Removing this run' })).toBeInTheDocument()
+  })
+
+  it('says how the run went against the plan once, with the next session', async () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
-    const verdict = (await screen.findByRole('heading', { name: 'Long run, but quicker than long-run pace.' })).closest('section')!
-    expect(within(verdict).getByText('14 km at 7:21–8:10/km')).toBeInTheDocument()
-    expect(within(verdict).getByText('15.4 km at 6:40/km')).toBeInTheDocument()
-    expect(within(verdict).getByText('+1.4 km')).toBeInTheDocument()
-    expect(within(verdict).getByText(/42 s\/km quicker than the plan’s range/)).toBeInTheDocument()
-    expect(within(verdict).getByText(/quicker than your goal pace of 7:00\/km/)).toBeInTheDocument()
-    expect(within(verdict).getByText('Next up: Fartlek, Tuesday 5 January 2027. Start it at the slow end of its range.')).toBeInTheDocument()
+    const card = (await screen.findByRole('heading', { name: 'Plan vs actual' })).closest('section')!
+    expect(within(card).getByText('Long run, but quicker than long-run pace.')).toBeInTheDocument()
+    expect(within(card).getByText('14 km at 7:21–8:10/km')).toBeInTheDocument()
+    expect(within(card).getByText('15.4 km at 6:40/km')).toBeInTheDocument()
+    expect(within(card).getByText('+1.4 km')).toBeInTheDocument()
+    expect(within(card).getByText(/42 s\/km quicker than the plan’s range/)).toBeInTheDocument()
+    expect(within(card).getByText(/quicker than your goal pace of 7:00\/km/)).toBeInTheDocument()
+    expect(within(card).getByText('Next up: Fartlek, Tuesday 5 January 2027. Start it at the slow end of its range.')).toBeInTheDocument()
   })
 
-  it('supports arrow, home and end navigation between analysis tabs', async () => {
-    runsApi([longRun])
-    const user = renderApp(`/?view=runs&run=${longRun.id}`)
-    const overview = await screen.findByRole('tab', { name: 'Overview' }, { timeout: 10000 })
-    overview.focus()
-    await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('tab', { name: 'Splits' })).toHaveFocus()
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Splits')
-    await user.keyboard('{End}')
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Details')
-    await user.keyboard('{Home}{ArrowLeft}')
-    expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Details')
-  })
-
-  it('checks every km against its zone and marks the quickest and hardest', async () => {
+  it('shows every split at its real distance, the final partial one included, with one short caveat', async () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Splits' }))
-    await userEvent.click(screen.getByText('Detailed zone and split evidence'))
-    const table = await screen.findByRole('table')
-    const rows = within(table).getAllByRole('row').slice(1)
-    expect(rows).toHaveLength(16)
-    expect(within(rows[0]!).getByText('31 s fast')).toBeInTheDocument()
-    expect(within(rows[0]!).getByText('Long')).toBeInTheDocument()
-    expect(within(rows[5]!).getByText('Hardest')).toBeInTheDocument()
-    expect(within(rows[6]!).getByText('Quickest')).toBeInTheDocument()
-    expect(within(rows[15]!).getByRole('rowheader')).toHaveTextContent('0.35')
-    expect(within(screen.getByRole('tabpanel')).getAllByText(/Even halves: nicely paced\./).length).toBeGreaterThan(0)
+    const splits = (await screen.findByRole('heading', { name: 'Your pace splits' })).closest('section')!
+    expect(within(splits).getAllByRole('button')).toHaveLength(16)
+    expect(within(splits).getByRole('button', { name: /0\.35.*partial split/ })).toBeInTheDocument()
+    expect(screen.getByText(/Even halves: nicely paced\. Splits show the pace you recorded, not whether each rep was done\./)).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Recorded split pace profile' })).toBeInTheDocument()
   })
 
-  it('splits a tempo into warm-up, work and cool-down, and says it started fast', async () => {
+  it('says a tempo started fast', async () => {
     runsApi([tempo])
     renderApp(`/?view=runs&run=${tempo.id}`)
-
-    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
-    expect(await screen.findByRole('heading', { name: 'Tempo run started 14 s/km fast, then settled into range.' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: 'Splits' }))
-    await userEvent.click(screen.getByText('Detailed zone and split evidence'))
-    const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1)
-    expect(within(rows[0]!).getByText('Warm-up')).toBeInTheDocument()
-    expect(within(rows[2]!).getByText('Work')).toBeInTheDocument()
-    expect(within(rows[8]!).getByText('Cool-down')).toBeInTheDocument()
+    expect(await screen.findByText('Tempo run started 14 s/km fast, then settled into range.')).toBeInTheDocument()
   })
 
-  it('shows heart-rate drift and time in zones from the max heart rate the runner set', async () => {
+  it('shows time in zones from the max heart rate the runner set', async () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Charts' }))
     const section = (await screen.findByRole('heading', { name: 'Heart rate' })).closest('section')!
-    expect(within(section).getByText(/Heart rate rose 6\.3% against pace/)).toBeInTheDocument()
     expect(within(section).getAllByRole('listitem')).toHaveLength(5)
     expect(within(section).getByText(/max heart rate you set \(188 bpm\)/)).toBeInTheDocument()
   })
@@ -329,7 +340,6 @@ describe('a run', () => {
     runsApi([{ ...longRun, heartRate: { maxHeartRateSetting: null, zones: null } }])
     const user = renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Charts' }))
     const section = (await screen.findByRole('heading', { name: 'Heart rate' })).closest('section')!
     expect(within(section).getByText(/to see time in heart-rate zones\. We don’t guess it\./)).toBeInTheDocument()
     await user.click(within(section).getByRole('button', { name: 'in Account' }))
@@ -340,7 +350,6 @@ describe('a run', () => {
     runsApi([longRun])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     const section = (await screen.findByRole('heading', { name: 'Best efforts' })).closest('section')!
     const upFront = section.querySelector<HTMLElement>(':scope > .efforts')!
     expect(within(upFront).getAllByRole('listitem')).toHaveLength(7)
@@ -361,32 +370,28 @@ describe('a run', () => {
     ])
     renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }))
     expect(await screen.findByText(/Your first run at these distances, so there’s nothing to beat yet\./)).toBeInTheDocument()
   })
 
   it('logs an unplanned run without judging it', async () => {
     runsApi([{ ...longRun, plan: null }])
-    const user = renderApp(`/?view=runs&run=${longRun.id}`)
+    renderApp(`/?view=runs&run=${longRun.id}`)
 
     expect(await screen.findByRole('heading', { name: 'Run', level: 2 })).toBeInTheDocument()
     const summary = screen.getByRole('region', { name: 'Run summary' })
     expect(summary).toHaveTextContent('Run recorded')
     expect(screen.queryByRole('heading', { name: 'Plan vs actual' })).not.toBeInTheDocument()
     expect(screen.queryByText(/missed|behind target|failed/i)).not.toBeInTheDocument()
-    await user.click(screen.getByRole('tab', { name: 'Details' }))
-    expect(screen.getByRole('heading', { name: 'An extra run, logged.' })).toBeVisible()
   })
 
   it('can be deleted, back to the list', async () => {
     const db = runsApi([longRun])
     const user = renderApp(`/?view=runs&run=${longRun.id}`)
 
-    await user.click(await screen.findByRole('tab', { name: 'Details' }))
     await user.click(await screen.findByRole('button', { name: 'Delete run' }))
     await user.click(screen.getByRole('button', { name: 'Yes, delete this run' }))
 
-    expect(await screen.findByText(/Runs recorded on your phone or watch can sync through Strava/)).toBeInTheDocument()
+    expect(await screen.findByText(/Use Add runs to bring in runs from Strava or a file/)).toBeInTheDocument()
     expect(db.runs).toHaveLength(0)
   })
 

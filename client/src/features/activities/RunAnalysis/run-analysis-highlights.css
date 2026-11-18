@@ -27,7 +27,6 @@
 .ra-split-fill{display:flex;align-items:center;justify-content:flex-end;min-width:0;height:100%;background:var(--effort-long);border-radius:999px;padding-right:.6rem;color:var(--on-sage);font-weight:700;font-size:var(--text-sm);white-space:nowrap;transition:width var(--dur-fill) var(--ease-fill)}
 .ra-split-best .ra-split-fill{background:var(--accent);color:var(--on-accent)}
 .ra-split-detail{font-size:var(--text-sm);margin:.2rem 0 .3rem 3.5rem;color:var(--muted)}
-.ra-view-all{display:block;margin:1rem 0 0 auto;background:none;border:0;color:var(--accent);font-weight:700;cursor:pointer;min-height:44px}
 @media(max-width:480px){.ra-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.ra-plan-grid{grid-template-columns:1fr}.ra-coaching{border-left:0;border-top:1px solid var(--line-strong);padding:1rem 0 0}.ra-split-fill{font-size:.72rem}}
 @media(prefers-reduced-motion:reduce){.ra-split-fill{transition:none}}
 

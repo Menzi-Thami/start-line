@@ -3,7 +3,6 @@ import { expect, test, type Page } from '@playwright/test'
 import { readFileSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { chapter, journeyOf, raceResult, recovery } from '../src/features/journey/journey-fixtures'
-import { openHomeLibrary } from './navigation'
 const plan = JSON.parse(readFileSync(new URL('../src/test/fixtures/plan-5k.json', import.meta.url), 'utf8'))
 const recording = JSON.parse(readFileSync(new URL('../src/test/fixtures/activity-tempo.json', import.meta.url), 'utf8'))
 const baseline = process.env.SIMPLICITY_BASELINE === '1'
@@ -62,7 +61,9 @@ for (const mode of ['light', 'dark'] as const) test(`Run detail hierarchy: ${mod
       const audit = await accessibility(page).analyze()
       expect(audit.violations.map(value => ({ id: value.id, targets: value.nodes.map(node => node.target) }))).toEqual([])
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-      await expect(page.getByRole('heading', { name: 'Plan vs actual' })).toHaveCount(0)
+      // One scroll: the plan comparison appears once, with no tabs.
+      await expect(page.getByRole('heading', { name: 'Plan vs actual' })).toHaveCount(1)
+      await expect(page.getByRole('tab')).toHaveCount(0)
     }
     if (info.project.name === 'desktop') {
       mkdirSync(root, { recursive: true })
@@ -82,6 +83,7 @@ test('recording identity and the Home or filtered Runs origin survive reload @ph
   await expect(page.getByRole('heading', { name: 'Welcome back, Naledi' })).toBeVisible()
   const nav = page.getByRole('navigation', { name: 'Main', exact: true })
   await nav.getByRole('button', { name: 'Runs', exact: true }).click()
+  await page.getByRole('button', { name: 'Filter', exact: true }).click()
   await page.getByRole('group', { name: 'Show runs from', exact: true }).getByRole('button', { name: 'This week', exact: true }).click()
   await page.getByRole('group', { name: 'Show runs by source', exact: true }).getByRole('button', { name: 'Strava', exact: true }).click()
   await expect(page.locator('.run-feed-open')).toHaveCount(1)
@@ -91,38 +93,39 @@ test('recording identity and the Home or filtered Runs origin survive reload @ph
   await page.getByRole('button', { name: /Back to previous page/ }).click()
   await expect(page).toHaveURL(/range=week/)
   await expect(page).toHaveURL(/source=Strava/)
+  await page.getByRole('button', { name: 'Filter: This week, Strava', exact: true }).click()
   await expect(page.getByRole('button', { name: 'This week', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('group', { name: 'Show runs by source', exact: true }).getByRole('button', { name: 'Strava', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
-test('Runs opens real insights and tools with keyboard controls and preserved calculator drafts @phone', async ({ page }) => {
+test('Runs keeps the calculators one keyboard-operable entry away, with drafts preserved and old links landing there @phone', async ({ page }) => {
   await mock(page, 'training')
-  await page.goto(fixture)
-  await openHomeLibrary(page, 'tools')
+  // An old Running tools link lands on Runs with the calculators open, not on a blank page.
+  await page.goto(fixture.replace('?view=home', '?view=home&tab=tools&from=runs'))
   const nav = page.getByRole('navigation', { name: 'Main', exact: true })
   await expect(nav.getByRole('button', { name: 'Runs', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page).toHaveURL(/view=runs&tab=tools/)
   await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()
   await page.getByLabel('Distance', { exact: true }).selectOption('other')
   const input = page.getByLabel('Distance (km)', { exact: true })
   await input.fill('13')
-  const tools = page.locator('.home-tools > summary')
+  const tools = page.locator('.runs-tools > summary')
   await tools.focus()
   await page.keyboard.press('Enter')
   await expect(input).toBeHidden()
   await page.keyboard.press('Enter')
   await expect(input).toHaveValue('13')
-  await page.getByRole('button', { name: '← Back to Runs', exact: true }).click()
-  await openHomeLibrary(page)
-  await expect(page.getByRole('region', { name: 'Personal bests', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Running insights|Back to Runs/ })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Personal bests', exact: true })).toHaveCount(0)
+  // An old insights link lands on Runs too.
+  await page.goto(fixture.replace('?view=home', '?view=home&tab=insights'))
+  await expect(nav.getByRole('button', { name: 'Runs', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { name: 'Runs', exact: true })).toBeVisible()
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back, Naledi' })).toBeVisible()
   await expect(nav.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
-  await expect(page.locator('.home-library')).toBeHidden()
-  await openHomeLibrary(page, 'tools')
   await page.getByRole('button', { name: 'Taperday', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back, Naledi' })).toBeVisible()
-  await expect(nav.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
-  await expect(page.locator('.home-library')).toBeHidden()
 })
 
 test('a missing recording ID is unavailable without substituting a recent recording @phone', async ({ page }) => {

@@ -1,6 +1,6 @@
 # Progress story (#143)
 
-**Where it lives:** Home › Running insights › **Your progress**, under the training trends. A 4, 8 or 12-week switch picks the span, and each span is compared with the same length just before it.
+**Where it lives:** Plan › Progress › More detail › **Compared with before**. A 4, 8 or 12-week switch picks the span, and each span is compared with the same length just before it.
 
 | Part | What it says | Worked out from |
 |---|---|---|

@@ -9,7 +9,6 @@
 @media (prefers-reduced-motion: no-preference) { .run-feed-open { transition: background-color 200ms; } }
 .run-feed-open > span:first-child { min-width: 0; overflow-wrap: anywhere; }
 .phone-run-guide { display: grid; gap: var(--space-3); padding-top: var(--space-3); }
-.phone-runs { scroll-margin-top: calc(var(--masthead-h) + var(--space-6)); }
 .phone-run-guide h3 { font-size: var(--text-lg); margin: var(--space-2) 0 0; }
 .phone-run-guide .export-steps { margin: 0; }
 .phone-run-guide .button { justify-self: start; white-space: normal; }
@@ -17,3 +16,19 @@
 .run-import-status .link-button { justify-self: start; }
 .running-app-guides { width: 100%; }
 .running-app-guides summary { white-space: normal; padding-block: var(--space-2); }
+/* One Add runs button, then the list. The sheet opens in place, so nothing is lost when it closes. */
+.runs-add { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-block: var(--space-4); }
+.add-runs-sheet { display: grid; gap: var(--space-5); margin-bottom: var(--space-5); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.add-runs-sheet[hidden] { display: none; }
+.add-runs-part { display: grid; gap: var(--space-2); min-width: 0; }
+.add-runs-part + .add-runs-part { border-top: 1px solid var(--line); padding-top: var(--space-4); }
+.add-runs-part > h3 { margin: 0; font-size: var(--text-lg); }
+.add-runs-part > .button { justify-self: start; }
+.runs-totals { margin-block: var(--space-4); }
+.runs-totals .home-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.runs-totals .home-tile { min-width: 0; padding: var(--space-3); }
+.runs-totals .home-tile-value { font-size: 1.6rem; }
+.run-filter-toggle { justify-self: start; }
+.runs-share, .runs-tools { margin-top: var(--space-5); }
+.runs-tools > summary { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.runs-totals .home-tiles > :last-child { grid-column: auto; }

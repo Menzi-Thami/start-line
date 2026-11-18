@@ -1,6 +1,7 @@
 import './run-cards.css'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
+import { ScreenRecovery } from '../../app/ScreenRecovery'
 import { useSyncedRuns } from '../sync/useSyncedRuns'
 import { emptyProgress, uploadAll, type BulkProgress, type BulkResult } from '../../lib/bulk-upload'
 import { formatDate, formatDistance, formatDuration, formatPace, localToday, type Units } from '../../lib/format'
@@ -8,9 +9,12 @@ import type { Activity, ActivitySummary } from '../../lib/types'
 import { KIND_LABEL } from './activity-copy'
 import { BulkSummary } from './BulkSummary'
 import { ExportGuide } from './ExportGuide'
-import { RunDataPanel } from './RunDataPanel'
 import { PhoneRunGuide } from './PhoneRunGuide'
 import { RunImportStatus } from './RunImportStatus'
+import { RunningTotals } from './RunningTotals'
+
+const MilestoneCards = lazy(() => import('../milestones/MilestoneCards').then((module) => ({ default: module.MilestoneCards })))
+const Calculators = lazy(() => import('../runner-home/Calculators').then((module) => ({ default: module.Calculators })))
 
 type ListState = { kind: 'loading' } | { kind: 'ready'; runs: ActivitySummary[] } | { kind: 'error'; message: string }
 
@@ -21,11 +25,15 @@ interface Props {
   selectedId?: string
   onOpenConnections: () => void
   onOpenPlan?: () => void
-  onOpenInsights?: (section: 'insights' | 'tools') => void
-  phoneHelp?: { open: boolean; onChange: (open: boolean) => void }
+  /** Whether Add runs is open, kept by the app so it stays open when the phone and desktop layouts swap. */
+  addRuns?: { open: boolean; onChange: (open: boolean) => void }
+  /** For the running totals (a cache key) and the calculators. */
+  runnerId?: string
+  today?: string
+  maxHeartRate?: number | null
+  race?: { distanceKm: number; goalSeconds: number } | null
 }
 
-/** Imported recordings, newest first, with phone sync and file upload options. */
 type Range = 'all' | 'week' | 'month'
 
 const RANGES: readonly { id: Range; label: string }[] = [
@@ -60,19 +68,25 @@ const SOURCES: readonly { id: Source; label: string }[] = [
 const fromSource = (runs: readonly ActivitySummary[], source: Source) =>
   source === 'any' ? runs : runs.filter((r) => (source === 'Strava' ? r.source.kind === 'Strava' : r.source.kind !== 'Strava'))
 
-function filtersFromUrl(): { range: Range; source: Source } {
+/** The Runs page's own address: the page itself, or the page a run was opened from (kept in returnTo). */
+function runsParams(): URLSearchParams {
   const query = new URLSearchParams(window.location.search)
   const origin = new URLSearchParams(query.get('returnTo')?.replace(/^\?/, '') ?? '')
-  const params = query.has('run') && origin.get('view') === 'runs' ? origin : query
+  return query.has('run') && origin.get('view') === 'runs' ? origin : query
+}
+
+function filtersFromUrl(): { range: Range; source: Source } {
+  const params = runsParams()
   const range = params.get('range'), source = params.get('source')
   return { range: range === 'week' || range === 'month' ? range : 'all', source: source === 'Strava' || source === 'Upload' ? source : 'any' }
 }
 
-export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPlan, onOpenInsights, phoneHelp }: Props) {
-  const phoneRef = useRef<HTMLDetailsElement>(null)
-  const [localPhoneOpen, setLocalPhoneOpen] = useState(false)
-  const phoneOpen = phoneHelp?.open ?? localPhoneOpen
-  const setPhoneOpen = phoneHelp?.onChange ?? setLocalPhoneOpen
+/** Imported recordings, newest first: one Add runs button, the totals, then the list. */
+export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPlan, addRuns, runnerId, today, maxHeartRate = null, race = null }: Props) {
+  const ids = useId()
+  const [localAddOpen, setLocalAddOpen] = useState(false)
+  const addOpen = addRuns?.open ?? localAddOpen
+  const setAddOpen = addRuns?.onChange ?? setLocalAddOpen
   const auth = useAuth()
   const imports = useSyncedRuns(true, false)
   const list: ListState = imports.runs ? { kind: 'ready', runs: imports.runs }
@@ -80,16 +94,27 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
   const fetchRuns = imports.reload
   const [range, setRange] = useState<Range>(() => filtersFromUrl().range)
   const [source, setSource] = useState<Source>(() => filtersFromUrl().source)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [toolsOpen, setToolsOpen] = useState(() => runsParams().get('tab') === 'tools')
+  // Calculator drafts stay mounted once opened, so closing the tools keeps what was typed.
+  const [toolsOpened, setToolsOpened] = useState(toolsOpen)
+  const toolsRef = useRef<HTMLDetailsElement>(null)
+  const [shareOpened, setShareOpened] = useState(false)
   useEffect(() => {
     const restore = () => { const filters = filtersFromUrl(); setRange(filters.range); setSource(filters.source) }
     window.addEventListener('popstate', restore)
     return () => window.removeEventListener('popstate', restore)
   }, [])
-  const changeFilter = (key: 'range' | 'source', value: string) => {
+  useEffect(() => {
+    // An old "Running tools" link lands here with the calculators open and in view.
+    if (runsParams().get('tab') === 'tools') toolsRef.current?.scrollIntoView?.({ block: 'start' })
+  }, [])
+  const changeParam = (key: 'range' | 'source' | 'tab', value: string | null) => {
     const params = new URLSearchParams(window.location.search)
-    if (value === 'all' || value === 'any') params.delete(key)
+    if (value === null || value === 'all' || value === 'any') params.delete(key)
     else params.set(key, value)
     if (params.has('run')) {
+      // A run is open beside the list: Back from it returns to the list as it is now.
       const origin = new URLSearchParams(params)
       origin.delete('run'); origin.delete('returnTo')
       params.set('returnTo', `?${origin}`)
@@ -141,59 +166,64 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
   }
 
   const running = bulk?.running ?? false
-  const openPhoneHelp = () => {
-    const guide = phoneRef.current
-    if (!guide) return
-    setPhoneOpen(true)
-    guide.open = true
-    guide.scrollIntoView?.({ block: 'start' })
-    guide.querySelector('summary')?.focus()
-  }
+  const shown = list.kind === 'ready' ? fromSource(inRange(list.runs, range), source) : []
+  const bothSources = list.kind === 'ready' && list.runs.some((r) => r.source.kind === 'Strava') && list.runs.some((r) => r.source.kind !== 'Strava')
+  const activeFilters = [range !== 'all' ? RANGES.find(r => r.id === range)!.label : null, source !== 'any' ? SOURCES.find(s => s.id === source)!.label : null].filter(Boolean)
 
   return (
     <section className="section" aria-labelledby="my-runs-title" style={{ marginTop: 0 }}>
       <h2 className="plan-title" id="my-runs-title">
         Runs
       </h2>
-      {onOpenInsights && <nav className="runs-detail-links" aria-label="Running tools and history">
-        <button type="button" className="link-button" onClick={() => onOpenInsights('insights')}>Running insights</button>
-        <button type="button" className="link-button" onClick={() => onOpenInsights('tools')}>Running tools</button>
-      </nav>}
 
-      <RunImportStatus status={imports.strava} error={imports.syncError} busy={imports.syncing} onCheck={() => void imports.refresh()} onConnect={onOpenConnections} />
-      <details ref={phoneRef} className="disclosure phone-runs" open={phoneOpen} onToggle={event => setPhoneOpen(event.currentTarget.open)}><summary>Connect through Strava</summary>
-        <PhoneRunGuide onOpenConnections={onOpenConnections} onOpenPlan={onOpenPlan} />
-      </details>
-      <details className="disclosure upload"><summary>Add runs from a file{running && <span role="status"> · Importing…</span>}{(singleError || bulk?.error) && <span className="field-error"> · Needs attention</span>}</summary>
-        <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Runs you add this way stay on Taperday for good. How to get the file:</p>
-        <ExportGuide onPhoneHelp={openPhoneHelp} />
-        <label className={running ? 'button button-primary is-busy' : 'button button-primary'}>
-          {running ? 'Reading your files…' : 'Upload runs'}
-          <input
-            ref={input}
-            className="visually-hidden"
-            type="file"
-            accept=".fit,.gpx,.tcx,.zip"
-            multiple
-            disabled={running}
-            onChange={(event) => {
-              const files = [...(event.target.files ?? [])]
-              if (files.length > 0) void upload(files)
-            }}
-          />
-        </label>
-        {singleError && (
-          <p className="field-error" role="alert" style={{ marginTop: 'var(--space-3)' }}>
-            {singleError}
+      <RunImportStatus show="problems" status={imports.strava} error={imports.syncError} busy={imports.syncing} onCheck={() => void imports.refresh()} onConnect={onOpenConnections} />
+      <div className="runs-add">
+        <button type="button" className="button button-primary" aria-expanded={addOpen} aria-controls={`${ids}-add`} onClick={() => setAddOpen(!addOpen)}>
+          Add runs
+        </button>
+        {!addOpen && running && <span className="field-help" role="status">Importing…</span>}
+        {!addOpen && !running && (singleError || bulk?.error) && <span className="field-error">An upload needs attention.</span>}
+      </div>
+      <div id={`${ids}-add`} className="add-runs-sheet" role="region" aria-label="Add runs" hidden={!addOpen}>
+        <section className="add-runs-part phone-runs" aria-labelledby={`${ids}-sync`}>
+          <h3 id={`${ids}-sync`}>Sync from your phone or watch</h3>
+          <RunImportStatus show="quiet" status={imports.strava} error={imports.syncError} busy={imports.syncing} onCheck={() => void imports.refresh()} onConnect={onOpenConnections} />
+          <PhoneRunGuide onOpenConnections={onOpenConnections} onOpenPlan={onOpenPlan} />
+        </section>
+        <section className="add-runs-part upload" aria-labelledby={`${ids}-file`}>
+          <h3 id={`${ids}-file`}>Upload a file</h3>
+          <p className="field-help">Taperday reads <strong>.fit</strong>, <strong>.gpx</strong> and <strong>.tcx</strong> files, and the zips they come in. Runs you add this way stay on Taperday for good.</p>
+          <label className={running ? 'button button-primary is-busy' : 'button button-primary'}>
+            {running ? 'Reading your files…' : 'Upload runs'}
+            <input
+              ref={input}
+              className="visually-hidden"
+              type="file"
+              accept=".fit,.gpx,.tcx,.zip"
+              multiple
+              disabled={running}
+              onChange={(event) => {
+                const files = [...(event.target.files ?? [])]
+                if (files.length > 0) void upload(files)
+              }}
+            />
+          </label>
+          {singleError && (
+            <p className="field-error" role="alert" style={{ marginTop: 'var(--space-3)' }}>
+              {singleError}
+            </p>
+          )}
+          {bulk && <BulkSummary running={bulk.running} progress={bulk.progress} result={bulk.result} error={bulk.error} onStop={() => stop.current?.abort()} />}
+          <p className="field-help" style={{ marginTop: 'var(--space-3)' }}>
+            Runs already added are skipped. Your route is never kept.
           </p>
-        )}
-        {bulk && <BulkSummary running={bulk.running} progress={bulk.progress} result={bulk.result} error={bulk.error} onStop={() => stop.current?.abort()} />}
-        <p className="field-help" style={{ marginTop: 'var(--space-3)' }}>
-          Runs already added are skipped. Your route is never kept.
-        </p>
-      </details>
+          <details className="disclosure export-help"><summary>How to get a file from your watch or app</summary>
+            <ExportGuide />
+          </details>
+        </section>
+      </div>
 
-      <RunDataPanel units={units} refreshKey={imports.revision} />
+      {runnerId && list.kind === 'ready' && list.runs.length > 0 && <RunningTotals ownerId={runnerId} units={units} today={today ?? localToday()} runs={list.runs} />}
 
       {list.kind === 'ready' && imports.error && <div className="error-panel" role="alert">
         <p>Your recordings could not refresh. Showing the recordings already loaded. {imports.error}</p>
@@ -228,33 +258,37 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
 
       {list.kind === 'ready' && list.runs.length === 0 && (
         <div className="empty" style={{ marginTop: 'var(--space-5)' }}>
-          <p><strong>No recordings yet.</strong> Runs recorded on your phone or watch can sync through Strava. You can also upload a saved recording from a file.</p>
-          <button type="button" className="button button-primary" style={{ marginTop: 'var(--space-3)' }} onClick={openPhoneHelp}>See my import options</button>
+          <p><strong>No recordings yet.</strong> Use Add runs to bring in runs from Strava or a file.</p>
         </div>
       )}
 
       {list.kind === 'ready' && list.runs.length > 0 && (
         <div className="run-filter-rows">
-          <div className="run-filters" role="group" aria-label="Show runs from">
-            {RANGES.map((r) => (
-              <button key={r.id} type="button" className="chip-button" aria-pressed={range === r.id} onClick={() => { setRange(r.id); changeFilter('range', r.id) }}>
-                {r.label}
-              </button>
-            ))}
-          </div>
-          {list.runs.some((r) => r.source.kind === 'Strava') && list.runs.some((r) => r.source.kind !== 'Strava') && (
-            <div className="run-filters" role="group" aria-label="Show runs by source">
-              {SOURCES.map((option) => (
-                <button key={option.id} type="button" className="chip-button" aria-pressed={source === option.id} onClick={() => { setSource(option.id); changeFilter('source', option.id) }}>
-                  {option.label}
+          <button type="button" className="chip-button run-filter-toggle" aria-expanded={filtersOpen} aria-controls={`${ids}-filters`} onClick={() => setFiltersOpen(open => !open)}>
+            Filter{activeFilters.length > 0 && `: ${activeFilters.join(', ')}`}
+          </button>
+          <div id={`${ids}-filters`} hidden={!filtersOpen}>
+            <div className="run-filters" role="group" aria-label="Show runs from">
+              {RANGES.map((r) => (
+                <button key={r.id} type="button" className="chip-button" aria-pressed={range === r.id} onClick={() => { setRange(r.id); changeParam('range', r.id) }}>
+                  {r.label}
                 </button>
               ))}
             </div>
-          )}
+            {bothSources && (
+              <div className="run-filters" role="group" aria-label="Show runs by source">
+                {SOURCES.map((option) => (
+                  <button key={option.id} type="button" className="chip-button" aria-pressed={source === option.id} onClick={() => { setSource(option.id); changeParam('source', option.id) }}>
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
-      {list.kind === 'ready' && list.runs.length > 0 && fromSource(inRange(list.runs, range), source).length === 0 && (
+      {list.kind === 'ready' && list.runs.length > 0 && shown.length === 0 && (
         <p className="field-help" style={{ marginTop: 'var(--space-4)' }}>
           {['No runs', source === 'Strava' ? 'from Strava' : source === 'Upload' ? 'uploaded' : '', range === 'week' ? 'this week' : range === 'month' ? 'in the last 30 days' : '', 'yet.'].filter(Boolean).join(' ')}
         </p>
@@ -262,7 +296,7 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
 
       {list.kind === 'ready' && list.runs.length > 0 && (
         <ul className="weeks runs" style={{ listStyle: 'none', padding: 0, marginTop: 'var(--space-4)' }}>
-          {fromSource(inRange(list.runs, range), source).map((run) => (
+          {shown.map((run) => (
             <li className="run-feed-row" key={run.id}>
               <button type="button" className="run-feed-open" aria-current={run.id === selectedId ? 'true' : undefined} onClick={() => onOpen(run.id)}><span>
                 <span className="run-card-distance">{formatDistance(run.distanceKm, units)}</span>
@@ -282,6 +316,26 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
           ))}
         </ul>
       )}
+
+      {list.kind === 'ready' && list.runs.length > 0 && <details className="disclosure runs-share" onToggle={event => { if (event.currentTarget.open) setShareOpened(true) }}>
+        <summary>Share a milestone</summary>
+        {shareOpened && <ScreenRecovery><Suspense fallback={<p className="field-help" role="status">Preparing your milestones…</p>}><MilestoneCards runs={list.runs} /></Suspense></ScreenRecovery>}
+      </details>}
+      <details ref={toolsRef} className="disclosure runs-tools" open={toolsOpen} onToggle={event => {
+        const open = event.currentTarget.open
+        if (open === toolsOpen) return
+        setToolsOpen(open)
+        if (open) setToolsOpened(true)
+        changeParam('tab', open ? 'tools' : null)
+      }}><summary>Running tools <span className="field-help">Pace, race time & heart rate</span></summary>
+        {toolsOpened && (
+          <ScreenRecovery>
+            <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading running tools"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>}>
+              <Calculators units={units} maxHeartRate={maxHeartRate} race={race} />
+            </Suspense>
+          </ScreenRecovery>
+        )}
+      </details>
     </section>
   )
 }

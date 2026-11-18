@@ -34,9 +34,12 @@ async function mockApi(page: Page) {
 test('training trends explain the next step and fit every width, light and dark @phone', async ({ page }, info) => {
   await mockApi(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-14&km=10')
-  await openDisclosure(page, /^Running insights/)
+  // Progress and trends live in the plan's Progress tab, behind More detail.
+  await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()
+  await page.getByRole('tab', { name: 'Progress', exact: true }).click()
+  await openDisclosure(page, /^More detail/)
 
-  const trends = page.locator('section.home-trends')
+  const trends = page.getByRole('region', { name: 'Training trends', exact: true })
   await expect(trends.getByRole('heading', { name: 'Hold your distance this week' })).toBeVisible()
   await expect(trends.locator('.insights-why').getByText(/58% above your average week before that/)).toBeVisible()
   await expect(trends.getByRole('region', { name: 'Coaching history' }).getByText('Declined')).toBeVisible()

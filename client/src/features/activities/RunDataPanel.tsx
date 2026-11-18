@@ -59,7 +59,7 @@ function Breakdown({ totals, units }: { totals: TotalsBreakdown; units: Units })
 /**
  * The runner's run data, made inspectable: where each total comes from, which sources feed it, measurements that are
  * missing, runs from Strava that didn't arrive (with a retry), and a CSV download. Duplicates never appear here: one
- * recording per run is kept automatically. Collapsed by default: the runs list stays first.
+ * recording per run is kept automatically. Lives in Account, under Your data, collapsed by default.
  */
 export function RunDataPanel({ units, refreshKey }: Props) {
   const auth = useAuth()
@@ -127,7 +127,7 @@ export function RunDataPanel({ units, refreshKey }: Props) {
   const skipped = data?.syncIssues.filter(issue => issue.skipped).length ?? 0
 
   return (
-    <details className="disclosure run-data" onToggle={(event) => setOpen(event.currentTarget.open)}>
+    <details className="settings-group run-data" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>
         Your run data
         {attention > 0 && <span className="field-error"> · {plural(attention, 'run')} from Strava didn’t arrive</span>}
@@ -221,7 +221,7 @@ export function RunDataPanel({ units, refreshKey }: Props) {
           </section>
 
           <section className="run-data-section" aria-labelledby="run-data-export">
-            <h3 id="run-data-export">Your data</h3>
+            <h3 id="run-data-export">Download your runs</h3>
             <p className="field-help">A spreadsheet of every run you can see here, with where each came from.</p>
             <button type="button" className="button button-quiet" disabled={busy === 'export'} onClick={download}>
               {busy === 'export' ? 'Preparing…' : 'Download runs (CSV)'}

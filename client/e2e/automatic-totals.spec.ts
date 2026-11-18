@@ -1,4 +1,4 @@
-import { openSyncedRuns, openRecentRun, openDisclosure } from './navigation'
+import { openRunDay, openRunningTotals } from './navigation'
 import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from '@playwright/test'
 import type { CheckIn, CheckInRequest } from '../src/lib/types'
@@ -42,20 +42,19 @@ const value = (page: Page, label: string) => tile(page, label).locator('.home-ti
 test('a synced 10 km run counts automatically before and after logging, reload and sync updates @phone', async ({ page }, info) => {
   const state = await history(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-14&km=10')
-  await openDisclosure(page, /^Running insights/)
+  const running = await openRunningTotals(page)
   await expect(value(page, 'This month')).toHaveText('10')
   await expect(value(page, 'This year')).toHaveText('10')
   await expect(value(page, 'Weekly average')).toHaveText('0')
   await expect(tile(page, 'This month').getByText('1 run', { exact: true })).toBeVisible()
   await expect(tile(page, 'This month').getByText('10 km from Strava', { exact: true })).toBeVisible()
   expect(state.writes).toBe(0)
-  const running = page.getByRole('region', { name: 'Your running', exact: true })
-  await openSyncedRuns(page)
-  await page.getByRole('button', { name: 'Log this run', exact: true }).click()
+  const day = await openRunDay(page, '2026-10-14')
+  await day.getByRole('button', { name: 'Log this run', exact: true }).click()
   await expect(page.getByLabel('Run details', { exact: true })).toHaveValue('synthetic-strava')
   await page.getByRole('button', { name: 'Save check-in', exact: true }).click()
-  await openRecentRun(page, '2026-10-14')
-  await expect(running.getByRole('article', { name: 'Additional run on Wednesday 14 October 2026', exact: true })).toBeVisible()
+  await expect(day.getByRole('article', { name: 'Additional run on Wednesday 14 October 2026', exact: true })).toBeVisible()
+  await openRunningTotals(page)
   await expect(value(page, 'This month')).toHaveText('10')
   await expect(tile(page, 'This month').getByText('1 run', { exact: true })).toBeVisible()
   expect(state.entries).toHaveLength(1)
@@ -67,7 +66,7 @@ test('a synced 10 km run counts automatically before and after logging, reload a
   await page.setViewportSize({ width: 375, height: 1000 })
   await running.screenshot({ path: info.outputPath('automatic-10km-totals.png') })
   await page.reload()
-  await openDisclosure(page, /^Running insights/)
+  await openRunningTotals(page)
   await expect(value(page, 'This month')).toHaveText('10')
   await expect(value(page, 'This year')).toHaveText('10')
   state.distance = 11
@@ -85,12 +84,13 @@ test('a synced 10 km run counts automatically before and after logging, reload a
 test('an independently entered correction counts once after cache expiry and later reopening @phone', async ({ page }) => {
   const state = await history(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-14&km=10')
-  await openSyncedRuns(page)
-  await page.getByRole('button', { name: 'Log this run', exact: true }).click()
+  const day = await openRunDay(page, '2026-10-14')
+  await day.getByRole('button', { name: 'Log this run', exact: true }).click()
   await page.getByLabel('Run details', { exact: true }).selectOption('')
   await page.getByLabel('Distance (km)', { exact: true }).fill('12')
   await page.getByRole('button', { name: 'Save check-in', exact: true }).click()
-  await openDisclosure(page, /^Running insights/)
+  await expect(day.getByRole('article', { name: 'Additional run on Wednesday 14 October 2026', exact: true })).toBeVisible()
+  await openRunningTotals(page)
   await expect(value(page, 'This month')).toHaveText('12')
   await expect(tile(page, 'This month').getByText('1 run', { exact: true })).toBeVisible()
   expect(state.entries).toHaveLength(1)
@@ -100,7 +100,7 @@ test('an independently entered correction counts once after cache expiry and lat
   await expect(value(page, 'This month')).toHaveText('12')
   state.available = true
   await page.reload()
-  await openDisclosure(page, /^Running insights/)
+  await openRunningTotals(page)
   await expect(value(page, 'This month')).toHaveText('12')
   await expect(value(page, 'This year')).toHaveText('12')
   await expect(tile(page, 'This month').getByText('1 run', { exact: true })).toBeVisible()

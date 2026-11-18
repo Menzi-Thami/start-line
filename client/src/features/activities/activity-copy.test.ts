@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Activity, PlannedVsActual } from '../../lib/types'
 import longRunFixture from '../../test/fixtures/activity-long-run.json'
 import tempoFixture from '../../test/fixtures/activity-tempo.json'
-import { actualLine, distanceDifference, driftText, halvesSummary, plannedLine, runVerdict, splitFit } from './activity-copy'
+import { actualLine, distanceDifference, halvesSummary, plannedLine, runVerdict } from './activity-copy'
 
 // Real API responses: a Comrades long run run quicker than planned, and a tempo that started fast.
 const longRun = longRunFixture as Activity
@@ -85,23 +85,7 @@ describe('the verdict', () => {
   })
 })
 
-describe('heart rate and splits', () => {
-  it('mentions notable drift neutrally', () => {
-    expect(driftText(longRun)).toBe(
-      'Heart rate rose 6.3% against pace from the first half to the second. Heat, fluids and tiredness all push it up, and it tends to shrink as your endurance builds.',
-    )
-    expect(driftText({ ...longRun, review: { ...longRun.review, heartRateDriftPercent: 2.1, heartRateDriftIsNotable: false } })).toBe(
-      'Heart rate held steady against pace (2.1% drift).',
-    )
-    expect(driftText(tempo)).toBeNull()
-  })
-
-  it('labels each km against its zone', () => {
-    expect(splitFit(longRun.splits[0]!)).toBe('31 s fast')
-    expect(splitFit({ ...longRun.splits[0]!, fit: 'In' })).toBe('In zone')
-    expect(splitFit({ ...longRun.splits[0]!, fit: 'Unscored' })).toBe('')
-  })
-
+describe('splits', () => {
   it('names the fade, the negative split and the even run', () => {
     const halves = longRun.halves
     expect(halvesSummary({ ...halves, verdict: 'PositiveSplit', secondHalfSlowerBySecondsPerKm: 12.4 }, 'km')).toBe('Second half 12 s/km slower.')

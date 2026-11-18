@@ -1,6 +1,6 @@
 # Training insights (#140)
 
-**Where it lives:** Home › Running insights › **Your training trends**, above the 12-week chart. The weekly coaching review on Home and on the plan has a **Decline this change** button next to Apply.
+**Where it lives:** Plan › Progress › More detail › **Training trends**. The weekly coaching review in Plan › Progress has a **Decline this change** button next to Apply.
 
 ## What a runner sees
 

@@ -36,9 +36,12 @@ async function mockApi(page: Page) {
 test('the progress story compares spans, switches between 4, 8 and 12 weeks and fits every width @phone', async ({ page }, info) => {
   await mockApi(page)
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-14&km=10')
-  await openDisclosure(page, /^Running insights/)
+  // Progress and trends live in the plan's Progress tab, behind More detail.
+  await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()
+  await page.getByRole('tab', { name: 'Progress', exact: true }).click()
+  await openDisclosure(page, /^More detail/)
 
-  const progress = page.locator('section.home-progress')
+  const progress = page.getByRole('region', { name: 'Compared with before', exact: true })
   await expect(progress.getByRole('table', { name: 'The last 4 weeks against the 4 weeks before' })).toBeVisible()
   await expect(progress.getByText(/new best, from 25:03/)).toBeVisible()
   await progress.getByRole('button', { name: '12 weeks' }).click()

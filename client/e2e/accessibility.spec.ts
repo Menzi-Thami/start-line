@@ -32,9 +32,9 @@ for (const scheme of ['dark', 'light'] as const) for (const width of [320, 768, 
       await page.getByRole('heading').first().waitFor()
       if (screen === 'account') await openDisclosure(page, 'Connections & run sources')
       await scan(screen)
-      if (screen === 'home') {
-        await openDisclosure(page, /^Running insights/)
-        await scan('home-history')
+      if (screen === 'runs') {
+        await page.getByRole('button', { name: 'Add runs', exact: true }).click()
+        await scan('runs-add')
       }
     }
     await page.goto('/e2e/fixtures/redesign.html?progress=1&stages=1')

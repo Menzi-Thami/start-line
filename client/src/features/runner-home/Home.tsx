@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { formatDate, type Units } from '../../lib/format'
 import type { ActivitySummary, PersonalBest, Runner, StravaStatus } from '../../lib/types'
 import { Avatar } from '../account/Avatar'
@@ -20,7 +20,6 @@ import { TodayFocus } from './TodayFocus'
 import { useHomePlan, useAvailableRecordings, type HomePlan } from './home-data'
 import './home-navigation.css'
 
-const RunningDetails = lazy(() => import('./RunningDetails').then(module => ({ default: module.RunningDetails })))
 export interface HomeProps {
   runner: Runner; units: Units; today: string; current: CurrentPlan | null | undefined
   runs?: ActivitySummary[]; bests?: PersonalBest[]; strava?: StravaStatus
@@ -31,11 +30,7 @@ export interface HomeProps {
   onPlanLoaded?: (plan: HomePlan) => void; photo?: string | null; accountLoading?: boolean
   currentPlanFailed?: boolean; onRetryCurrentPlan?: () => void
 }
-function detailFromUrl() {
-  const params = new URLSearchParams(window.location.search)
-  return params.get('review') === '1' || params.get('tab') === 'tools' || params.get('tab') === 'insights'
-}
-/** One priority on Home; the existing detailed running tools are opened deliberately. */
+/** One priority on Home. Running totals and tools live on Runs; progress and the weekly review live on the plan. */
 export function Home(props: HomeProps) {
   const { runner, units, today, current: stored, runs = [], strava, onOpenPlan, onBuildPlan, onOpenRun, onOpenRuns,
     initialPlan, onPlanLoaded, photo = null, accountLoading = false } = props
@@ -55,27 +50,11 @@ export function Home(props: HomeProps) {
     today, units, get: checkIns.get, synced: synced.get, entries: checkIns.entries,
     save: checkIns.save, remove: checkIns.remove, saveAdditional: checkIns.saveAdditional, removeAdditional: checkIns.removeAdditional,
   } : undefined
-  const [details, setDetails] = useState(detailFromUrl)
-  const [visitedDetails, setVisitedDetails] = useState(details)
-  useEffect(() => {
-    const navigate = () => { const open = detailFromUrl(); setDetails(open); if (open) setVisitedDetails(true) }
-    window.addEventListener('popstate', navigate)
-    return () => window.removeEventListener('popstate', navigate)
-  }, [])
-  const closeDetails = () => {
-    const params = new URLSearchParams(window.location.search)
-    const fromRuns = params.get('from') === 'runs'
-    for (const key of ['tab', 'review', 'from']) params.delete(key)
-    window.history.replaceState(window.history.state, '', `${window.location.pathname}?${params}`)
-    setDetails(false)
-    if (fromRuns) onOpenRuns()
-    else requestAnimationFrame(() => heading.current?.focus())
-  }
   const week = plan?.weeks.find(value => value.startDate <= today && today <= weekEnd(value))
   const weekRuns = week?.sessions.filter(session => session.type !== 'Strength' && session.type !== 'Race') ?? []
   const doneRuns = weekRuns.filter(session => { const own = coach?.get(session); return own ? own.status !== 'Skipped' : syncedFor(session, coach)?.state === 'Completed' || !!recordingForToday(session, coach, available) }).length
   return <div className={`home home-simple${afterTraining ? ' is-after-training' : ''}`}>
-    {!details && <div>
+    <div>
       <header className="home-hello"><Avatar name={runner.displayName} photo={photo} size={48} /><div>
         <h1 ref={heading} tabIndex={-1} className="home-title">Welcome back, {runner.displayName}</h1><p className="home-lede">{formatDate(today, 'long')}</p>
       </div></header>
@@ -96,7 +75,6 @@ export function Home(props: HomeProps) {
         {!pending && <LatestRun runs={available} strava={strava} units={units} today={today} onOpenRun={onOpenRun} onOpenRuns={onOpenRuns} />}
         {!pending && strava?.status === 'NeedsReconnect' && <p className="field-help home-connection-note">Your Strava connection needs attention. <button type="button" className="link-button" onClick={props.onOpenAccount}>Reconnect Strava</button></p>}
       </div>
-    </div>}
-    {visitedDetails && <div hidden={!details}><Suspense fallback={<p role="status">Loading your running details…</p>}><RunningDetails {...props} runs={available} onBack={closeDetails} backLabel={new URLSearchParams(window.location.search).get('from') === 'runs' ? '← Back to Runs' : '← Back to Home'} /></Suspense></div>}
+    </div>
   </div>
 }

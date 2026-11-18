@@ -7,6 +7,9 @@ import { Home } from '../features/runner-home/Home'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
+import { RunningTotals } from '../features/activities/RunningTotals'
+import { ProgressStory } from '../features/coaching/ProgressStory'
+import { TrainingInsights } from '../features/coaching/TrainingInsights'
 import { current, today } from './run-history-data'
 
 const planFixture = plan as TrainingPlan
@@ -18,6 +21,10 @@ function SavedPlan({ runs }: { runs: ActivitySummary[] }) {
   const synced = useSyncedCompletions(current.id, completionsKey(checkIns.entries, runs))
   return <><CheckInLoadState {...checkIns} /><PlanView plan={planFixture} today={today} units="km" onUnitsChange={noop} shareUrl="https://example.test/plan" runs={runs}
     canCompleteRuns={checkIns.ready}
+    progressExtras={<div className="progress-extras">
+      <section className="progress-extra" aria-labelledby="progress-compare"><h3 id="progress-compare">Compared with before</h3><ProgressStory planId={current.id} units="km" refreshKey={`${checkIns.entries.length}|${runs.length}`} /></section>
+      <section className="progress-extra" aria-labelledby="progress-trends"><h3 id="progress-trends">Training trends</h3><TrainingInsights planId={current.id} units="km" refreshKey={`${checkIns.entries.length}|${runs.length}`} /></section>
+    </div>}
     coach={checkIns.ready ? { ...checkIns, synced: synced.get, today, units: 'km' } : undefined} /></>
 }
 
@@ -27,7 +34,8 @@ export function Journey({ runs }: { runs: ActivitySummary[] }) {
   return <AuthContext.Provider value={auth}>
     <button className="button button-quiet" onClick={() => setView('home')}>Return home</button>
     <button className="button button-quiet" onClick={() => setView('plan')}>Visit calendar</button>
-    {view === 'home' ? <Home runner={{ id: 'synthetic-runner', displayName: 'QA runner' } as Runner} today={today} units="km" current={current}
+    <button className="button button-quiet" onClick={() => setView('runs')}>Visit runs</button>
+    {view === 'runs' ? <RunningTotals ownerId="synthetic-runner" units="km" today={today} runs={runs} /> : view === 'home' ? <Home runner={{ id: 'synthetic-runner', displayName: 'QA runner' } as Runner} today={today} units="km" current={current}
       initialPlan={{ id: current.id, plan: planFixture }} runs={runs} onOpenPlan={() => setView('plan')}
       onOpenAccount={noop} onOpenRun={noop} onOpenRuns={noop} onBuildPlan={noop} /> : <SavedPlan runs={runs} />}
   </AuthContext.Provider>

@@ -76,7 +76,6 @@ describe('permanent race history and trophy cabinet', () => {
   it('holds legacy duplicates for explicit review instead of choosing a trophy-winning outcome', async () => {
     vi.spyOn(api.me.journey, 'races').mockResolvedValue({ races: [raceMemory({ needsReview: true, majorEligible: false }),
       raceMemory({ needsReview: true, majorEligible: false, result: raceResult({ id: 'other-result', outcome: 'DidNotFinish', finishTime: null }) })], majors: majorDefinitions })
-    const user = userEvent.setup()
     show()
     expect(within(await screen.findByRole('list', { name: 'Saved races' })).getAllByRole('listitem')).toHaveLength(2)
     expect(await screen.findByText(/Some older races have more than one saved result/)).toBeVisible()

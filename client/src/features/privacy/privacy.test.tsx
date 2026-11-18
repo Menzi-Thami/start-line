@@ -79,28 +79,29 @@ describe('signing up', () => {
     return bodies
   }
 
-  it('asks for heart rate separately, and leaves it off unless ticked', async () => {
+  it('leaves heart rate off at sign-up and says it is asked in Account', async () => {
     const bodies = profileApi()
     const saved = vi.fn()
     const user = renderWith(<ProfileForm onSaved={saved} />, signedIn)
 
-    expect(screen.getByText(/Heart rate only if you agree below/)).toBeInTheDocument()
-    expect(screen.getByRole('checkbox', { name: 'Keep heart rate from my runs (optional)' })).not.toBeChecked()
+    expect(screen.getByText(/Heart rate only if you turn it on in Account/)).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: 'Keep heart rate from my runs (optional)' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('checkbox', { name: /I’ve read this/ }))
     await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
 
     await waitFor(() => expect(saved).toHaveBeenCalled())
-    expect(bodies[0]).toMatchObject({ acceptPrivacyNotice: true, heartRateConsent: false })
+    // Not sent at all, so the API keeps its default (off) and no consent is recorded for the runner.
+    expect(bodies[0]).toMatchObject({ acceptPrivacyNotice: true })
+    expect(bodies[0]).not.toHaveProperty('heartRateConsent')
   })
 
-  it('sends heart-rate consent when the runner ticks it', async () => {
+  it('sends heart-rate consent when the runner ticks it in their profile', async () => {
     const bodies = profileApi()
     const saved = vi.fn()
-    const user = renderWith(<ProfileForm onSaved={saved} />, signedIn)
+    const user = renderWith(<ProfileForm runner={{ ...sipho, needsPrivacyConsent: false }} onSaved={saved} />, signedIn)
 
-    await user.click(screen.getByRole('checkbox', { name: /I’ve read this/ }))
     await user.click(screen.getByRole('checkbox', { name: 'Keep heart rate from my runs (optional)' }))
-    await user.click(screen.getByRole('button', { name: 'Finish signing up' }))
+    await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
     await waitFor(() => expect(saved).toHaveBeenCalled())
     expect(bodies[0]).toMatchObject({ heartRateConsent: true })

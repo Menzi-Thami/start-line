@@ -156,7 +156,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
       {signingUp && (
         <div className="notice">
           <h3>What we keep, and why</h3>
-          <PrivacyNoticeSummary />
+          <PrivacyNoticeSummary heartRateBelow={false} />
           <label className="session-done" style={{ color: 'var(--ink)' }}>
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
             I’ve read this and I’m happy for Taperday to keep this information.

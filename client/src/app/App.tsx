@@ -18,8 +18,6 @@ import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
 import { Runner as TaperdayRunner } from '../features/shared/Runner'
-import { ProgressStory } from '../features/coaching/ProgressStory'
-import { TrainingInsights } from '../features/coaching/TrainingInsights'
 import { ThemeToggle } from './ThemeToggle'
 import { ScrollProgress } from './ScrollProgress'
 import { ScreenRecovery } from './ScreenRecovery'
@@ -36,11 +34,9 @@ import { Hero, RaceTicker } from '../features/home/Hero'
 import { SignInLanding } from '../features/home/SignInLanding'
 import { BrandIntroGate } from '../features/home/BrandIntroGate'
 import { PlanView } from '../features/plan/PlanView'
-import { RunningJourney } from '../features/journey/RunningJourney'
-import { isLiveRecovery, isPostTrainingHome, planRunDays } from '../features/journey/journey-model'
+import { isLiveRecovery, isPostTrainingHome } from '../features/journey/journey-model'
 import { useJourney } from '../features/journey/useJourney'
 import { useToday } from '../lib/useToday'
-import { Replan } from '../features/plan/Replan'
 import { readStravaCallback, STRAVA_CALLBACK_PATH } from '../features/sync/strava-callback'
 import { StravaWelcome } from '../features/sync/StravaWelcome'
 import { beginStravaWelcome, finishStravaWelcome, hasStravaWelcome } from '../features/sync/strava-welcome'
@@ -51,7 +47,6 @@ import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/h
 import { localToday, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
 import { prefersMotion, type IntroAudience } from '../lib/motion'
-import { loadUnits, saveUnits } from '../lib/storage'
 import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
@@ -176,7 +171,6 @@ export function App() {
   const [stravaNotice, setStravaNotice] = useState<string | null>(null)
   // True from the moment Strava sends the runner back until the connection is saved, so Account says so meanwhile.
   const [stravaConnecting, setStravaConnecting] = useState(() => stravaCallback !== null && !stravaCallback.error && !!stravaCallback.code)
-  const [units, setUnits] = useState<Units>(loadUnits)
   const [races, setRaces] = useState<RacesState>({ kind: 'loading' })
   // A shared link starts building straight away, so it opens in the loading state.
   const [plan, setPlan] = useState<PlanState>(() => (initial ? { kind: 'loading' } : { kind: 'idle' }))
@@ -229,7 +223,7 @@ export function App() {
     const withDate = { ...inputs, planFrom: inputs.planFrom ?? localToday() }
     const query = toSearchParams(withDate)
     const navigation = new URLSearchParams(window.location.search)
-    for (const key of ['day', 'planTab', 'planWeek', 'month', 'progressWeeks']) {
+    for (const key of ['day', 'planTab', 'planWeek', 'month', 'progressWeeks', 'review']) {
       const value = navigation.get(key)
       if (value) query.set(key, value)
     }
@@ -333,6 +327,9 @@ export function App() {
   if (owner && snapshot?.owner !== owner) setSnapshot({ owner, copy: readSnapshot(owner) })
   const copy = owner && snapshot?.owner === owner ? snapshot.copy : null
   const ready = runner.state.kind === 'ready' ? runner.state.runner : null
+  // Units are an account setting (Account › profile). Signed out, or before the account loads, kilometres.
+  const profileUnits = ready?.units ?? copy?.runner?.units
+  const units: Units = profileUnits === 'Miles' ? 'mi' : 'km'
   useEffect(() => {
     if (owner && ready) saveSnapshot(owner, { runner: ready })
   }, [owner, ready])
@@ -692,6 +689,17 @@ export function App() {
     build(inputs)
   }
 
+  // The weekly review lives in Plan › Progress. Its reminder link (?view=home&review=1) still lands there, replacing the
+  // old Home entry so Back doesn't bounce through it.
+  const reviewLink = view === 'home' && new URLSearchParams(locationSearch).get('review') === '1' ? ownPlan?.inputs : undefined
+  useEffect(() => {
+    if (!reviewLink) return
+    window.history.replaceState(null, '', '?planTab=progress&review=1')
+    openSaved(reviewLink)
+    // openSaved is a plain function of this render; the link itself is what should trigger the move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewLink])
+
   // "Replan from here". A shared plan is rebuilt from its link alone; the runner's saved plan is rebuilt in their account
   // too, so it opens rebuilt on every device. Failures go back to the replan form, never to the builder.
   const replanWith = async (replan: ReplanInputs | undefined) => {
@@ -715,11 +723,6 @@ export function App() {
     setPlan({ kind: 'ready', plan: rebuilt, inputs: next })
     if (saved && token) currentPlan.refresh()
     window.scrollTo?.({ top: 0 })
-  }
-
-  const changeUnits = (next: Units) => {
-    setUnits(next)
-    saveUnits(next)
   }
 
   const state = runner.state
@@ -1193,22 +1196,6 @@ export function App() {
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}
                 plan={plan.plan}
                 reveal={revealPlan}
-                progressExtras={savedOnScreen && state.kind === 'ready' ? (
-                  <div className="progress-extras">
-                    <section className="progress-extra" aria-labelledby="progress-compare">
-                      <h3 id="progress-compare">Compared with before</h3>
-                      <ProgressStory planId={savedOnScreen} units={units} refreshKey={`${checkIns.entries.length}|${runs?.length ?? 0}`} />
-                    </section>
-                    <section className="progress-extra" aria-labelledby="progress-trends">
-                      <h3 id="progress-trends">Training trends</h3>
-                      <TrainingInsights planId={savedOnScreen} units={units} refreshKey={`${checkIns.entries.length}|${runs?.length ?? 0}`} />
-                    </section>
-                    <section className="progress-extra" aria-labelledby="progress-journey">
-                      <h3 id="progress-journey">Your running journey</h3>
-                      <RunningJourney units={units} today={today} runDays={planRunDays(plan.plan)} />
-                    </section>
-                  </div>
-                ) : undefined}
                 journeyPlanId={savedOnScreen && state.kind === 'ready' ? savedOnScreen : null}
                 onNewRace={startFresh}
                 onOpenJourney={() => openChapter()}
@@ -1217,7 +1204,6 @@ export function App() {
                 // The bar's Home does this job wherever the bar is shown.
                 onBack={state.kind === 'ready' && !showBar ? () => go('home') : undefined}
                 units={units}
-                onUnitsChange={changeUnits}
                 shareUrl={`${window.location.origin}${window.location.pathname}?${toSearchParams(plan.inputs)}`}
                 calendar={
                   savedOnScreen && calendarLink.token
@@ -1229,9 +1215,6 @@ export function App() {
                 runs={state.kind === 'ready' ? runs : undefined}
                 onLoadActivity={state.kind === 'ready' ? async (id) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to view your race recording.'); return api.me.activity(token, id) } : undefined}
                 bests={state.kind === 'ready' ? synced.bests : undefined}
-                strava={state.kind === 'ready' ? synced.strava : undefined}
-                onOpenAccount={state.kind === 'ready' ? () => go('account') : undefined}
-                onOpenRuns={state.kind === 'ready' ? () => go('runs') : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
                 coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, synced: stravaCompletions.get, save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
                   reviewRemaining: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your week.'); return api.me.reviewRemainingWeek(token, savedOnScreen) },
@@ -1253,15 +1236,7 @@ export function App() {
                 coachNotes={notes}
                 onInjuryReplan={() => replanWith({ from: today, setback: 'Injury' })}
                 onUseGoal={(goalSeconds) => build({ ...plan.inputs, goalSeconds })}
-                replan={
-                  <Replan
-                    plan={plan.plan}
-                    today={today}
-                    units={units}
-                    onReplan={replanWith}
-                    onUseGoal={(goalSeconds) => build({ ...plan.inputs, goalSeconds })}
-                  />
-                }
+                onReplan={replanWith}
                 toolbarExtra={
                   <>
                     <SavePlanButton

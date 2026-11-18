@@ -16,7 +16,7 @@ const noop = () => {}
 function SavedPlan({ runs }: { runs: ActivitySummary[] }) {
   const checkIns = useCheckIns(current.id)
   const synced = useSyncedCompletions(current.id, completionsKey(checkIns.entries, runs))
-  return <><CheckInLoadState {...checkIns} /><PlanView plan={planFixture} today={today} units="km" onUnitsChange={noop} shareUrl="https://example.test/plan" runs={runs}
+  return <><CheckInLoadState {...checkIns} /><PlanView plan={planFixture} today={today} units="km" shareUrl="https://example.test/plan" runs={runs}
     canCompleteRuns={checkIns.ready}
     coach={checkIns.ready ? { ...checkIns, synced: synced.get, today, units: 'km' } : undefined} /></>
 }

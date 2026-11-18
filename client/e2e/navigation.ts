@@ -16,7 +16,6 @@ export async function openDisclosure(page: Page, label: string | RegExp) {
   return summary.locator('..')
 }
 
-export const openPlanOptions = (page: Page) => openDisclosure(page, 'Plan options')
 export async function openHomeLibrary(page: Page, section: 'insights' | 'tools' | 'review' = 'insights') {
   const main = page.getByRole('navigation', { name: 'Main', exact: true })
   if (await main.count() && section !== 'review') {

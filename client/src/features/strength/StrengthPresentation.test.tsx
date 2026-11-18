@@ -35,7 +35,7 @@ describe('compact strength workouts', () => {
 
   it('keeps weekly plan exercises hidden until selected without hiding the workout identity', async () => {
     const user = userEvent.setup()
-    const { container } = render(<PlanView plan={planFixture} units="km" today="2026-10-18" shareUrl="https://example.test" onUnitsChange={() => {}} />)
+    const { container } = render(<PlanView plan={planFixture} units="km" today="2026-10-18" shareUrl="https://example.test" />)
     const week = screen.getByRole('tabpanel', { name: 'This week' })
     expect(within(week).getByText('Strength & mobility', { exact: true })).toBeVisible()
     within(week).getAllByRole('checkbox', { name: /Squat, set/ }).forEach(box => expect(box).not.toBeVisible())

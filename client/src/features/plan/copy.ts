@@ -1,4 +1,4 @@
-import type { DistanceCategory, PaceZone, TrainingPhase } from '../../lib/types'
+import type { PaceZone, TrainingPhase } from '../../lib/types'
 
 export const ZONES: Record<PaceZone, { name: string; note: string; colour: string }> = {
   Recovery: { name: 'Recovery', note: 'Slower than easy. Just loosening up after a hard day.', colour: 'var(--effort-recovery)' },
@@ -15,13 +15,4 @@ export const PHASES: Record<TrainingPhase, string> = {
   Peak: 'Peak',
   Taper: 'Taper',
   RaceWeek: 'Race week',
-}
-
-export const FOCUS: Record<DistanceCategory, string> = {
-  FiveK: 'Short intervals, hills and strides, with modest long runs.',
-  TenK: '1 km reps, tempo runs and goal-pace blocks.',
-  HalfMarathon: 'Tempo runs, cruise intervals and goal-pace work.',
-  Marathon: 'Cruise intervals, marathon-pace runs and long runs that rehearse race day.',
-  Ultra: 'Back-to-back weekends, long hills and eating on the run.',
-  LongUltra: 'Back-to-back weekends, long climbs and descents, and a patient build.',
 }

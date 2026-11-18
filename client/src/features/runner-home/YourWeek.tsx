@@ -15,6 +15,8 @@ interface Props {
   checkInFor?: CheckInFor
   /** Whether a held Strava run completes a session, while the runner hasn't answered. */
   syncedFor?: (session: Session) => boolean
+  /** What the coach's note may offer: a rebuild after an injury, or a faster goal after strong weeks. */
+  noteActions?: { onInjuryReplan?: () => Promise<void>; fasterGoal?: number; onUseGoal?: (goalSeconds: number) => void }
 }
 
 const day = (date: string) => formatDate(date, 'weekday')
@@ -86,7 +88,7 @@ function ThisWeek({ plan, week, units }: Pick<Props, 'plan' | 'week' | 'units'>)
  * The week on one card: the coach's call for it, how last week went and what this one asks for. Built from the
  * coached plan, the runner's own runs (uploads and, while they're kept, synced ones) and their check-ins.
  */
-export function YourWeek({ plan, week, coachNotes, today, units, runs, checkInFor, syncedFor }: Props) {
+export function YourWeek({ plan, week, coachNotes, today, units, runs, checkInFor, syncedFor, noteActions }: Props) {
   const note = coachNotes.find((n) => n.weekStart === week.startDate)
   const lastWeek = plan.weeks.find((w) => w.number === week.number - 1)
   return (
@@ -94,7 +96,7 @@ export function YourWeek({ plan, week, coachNotes, today, units, runs, checkInFo
       <h2 id="your-week" className="home-card-heading">
         Your week
       </h2>
-      {note && <CoachNote note={note} />}
+      {note && <CoachNote note={note} {...noteActions} />}
       {week.guidance && <p className="week-guidance">{week.guidance}</p>}
       <div className="your-week-grid">
         <section aria-labelledby="your-week-last">

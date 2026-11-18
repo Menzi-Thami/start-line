@@ -1,4 +1,4 @@
-import { closePlanDay, findPlanControl, openWeekDay, openDisclosure } from '../../test/user-navigation'
+import { closePlanDay, findPlanControl, openRebuild, openWeekDay, openDisclosure } from '../../test/user-navigation'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -444,7 +444,7 @@ describe('a signed-up runner', () => {
     expect(screen.getByRole('button', { name: /^Tuesday 13 October 2026:/ })).toHaveAccessibleName(/Completed/)
   })
 
-  it('opens on this week’s coach’s note', async () => {
+  it('opens the weekly review in Progress on this week’s coach’s note', async () => {
     // Tuesday of week 2, which the coach eased after week 1 felt too hard.
     vi.setSystemTime(new Date(2026, 9, 20, 7, 0))
     accountApi({
@@ -455,11 +455,24 @@ describe('a signed-up runner', () => {
       ],
     })
     window.history.replaceState(null, '', '/')
-    await openTheirPlan(renderWith(signedIn()))
+    const user = renderWith(signedIn())
+    await openTheirPlan(user)
+    await user.click(screen.getByRole('tab', { name: 'Progress' }))
 
     const note = await screen.findByRole('region', { name: 'Coach’s note' }, { timeout: 3000 })
     expect(within(note).getByRole('heading', { name: 'An easier week' })).toBeInTheDocument()
     expect(within(note).getByText('Several runs last week felt harder than they should.')).toBeInTheDocument()
+  })
+
+  it('shows their plan in the units from their account profile, with no switch on the plan', async () => {
+    accountApi({ runner: { ...thandi, units: 'Miles' }, plans: [current] })
+    window.history.replaceState(null, '', '/')
+    const user = renderWith(signedIn())
+    await openTheirPlan(user)
+
+    // A 5K is 3.1 miles.
+    expect(await screen.findByText('3.1 mi', { selector: '.plan-facts > li' })).toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup', { name: 'Units' })).not.toBeInTheDocument()
   })
 
   it('isn’t asked about runs on a plan that isn’t theirs', async () => {
@@ -478,7 +491,6 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
-    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
 
     await waitFor(() =>
@@ -495,7 +507,6 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await findPlanControl('Make this my plan')
 
-    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
 
     expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain('/api/v1/plans/calendar.ics?')
@@ -532,7 +543,6 @@ describe('a signed-up runner', () => {
     window.history.replaceState(null, '', '/')
     const user = renderWith(signedIn())
     await openTheirPlan(user)
-    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
     await waitFor(() => expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain(calendarToken))
 
@@ -546,7 +556,6 @@ describe('a signed-up runner', () => {
     expect(resets).toBe(1)
     window.history.back()
     await screen.findByRole('heading', { name: 'Parkrun PB' }, { timeout: 3000 })
-    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
     expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain(`/api/v1/calendar/${newCalendarToken}.ics`)
   })
@@ -581,8 +590,7 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
-    await openDisclosure('Plan options')
-    await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
+    await openRebuild()
     await user.click(screen.getByRole('radio', { name: /I was ill/ }))
     await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
 

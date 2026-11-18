@@ -13,7 +13,7 @@ afterEach(() => vi.restoreAllMocks())
 it.each([undefined, 'week', 'all', 'progress'] as const)('leads a completed plan with the saved race and retains access to the training plan (%s)', async openTab => {
   const result = raceResult({ raceDate: planFixture.race.date })
   vi.spyOn(api.me.journey, 'get').mockResolvedValue(journeyOf([chapter({ raceName: planFixture.race.name, raceDate: planFixture.race.date, raceResult: result })]))
-  render(<AuthContext.Provider value={auth}><PlanView plan={planFixture} today={planFixture.race.date} units="km" onUnitsChange={vi.fn()} shareUrl="https://example.test/plan" journeyPlanId={PLAN_ID} onEditPlan={vi.fn()} openTab={openTab ? { id: openTab, seq: 1 } : undefined} /></AuthContext.Provider>)
+  render(<AuthContext.Provider value={auth}><PlanView plan={planFixture} today={planFixture.race.date} units="km" shareUrl="https://example.test/plan" journeyPlanId={PLAN_ID} onEditPlan={vi.fn()} openTab={openTab ? { id: openTab, seq: 1 } : undefined} /></AuthContext.Provider>)
   expect(await screen.findByRole('heading', { name: 'Finished in 1:52:10' })).toBeVisible()
   const expanded = openTab === 'all' || openTab === 'progress'
   const button = screen.getByRole('button', { name: expanded ? 'Hide training plan' : 'View training plan' })

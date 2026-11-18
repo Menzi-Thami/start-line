@@ -1,4 +1,4 @@
-import { formatDate, formatDistance, type Units } from '../../lib/format'
+import { formatDate } from '../../lib/format'
 import { plannedRuns, ranKmByWeek, runsByDate, weekEnd } from '../../lib/plan-runs'
 import type { ActivitySummary, CheckIn, PlanWeek, Session, SessionType, TrainingPlan } from '../../lib/types'
 import { KEY_SESSIONS } from '../dashboard/dashboard-math'
@@ -133,16 +133,6 @@ export const FEEL_WORDS: Record<Feel, string> = {
   harder: 'Hard sessions felt harder than they should',
   right: 'Hard sessions felt about right',
   easier: 'Hard sessions felt easier than they should',
-}
-
-/** A week's review in one short line, for the plan's week list: "Ran 4 of 5 runs · 38 of 42 km · Hard sessions felt about right". */
-export function reviewLine(review: WeekReview, units: Units): string {
-  const parts = [
-    review.dueRuns > 0 ? `Ran ${review.doneRuns} of ${review.dueRuns} ${review.dueRuns === 1 ? 'run' : 'runs'}` : null,
-    `${formatDistance(review.ranKm, units).split(' ')[0]} of ${formatDistance(review.plannedKm, units)}`,
-    review.feel ? FEEL_WORDS[review.feel] : null,
-  ]
-  return parts.filter(Boolean).join(' · ')
 }
 
 /** "Tempo run, Thursday 22 October". */

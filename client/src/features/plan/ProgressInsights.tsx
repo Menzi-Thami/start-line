@@ -2,7 +2,6 @@ import './training-status.css'
 import { useId, useState, type ReactNode } from 'react'
 import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
 import type { ActivitySummary, PersonalBest, PlanWeek } from '../../lib/types'
-import { milestonesFromRuns } from '../milestones/milestones'
 import { VolumeChart } from './VolumeChart'
 import type { dayStatus } from './training-status'
 import { calendarDaysEnding, comparablePaceGroups, progressDistanceTotals, volumeWeeksInPeriod } from './progress-evidence'
@@ -10,7 +9,7 @@ import './progress-insights.css'
 
 /**
  * Progress, simply: how far you ran against the plan, as two totals and one weekly chart. Everything else (your days, easy-run
- * pace, milestones and whatever the caller passes as `more`) waits behind one "More detail" row.
+ * pace, personal bests and whatever the caller passes as `more`) waits behind one "More detail" row.
  */
 export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, statusFor, onOpenDate, bests = [], onOpenRun, more }: {
   weeks: PlanWeek[]; units: Units; currentWeek: number | null; ran?: ReadonlyMap<number, number>; runs?: readonly ActivitySummary[]; today: string
@@ -34,7 +33,6 @@ export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, 
   const x = (index: number) => 25 + index * 550 / Math.max(1, points.length - 1)
   const y = (pace: number) => 20 + (pace - minimum) * 140 / (maximum - minimum)
   const visibleWeeks = volumeWeeksInPeriod(weeks, today, period)
-  const milestones = milestonesFromRuns(runs ?? [])
   const totals = progressDistanceTotals(visibleWeeks, ran, today)
   // The calendar runs Monday to Sunday: the first date starts in its own weekday's column.
   const firstColumn = (new Date(`${days[0]}T12:00:00Z`).getUTCDay() + 6) % 7 + 1
@@ -64,7 +62,7 @@ export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, 
     </section>
 
     <details className="disclosure progress-more" open={moreOpen} onToggle={event => setMoreOpen(event.currentTarget.open)}>
-    <summary>More detail <span className="field-help">Your days, easy-run pace, milestones, paces and every week</span></summary>
+    <summary>More detail <span className="field-help">Your days, easy-run pace, personal bests and training paces</span></summary>
     <section className="panel" aria-labelledby={`${id}-consistency`}><h3 id={`${id}-consistency`}>Your days</h3>
       <p className="field-help">Tap a day to see what was planned and what you ran.</p>
       <div className="consistency-weekdays" aria-hidden="true">{['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => <span key={index}>{day}</span>)}</div>
@@ -95,7 +93,6 @@ export function ProgressInsights({ weeks, units, currentWeek, ran, runs, today, 
         <details><summary>Pace table</summary><table><thead><tr><th>Date</th><th>Distance</th><th>Pace</th></tr></thead><tbody>{points.map(run => <tr key={run.id}><th scope="row">{formatDate(run.localDate)}</th><td>{formatDistance(run.distanceKm, units)}</td><td>{formatPace(run.paceSecondsPerKm, units)}</td></tr>)}</tbody></table></details>
       </> : <p>No easy runs with a pace in these weeks yet.</p>}
     </section>
-    <section aria-label="Running milestones"><h3>Milestones</h3><div className="progress-milestones">{milestones.length ? milestones.map(item => <article className="panel" key={item.id}><h4>{item.title}</h4><strong>{item.unit === 'km' ? formatDistance(item.value, units) : `${item.value} weeks`}</strong><p>{item.detail}</p></article>) : <p>Add a run and your milestones start here.</p>}</div></section>
     {bests.length > 0 && <section aria-label="Personal best records"><h3>Personal bests</h3><ul className="progress-personal-bests">{bests.filter(best => [1000, 5000, 10000, 21097.5, 42195].includes(best.distanceMetres)).map(best => <li key={`${best.distanceMetres}-${best.activityId}`}>{best.name} · {formatDuration(best.seconds)} · {formatDate(best.localDate)} · {best.source}{onOpenRun && <button type="button" className="link-button" onClick={() => onOpenRun(best.activityId)}>View record run</button>}</li>)}</ul></section>}
     {more}
     </details>

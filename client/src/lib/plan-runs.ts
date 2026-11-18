@@ -52,9 +52,6 @@ export function ranKmByWeek(weeks: readonly PlanWeek[], runs: readonly ActivityS
   return ran
 }
 
-/** More than a fifth over the planned distance: worth a calm word, nothing more. */
-export const wellOverPlan = (plannedKm: number, ranKm: number) => plannedKm > 0 && ranKm > plannedKm * 1.2
-
 /** Logged history is independent of whether the current schedule still contains that prescription. */
 export const outsideSchedule = (entry: CheckIn, sessions: readonly Session[]) => entry.status !== 'Skipped' &&
   (entry.isAdditional || !sessions.some(session => session.date === entry.date && session.type === entry.sessionType))

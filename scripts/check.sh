@@ -28,6 +28,8 @@ step 'Staging integration readiness: synthetic configuration tests'
 node --test ../scripts/staging-integration-readiness.test.mjs
 step 'Client: install'
 npm ci --silent
+step 'Client: dependency security regressions'
+npm run -s test:security
 step 'Client: lint'
 npm run -s lint
 step 'Client: typecheck'

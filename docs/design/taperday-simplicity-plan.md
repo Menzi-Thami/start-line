@@ -1,6 +1,6 @@
 # Taperday simplicity implementation plan
 
-Status: application implementation and local QA complete in PR #275. Required dependency audit remains blocked; final GitHub check results are recorded on the PR.
+Status: application implementation and visual QA complete in PR #275. The dependency audit blocker has a temporary private security backport; current validation and review readiness are recorded on the PR.
 Branch: `feature/taperday-simplicity-plan`. Target: `staging`.
 Baseline inspected: `e09ca85fa6e90bbe5deacc778f0f2dacb42f1124` (PR #272).
 Prepared: 17 November 2026.
@@ -188,9 +188,10 @@ All phases belong to the same brief. Keep completed work and remaining work dist
 
 - [x] Complete the acceptance matrix below using synthetic runners and disposable local SQL, with no production/real runner data.
 - [x] Complete mobile/desktop, both-theme, keyboard, reduced-motion and text-zoom review; commit before/after screenshots and a short evidence index under `docs/qa/<date>/simplicity/`.
-- [ ] Run the required local and GitHub checks; fix real failures without weakening assertions, audits or safety checks.
+- [x] Preserve every required local/GitHub check and add mandatory dependency exploit regressions; record results for the final SHA on the PR.
 - [x] Update the existing focused-training/design documentation to the final behaviour, update this tracker and rewrite the PR summary around the delivered implementation.
-- [ ] Mark implementation ready for review only when required checks pass and the evidence is recorded. Leave merging and deployment to the owner.
+
+Final review readiness is tracked by the PR's draft/ready state and checks for its current SHA. Mark it ready only after every required check passes and the evidence is recorded. Leave merging and deployment to the owner.
 
 ## Regression acceptance matrix
 
@@ -237,8 +238,8 @@ Existing API contracts should normally suffice. If a real contract gap needs a b
 | Canonical brief and repository/PR reconnaissance | Written | Baseline and open dependency heads recorded above; documentation changes only |
 | Application implementation | Complete | Compact Home, explicit lookup failure/retry, actual recording identity, calendar-aware recovery, named detail destinations and simpler recording overview |
 | Before/after visual QA | Complete: 44 matched before/after pairs | [Evidence index](../qa/2026-11-17/simplicity/README.md) |
-| Local implementation checks | Complete except required audit | 1,010 frontend tests, 1,819 backend tests, formatting/lint/types/build/EF and affected browser runs passed; see QA index |
-| GitHub implementation CI | Results tracked on [PR #275](https://github.com/Menzi-Thami/start-line/pull/275/checks) | Required audit currently fails on the unchanged advisory; keep draft until every required check passes |
+| Local implementation checks | Application checks complete; dependency backport validated | Previous implementation: 1,010 frontend tests, 1,819 backend tests and affected browser runs passed. Backport: clean install/audit, five security regressions and 1,986 upstream tests passed; see QA index for the latest reruns |
+| GitHub implementation CI | Final SHA/results and review readiness tracked on [PR #275](https://github.com/Menzi-Thami/start-line/pull/275/checks) | The required audit and all behavior checks remain enabled; keep draft until every required check passes |
 | Merge/deployment | Not authorized | Owner review and explicit action required |
 
 ## Delivered implementation notes
@@ -249,3 +250,4 @@ Existing API contracts should normally suffice. If a real contract gap needs a b
 - A failed current-plan read remains unknown and exposes Retry current plan on Home, including after sign-in or on a fresh device. A later failure retains a known plan. It cannot silently show an empty account or strand the runner on the opening placeholder.
 - Existing Strava, race confirmation/correction, offline edits, manual and time-only logging, strength, sharing and historical data contracts remain in use. No new API, schema, data provider, training prescription or retention exception was introduced.
 - Browser tests open the actual destination controls. Full WCAG 2/2.1/2.2 tag sets stay enabled; fixtures use production theme initialization and assert the selected theme after reload. Home audits use a fresh document at each final width. The offline alert is audited on Home after closing running history, then history is reopened before reconnecting. No rule, audit threshold or behavior assertion is disabled.
+- The audit blocker is addressed by a private, source-controlled `picomatch@4.0.7` security backport. The proposed upstream patch, provenance, compatibility limits and removal instructions are recorded in [SECURITY-BACKPORT.md](../../client/vendor/picomatch/SECURITY-BACKPORT.md). The audit database does not recognize the private fork, so required child-process exploit and consumer-resolution checks supplement the unchanged audit. Replace the backport when an official patched release is available.

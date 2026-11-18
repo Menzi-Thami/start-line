@@ -51,6 +51,16 @@ Local WebKit used a task-owned Debian `libGLESv2.so.2` matching the installed GL
 
 ## Limits and readiness
 
-The unchanged required audit reports [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) through latest `picomatch@4.0.7`, rechecked during implementation. The audit threshold stays intact. The PR remains draft while any required check fails.
+### 18 November dependency security follow-up
+
+The registry still had no official patched release for [GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf). All build/test consumers now resolve a private backport from the original MIT-licensed `picomatch@4.0.7` distribution, using the parser fix proposed in upstream PR #262 at `3222059ac27492d9c0147fee5c65f751bbd851ab`. Source, licence, complete patch and removal instructions are committed in [the backport directory](../../../../client/vendor/picomatch/SECURITY-BACKPORT.md).
+
+- Verified the original npm distribution's SHA-512. Its `+(*a)` near-miss blocked and was killed at the external two-second deadline; the patched dependency completes promptly.
+- The original 4.0.7 upstream suite plus the three proposed security regressions passed: **1,986 tests**, with existing assertions unchanged.
+- Clean `npm ci`, **five required dependency security tests** and the unchanged `npm audit --audit-level=high` passed; the audit reports **zero vulnerabilities**. All four transitive build/test consumers resolve the same backport.
+- The dependency regressions cover ordinary file discovery, literal wildcards, existing alternative matches, POSIX, Windows/bash/capture options, nested/alternative attack shapes, bracket parsing and case folding. Matching runs in child processes that can be killed independently of a blocked regex event loop.
+- Latest frontend/backend/browser reruns and final GitHub check results for this change are recorded on [PR #275](https://github.com/Menzi-Thami/start-line/pull/275). Keep the PR draft while required checks are pending or failing.
+
+This is a **proposed upstream patch, not an official release or upstream approval**. The advisory database does not recognize the private fork; the clean audit alone is not proof of the fix. The required exploit checks supplement it. The patch retains upstream's explicit safety opt-out and literalizes unsupported unsafe forms; this is not a general guarantee for arbitrary regex syntax. Replace it with an official patched release when available, retaining the security regressions. No advisory, threshold, existing assertion or WCAG rule is suppressed.
 
 Device profiles and text-size simulation do not establish physical-device native sharing, live Strava delivery or Azure/Entra cold-start reliability. The integrated automatic warm-up improves real waiting feedback and does not promise that hosting cold starts are removed. No hosting, billing, provider retention or schema change is included. Nothing is merged or deployed.

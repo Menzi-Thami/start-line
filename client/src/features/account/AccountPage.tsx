@@ -3,7 +3,6 @@ import { useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { Runner } from '../../lib/types'
-import { loadUnits } from '../../lib/storage'
 import { RunDataPanel } from '../activities/RunDataPanel'
 import { InstallSection } from '../install/InstallApp'
 import { RemindersSection } from '../reminders/Reminders'
@@ -148,7 +147,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       </section>
       <section className="account-group" aria-labelledby="account-group-data">
       <h3 className="account-group-title" id="account-group-data">Your data</h3>
-      <RunDataPanel units={loadUnits()} />
+      <RunDataPanel units={runner.units === 'Miles' ? 'mi' : 'km'} />
       <details className="settings-group"><summary>Data & privacy</summary>
       <div className="section">
         <h3>Your data</h3>

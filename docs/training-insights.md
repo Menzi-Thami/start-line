@@ -1,6 +1,6 @@
 # Training insights (#140)
 
-**Where it lives:** Plan › Progress › More detail › **Training trends**. The weekly coaching review in Plan › Progress has a **Decline this change** button next to Apply.
+**Where it lives:** nowhere in the app at the moment. The Runs simplification removed the Home running-details page that showed it, and the Plan simplification (#277) left it out of Plan › Progress. The API endpoint and the `TrainingInsights` component (with its unit tests) remain, unrendered, for an owner decision. The weekly review in Plan › Progress still offers **Decline this change** next to Apply.
 
 ## What a runner sees
 

@@ -18,7 +18,7 @@ const records = [{ ...run, source: run.source } as ActivitySummary, ...(new URLS
 export function Fixture() {
   const [analysis, setAnalysis] = useState(false)
   return <AuthContext.Provider value={accountsOff}><div style={{ maxWidth: 1200, margin: '0 auto', padding: 16 }}>
-    {analysis ? <ActivityPage id={run.id} initial={run} units="km" onBack={() => setAnalysis(false)} onDeleted={() => setAnalysis(false)} /> : <PlanView plan={plan as TrainingPlan} today="2026-10-14" units="km" onUnitsChange={() => {}} shareUrl="https://example.test" runs={records} onOpenRun={() => setAnalysis(true)} />}
+    {analysis ? <ActivityPage id={run.id} initial={run} units="km" onBack={() => setAnalysis(false)} onDeleted={() => setAnalysis(false)} /> : <PlanView plan={plan as TrainingPlan} today="2026-10-14" units="km" shareUrl="https://example.test" runs={records} onOpenRun={() => setAnalysis(true)} />}
   </div></AuthContext.Provider>
 }
 createRoot(document.getElementById('root')!).render(<Fixture />)

@@ -1,6 +1,6 @@
 # Life happens (#142)
 
-**Where it lives:** Plan › **Life happens · change of plans?** on the runner's saved plan. It replaces the static advice from the earlier starter.
+**Where it lives:** Plan › **Change my plan** on the runner's saved plan (This week and Calendar), beside an easier rest of the week ("Week off track") and "Rebuild from today". Moving a single run, and swapping two, live on the run's own day and by drag and drop. Since 18 November 2026 the form offers Missed a run, Short on time, Travelling and Feeling unwell; "Move my long run" is done by moving the long run from its day.
 
 | Situation | What it proposes |
 |---|---|

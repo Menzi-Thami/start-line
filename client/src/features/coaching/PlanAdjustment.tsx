@@ -3,7 +3,7 @@ import { formatDate, formatDistance, formatPaceRange, type Units } from '../../l
 import type { CoachingProposal, RecoveryReadiness, TrainingPlan } from '../../lib/types'
 import { ZONES } from '../plan/copy'
 import { CoachNote } from './CoachNote'
-import { RemainingWeekAdjustment, type RemainingWeekActions } from './RemainingWeekAdjustment'
+import type { RemainingWeekActions } from './RemainingWeekAdjustment'
 import type { LifeHappensActions } from '../plan/LifeHappens'
 
 export interface AdjustmentActions extends Partial<RemainingWeekActions> {
@@ -48,18 +48,8 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
   }
   return (
     <section className="plan-adjustment" aria-label="Review upcoming training">
-      {actions.reviewRemaining && actions.applyRemaining && (
-        <RemainingWeekAdjustment
-          current={current}
-          units={units}
-          actions={{ reviewRemaining: actions.reviewRemaining, applyRemaining: actions.applyRemaining }}
-        />
-      )}
-      <h3>Weekly review</h3>
-      <p>
-        On Sunday, review this week for next Monday. From Monday, review the week just finished. Changes are applied only after you review
-        them.
-      </p>
+      <h3>Should next week change?</h3>
+      <p>Review how your week went. Nothing changes until you apply it.</p>
       <div className="field">
         <label className="field-label" htmlFor={recoveryId}>
           How recovered do you feel for the week ahead?
@@ -81,9 +71,6 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
           <option value="Unwell">Unwell or not ready to train</option>
         </select>
       </div>
-      <p className="field-help">
-        Your completed runs and original workouts stay in your plan. Review coaching before changing upcoming training.
-      </p>
       {!proposal ? (
         <button
           type="button"
@@ -91,7 +78,7 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
           disabled={busy}
           onClick={() => void run(async () => setProposal(await actions.review(recovery)))}
         >
-          {busy ? 'Reviewing…' : 'Review training adjustments'}
+          {busy ? 'Reviewing…' : 'Review my week'}
         </button>
       ) : (
         <>
@@ -126,15 +113,14 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
                 </p>
               )}
               <p className="field-help">
-                Lasting coaching uses your entries and uploaded files. Progression needs three strong weeks, complete logs and a positive
-                recovery check. One demand increases at a time; recovery and taper weeks are protected.
+                The plan only steps up after three strong, fully logged weeks, and never in an easier or taper week.
               </p>
             </div>
           )}
           <p>
             {proposal.hasChanges
               ? 'This is a preview. Your plan has not changed.'
-              : 'Your plan stays as it is. Weekly suggestions need enough completed training and cannot rewrite past workouts. Use Replan from here to rebuild future weeks.'}
+              : 'Your plan stays as it is. To rebuild future weeks, use Change my plan.'}
           </p>
           {proposal.canApply && proposal.proposed.coaching?.at(-1) && <CoachNote note={proposal.proposed.coaching.at(-1)!} preview />}
           {proposal.hasChanges && (

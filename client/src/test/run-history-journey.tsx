@@ -8,8 +8,6 @@ import { useCheckIns } from '../features/coaching/useCheckIns'
 import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { RunningTotals } from '../features/activities/RunningTotals'
-import { ProgressStory } from '../features/coaching/ProgressStory'
-import { TrainingInsights } from '../features/coaching/TrainingInsights'
 import { current, today } from './run-history-data'
 
 const planFixture = plan as TrainingPlan
@@ -19,12 +17,8 @@ const noop = () => {}
 function SavedPlan({ runs }: { runs: ActivitySummary[] }) {
   const checkIns = useCheckIns(current.id)
   const synced = useSyncedCompletions(current.id, completionsKey(checkIns.entries, runs))
-  return <><CheckInLoadState {...checkIns} /><PlanView plan={planFixture} today={today} units="km" onUnitsChange={noop} shareUrl="https://example.test/plan" runs={runs}
+  return <><CheckInLoadState {...checkIns} /><PlanView plan={planFixture} today={today} units="km" shareUrl="https://example.test/plan" runs={runs}
     canCompleteRuns={checkIns.ready}
-    progressExtras={<div className="progress-extras">
-      <section className="progress-extra" aria-labelledby="progress-compare"><h3 id="progress-compare">Compared with before</h3><ProgressStory planId={current.id} units="km" refreshKey={`${checkIns.entries.length}|${runs.length}`} /></section>
-      <section className="progress-extra" aria-labelledby="progress-trends"><h3 id="progress-trends">Training trends</h3><TrainingInsights planId={current.id} units="km" refreshKey={`${checkIns.entries.length}|${runs.length}`} /></section>
-    </div>}
     coach={checkIns.ready ? { ...checkIns, synced: synced.get, today, units: 'km' } : undefined} /></>
 }
 

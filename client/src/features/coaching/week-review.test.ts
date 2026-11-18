@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ActivitySummary, CheckIn, Session } from '../../lib/types'
 import { planFixture } from '../../test/server'
-import { reviewLine, reviewWeek, weekAhead, type CheckInFor } from './week-review'
+import { reviewWeek, weekAhead, type CheckInFor } from './week-review'
 
 // The fixture is a 5K plan: week 1 from Monday 12 October (hills Tue, easy+strides Thu, easy Sat, long run 6 km Sun),
 // week 2 from 19 October (17.5 km then 23.5 km), week 4 a cutback, week 9 race week with the race on 13 December.
@@ -31,7 +31,6 @@ describe('reviewWeek', () => {
 
     expect(review).toMatchObject({ dueRuns: 4, doneRuns: 4, plannedKm: 17.5, ranKm: 18.1, missed: [], finished: true, feel: null, checkedIn: 0 })
     expect(review.longRun).toMatchObject({ done: true, ranKm: 6.4 })
-    expect(reviewLine(review, 'km')).toBe('Ran 4 of 4 runs · 18.1 of 17.5 km')
   })
 
   it('names the runs that were missed, and a missed long run', () => {
@@ -50,7 +49,6 @@ describe('reviewWeek', () => {
     const harder = reviewWeek(week(1), runs, '2026-10-20', checkIns(checkIn('2026-10-13', 'Hills', { effort: 9 })))
     expect(harder.feel).toBe('harder')
     expect(harder.checkedIn).toBe(1)
-    expect(reviewLine(harder, 'km')).toContain('Hard sessions felt harder than they should')
 
     const easier = reviewWeek(week(1), runs, '2026-10-20', checkIns(checkIn('2026-10-13', 'Hills', { effort: 5 })))
     expect(easier.feel).toBe('easier')

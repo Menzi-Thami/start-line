@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../../lib/api-client'
 import type { TrainingPlan } from '../../lib/types'
 import { planFixture } from '../../test/server'
-import { Replan } from './Replan'
+import { ChangePlan } from './ChangePlan'
 
 // The fixture plan runs from Monday 12 October to a 5K on Sunday 13 December.
 const IN_THE_PLAN = '2026-10-21'
@@ -13,21 +13,24 @@ const setup = (overrides: Partial<TrainingPlan> = {}, today = IN_THE_PLAN, units
   const onReplan = vi.fn<(replan: unknown) => Promise<void>>().mockResolvedValue(undefined)
   const onUseGoal = vi.fn()
   const user = userEvent.setup()
-  render(<Replan plan={{ ...planFixture, ...overrides }} today={today} units={units} onReplan={onReplan} onUseGoal={onUseGoal} />)
+  render(<ChangePlan plan={{ ...planFixture, ...overrides }} today={today} units={units} onReplan={onReplan} onUseGoal={onUseGoal} />)
   return { user, onReplan, onUseGoal }
 }
 
-const open = (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole('button', { name: 'Fell behind? Replan from here' }))
+const open = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByText('Change my plan', { selector: 'summary' }))
+  await user.click(screen.getByRole('button', { name: 'Rebuild from today' }))
+}
 const rebuild = () => screen.getByRole('button', { name: 'Rebuild my plan' })
 
-describe('replan from here', () => {
+describe('rebuild from today, in Change my plan', () => {
   it.each([
     ['before the plan starts', '2026-10-08'],
     ['within two weeks of the race', '2026-11-30'],
   ])('isn’t offered %s', (_, today) => {
     setup({}, today)
 
-    expect(screen.queryByRole('button', { name: /Replan from here/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Rebuild from today' })).not.toBeInTheDocument()
   })
 
   it('rebuilds from today after the setback the runner picks', async () => {

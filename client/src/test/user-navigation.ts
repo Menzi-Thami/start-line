@@ -12,9 +12,17 @@ export async function openDisclosure(label: string | RegExp) {
   return summary.closest('details')!
 }
 
+/** The plan's tools row (Share link, Add to calendar, Export to watch, Save or Delete) is always in view. */
 export async function findPlanControl(name: string) {
-  await openDisclosure('Plan options')
+  await closePlanDay()
   return screen.findByRole('button', { name }, { timeout: 10000 })
+}
+
+/** "Change my plan" › Rebuild from today: the one door for every change to the plan. */
+export async function openRebuild() {
+  await closePlanDay()
+  await openDisclosure('Change my plan')
+  await userEvent.setup().click(await screen.findByRole('button', { name: 'Rebuild from today' }))
 }
 
 export async function openStrengthWorkouts() {

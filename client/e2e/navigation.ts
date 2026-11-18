@@ -15,7 +15,6 @@ export async function openDisclosure(page: Page, label: string | RegExp) {
   return summary.locator('..')
 }
 
-export const openPlanOptions = (page: Page) => openDisclosure(page, 'Plan options')
 export async function openStrengthWorkouts(page: Page) {
   await page.getByRole('tab', { name: 'This week', exact: true }).click()
   return openDisclosure(page, 'Strength workouts')

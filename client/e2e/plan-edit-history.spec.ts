@@ -76,7 +76,7 @@ for (const mode of ['manual', 'time-only', 'tick', 'strava']) {
     await days.getByRole('checkbox', { name: 'Wednesday', exact: true }).uncheck()
     await days.getByRole('checkbox', { name: 'Thursday', exact: true }).check()
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
-    await page.getByText('More options', { exact: true }).click()
+    await openDisclosure(page, 'More options')
     await page.getByRole('group', { name: 'Strength and mobility days', exact: true }).getByRole('checkbox', { name: 'Monday', exact: true }).check()
     failSave = true
     await page.getByRole('button', { name: 'Build my plan', exact: true }).click()

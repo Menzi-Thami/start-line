@@ -19,7 +19,7 @@ Home has no nested Today/Tools navigation or repeated weekly workout list. Legac
 ## Interaction rules
 
 - Five main destinations: Home, Plan, Runs, Journey, Account. Journey remains available without a plan; Plan has This week, Calendar and Progress.
-- Every plan lights Plan in the bar and rail: a training plan, the signed-in builder, Couch to 5K and a recovery or easy-running plan. Plan is shown whenever one of these is open, so the highlight never points at a missing item. Recovery lights Plan even when opened from Journey; tapping Plan from Couch to 5K opens the runner's race plan when they have one.
+- Every plan lights Plan in the bar and rail: a training plan, the builder while changing it, Couch to 5K and a recovery or easy-running plan. Plan is shown whenever one of these is open, so the highlight never points at a missing item. Recovery lights Plan even when opened from Journey; tapping Plan from Couch to 5K opens the runner's race plan when they have one.
 - Keep the prescription separate from what happened. Imported activity does not silently complete training; saved logs, source availability, unknown measurements and failures retain their existing meaning.
 - Week and calendar select a compact day preview. Open day details navigates to one canonical screen, preserving the existing logging and strength controls. The day URL supports Back/Forward and refresh.
 - The dedicated day screen remains open during outside actions; Back/Close/Escape returns to the schedule.

@@ -790,7 +790,7 @@ export function App() {
   // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
   // Strength is part of Plan, so training always has one navigation destination.
   const onPlan = view === 'build' && plan.kind === 'ready' && !editing
-  // Every plan lights Plan: a training plan, the builder while signed in, Couch to 5K and a recovery or easy-running plan.
+  // Every plan lights Plan: a training plan, the builder while changing it, Couch to 5K and a recovery or easy-running plan.
   // The bar shows Plan whenever one of these is on screen, so the highlight never points at a missing item. Recovery is
   // also reachable from Journey, but it is a plan, so it lights Plan wherever it was opened from.
   const barCurrent: TabBarItem | null =

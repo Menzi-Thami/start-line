@@ -267,3 +267,35 @@ test('Strava setup stays concise with app and watch instructions closed by defau
     }
   }
 })
+
+// TEMPORARY diagnostic for the Firefox audit crash; removed once the cause is known.
+test('diagnose Firefox audit crash on Add runs @phone', async ({ context, browserName }) => {
+  test.skip(browserName !== 'firefox', 'Firefox only')
+  const variants: [string, (builder: AxeBuilder) => AxeBuilder][] = [
+    ['all', b => b],
+    ['no target-size', b => b.disableRules(['target-size'])],
+    ['exclude upload', b => b.exclude('.add-runs-sheet .upload')],
+    ['exclude phone-runs', b => b.exclude('.add-runs-sheet .phone-runs')],
+    ['exclude file label', b => b.exclude('.add-runs-sheet label.button')],
+    ['exclude export help', b => b.exclude('.export-help')],
+    ['exclude runs-tools', b => b.exclude('.runs-tools')],
+    ['exclude sheet', b => b.exclude('.add-runs-sheet')],
+    ['sheet closed', b => b],
+  ]
+  for (const [name, configure] of variants) {
+    const page = await context.newPage()
+    try {
+      await mockApi(page)
+      await page.setViewportSize({ width: 375, height: 900 })
+      await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
+      if (name !== 'sheet closed') await page.getByRole('button', { name: 'Add runs', exact: true }).click()
+      else await page.getByRole('button', { name: 'Add runs', exact: true }).waitFor()
+      await configure(new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])).analyze()
+      console.log(`FIREFOX-DIAG ${name}: ok`)
+    } catch (error) {
+      console.log(`FIREFOX-DIAG ${name}: ${(error as Error).message.split('\n')[0]}`)
+    } finally {
+      await page.close().catch(() => undefined)
+    }
+  }
+})

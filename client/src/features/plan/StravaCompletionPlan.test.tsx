@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ActivitySummary, CheckIn, CheckInRequest, Session, SyncedCompletion, TrainingPlan } from '../../lib/types'
 import plan5k from '../../test/fixtures/plan-5k.json'
-import { closePlanDay, openDisclosure, openWeekDay } from '../../test/user-navigation'
+import { closePlanDay, openWeekDay } from '../../test/user-navigation'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { PlanView } from './PlanView'
 
@@ -39,14 +39,14 @@ function coachWith(completions: SyncedCompletion[], initial: CheckIn[] = []) {
     remove: vi.fn(),
   })
   let rerender = () => {}
-  const view = () => <PlanView plan={plan} units="km" onUnitsChange={() => {}} shareUrl="https://taperday.run/?x" today="2026-10-18" runs={[stravaRun]} coach={coach()} />
+  const view = () => <PlanView plan={plan} units="km" shareUrl="https://taperday.run/?x" today="2026-10-18" runs={[stravaRun]} coach={coach()} />
   const rendered = render(view())
   rerender = () => rendered.rerender(view())
   return { saves }
 }
 
 describe('a plan session completed via Strava', () => {
-  it('shows done on the week, the calendar and the week’s count, with provenance and the longer-run words', async () => {
+  it('shows done on the week and the calendar, with provenance and the longer-run words', async () => {
     coachWith([hills])
 
     expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026:.*Hill repeats.*Recorded via Strava/ })).toBeInTheDocument()
@@ -57,9 +57,8 @@ describe('a plan session completed via Strava', () => {
     await closePlanDay()
     await userEvent.click(screen.getByRole('tab', { name: 'Calendar' }))
     expect(screen.getByRole('button', { name: /^13 [A-Za-z]+: Hill repeats, recorded via strava/ })).toBeInTheDocument()
-
-    const schedule = await openDisclosure('Full training schedule')
-    expect(within(schedule).getByText(/· 1 of \d+ done/)).toBeInTheDocument()
+    // Two ways to browse weeks: This week and Calendar. No third, full-schedule list.
+    expect(screen.queryByText('Full training schedule', { selector: 'summary' })).not.toBeInTheDocument()
   })
 
   it('keeps the tick with one tap, which makes it the runner’s own', async () => {

@@ -1,4 +1,4 @@
-import { openTrainingGuide, openStrengthWorkouts, openDisclosure, openWeekDay } from '../test/user-navigation'
+import { openTrainingGuide, openStrengthWorkouts, openRebuild, openWeekDay } from '../test/user-navigation'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -427,6 +427,8 @@ describe('building a plan', () => {
     await answerEverything(user)
 
     await buildIt(user)
+    // Progress is the one place for the outlook.
+    await user.click(await screen.findByRole('tab', { name: 'Progress' }))
 
     expect(await screen.findByRole('region', { name: 'Your goal is at risk' })).toBeInTheDocument()
     expect(screen.getByText('Your 10 km in 50:00 points to about 12:10:00 for this race today.')).toBeInTheDocument()
@@ -509,8 +511,7 @@ describe('a shared plan', () => {
     window.history.replaceState(null, '', `/${link}`)
     const { user } = setup()
 
-    await openDisclosure('Plan options')
-    await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
+    await openRebuild()
     await user.click(screen.getByRole('radio', { name: /I missed some training/ }))
     await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
 
@@ -523,8 +524,7 @@ describe('a shared plan', () => {
     window.history.replaceState(null, '', `/${link}&v=2`)
     const { user } = setup()
 
-    await openDisclosure('Plan options')
-    await user.click(await screen.findByRole('button', { name: 'Fell behind? Replan from here' }))
+    await openRebuild()
     await user.click(screen.getByRole('radio', { name: /I missed some training/ }))
     await user.click(screen.getByRole('button', { name: 'Rebuild my plan' }))
 
@@ -532,16 +532,15 @@ describe('a shared plan', () => {
     expect(lastPlanRequest.body).toMatchObject({ version: 2, replanFrom: '2026-10-21' })
   })
 
-  it('switches every distance and pace to miles', async () => {
+  it('shows a plan from a link in kilometres, with units set only in the account profile', async () => {
+    window.localStorage.setItem('startline:units', 'mi')
     window.history.replaceState(null, '', `/${link}`)
-    const { user } = setup()
+    setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await user.click(screen.getByRole('radio', { name: 'Miles' }))
-
-    expect(screen.getByText('3.1 mi', { selector: '.plan-facts > li' })).toBeInTheDocument()
-    expect(screen.getAllByText(/\/mi/).length).toBeGreaterThan(0)
-    expect(window.localStorage.getItem('startline:units')).toBe('mi')
+    // An old device setting no longer applies: signed out, the default is kilometres.
+    expect(screen.getByText('5 km', { selector: '.plan-facts > li' })).toBeInTheDocument()
+    expect(screen.queryByRole('radiogroup', { name: 'Units' })).not.toBeInTheDocument()
   })
 
   it('remembers ticked-off sessions on this device', async () => {
@@ -654,25 +653,25 @@ describe('a shared plan', () => {
     expect(within(day).getByRole('checkbox', { name: 'Done' })).toBeChecked()
   })
 
-  it('keeps sharing in one menu', async () => {
+  it('keeps the plan tools in one row: share and calendar (export needs structured steps), with no print or text export', async () => {
     window.history.replaceState(null, '', `/${link}`)
     const { user } = setup()
+    // userEvent installs its own clipboard; watch the one the page will use.
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText')
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await openDisclosure('Plan options')
-    await user.click(screen.getByText('Share'))
+    const tools = screen.getByRole('group', { name: 'Plan tools' })
+    await user.click(within(tools).getByRole('button', { name: 'Share link' }))
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('km=5'))
+    expect(await screen.findByText('Link copied.')).toBeInTheDocument()
+    expect(within(tools).getByText('Add to calendar')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Print', hidden: true })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /session overview/, hidden: true })).not.toBeInTheDocument()
 
-    for (const action of ['Copy link to this plan', 'Print']) {
-      expect(screen.getByRole('button', { name: action })).toBeVisible()
-    }
-
+    await user.click(within(tools).getByText('Add to calendar'))
+    expect(screen.getByRole('button', { name: /Download a calendar file/ })).toBeVisible()
     await user.keyboard('{Escape}')
-    expect(screen.getByRole('button', { name: 'Print', hidden: true })).not.toBeVisible()
-
-    await openDisclosure('Plan options')
-    await user.click(screen.getByText('Share'))
-    await user.click(screen.getByRole('heading', { name: 'Parkrun PB' }))
-    expect(screen.getByRole('button', { name: 'Print', hidden: true })).not.toBeVisible()
+    expect(screen.getByRole('button', { name: /Download a calendar file/, hidden: true })).not.toBeVisible()
   })
 
   it('offers to subscribe Apple, Google or Outlook calendars to the plan', async () => {
@@ -680,7 +679,6 @@ describe('a shared plan', () => {
     const { user } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await openDisclosure('Plan options')
     await user.click(screen.getByText('Add to calendar'))
 
     const apple = screen.getByRole('link', { name: /Apple Calendar/ })
@@ -703,12 +701,13 @@ describe('a shared plan', () => {
     expect(document.querySelector('.plan-progress.is-before .runner-crouch')).not.toBeNull()
   })
 
-  it('opens the current week and shows rest days', async () => {
+  it('opens the current week and shows rest days, and an easier week when browsed to', async () => {
     window.history.replaceState(null, '', `/${link}`)
-    setup()
+    const { user } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    expect(screen.getAllByText('Rest').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Rest day', { exact: false }).length).toBeGreaterThan(0)
+    await user.selectOptions(screen.getByLabelText('Jump to week'), 'Week 4')
     expect(screen.getAllByText('Easier week').length).toBeGreaterThan(0)
   })
 })

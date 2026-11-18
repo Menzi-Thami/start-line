@@ -541,7 +541,19 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .readiness-actions { margin-inline-start: auto; display: inline-flex; gap: var(--space-3); }
 .readiness-today { margin-inline-start: var(--space-2); }
 
-/* Life happens (#142): Plan. Tokens only, so dark mode follows. */
+/* Change my plan: one door for every change (Life happens #142, an easier week, a rebuild). Tokens only, so dark mode follows. */
+.change-plan .pills { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
+.change-plan .pills .button[aria-pressed='true'] { background: var(--sage); color: var(--on-sage, var(--ink)); }
+.change-plan .replan-form, .change-plan .section { margin-block: var(--space-3); }
+/* The tools row: Share link, Add to calendar, Export to watch, then Save or Delete. */
+.plan-tools-row { margin-block: var(--space-4) var(--space-2); }
+.workout-export .menu-panel { gap: var(--space-2); padding: var(--space-3); min-width: min(18rem, calc(100vw - 2rem)); }
+/* Race prep, in race week only. */
+.race-prep { display: grid; gap: var(--space-2); margin-block: 0 var(--space-5); }
+.race-prep h3, .race-prep h4, .race-prep p { margin: 0; }
+.race-prep .race-day-card { margin-bottom: var(--space-2); }
+.race-prep .race-week-checklist { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-1); }
+
 .life-happens .pills { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-block: var(--space-2); }
 .life-happens .pills .button[aria-pressed='true'] { background: var(--sage); color: var(--on-sage, var(--ink)); }
 .life-happens-form { display: grid; gap: var(--space-3); margin-block: var(--space-3); max-inline-size: 32rem; }

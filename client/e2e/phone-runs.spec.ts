@@ -135,8 +135,10 @@ test('phone runner can reach the existing manual training log without a recordin
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
   await page.getByText('Connect through Strava', { exact: true }).click()
   await page.getByRole('button', { name: 'Open my training plan', exact: true }).click()
+  // Manual logging lives on the day: today's here.
+  await page.getByRole('button', { name: /^Sunday 18 October 2026:/ }).click()
+  await page.getByRole('button', { name: /Open day details/ }).click()
   await page.getByRole('button', { name: 'Log a run', exact: true }).click()
-  await expect(page.getByLabel('Run date', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Distance (km)', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Run details', { exact: true })).toBeVisible()
 })

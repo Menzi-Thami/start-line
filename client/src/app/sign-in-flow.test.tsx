@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -12,6 +12,8 @@ import { lastPlanRequest, planFixture, server, stravaOff } from '../test/server'
 import { App } from './App'
 import { AuthContext, type Auth } from './auth-context'
 import { readCheckInCopy, writeCheckInCopy } from '../features/coaching/check-in-storage'
+import { localToday } from '../lib/format'
+import { openWeekDay } from '../test/user-navigation'
 
 const thandi: Runner = {
   id: 'runner-1',
@@ -305,8 +307,9 @@ describe('their plan from the copy kept on this device', () => {
       try {
         expect(await screen.findByRole('heading', { name: 'Parkrun PB' })).toBeInTheDocument()
         expect(await screen.findByText(/Offline · showing your saved run entries/)).toBeVisible()
+        // Logging lives on the day: today's, here.
+        await openWeekDay(localToday())
         await user.click(await screen.findByRole('button', { name: /^Log a run$/ }))
-        fireEvent.change(screen.getByLabelText('Run date'), { target: { value: '2026-10-14' } })
         await user.type(screen.getByLabelText('Distance (km)', { exact: true }), '7')
         await user.click(screen.getByRole('button', { name: /^Save check-in$/ }))
         expect(await screen.findByRole('region', { name: 'Runs waiting to sync' })).toHaveTextContent('Saved on this device')

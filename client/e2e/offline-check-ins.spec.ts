@@ -47,12 +47,14 @@ for (const mode of ['light', 'dark'] as const) {
     await page.goto(fixture)
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
     await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()
+    // Logging lives on the run's own day.
+    await page.getByRole('button', { name: /^Wednesday 14 October 2026:/ }).click()
+    await page.getByRole('button', { name: /Open day details/ }).click()
     await expect(page.getByRole('button', { name: 'Log a run', exact: true })).toBeVisible()
     accountConnected = false
     await connection(page, false)
     await expect(page.getByText(/Offline · showing your saved run entries/)).toBeVisible()
     await page.getByRole('button', { name: 'Log a run', exact: true }).click()
-    await page.getByLabel('Run date').fill('2026-10-14')
     await page.getByLabel('Distance (km)', { exact: true }).fill('7')
     await page.getByLabel('Minutes', { exact: true }).fill('42')
     await page.getByRole('button', { name: 'Save check-in', exact: true }).click()

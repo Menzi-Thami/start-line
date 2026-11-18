@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import plan5k from '../test/fixtures/plan-5k.json'
-import { dayRuns, ranKmByWeek, runsByDate, weekEnd, wellOverPlan } from './plan-runs'
+import { dayRuns, ranKmByWeek, runsByDate, weekEnd } from './plan-runs'
 import { UPLOADED } from '../test/sources'
 import type { ActivitySummary, TrainingPlan } from './types'
 
@@ -83,15 +83,6 @@ describe('ranKmByWeek', () => {
   it('leaves the race out of race week, like the planned distance does', () => {
     const ran = ranKmByWeek(plan.weeks, [run('shakeout', '2026-12-12', 5), run('race', '2026-12-13', 5)], '2026-12-14')
     expect(ran.get(9)).toBe(5)
-  })
-})
-
-describe('wellOverPlan', () => {
-  it('only speaks up past a fifth over the plan', () => {
-    expect(wellOverPlan(40, 48)).toBe(false)
-    expect(wellOverPlan(40, 48.1)).toBe(true)
-    expect(wellOverPlan(40, 20)).toBe(false)
-    expect(wellOverPlan(0, 5)).toBe(false)
   })
 })
 

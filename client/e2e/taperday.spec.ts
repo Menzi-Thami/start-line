@@ -1,4 +1,4 @@
-import { openPlanOptions, openDisclosure } from './navigation'
+import { openDisclosure } from './navigation'
 import { expect, test, type Page } from '@playwright/test'
 
 /*
@@ -99,8 +99,7 @@ test('a calendar can subscribe to the plan, and the feed it subscribes to works'
   await page.goto(sharedLink())
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
 
-  await openPlanOptions(page)
-  await page.getByText('Add to calendar').click()
+  await page.getByRole('group', { name: 'Plan tools' }).getByText('Add to calendar').click()
   const apple = await page.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')
   expect(apple).toMatch(/^webcal:\/\/.+\/api\/v1\/plans\/calendar\.ics\?/)
   expect(await page.getByRole('link', { name: /Google Calendar/ }).getAttribute('href')).toMatch(/^https:\/\/calendar\.google\.com\//)
@@ -154,16 +153,18 @@ test('installs as an app: the manifest, its icons, and a service worker that ope
   await context.setOffline(false)
 })
 
-test('distances switch to miles', async ({ page }) => {
+test('a shared plan shows the default units, with no units switch on the plan', async ({ page }) => {
   await page.goto(sharedLink())
   await expect(page.getByRole('heading', { name: 'Spring 10K' })).toBeVisible()
 
-  await openPlanOptions(page)
-  await page.getByRole('radio', { name: 'Miles' }).check()
-  // A 10K is 6.2 miles.
-  await expect(page.getByText('6.2 mi', { exact: true })).toBeVisible()
-  // Remembered on this device for next time.
-  expect(await page.evaluate(() => localStorage.getItem('startline:units'))).toBe('mi')
+  // Units are an account setting; anyone viewing a link sees kilometres.
+  await expect(page.locator('.plan-facts')).toContainText('10 km')
+  await expect(page.getByRole('radiogroup', { name: 'Units' })).toHaveCount(0)
+  await expect(page.getByRole('group', { name: 'Plan tools' }).getByRole('button', { name: 'Share link' })).toBeVisible()
+  // A real plan's runs carry their steps, so a workout can go to a watch.
+  await page.getByRole('group', { name: 'Plan tools' }).getByText('Export to watch').click()
+  await expect(page.getByRole('button', { name: 'Download .tcx file' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Print' })).toHaveCount(0)
 })
 
 test.describe('with motion', () => {

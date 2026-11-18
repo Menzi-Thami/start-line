@@ -6,7 +6,7 @@ Time-only and linked entries count towards the number of saved runs. Their saved
 
 ## Remaining week
 
-Home and Plan offer **Review and adjust training → Preview the rest of this week**. The runner first confirms that their actual runs have been logged; a missing check-in alone is not proof of a missed run.
+Plan offers **Change my plan → Week off track → Preview the rest of this week**. The runner first confirms that their actual runs have been logged; a missing check-in alone is not proof of a missed run.
 
 The optional conservative reset changes dates after the runner's local today and before next Monday. It never moves missed sessions, adds days or increases kilometres. Upcoming runs become easy, at most 8 km and no longer than prescribed. Manually reported distance and uploads cap the remaining distance against the original week's budget. Pain that changed running, or an already completed weekly distance budget, suggests rest. Strength, today, earlier workouts, future weeks and the race remain unchanged. Race week is left as written. Illness, injury and longer breaks still use **Replan from here**; the UI recommends rest and professional advice for pain.
 

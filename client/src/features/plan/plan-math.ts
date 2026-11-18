@@ -1,4 +1,6 @@
-import type { PlanWeek, Session } from '../../lib/types'
+import { daysBetween } from '../../lib/countdown'
+import { addDays } from '../../lib/format'
+import type { PlanWeek, Session, TrainingPlan } from '../../lib/types'
 
 /** Race week shows its training only; the race itself would dwarf every other bar. */
 export const trainingKm = (week: PlanWeek) =>
@@ -21,4 +23,16 @@ export function weekLabels(count: number, current: number | null): Set<number> {
     if (fits(i)) shown.add(i)
   }
   return shown
+}
+
+/** The days before the race a plan can still be rebuilt: the API's rule too. */
+const MIN_DAYS_BEFORE_RACE = 14
+
+/** A plan can be rebuilt from today once it has started and while the race is at least two weeks away. */
+export const canReplan = (plan: TrainingPlan, today: string) => today >= plan.startDate && today <= addDays(plan.race.date, -MIN_DAYS_BEFORE_RACE)
+
+/** Race week: the seven days before the race, and race day itself. Race prep shows only then. */
+export const inRaceWeek = (plan: TrainingPlan, today: string) => {
+  const days = daysBetween(today, plan.race.date)
+  return days >= 0 && days <= 7
 }

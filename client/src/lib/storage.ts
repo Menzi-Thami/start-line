@@ -32,11 +32,3 @@ export function loadDone(planKey: string): Set<string> {
 export function saveDone(planKey: string, done: Set<string>): void {
   write(`startline:done:${planKey}`, JSON.stringify([...done]))
 }
-
-export function loadUnits(): 'km' | 'mi' {
-  return read('startline:units') === 'mi' ? 'mi' : 'km'
-}
-
-export function saveUnits(units: 'km' | 'mi'): void {
-  write('startline:units', units)
-}

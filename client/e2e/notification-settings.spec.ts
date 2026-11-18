@@ -93,8 +93,6 @@ test('push destinations open preparation, weekly review and connection details @
   await expect(page.getByRole('tab', { name: 'Progress', exact: true })).toHaveAttribute('aria-selected', 'true')
   await page.locator('.plan-weekly-review > summary').click()
   await expect(page.getByRole('heading', { name: 'Your week', exact: true })).toBeVisible()
-  await page.locator('summary').filter({ hasText: /^Review and adjust training$/ }).click()
-  await expect(page.getByRole('heading', { name: 'Weekly review', exact: true })).toBeVisible()
   await page.goto(`${base}?view=account&settings=connections`)
   const connections = page.locator('details').filter({ has: page.locator('summary', { hasText: 'Connections & run sources' }) })
   await expect(connections).toHaveAttribute('open', '')

@@ -17,10 +17,11 @@ for (const scheme of ['dark', 'light'] as const) {
       await expect(page.getByRole('heading', { name: 'Long run', level: 2 })).toBeVisible()
       await expect(page.getByRole('region', { name: 'Run summary' })).toContainText('15.4 km')
       await expect(page.locator('.ra-hero .runner-sprint')).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Plan vs actual' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Plan vs actual' })).toHaveCount(0)
       for (const tab of ['Overview', 'Splits', 'Charts', 'Details'] as const) {
         await page.getByRole('tab', { name: tab, exact: true }).click()
         await expect(page.getByRole('tabpanel', { name: tab })).toBeVisible()
+        if (tab === 'Details') await expect(page.getByRole('heading', { name: 'Plan vs actual' })).toBeVisible()
         expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${tab} overflow in ${scheme} at ${width}px`).toBeLessThanOrEqual(1)
         await page.screenshot({
           path: testInfo.outputPath(`analysis-run-${scheme}-${width}-${tab.toLowerCase()}.png`),

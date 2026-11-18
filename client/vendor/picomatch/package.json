@@ -1,0 +1,24 @@
+{
+  "name": "@taperday/picomatch",
+  "version": "4.0.7-taperday.1",
+  "private": true,
+  "description": "Blazing fast and accurate glob matcher written in JavaScript, with no dependencies and full support for standard and extended Bash glob features, including braces, extglobs, POSIX brackets, and regular expressions.",
+  "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "posix.js",
+    "lib"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=12"
+  },
+  "taperdayPatch": {
+    "upstream": "picomatch@4.0.7",
+    "advisory": "GHSA-fc5q-39xc-vjpf",
+    "patch": "https://github.com/micromatch/picomatch/pull/262",
+    "commit": "3222059ac27492d9c0147fee5c65f751bbd851ab"
+  }
+}

@@ -120,6 +120,7 @@ The race calendar reconciles organiser feeds, federation calendars and curated f
 | [CLAUDE.md](CLAUDE.md) | Repository conventions, architecture and compatibility rules |
 | [Engineering principles](.claude/rules/engineering-principles.md) | Dependency direction, clocks, errors and safe testing |
 | [Testing](docs/testing.md) | Isolated databases and checks required before merging |
+| [Simplicity implementation plan](docs/design/taperday-simplicity-plan.md) | Canonical proposed Home/run-detail refinement, lifecycle decisions, acceptance matrix and implementation handoff |
 | [Run logging](docs/run-logging.md) | Planned versus completed work, additional runs, coaching and stickers |
 | [Activity imports](docs/activity-import.md) | Supported recordings and run analysis |
 | [Design system](docs/design/night-run/README.md), [brand](docs/brand.md) | Taperday's visual identity and voice |

@@ -47,8 +47,11 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=2026-10-18&km=4.1')
 
   const today = page.getByRole('region', { name: 'Today', exact: true })
+  await expect(today.getByText('Imported from Strava', { exact: true })).toBeVisible()
+  await expect(today.getByRole('button', { name: 'Open run details', exact: true })).toBeVisible()
+  await expect(today.getByRole('button', { name: 'Keep this tick', exact: true })).toHaveCount(0)
+  await today.getByRole('button', { name: 'Log a run manually', exact: true }).click()
   await expect(today.getByText('Completed via Strava', { exact: true })).toBeVisible()
-  await expect(today.locator('.home-status-chip')).toContainText('Recorded via Strava · provisional')
   await expect(today.locator('.home-done-chip')).toHaveCount(0)
   await expect(today.locator('.strava-completion-figures')).toHaveText('Planned 6 km · Ran 4.1 km')
   await expect(today.getByText(/You got out there — that counts\. You ran 4\.1 km of your planned 6 km today\./)).toBeVisible()
@@ -85,6 +88,8 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   // Fetched again on the next visit; the runner keeps the tick, which outlasts the copy.
   state.held = true
   await page.reload()
+  await expect(today.getByText('Imported from Strava', { exact: true })).toBeVisible()
+  await today.getByRole('button', { name: 'Log a run manually', exact: true }).click()
   await expect(today.getByText('Completed via Strava', { exact: true })).toBeVisible()
   await today.getByRole('button', { name: 'Keep this tick', exact: true }).click()
   await expect(today.getByRole('button', { name: 'Change how Long run went', exact: true })).toBeVisible()

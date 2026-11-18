@@ -39,7 +39,7 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     const name = `Additional run on ${formatDate(date!, 'long')}`
     await openRecentRun(page, date!)
     await expect(running.getByRole('article', { name, exact: true })).toContainText('10 km · 1:00:00')
-    await expect(page.locator('.home-week-body .home-tile-value')).toHaveText('10 km')
+    await expect(running.locator('.home-tiles .home-tile').filter({ hasText: 'This month' }).locator('.home-tile-value .mono')).toHaveText('10')
     expect(entries).toHaveLength(1)
     expect(entries[0]?.activityId).toBe('synthetic-strava')
     await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()

@@ -21,6 +21,8 @@ import { PlanAdjustment } from '../coaching/PlanAdjustment'
 import { RunLog } from '../coaching/RunLog'
 import { SavedRun } from '../coaching/SavedRun'
 import { weekEnd } from '../../lib/plan-runs'
+import { YourWeek } from '../runner-home/YourWeek'
+import { ReadinessCheckIn } from '../runner-home/ReadinessCheckIn'
 import { CoachNote } from '../coaching/CoachNote'
 import { completedViaStrava } from '../coaching/strava-completion'
 import { latestPaced } from '../coaching/fitness'
@@ -207,6 +209,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const tabs: readonly { id: TabId; label: string }[] = PLAN_TABS
   const [tab, setTab] = useState<TabId>(() => readPlanTab())
   const [progressVisited, setProgressVisited] = useState(() => readPlanTab() === 'progress')
+  const [weeklyReviewOpen, setWeeklyReviewOpen] = useState(false)
   useEffect(() => { onTabChange?.(tab) }, [tab, onTabChange])
   useEffect(() => {
     const onPop = () => {
@@ -579,6 +582,10 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         </div>
 
         <div {...panel('progress')}>
+          {!trainingEnded && coach && currentWeek !== null && <details className="disclosure plan-weekly-review" open={weeklyReviewOpen} onToggle={event => setWeeklyReviewOpen(event.currentTarget.open)}><summary>Weekly coaching review</summary>{weeklyReviewOpen && <>
+            <YourWeek plan={plan} week={plan.weeks.find(week => week.number === currentWeek)!} coachNotes={coachNotes ?? []} today={today} units={units} runs={runs ?? []} checkInFor={coach.get} syncedFor={session => coach.synced?.(session)?.state === 'Completed'} />
+            <ReadinessCheckIn today={today} />
+          </>}</details>}
           {/* Progress does one job: how you're tracking. A headline, the outlook and one chart; the rest waits behind "More detail". */}
           <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />
           {plan.outlook && plan.outlook.verdict !== 'AtRisk' && (

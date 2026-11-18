@@ -1,4 +1,4 @@
-import AxeBuilder from '@axe-core/playwright'
+import { accessibility } from './accessibility'
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import type { CheckIn, CheckInRequest } from '../src/lib/types'
@@ -24,6 +24,7 @@ for (const mode of ['light', 'dark'] as const) {
     await page.addInitScript(() => Object.defineProperty(navigator, 'onLine', {
       get: () => localStorage.getItem('qa:offline') !== '1', configurable: true,
     }))
+    await page.addInitScript(value => localStorage.setItem('taperday:theme', value), mode)
     await page.route('**/api/v1/**', async route => {
       if (!accountConnected) return route.abort('internetdisconnected')
       const path = new URL(route.request().url()).pathname
@@ -42,6 +43,7 @@ for (const mode of ['light', 'dark'] as const) {
       } else if (path.endsWith('/running')) data = entries.map(entry => ({ date: entry.date, distanceKm: entry.distanceKm, source: 'Ticked' }))
       await route.fulfill({ json: data })
     })
+    await page.setViewportSize({ width: 375, height: 900 })
     await page.goto(fixture)
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
     await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()
@@ -74,10 +76,20 @@ for (const mode of ['light', 'dark'] as const) {
     await expect(entry).toContainText('8 km · 42:00')
     await status.getByRole('button', { name: 'Review device drafts' }).click()
     await expect(status).toContainText('Device draft: Done · 8 km · 00:42:00')
+    // Audit the actual Home alert after leaving the deliberately opened running history.
+    await page.getByRole('button', { name: '← Back to Home', exact: true }).click()
+    await page.reload()
+    await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+    await expect(page.getByRole('region', { name: 'Today', exact: true })).toBeVisible()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', mode)
+    await status.getByRole('button', { name: 'Review device drafts' }).click()
+    await expect(status).toContainText('Device draft: Done · 8 km · 00:42:00')
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    const accessibility = await new AxeBuilder({ page }).include('.callout').withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze()
-    expect(accessibility.violations).toEqual([])
+    const audit = await accessibility(page).analyze()
+    expect(audit.violations).toEqual([])
     await status.screenshot({ path: info.outputPath(`offline-run-${mode}.png`) })
+    await openRecentRun(page, '2026-10-14')
+    await expect(entry).toContainText('8 km · 42:00')
     accountConnected = true
     await connection(page, true)
     await expect(status).toHaveCount(0)

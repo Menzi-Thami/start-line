@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatDate, type Units } from '../../lib/format'
 import { Runner } from '../shared/Runner'
-import { isLiveRecovery, recoveryWelcome } from './journey-model'
+import { isLiveRecovery, recoveryOnHome, recoveryWelcome } from './journey-model'
 import { MaintenanceCard, NextChapter } from './NextChapter'
 import { RecoveryDashboard, RecoveryOffer } from './Recovery'
 import { useRaceHistory } from './useRaceHistory'
@@ -14,7 +14,7 @@ export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onO
 }) {
   const data = journey.state.kind === 'ready' ? journey.state.journey : null
   const existing = data?.recovery ?? null
-  const maintaining = data?.maintenance?.status === 'Active' && !isLiveRecovery(existing)
+  const maintaining = data?.maintenance?.status === 'Active' && !recoveryOnHome(existing, today)
   const wanted = new URLSearchParams(window.location.search).get('race')
   const chapter = data?.chapters.find(chapter => recoveryWelcome(chapter.raceResult?.outcome) && (!wanted || chapter.raceResult?.id === wanted))
   const races = useRaceHistory(!maintaining && !chapter?.raceResult && (!existing || !!wanted))
@@ -52,7 +52,7 @@ export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onO
     {!maintaining && recovery && <div className="panel"><RecoveryDashboard key={recovery.id} recovery={recovery} today={today}
       onCheckIn={(feeling, redFlags) => actions.checkIn(recovery.id, { feeling, redFlags, date: today })}
       onChange={change => actions.changeRecovery(recovery.id, change)}
-      next={!isLiveRecovery(recovery) && !data?.maintenance ? next : undefined} />
+      next={!recoveryOnHome(recovery, today) && !data?.maintenance ? next : undefined} />
       <details className="recovery-plan-calendar"><summary>View recovery days</summary><ol aria-label="Recovery plan days">
         {recovery.days.map(day => <li key={day.date} aria-current={day.date === today ? 'date' : undefined}>
           <time dateTime={day.date}>{formatDate(day.date, 'dayMonth')}</time><div><strong>{day.title}</strong><p>{day.guidance}</p></div>

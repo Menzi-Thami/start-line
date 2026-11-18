@@ -134,7 +134,10 @@ describe('my runs', () => {
     expect(db.uploads).toHaveLength(1)
     expect(db.uploads[0]?.contentType).toMatch(/^multipart\/form-data; boundary=/)
     expect(db.uploads[0]?.files).toBe(1)
-    expect(window.location.search).toBe(`?view=runs&run=${longRun.id}`)
+    const location = new URLSearchParams(window.location.search)
+    expect(location.get('view')).toBe('runs')
+    expect(location.get('run')).toBe(longRun.id)
+    expect(location.get('returnTo')).toBe('?view=runs')
   })
 
   it('takes a Nike runner from file help to phone guidance and the real connection settings', async () => {
@@ -364,10 +367,15 @@ describe('a run', () => {
 
   it('logs an unplanned run without judging it', async () => {
     runsApi([{ ...longRun, plan: null }])
-    renderApp(`/?view=runs&run=${longRun.id}`)
+    const user = renderApp(`/?view=runs&run=${longRun.id}`)
 
     expect(await screen.findByRole('heading', { name: 'Run', level: 2 })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'An extra run, logged.' })).toBeInTheDocument()
+    const summary = screen.getByRole('region', { name: 'Run summary' })
+    expect(summary).toHaveTextContent('Run recorded')
+    expect(screen.queryByRole('heading', { name: 'Plan vs actual' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/missed|behind target|failed/i)).not.toBeInTheDocument()
+    await user.click(screen.getByRole('tab', { name: 'Details' }))
+    expect(screen.getByRole('heading', { name: 'An extra run, logged.' })).toBeVisible()
   })
 
   it('can be deleted, back to the list', async () => {

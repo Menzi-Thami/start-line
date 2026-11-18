@@ -110,4 +110,4 @@ export const handlers = [
   }),
 ]
 
-export const server = setupServer(...handlers)
+export const server = setupServer(http.get('*/api/v1/me/beginner', () => new HttpResponse(null, { status: 204 })), ...handlers)

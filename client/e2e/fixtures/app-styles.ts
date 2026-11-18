@@ -14,3 +14,7 @@ import '../../src/styles/account-nav-clarity.css'
 import '../../src/styles/ux-run-journal-refresh.css'
 import '../../src/styles/ux-redesign.css'
 import '../../src/styles/studio-responsive-polish.css'
+import { applyStoredTheme } from '../../src/lib/theme'
+
+// Match production bootstrap so reload preserves the runner's actual theme choice.
+applyStoredTheme()

@@ -56,4 +56,23 @@ describe('post-run analysis highlights', () => {
     rerender(<PaceSplitsVisual splits={[]} units="km" />)
     expect(screen.getByText('No recorded splits for this run.')).toBeInTheDocument()
   })
+
+  it('labels a 1.10 km closing interval as partial and compares only full kilometres', () => {
+    const splits = [
+      { ...run.splits[0]!, number: 20, distanceKm: 1, movingSeconds: 330, paceSecondsPerKm: 330 },
+      { ...run.splits[0]!, number: 21, distanceKm: 1.1, movingSeconds: 350, paceSecondsPerKm: 350 / 1.1 },
+    ] satisfies Split[]
+    render(<PaceSplitsVisual splits={splits} units="km" />)
+    expect(screen.getByText(/Fastest: KM 20/)).toBeInTheDocument()
+    const partial = screen.getByRole('button', { name: /1.10.*5:18\/km.*partial split/ })
+    expect(partial.className).not.toContain('ra-split-best')
+  })
+
+  it('keeps recorded moving and elapsed time distinct without claiming official timing', () => {
+    render(<RunSummaryHero run={{ ...run, movingSeconds: 3000, elapsedSeconds: 3040, paceSecondsPerKm: 300 }} units="km" />)
+    const summary = screen.getByRole('region', { name: 'Run summary' })
+    expect(summary).toHaveTextContent('Moving time50:00')
+    expect(summary).toHaveTextContent('Elapsed time50:40')
+    expect(summary).not.toHaveTextContent(/official|chip|verified/i)
+  })
 })

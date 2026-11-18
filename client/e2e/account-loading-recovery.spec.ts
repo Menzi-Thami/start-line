@@ -1,10 +1,13 @@
-import { expect, test, type Route } from '@playwright/test'
+import AxeBuilder from '@axe-core/playwright'
+import { mkdir } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
+import { expect, test, type Page, type Route } from '@playwright/test'
 import { ownerOf } from '../src/lib/home-snapshot'
 import { chapter, journeyOf, recap } from '../src/features/journey/journey-fixtures'
 
 test.use({ serviceWorkers: 'block' })
 
-test('cached Home → slow account → deadline → retry restores the saved chapter and navigation @phone', async ({ page }, info) => {
+async function connection(page: Page) {
   const account = { name: 'Journey QA', email: 'journey@example.test' }
   const runner = { id: 'synthetic-journey-runner', displayName: 'Naledi', email: account.email, timeZone: 'UTC', units: 'Kilometres',
     weeklyEmails: false, consentedAt: '2026-11-16T12:00:00Z', maxHeartRate: null, privacyNoticeVersion: '2026-10-21',
@@ -34,6 +37,12 @@ test('cached Home → slow account → deadline → retry restores the saved cha
     else if (path.endsWith('/photo') || path.endsWith('/beginner')) { await route.fulfill({ status: 204 }); return }
     await route.fulfill({ json: data })
   })
+  return { held, reads: () => accountReads, recover: () => { recover = true } }
+}
+
+test('cached Home → slow account → deadline → retry restores the saved chapter and navigation @phone', async ({ page }, info) => {
+  const state = await connection(page)
+  const held = state.held
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=home')
   await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
   await expect(page.getByRole('heading', { name: 'Welcome back, Naledi', exact: true })).toBeVisible()
@@ -42,6 +51,8 @@ test('cached Home → slow account → deadline → retry restores the saved cha
   await expect.poll(() => held.length).toBe(1)
   await page.clock.runFor(6500)
   await expect(page.locator('.sign-in-wait').getByRole('button', { name: 'Try again', exact: true })).toBeVisible()
+  await expect(page.locator('.account-warmup .runner-sprint')).toBeVisible()
+  await expect(page.getByText('Finding your current chapter…', { exact: true })).toHaveCount(0)
   await page.clock.runFor(60_000)
   await expect(page.getByRole('alert')).toContainText('Your account is taking too long to load. Please try again.')
   await expect(page.getByText('Fetch is aborted', { exact: true })).toHaveCount(0)
@@ -49,15 +60,78 @@ test('cached Home → slow account → deadline → retry restores the saved cha
   await expect(page.getByText('Something to run towards?', { exact: true })).toHaveCount(0)
   await page.screenshot({ path: info.outputPath('connection-run-timeout.png'), fullPage: true })
   for (const route of held) await route.abort().catch(() => undefined) // The browser may already have cancelled it.
-  recover = true
+  state.recover()
   await page.getByRole('button', { name: 'Try again', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back, Naledi online', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Review my race', exact: true })).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect(page.locator('.home-top')).toHaveCount(0)
   await expect(nav).toBeVisible()
-  expect(accountReads).toBe(2)
+  expect(state.reads()).toBe(2)
   await page.screenshot({ path: info.outputPath('connection-run-recovered.png'), fullPage: true })
   await nav.getByRole('button', { name: 'Journey', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your journey.', exact: true })).toBeVisible()
 })
+
+for (const motion of ['no-preference', 'reduce'] as const) {
+  test(`slow connection has an automatic runner and rotating tips and immediate recovery with ${motion} motion @phone`, async ({ page }, info) => {
+    const state = await connection(page)
+    await page.emulateMedia({ reducedMotion: motion })
+    await page.setViewportSize({ width: 375, height: 900 })
+    await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=home')
+    const greeting = page.getByRole('heading', { name: 'Welcome back, Naledi', exact: true })
+    const nav = page.getByRole('navigation', { name: 'Main', exact: true })
+    await expect(greeting).toBeVisible()
+    await expect(page.locator('.account-warmup')).toHaveCount(0)
+    await expect.poll(() => state.held.length).toBe(1)
+    await page.clock.runFor(6500)
+    const warm = page.getByRole('region', { name: 'Connecting to Taperday', exact: true })
+    await expect(warm).toBeVisible()
+    await expect(warm).toContainText('Your saved Home stays below')
+    await expect(page.getByText('Finding your current chapter…', { exact: true })).toHaveCount(0)
+    await expect(greeting).toBeVisible()
+    await expect(nav).toBeVisible()
+    expect(await warm.locator('.limb').count()).toBeGreaterThan(0)
+    const animationStates = () => warm.locator('.limb').evaluateAll(limbs => limbs.map(limb => ({ name: getComputedStyle(limb).animationName, state: getComputedStyle(limb).animationPlayState })))
+    if (motion === 'no-preference') expect((await animationStates()).every(value => value.name !== 'none' && value.state === 'running')).toBe(true)
+    else expect((await animationStates()).every(value => value.name === 'none')).toBe(true)
+    await expect(warm.getByRole('button', { name: 'Next tip', exact: true })).toHaveCount(0)
+    await expect(warm).toContainText('A free Strava account can bring')
+    await page.clock.runFor(8000)
+    await expect(warm).toContainText('completed training chapters and race results are kept in Journey')
+    await warm.getByRole('button', { name: 'Pause warm-up', exact: true }).click()
+    if (motion === 'no-preference') expect((await animationStates()).every(value => value.state === 'paused')).toBe(true)
+    await page.clock.runFor(8000)
+    await expect(warm).toContainText('completed training chapters and race results are kept in Journey')
+    await warm.getByRole('button', { name: 'Resume warm-up', exact: true }).click()
+    if (motion === 'no-preference') expect((await animationStates()).every(value => value.state === 'running')).toBe(true)
+    await page.clock.runFor(8000)
+    await expect(warm).toContainText('Recovery has its own plan. Home stays your starting point.')
+    await warm.getByRole('button', { name: 'Pause warm-up', exact: true }).click()
+    for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark']) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
+      await page.evaluate(async () => {
+        await document.fonts.ready
+        await new Promise(requestAnimationFrame)
+        // Theme transitions must settle before measuring contrast; the runner stays controlled separately.
+        await Promise.all(document.getAnimations().filter(animation => animation instanceof CSSTransition).map(animation => animation.finished.catch(() => undefined)))
+      })
+      const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
+      expect(result.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+      if (info.project.name === 'desktop' && [375, 1440].includes(width)) {
+        const qa = fileURLToPath(new URL('../../docs/qa/2026-11-17/account-warmup/', import.meta.url))
+        await mkdir(qa, { recursive: true })
+        await page.evaluate(() => { if (document.activeElement instanceof HTMLElement) document.activeElement.blur(); window.scrollTo(0, 0) })
+        await page.screenshot({ path: `${qa}/warmup-${width}-${mode}-${motion}.png`, fullPage: true })
+      }
+    }
+    state.recover()
+    for (const route of state.held) await route.fulfill({ json: { id: 'synthetic-journey-runner', displayName: 'Naledi online', units: 'Kilometres', timeZone: 'UTC', needsPrivacyConsent: false } }).catch(() => undefined)
+    await expect(warm).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Welcome back, Naledi online', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Review my race', exact: true })).toBeVisible()
+    expect(state.reads()).toBe(1)
+  })
+}

@@ -114,6 +114,7 @@ for (const width of [320, 768, 1440]) {
     const evidence = page.getByRole('region', { name: 'Each part of the workout' })
     await page.evaluate(() => scrollTo(0, 0))
     await expect(page.locator('.ra-hero')).toBeVisible()
+    await page.getByRole('tab', { name: 'Details', exact: true }).click()
     await expect(evidence).toContainText('Lined up from when you pressed start')
     await expect(evidence.getByRole('img', { name: 'Done' })).toHaveCount(1)
     await expect(evidence).toContainText('parts done')

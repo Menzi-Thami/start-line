@@ -10,6 +10,7 @@
     "lint": "oxlint --deny-warnings",
     "typecheck": "tsc -b",
     "test": "vitest run",
+    "test:security": "node --test ../scripts/picomatch-security.test.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "gen:api": "npx -y openapi-typescript@7 http://localhost:5122/openapi/v1.json -o src/lib/api-schema.ts",
@@ -39,9 +40,13 @@
     "jsdom": "^31.0.0",
     "msw": "^2.15.0",
     "oxlint": "^1.92.0",
+    "picomatch": "file:vendor/picomatch",
     "typescript": "~7.0.2",
     "vite": "^8.3.6",
     "vitest": "^5.0.3"
+  },
+  "overrides": {
+    "picomatch": "$picomatch"
   },
   "engines": {
     "node": ">=22"

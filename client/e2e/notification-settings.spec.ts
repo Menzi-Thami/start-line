@@ -84,13 +84,20 @@ test('notification choices survive reload and recover from a failed save @phone'
 test('push destinations open preparation, weekly review and connection details @phone', async ({ page }, info) => {
   await setup(page)
   const base = 'http://127.0.0.1:5176/e2e/fixtures/plan-edit.html'
+  // Race prep shows in race week: the reminder goes the day before the race.
+  await page.clock.install({ time: new Date('2026-12-12T08:00:00Z') })
   await page.goto(`${base}?view=plan&prepare=race`)
   await expect(page.getByRole('heading', { name: 'Prepare for Parkrun PB' })).toBeVisible()
-  await expect(page.getByRole('table')).toContainText('24:30')
+  await expect(page.locator('#race-prep').getByRole('table')).toContainText('24:30')
   await page.locator('.preparation-card').screenshot({ path: info.outputPath('race-preparation.png') })
+  // Tomorrow's long run opens on that run's own day.
+  await page.goto(`${base}?view=plan&prepare=long&date=2026-12-06`)
+  await expect(page.getByRole('region', { name: 'Sunday 6 December 2026', exact: true })).toBeVisible()
+  // The weekly review's reminder lands in Plan › Progress, already open.
   await page.goto(`${base}?view=home&review=1`)
-  await expect(page.locator('.home-review')).toHaveAttribute('open', '')
-  await expect(page.getByRole('heading', { name: 'Weekly review', exact: true })).toBeVisible()
+  await expect(page.locator('.plan-weekly-review')).toHaveAttribute('open', '')
+  await expect(page.getByRole('tab', { name: 'Progress', exact: true })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('heading', { name: 'Should next week change?', exact: true })).toBeVisible()
   await page.goto(`${base}?view=account&settings=connections`)
   const connections = page.locator('details').filter({ has: page.locator('summary', { hasText: 'Connections & run sources' }) })
   await expect(connections).toHaveAttribute('open', '')

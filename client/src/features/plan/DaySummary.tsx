@@ -13,7 +13,7 @@ import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength
 import { sessionKey } from './plan-math'
 import { SessionSteps } from './SessionSteps'
 import { compareWorkoutDistance } from './workout-distance-feedback'
-import { SessionItem } from './WeekList'
+import { SessionItem } from './SessionItem'
 import { RunWalkChip } from './RunWalkChip'
 import { Runner } from '../shared/Runner'
 

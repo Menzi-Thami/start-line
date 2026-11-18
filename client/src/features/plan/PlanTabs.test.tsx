@@ -5,7 +5,7 @@ import { planFixture } from '../../test/server'
 import { PlanView } from './PlanView'
 
 const view = () =>
-  render(<PlanView plan={planFixture} units="km" onUnitsChange={() => undefined} shareUrl="https://taperday.run/x" today="2026-10-01" />)
+  render(<PlanView plan={planFixture} units="km" shareUrl="https://taperday.run/x" today="2026-10-01" />)
 
 // jsdom has no layout, so give the row and its tabs the measurements a phone would: a 360px row, with the tabs laid
 // out one after another from the start of the row and the last ones beyond its edge.

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { Session } from '../../lib/types'
-import { SessionItem } from './WeekList'
+import { SessionItem } from './SessionItem'
 
 const longRun = (overrides: Partial<Session>): Session => ({
   date: '2027-02-07',

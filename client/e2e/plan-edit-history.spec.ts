@@ -1,4 +1,4 @@
-import { openStrengthWorkouts, openDisclosure } from './navigation'
+import { openStrengthWorkouts } from './navigation'
 import { expect, test } from '@playwright/test'
 import type { CheckIn, CheckInRequest, GeneratePlanRequest, TrainingPlan } from '../src/lib/types'
 
@@ -124,8 +124,7 @@ for (const mode of ['manual', 'time-only', 'tick', 'strava']) {
     expect(saves).toBe(2)
     expect(entries).toHaveLength(1)
     expect(current.inputs.startOn).toBe('2026-11-02')
-    await openDisclosure(page, /^Earlier logged runs/)
-    await expect(page.getByRole('region', { name: 'Earlier logged runs', exact: true })).toContainText('Wednesday 28 October')
+    // The run from before the new start date stays on the calendar.
     await page.getByRole('tab', { name: 'Calendar', exact: true }).click()
     await page.getByRole('region', { name: 'Your plan by month', exact: true }).getByRole('button', { name: /^28 October:/ }).click()
     await page.getByRole('button', { name: /Open day details/ }).click()

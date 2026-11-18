@@ -1,15 +1,12 @@
-import { openTrainingGuide } from '../../test/user-navigation'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { runsByDate } from '../../lib/plan-runs'
-import type { ActivitySummary, PersonalBest, SessionType, StravaStatus, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, PersonalBest, SessionType, TrainingPlan } from '../../lib/types'
 import plan5k from '../../test/fixtures/plan-5k.json'
-import { stravaOff } from '../../test/server'
 import { FROM_STRAVA, UPLOADED } from '../../test/sources'
 import { PlanView } from '../plan/PlanView'
 import { adherence, easyTrend, missedKeySession, mondayOf, verdictChip, weekSoFar } from './dashboard-math'
-import { Overview } from './Overview'
 
 // Week 1 of the 5K plan (from Monday 12 October): strength Mon, hills Tue 5.5 km, easy + strides Thu 3 km,
 // easy Sat 3 km, long run Sun 6 km. Week 2: fartlek Tue, progression Thu, easy Sat, long run Sun.
@@ -120,15 +117,6 @@ describe('verdict chips', () => {
   })
 })
 
-const connected: StravaStatus = {
-  ...stravaOff,
-  available: true,
-  connected: true,
-  status: 'Active',
-  connectedAt: '2026-10-12T06:00:00Z',
-  lastSyncedAt: '2026-10-18T07:10:00Z',
-}
-
 const bests: PersonalBest[] = [
   { name: '5K', distanceMetres: 5000, seconds: 1500, paceSecondsPerKm: 300, activityId: 'long', localDate: '2026-10-18', source: 'Strava' },
   { name: '400 m', distanceMetres: 400, seconds: 95, paceSecondsPerKm: 237.5, activityId: 'hills', localDate: '2026-10-13', source: 'Upload' },
@@ -139,75 +127,18 @@ const synced = [
   run('long', '2026-10-18', 6.1, { plannedTitle: 'Long run', plannedSessionType: 'LongRun', pace: 'OnTarget', source: FROM_STRAVA }),
 ]
 
-function overview(props: Partial<Parameters<typeof Overview>[0]> = {}) {
-  return render(
-    <Overview plan={plan} units="km" today="2026-10-19" currentWeek={2} week={plan.weeks[1]!} runs={synced} bests={bests} strava={connected} onOpenRun={() => {}} {...props} />,
-  )
-}
-
-describe('the overview', () => {
-  it('shows this week, the plan so far, recent runs with verdicts and personal bests', () => {
-    overview()
-
-    const week = screen.getByRole('region', { name: 'Week 2' })
-    expect(within(week).getByText(/of 4 runs/)).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'The plan so far' })).toHaveTextContent('2 of the 4 runs so far')
-
-    const recent = within(screen.getByRole('region', { name: 'Recent runs' })).getAllByRole('listitem')
-    expect(recent[0]).toHaveTextContent('Long run')
-    expect(recent[0]).toHaveTextContent('Kept easy')
-    expect(within(recent[0]!).getByRole('link', { name: 'View on Strava' })).toHaveAttribute('href', 'https://www.strava.com/activities/1234')
-    expect(within(recent[1]!).queryByRole('link', { name: 'View on Strava' })).not.toBeInTheDocument()
+describe('progress in one place', () => {
+  it('keeps personal bests in Plan › Progress, with no separate overview or extra plan tab', async () => {
+    render(<PlanView plan={plan} units="km" shareUrl="https://taperday.run/?x" today="2026-10-19" runs={synced} bests={bests} />)
+    const tabs = screen.getAllByRole('tab').map((t) => t.textContent)
+    expect(tabs).toEqual(['This week', 'Calendar', 'Progress'])
+    await userEvent.click(screen.getByRole('tab', { name: 'Progress' }))
+    expect(screen.queryByText('Running insights', { selector: 'summary' })).not.toBeInTheDocument()
 
     // Only the headline distances: 5K yes, 400 m no.
-    const pbs = screen.getByRole('region', { name: 'Personal bests' })
+    const pbs = screen.getByRole('region', { name: 'Personal best records' })
     expect(pbs).toHaveTextContent('5K')
     expect(pbs).toHaveTextContent('25:00')
     expect(pbs).not.toHaveTextContent('400 m')
-  })
-
-  it('credits Strava beside synced runs', () => {
-    overview()
-
-    expect(screen.getByText(/Runs arrive from Strava by themselves/)).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: 'Powered by Strava' })).toBeInTheDocument()
-  })
-
-  it('nudges, calmly, about a missed key session', () => {
-    overview({ runs: [synced[0]!], today: '2026-10-19' })
-
-    expect(screen.getByRole('note')).toHaveTextContent('no run for long run. No need to make it up')
-  })
-
-  it('says when runs are on their way, and when Strava needs connecting again', () => {
-    const { unmount } = overview({ strava: { ...connected, pending: 3 } })
-    expect(screen.getByText('Fetching 3 runs from Strava…')).toBeInTheDocument()
-    unmount()
-
-    const onOpenAccount = vi.fn()
-    overview({ strava: { ...connected, status: 'NeedsReconnect' }, onOpenAccount })
-    expect(screen.getByRole('note')).toHaveTextContent('Strava has stopped sending your runs')
-  })
-
-  it('offers Strava, or the upload, to runners who haven’t connected', async () => {
-    const onOpenAccount = vi.fn()
-    overview({ strava: { ...stravaOff, available: true }, runs: [], onOpenAccount, onOpenRuns: () => {} })
-
-    await userEvent.click(screen.getByRole('button', { name: 'Connect Strava' }))
-    expect(onOpenAccount).toHaveBeenCalled()
-    expect(screen.getByRole('button', { name: 'upload a .fit file' })).toBeInTheDocument()
-    expect(screen.queryByRole('img', { name: 'Powered by Strava' })).not.toBeInTheDocument()
-  })
-
-  it('keeps running insights in Progress without adding another plan tab', async () => {
-    const { unmount } = render(<PlanView plan={plan} units="km" onUnitsChange={() => {}} shareUrl="https://taperday.run/?x" today="2026-10-19" />)
-    expect(screen.queryByRole('tab', { name: 'Overview' })).not.toBeInTheDocument()
-    unmount()
-
-    render(<PlanView plan={plan} units="km" onUnitsChange={() => {}} shareUrl="https://taperday.run/?x" today="2026-10-19" runs={synced} strava={connected} />)
-    const tabs = screen.getAllByRole('tab').map((t) => t.textContent)
-    expect(tabs).toEqual(['This week', 'Calendar', 'Progress'])
-    await openTrainingGuide('Running insights')
-    expect(screen.getByRole('heading', { name: 'Easy runs over time' })).toBeInTheDocument()
   })
 })

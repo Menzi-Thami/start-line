@@ -41,11 +41,8 @@ export function RemainingWeekAdjustment({
   const describe = (km: number | null | undefined) => (km == null ? 'Rest day' : `Easy run · ${formatDistance(km, units)}`)
   return (
     <section className="section" aria-labelledby={id}>
-      <h3 id={id}>Week didn’t go to plan?</h3>
-      <p>
-        Log what you actually ran first, including a different run or time-only entry. Preview an easier rest of this week without squeezing
-        missed runs into another day.
-      </p>
+      <h3 id={id}>Ease the rest of this week</h3>
+      <p>Log what you ran first, then preview an easier rest of the week. Missed runs aren’t squeezed in elsewhere.</p>
       <label className="session-done">
         <input
           type="checkbox"
@@ -104,8 +101,7 @@ export function RemainingWeekAdjustment({
         </div>
       )}
       <p className="field-help">
-        A short reset keeps runs easy and at most {formatDistance(8, units)}, never longer than planned. For illness, injury or a longer
-        break, use Replan from here. If pain changes how you run, choose rest and seek professional advice.
+        Runs stay easy and at most {formatDistance(8, units)}. For illness, injury or a longer break, rebuild from today instead.
       </p>
       {!!current.adjustments?.length && (
         <details>

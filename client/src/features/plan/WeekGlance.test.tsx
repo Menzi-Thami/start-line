@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { planFixture } from '../../test/server'
 import type { ActivitySummary } from '../../lib/types'
 import { WeekGlance } from './WeekGlance'
-import { WeekDays } from './WeekList'
+import { SessionItem } from './SessionItem'
 import { sessionKey } from './plan-math'
 
 const week = planFixture.weeks[0]!
@@ -69,7 +69,7 @@ describe('strength stays separate from running', () => {
   })
 
   it('labels strength distinctly with exercises rather than running pace or coaching controls', () => {
-    const { container } = render(<WeekDays week={{ ...week, sessions: [strength] }} byZone={new Map()} units="km" done={new Set()} onDoneChange={vi.fn()} />)
+    const { container } = render(<SessionItem session={strength} pace={undefined} units="km" done={new Set()} onDoneChange={vi.fn()} />)
     const card = container.querySelector('.session-strength')!
     expect(card).toHaveTextContent('Strength')
     expect(card).toHaveTextContent(`${strength.exercises.length} exercises`)

@@ -1,4 +1,4 @@
-import { openStrengthWorkouts } from './navigation'
+import { openDisclosure, openStrengthWorkouts } from './navigation'
 import { expect, test } from '@playwright/test'
 import type { CheckIn, CheckInRequest, GeneratePlanRequest, TrainingPlan } from '../src/lib/types'
 

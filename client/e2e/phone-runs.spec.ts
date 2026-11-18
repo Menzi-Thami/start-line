@@ -93,10 +93,17 @@ for (const mode of ['light', 'dark']) {
     await expect(nav).toBeVisible()
     await nav.getByRole('button', { name: 'Runs', exact: true }).click()
     await expect(sheet).toBeVisible()
+    // Add runs stays open when the mobile panel moves into the desktop split view.
+    await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(page.locator('.runs-split')).toHaveCount(1)
+    await expect(sheet).toBeVisible()
     for (const width of [320, 375, 768, 1440]) {
+      // Each audit gets a fresh document at its final size (Firefox's geometry checks can crash after resizing).
       await page.setViewportSize({ width, height: 900 })
-      // Help stays open when the mobile panel moves into the desktop split view.
+      await page.reload()
+      await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
       await expect(page.locator('.runs-split')).toHaveCount(width >= 1024 ? 1 : 0)
+      await addRuns.click()
       await expect(sheet).toBeVisible()
       const help = guide.locator('details.device-guide')
       if (await help.getAttribute('open') === null) await help.locator(':scope > summary').click()

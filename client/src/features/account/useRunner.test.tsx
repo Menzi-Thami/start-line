@@ -2,7 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { accountsOff, AuthContext, type Auth } from '../../app/auth-context'
-import { api } from '../../lib/api-client'
+import { api, ApiError } from '../../lib/api-client'
 import type { Runner } from '../../lib/types'
 import { ACCOUNT_TIMEOUT_MESSAGE, useRunner, WAKE_PATIENCE_MS } from './useRunner'
 
@@ -87,5 +87,29 @@ describe('bounded account loading', () => {
     next({ ...runner, id: 'second-runner', displayName: 'Sipho' })
     await flush()
     expect(view.result.current.state).toEqual({ kind: 'ready', runner: { ...runner, id: 'second-runner', displayName: 'Sipho' } })
+  })
+})
+
+
+describe('remembered session recovery', () => {
+  it('does not mistake a remembered runner with an expired token for a signed-out visitor', async () => {
+    const read = vi.spyOn(api.me, 'get')
+    const view = mount({ ...identity(), getToken: () => Promise.resolve(null) })
+    await flush()
+    expect(view.result.current.state).toEqual({
+      kind: 'error',
+      message: 'Your sign-in needs renewing. Continue securely to get back to your training.',
+      needsSignIn: true,
+    })
+    expect(read).not.toHaveBeenCalled()
+    view.unmount()
+  })
+
+  it('offers session recovery when the API rejects an expired token', async () => {
+    vi.spyOn(api.me, 'get').mockRejectedValueOnce(new ApiError('Expired', 401))
+    const view = mount(identity())
+    await flush()
+    expect(view.result.current.state).toMatchObject({ kind: 'error', needsSignIn: true })
+    view.unmount()
   })
 })

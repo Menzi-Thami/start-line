@@ -100,8 +100,8 @@ it.each(['Active', 'Completed', 'Ended'] as const)('keeps an elapsed %s recovery
   expect(screen.getByRole('heading', { name: 'Ready when you are.' })).toBeVisible()
   expect(screen.queryByText(/You’re recovered|Finish recovery/)).not.toBeInTheDocument()
   await opened.user.click(screen.getByRole('button', { name: 'Choose my next challenge' }))
-  expect(opened.onOpenRecovery).toHaveBeenCalledOnce()
-  expect(opened.onBuildPlan).not.toHaveBeenCalled()
+  expect(opened.onBuildPlan).toHaveBeenCalledOnce()
+  expect(opened.onOpenRecovery).not.toHaveBeenCalled()
 })
 it('opens the optional easy-running plan as one priority', async () => {
   const opened = show(journeyOf([], { maintenance: maintenance() }))
@@ -109,6 +109,10 @@ it('opens the optional easy-running plan as one priority', async () => {
   await opened.user.click(screen.getByRole('button', { name: 'Open easy running' }))
   expect(opened.onOpenRecovery).toHaveBeenCalledOnce()
   expect(opened.onBuildPlan).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Train for another race' })).toBeVisible()
+  expect(document.querySelectorAll('.home-focus .button-primary')).toHaveLength(1)
+  await opened.user.click(screen.getByRole('button', { name: 'Train for another race' }))
+  expect(opened.onBuildPlan).toHaveBeenCalledOnce()
 })
 it('keeps experienced runners on Home months after training without restarting onboarding', async () => {
   const opened = show(journeyOf([chapter({ raceDate: '2026-04-12', status: 'Archived', lifecycle: 'Archived' })]))

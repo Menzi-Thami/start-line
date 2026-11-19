@@ -1,4 +1,4 @@
-import AxeBuilder from '@axe-core/playwright'
+import AxeBuilder from './axe'
 import { expect, test, type Page } from '@playwright/test'
 import { mkdir, readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
@@ -59,7 +59,7 @@ async function mockApi(page: Page, hasPlan = false, imports?: Imports) {
 }
 
 for (const mode of ['light', 'dark']) {
-  test(`Strava setup leads with free accounts and keeps app-specific help optional in ${mode} mode @phone`, async ({ page, browserName }, info) => {
+  test(`Strava setup leads with free accounts and keeps app-specific help optional in ${mode} mode @phone`, async ({ page}, info) => {
     const errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
     await mockApi(page)
@@ -115,12 +115,8 @@ for (const mode of ['light', 'dark']) {
       if (mode === 'dark') { await expect(mark.locator('.strava-powered-screen')).toBeVisible(); await expect(mark.locator('.strava-powered-print')).toBeHidden() }
       else { await expect(mark.locator('.strava-powered-print')).toBeVisible(); await expect(mark.locator('.strava-powered-screen')).toBeHidden() }
       expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), `${width}px`).toBeLessThanOrEqual(1)
-      // Firefox's content process crashes ("Page crashed") inside axe on the open Add runs sheet: a browser bug, not a
-      // finding. The same audit runs in Chromium, Android and both WebKit projects; Firefox still checks everything else.
-      if (browserName !== 'firefox') {
-        const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
-        expect(audit.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
-      }
+      const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
+      expect(audit.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
       if (width === 375 || width === 1440) {
         // Full-page captures should start above the sticky header; axe may move keyboard focus.
         await page.evaluate(() => {
@@ -244,7 +240,7 @@ test('a skipped recording gains an explanation in Account when pending work comp
   await expect(page.getByRole('link', { name: /Strava run,/ })).toHaveAttribute('href', 'https://www.strava.com/activities/12345')
 })
 
-test('Strava setup stays concise with app and watch instructions closed by default @phone', async ({ page, browserName }, info) => {
+test('Strava setup stays concise with app and watch instructions closed by default @phone', async ({ page}, info) => {
   await mockApi(page)
   await page.setViewportSize({ width: 375, height: 900 })
   await page.goto('http://127.0.0.1:5176/e2e/fixtures/journey.html?view=runs')
@@ -262,11 +258,8 @@ test('Strava setup stays concise with app and watch instructions closed by defau
     await expect(mark).toBeVisible()
     if (mode === 'dark') await expect(mark.locator('.strava-powered-screen')).toBeVisible()
     else await expect(mark.locator('.strava-powered-print')).toBeVisible()
-    // Firefox crashes inside axe on the open Add runs sheet (see the test above); other projects run the audit.
-    if (browserName !== 'firefox') {
-      const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
-      expect(audit.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
-    }
+    const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
+    expect(audit.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     if (info.project.name === 'desktop') {
       await mkdir(qa, { recursive: true })

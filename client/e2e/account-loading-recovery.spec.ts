@@ -1,4 +1,4 @@
-import AxeBuilder from '@axe-core/playwright'
+import AxeBuilder from './axe'
 import { mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Page, type Route } from '@playwright/test'

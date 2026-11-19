@@ -1,4 +1,4 @@
-import AxeBuilder from '@axe-core/playwright'
+import AxeBuilder from './axe'
 import { expect, test, type Page } from '@playwright/test'
 import { readFile, mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'

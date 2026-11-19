@@ -1,5 +1,5 @@
 import { openDisclosure } from './navigation'
-import AxeBuilder from '@axe-core/playwright'
+import AxeBuilder from './axe'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 

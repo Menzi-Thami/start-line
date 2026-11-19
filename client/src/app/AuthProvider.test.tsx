@@ -57,6 +57,7 @@ function Buttons() {
       <button type="button" onClick={auth.signUp}>sign up</button>
       <button type="button" onClick={auth.signOut}>sign out</button>
       <button type="button" onClick={() => void auth.getToken().then(setToken)}>read token</button>
+      {auth.resumeSession && <button type="button" onClick={auth.resumeSession}>continue securely</button>}
       {token !== undefined && <output>{token ?? 'no token'}</output>}
       {auth.signInWithGoogle && <button type="button" onClick={auth.signInWithGoogle}>google</button>}
     </>
@@ -100,6 +101,48 @@ describe('starting a sign-in on a device that remembers someone', () => {
 })
 
 describe('one runner per device', () => {
+
+  it('never redirects during a silent token failure, then renews only on a user tap', async () => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    msal.acquireTokenSilent.mockRejectedValueOnce(new InteractionRequiredAuthError('login_required', 'Synthetic session expiry'))
+    await user.click(screen.getByRole('button', { name: 'read token' }))
+    expect(await screen.findByText('no token')).toBeInTheDocument()
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+    expect(cached).toEqual([remembered])
+
+    await user.click(screen.getByRole('button', { name: 'continue securely' }))
+    await waitFor(() => expect(msal.acquireTokenRedirect).toHaveBeenCalledWith({
+      scopes: [config(false).scope], account: remembered, redirectStartPage: window.location.href,
+    }))
+    expect(msal.clearCache).not.toHaveBeenCalled()
+    expect(cached).toEqual([remembered])
+  })
+
+  it('keeps queued offline runs when a runner explicitly renews the same account', async () => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    writeCheckInCopy('t:remembered', 'plan', { entries: [], pending: [{ revision: 'one', key: '2026-10-14|Easy',
+      date: '2026-10-14', sessionType: 'Easy', base: null, answers: { status: 'Done', effort: null, distanceUnreported: false } }] })
+
+    await user.click(screen.getByRole('button', { name: 'continue securely' }))
+    await waitFor(() => expect(msal.acquireTokenRedirect).toHaveBeenCalledTimes(1))
+    expect(readCheckInCopies('t:remembered').plan?.pending).toHaveLength(1)
+    expect(msal.clearCache).not.toHaveBeenCalled()
+    expect(msal.getActiveAccount()).toEqual(remembered)
+  })
+
+  it('does not attempt interactive renewal without internet', async () => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    const connection = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      await user.click(screen.getByRole('button', { name: 'continue securely' }))
+      expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+      expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+      expect(cached).toEqual([remembered])
+    } finally { connection.mockRestore() }
+  })
   it('keeps unsynced drafts in place when an online token renewal needs explicit sign-in', async () => {
     const user = userEvent.setup()
     await renderWith(false)

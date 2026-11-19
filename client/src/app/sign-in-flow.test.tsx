@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -553,5 +553,36 @@ describe('dead ends', () => {
 
     expect(await screen.findByText('Finishing connecting Strava…')).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Connect with Strava' })).not.toBeInTheDocument())
+  })
+})
+
+
+describe('restoring an expired remembered session', () => {
+
+  it('keeps a renewal failure on the same account instead of opening account selection', async () => {
+    window.history.replaceState(null, '', '/?view=home')
+    const resumeSession = vi.fn()
+    const signIn = vi.fn()
+    renderApp(signedIn({
+      getToken: () => Promise.resolve(null),
+      resumeSession,
+      signIn,
+      error: { message: 'Microsoft could not complete that request.', code: 'temporarily_unavailable' },
+    }))
+    const actions = await screen.findAllByRole('button', { name: 'Continue securely' })
+    expect(actions.length).toBeGreaterThan(0)
+    fireEvent.click(actions[0]!)
+    expect(resumeSession).toHaveBeenCalledTimes(1)
+    expect(signIn).not.toHaveBeenCalled()
+  })
+  it('offers Continue securely instead of telling a remembered runner to sign up again', async () => {
+    window.history.replaceState(null, '', '/?view=home')
+    const resumeSession = vi.fn()
+    renderApp(signedIn({ getToken: () => Promise.resolve(null), resumeSession }))
+    const continueButton = await screen.findByRole('button', { name: 'Continue securely' })
+    expect(screen.getByText(/Your sign-in needs renewing/)).toBeInTheDocument()
+    expect(screen.queryByText(/Sign in to see your saved plans/)).not.toBeInTheDocument()
+    fireEvent.click(continueButton)
+    expect(resumeSession).toHaveBeenCalledTimes(1)
   })
 })

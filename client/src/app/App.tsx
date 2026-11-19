@@ -837,13 +837,14 @@ export function App() {
         : state.kind === 'error'
           ? {
               key: 'error',
-              title: 'We couldn’t load your account',
+              title: state.needsSignIn ? 'Pick up where you left off' : 'We couldn’t load your account',
               hint: state.message,
               body: (
                 <div className="submit-row">
-                  <button type="button" className="button" onClick={() => runner.refresh()}>
-                    Try again
+                  <button type="button" className="button" onClick={state.needsSignIn ? (auth.resumeSession ?? auth.signIn) : () => runner.refresh()}>
+                    {state.needsSignIn ? 'Continue securely' : 'Try again'}
                   </button>
+                  {state.needsSignIn && <button type="button" className="button button-quiet" onClick={() => runner.refresh()}>Try again</button>}
                   <button type="button" className="link-button" onClick={auth.signOut}>
                     Sign out
                   </button>
@@ -920,8 +921,8 @@ export function App() {
           <div className="callout" role="alert">
             <p>
               {auth.error.message}{' '}
-              <button type="button" className="link-button" onClick={auth.signIn}>
-                Try again
+              <button type="button" className="link-button" onClick={auth.account ? (auth.resumeSession ?? auth.signIn) : auth.signIn}>
+                {auth.account ? 'Continue securely' : 'Try again'}
               </button>
             </p>
             {auth.error.code && <p className="field-help">Error code {auth.error.code}, if you contact us.</p>}
@@ -933,7 +934,7 @@ export function App() {
         )}
 
         {view === 'sign-in' && state.kind === 'signed-out' && <SignInLanding onSignIn={auth.signIn} onSignUp={auth.signUp} onGoogle={auth.signInWithGoogle} onBack={() => go('build')} />}
-        {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty" role="status"><p>{state.kind === 'loading' || state.kind === 'ready' ? 'Finding your training plan…' : 'Finish your account setup to continue.'}</p>{state.kind === 'needs-sign-up' && <button type="button" className="button" onClick={() => go('sign-up')}>Finish setting up your account</button>}</div>}
+        {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty" role="status"><p>{state.kind === 'loading' || state.kind === 'ready' ? 'Finding your training plan…' : state.kind === 'error' && state.needsSignIn ? 'Your sign-in needs renewing. Continue securely to return to your training.' : 'Finish your account setup to continue.'}</p>{state.kind === 'needs-sign-up' && <button type="button" className="button" onClick={() => go('sign-up')}>Finish setting up your account</button>}</div>}
         {view === 'onboarding' && state.kind === 'ready' && (
           <StravaWelcome notice={stravaNotice} connecting={stravaConnecting} onContinue={leaveStravaWelcome} />
         )}
@@ -956,10 +957,12 @@ export function App() {
         {state.kind === 'error' && !showBuilder && (
           <div className="callout" role="alert">
             <p>
-              We couldn’t load your account. {state.message}{' '}
-              <button type="button" className="link-button" onClick={() => runner.refresh()}>
-                Try again
-              </button>
+              {state.needsSignIn ? state.message : `We couldn’t load your account. ${state.message}`}{' '}
+              {state.needsSignIn ? (
+                <button type="button" className="link-button" onClick={auth.resumeSession ?? auth.signIn}>Continue securely</button>
+              ) : (
+                <button type="button" className="link-button" onClick={() => runner.refresh()}>Try again</button>
+              )}
             </p>
           </div>
         )}

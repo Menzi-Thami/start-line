@@ -39,10 +39,10 @@ async function mockApi(page: Page) {
   return state
 }
 
-// Your run data lives in Account, under Your data.
+// Your run data lives in Account, under Data & privacy (opened by ?settings=data).
 test('a runner sees what their total is made of and retries a run that failed to arrive @phone', async ({ page }) => {
   const state = await mockApi(page)
-  await page.goto('http://127.0.0.1:5176/e2e/fixtures/plan-edit.html?view=account')
+  await page.goto('http://127.0.0.1:5176/e2e/fixtures/plan-edit.html?view=account&settings=data')
 
   const panel = page.locator('details.run-data')
   await expect(panel.locator('summary')).toContainText('1 run from Strava didn’t arrive')
@@ -65,7 +65,7 @@ test('64-bit Strava activity links keep every digit and remain distinct after re
   const state = await mockApi(page)
   const ids = ['9007199254740992', '9007199254740993', '9223372036854775807']
   state.issues = ids.map(id => ({ stravaActivityId: id, reason: 'Recording unavailable', skipped: true, at: '2026-10-28T06:00:00Z' }))
-  await page.goto('http://127.0.0.1:5176/e2e/fixtures/plan-edit.html?view=account')
+  await page.goto('http://127.0.0.1:5176/e2e/fixtures/plan-edit.html?view=account&settings=data')
   for (const visit of [0, 1]) {
     if (visit) await page.reload()
     const panel = page.locator('details.run-data')

@@ -26,7 +26,6 @@ interface Props {
   stravaConnecting?: boolean
   /** A new calendar link was made here, so the plan's calendar menu offers it rather than the old one. */
   onNewCalendarLink?: (token: string) => void
-  /** "Your run data" (where totals come from), shown first under Data & privacy. Its own download is not repeated here. */
 }
 
 type Group = 'profile' | 'connections' | 'notifications' | 'data'

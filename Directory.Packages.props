@@ -17,7 +17,7 @@
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Identity.Web" Version="4.18.0" />
     <!-- FIT Protocol License: server-side only, never bundled into the client. See docs/activity-import.md. -->
-    <PackageVersion Include="Garmin.FIT.Sdk" Version="21.221.0" />
+    <PackageVersion Include="Garmin.FIT.Sdk" Version="21.222.0" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.15" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.15" />
     <!-- Strava tokens are encrypted with Data Protection; the key ring lives in SQL, wrapped by a Key Vault key in Azure. -->
@@ -26,7 +26,7 @@
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <!-- Web Push (VAPID, aes128gcm) for reminders. On .NET 6+ it uses the platform's own crypto: no BouncyCastle. -->
     <PackageVersion Include="Lib.Net.Http.WebPush" Version="3.3.1" />
-    <PackageVersion Include="Scalar.AspNetCore" Version="2.20.0" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.21.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.21.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.21.0" />
@@ -41,7 +41,7 @@
   </ItemGroup>
   <ItemGroup Label="Tests">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
-    <PackageVersion Include="coverlet.collector" Version="10.1.0" />
+    <PackageVersion Include="coverlet.collector" Version="10.1.1" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="Shouldly" Version="4.3.0" />

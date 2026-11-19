@@ -38,3 +38,15 @@ No arbitrary 30-day guarantee: browser storage, the user declining persistence, 
 ## Release
 
 Open a PR to `staging`; require green checks and real iPhone/Android verification before merging or deploying to production. Do not merge automatically.
+
+## Quiet renewal when the app opens (19 November 2026)
+
+Microsoft gives this app a sign-in that lasts 24 hours, fixed for single-page apps and email-code sign-in. When the app opens after that, `AuthProvider` first tries the stored tokens only (no hidden iframe, so no Safari timeout). If they've run out, it makes one top-level visit to Microsoft with `prompt=none`, which never shows a page:
+
+- **Microsoft's session still alive** (the runner answered **Yes** to "Stay signed in?"): Microsoft sends straight back with new tokens. The runner sees a reload and stays signed in, with no code.
+- **Session gone** (they answered No, signed out, or cleared site data): Microsoft sends back an error. The runner stays remembered on the device and **Continue securely** asks for the code when it's needed.
+- At most once per app launch (marked in `sessionStorage`), never offline, and never on the way back from a sign-in. A failed check mid-task still waits for the runner's tap, as before.
+
+The sign-in screen says: "When Microsoft asks, tap **Yes** to stay signed in, so you won't need a code next time."
+
+Manual check on a real phone: sign in and tap Yes. Leave the app closed for more than 24 hours, then open it. You should see a brief reload, then your plan, with no code.

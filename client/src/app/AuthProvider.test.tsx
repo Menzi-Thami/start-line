@@ -76,6 +76,65 @@ beforeEach(() => {
   cached = [remembered]
   active = null
   redirectResult = null
+  sessionStorage.clear()
+})
+
+describe('opening the app after its 24-hour sign-in has run out', () => {
+  const open = () => render(<AuthProvider config={config(false)}><Buttons /></AuthProvider>)
+  const expired = () => new InteractionRequiredAuthError('no_tokens_found', 'Synthetic expired refresh token')
+
+  it('uses the stored tokens only, and needs no renewal while they are valid', async () => {
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(msal.acquireTokenSilent).toHaveBeenCalledWith(expect.objectContaining({ account: remembered, cacheLookupPolicy: 2 }))
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+  })
+
+  it('renews with a quiet visit to Microsoft that shows no page, staying on this page and this account', async () => {
+    msal.acquireTokenSilent.mockRejectedValueOnce(expired())
+    open()
+    await waitFor(() => expect(msal.acquireTokenRedirect).toHaveBeenCalledWith({
+      scopes: [config(false).scope], account: remembered, prompt: 'none', redirectStartPage: window.location.href,
+    }))
+    // On its way out: no flash of a signed-out page.
+    expect(screen.getByTestId('who')).toHaveTextContent('loading')
+    expect(msal.clearCache).not.toHaveBeenCalled()
+  })
+
+  it('keeps the remembered runner when Microsoft needs a code after all, and offers Continue securely', async () => {
+    sessionStorage.setItem('taperday.quiet-renewal', 'pending')
+    msal.handleRedirectPromise.mockRejectedValueOnce(new InteractionRequiredAuthError('login_required', 'Synthetic: session ended'))
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'continue securely' })).toBeInTheDocument()
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('taperday.quiet-renewal')).toBe('tried')
+  })
+
+  it('tries the quiet renewal once per launch, never in a loop', async () => {
+    sessionStorage.setItem('taperday.quiet-renewal', 'tried')
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(msal.acquireTokenSilent).not.toHaveBeenCalled()
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+  })
+
+  it('stays put offline, with the runner still remembered', async () => {
+    const connection = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      open()
+      expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+      expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+    } finally { connection.mockRestore() }
+  })
+
+  it('does not renew on the way back from a sign-in that just finished', async () => {
+    redirectResult = { account: remembered }
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(msal.acquireTokenSilent).not.toHaveBeenCalled()
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+  })
 })
 
 describe('starting a sign-in on a device that remembers someone', () => {

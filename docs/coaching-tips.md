@@ -48,11 +48,8 @@ The first rule that matches wins (`CoachingTipSelector.Choose`; every threshold 
 
 ### Running figures: read now, never kept
 
-Rules 3 and 4 read the runner's running through `RunningLogReader` with `includeSynced: true`: kept runs (the runner's
-own check-ins and uploads) plus the Strava runs Taperday holds **right now**, as Home counts them. They're worked out on
-every read and used only for the choice and this one email. Nothing worked out from a Strava run is stored: the delivery
-row keeps only the tip's key and the Thursday, never a distance (Strava API Policy, see [strava-sync.md](strava-sync.md)).
-A Strava-only runner has nothing in the earlier 30 days (the cache is 7 days), so rule 3 never fires for them.
+Rule 3 (the long-run jump) reads **kept runs only** through `RunningLogReader` with `includeSynced: false`: the runner's own check-ins and uploads. Rule 4 (comeback) also counts the Strava runs Taperday holds **right now**, as Home does, but only so a runner who did run never gets a "quiet week" tip. Both are worked out on every read. The delivery row keeps only the tip's key and the Thursday, never a distance, and no tip that fires is decided from Strava data (Strava API Policy, see [strava-sync.md](strava-sync.md)).
+A runner whose runs only come from Strava never gets rule 3, since it uses kept runs only.
 
 ## The tip bank
 
@@ -155,8 +152,7 @@ Counts and ids only, never personal data:
 
 ## Not yet
 
-- **Strava-derived choice.** Which tip went is kept (its key, such as `spike` or `comeback`), and the choice may have used
-  Strava runs Taperday held at the time. No distance or other figure is kept, but the key alone records that a rule fired.
+- **Strava-only runners** never get the long-run jump tip: it's judged on kept runs (uploads and ticks) only, so nothing stored is decided from Strava.
 - **Couch to 5K detail.** A programme counts as under way until all 27 runs are ticked; a programme abandoned part-way
   keeps a runner on Track A even with a regular plan beside it.
 - **Send time.** Like the recap, a tip only goes while the API is awake in the runner's 07:00 hour; the wake workflow

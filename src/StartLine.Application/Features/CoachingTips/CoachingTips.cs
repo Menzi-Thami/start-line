@@ -210,16 +210,19 @@ internal sealed partial class CoachingTipSender(
     private static bool Wants(Runner runner) => runner.WeeklyEmails && !string.IsNullOrWhiteSpace(runner.Email);
 
     /// <summary>
-    /// What the rules need, read now. Kept runs and the Strava runs held right now, as Home counts them (<see cref="RunningLogReader"/>
-    /// with synced runs); nothing worked out from them is stored. The current plan gives the race day and whether it had
-    /// running sessions last week.
+    /// What the rules need, read now (<see cref="RunningLogReader"/>). The long-run jump uses kept runs only; whether the
+    /// runner ran last week also counts the Strava runs held right now, as Home does. The current plan gives the race day
+    /// and whether it had running sessions last week.
     /// </summary>
     private async Task<CoachingTipFacts> FactsAsync(Runner runner, DateOnly thursday, CancellationToken cancellationToken)
     {
         var yesterday = thursday.AddDays(-1);
         var weekFrom = thursday.AddDays(-7);
         var monthFrom = weekFrom.AddDays(-30);
-        var runs = await reader.ReadAsync(runner, monthFrom, yesterday, includeSynced: true, cancellationToken);
+        // The long-run jump is judged on kept runs only (uploads and ticks): which tip went out is stored, and nothing
+        // worked out from Strava may be. Held Strava runs only stop a "quiet week" tip going to someone who did run.
+        var kept = await reader.ReadAsync(runner, monthFrom, yesterday, includeSynced: false, cancellationToken);
+        var lastWeek = await reader.ReadAsync(runner, weekFrom, yesterday, includeSynced: true, cancellationToken);
 
         var saved = await db.SavedPlans.AsNoTracking()
             .Where(p => p.RunnerId == runner.Id && p.Status == SavedPlanStatus.Active)
@@ -247,10 +250,10 @@ internal sealed partial class CoachingTipSender(
 
         var track = CoachingTipSelector.TrackFor(saved?.Inputs.Experience, InCouchTo5K(runner));
         return new(thursday, race, track,
-            Longest(runs, weekFrom, yesterday),
-            Longest(runs, monthFrom, weekFrom.AddDays(-1)),
+            Longest(kept, weekFrom, yesterday),
+            Longest(kept, monthFrom, weekFrom.AddDays(-1)),
             planned,
-            runs.Any(r => r.Date >= weekFrom));
+            lastWeek.Count > 0);
     }
 
     private static double? Longest(IReadOnlyList<LoggedRun> runs, DateOnly from, DateOnly to) => runs

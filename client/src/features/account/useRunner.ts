@@ -9,7 +9,7 @@ export type RunnerState =
   | { kind: 'loading' }
   | { kind: 'needs-sign-up' }
   | { kind: 'ready'; runner: Runner }
-  | { kind: 'error'; message: string }
+  | { kind: 'error'; message: string; needsSignIn?: boolean }
 
 /** A hard budget for the whole account load, including token acquisition, reads and retries. */
 export const WAKE_PATIENCE_MS = 60_000
@@ -66,7 +66,16 @@ export function useRunner() {
       .catch((error: unknown) => {
         if (flags.cancelled) return
         const failed: RunnerState = error instanceof ApiError && error.status === 404 ? { kind: 'needs-sign-up' }
-          : error instanceof ApiError && error.status === 401 ? { kind: 'signed-out' }
+          : error instanceof ApiError && error.status === 401
+            ? auth.account
+              ? {
+                  kind: 'error',
+                  message: navigator.onLine
+                    ? 'Your sign-in needs renewing. Continue securely to get back to your training.'
+                    : 'You’re offline. Reconnect to the internet before continuing your sign-in.',
+                  needsSignIn: true,
+                }
+              : { kind: 'signed-out' }
             : { kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.' }
         setLoaded({ owner: auth, state: failed })
       })

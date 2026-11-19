@@ -1,6 +1,6 @@
 # Training insights (#140)
 
-**Where it lives:** nowhere in the app at the moment. The Runs simplification removed the Home running-details page that showed it, and the Plan simplification (#277) left it out of Plan › Progress. The API endpoint and the `TrainingInsights` component (with its unit tests) remain, unrendered, for an owner decision. The weekly review in Plan › Progress still offers **Decline this change** next to Apply.
+**Where it lives:** removed from the app on 19 November 2026 (whole-app simplification). Plan › Progress covers the same ground more simply (totals and chart, easy-run pace, personal bests, the goal outlook) and the weekly review gives the advice. The `TrainingInsights` component and its tests were deleted; the API endpoint and the server-side calculation stay, and the weekly recap email still uses the trends. This page records what training insights showed, in case it comes back.
 
 ## What a runner sees
 

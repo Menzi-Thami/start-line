@@ -727,34 +727,6 @@ select {
   color: var(--muted);
 }
 
-/* Four bars stepping down, then the race-day dot: the favicon's taper, filling in as you go. */
-.wizard-bar {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  align-items: flex-end;
-  gap: 5px;
-}
-
-.wizard-bar li {
-  width: 22px;
-  border-radius: 2px;
-  background: var(--line-strong);
-  transition: background-color var(--dur-base) var(--ease-standard);
-}
-
-.wizard-bar li:last-child {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  margin-left: 3px;
-}
-
-.wizard-bar li.is-done {
-  background: var(--accent);
-}
-
 .wizard-cancel {
   margin-left: auto;
   align-self: center;

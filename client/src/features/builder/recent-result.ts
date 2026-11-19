@@ -44,9 +44,3 @@ export function recentDraft(recent: RecentResultInputs | undefined, today: strin
     ago,
   }
 }
-
-/** "10K in 50:00", for the review screen. */
-export const describeRecent = (draft: RecentDraft, formatted: string): string => {
-  const known = RECENT_DISTANCES.find((d) => d.km === draft.km)
-  return `${known ? known.label : `${draft.km} km`} in ${formatted}`
-}

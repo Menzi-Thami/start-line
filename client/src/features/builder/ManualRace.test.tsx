@@ -22,7 +22,7 @@ async function dateAndBuild(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: 'Monday 30 November 2026' }))
   await user.click(screen.getByRole('button', { name: 'Continue' }))
   await user.click(within(screen.getByRole('group', { name: 'Suggested goal times' })).getByRole('button', { name: /Steady/ }))
-  for (let step = 0; step < 3; step++) await user.click(screen.getByRole('button', { name: 'Continue' }))
+  for (let step = 0; step < 2; step++) await user.click(screen.getByRole('button', { name: 'Continue' }))
   await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 }
 
@@ -72,7 +72,7 @@ describe('manual race setup', () => {
     const { user, onSubmit } = show(reopened, units)
     await user.click(screen.getByRole('button', { name: 'Change race' }))
     if (units === 'km') expect(screen.getByRole('textbox', { name: 'Distance (km)' })).toHaveValue('15.75')
-    for (let step = 0; step < 4; step++) await user.click(screen.getByRole('button', { name: 'Continue' }))
+    for (let step = 0; step < 3; step++) await user.click(screen.getByRole('button', { name: 'Continue' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
     expect(onSubmit.mock.calls[0]![0]).toMatchObject({ distanceKm: 15.75, raceName: saved.raceName, raceDate: saved.raceDate, version: 3, planFrom: saved.planFrom })
   })

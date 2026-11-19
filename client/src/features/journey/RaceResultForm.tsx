@@ -21,6 +21,8 @@ interface Props {
   onDelete: () => Promise<void>
   onCelebrate?: (trigger: HTMLElement) => void
   startEditing?: boolean
+  /** The race date was asked for already (a past race), so the form doesn't ask for it twice. */
+  fixedDate?: boolean
 }
 
 type Draft = { outcome: RaceOutcome; hours: string; minutes: string; seconds: string; distance: string; date: string; activityId: string; note: string; expectedVersion: string | null; timeKind: RaceTimeKind }
@@ -48,7 +50,7 @@ const draftFrom = (chapter: RaceResultContext, today: string, outcome: RaceOutco
  * A synced recording can be proposed with one tap to confirm, but never marks a runner as a finisher without consent.
  * Saving can be edited or undone, and a failed save keeps everything typed.
  */
-export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivity, onSave, onDelete, onCelebrate, startEditing = false }: Props) {
+export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivity, onSave, onDelete, onCelebrate, startEditing = false, fixedDate = false }: Props) {
   const id = useId()
   // What this form last saved or removed, until the reloaded journey brings the server's own copy.
   // It's dropped as soon as the server's copy changes, so a reload always wins.
@@ -331,10 +333,10 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
           <input id={`${id}-distance`} className="input mono" inputMode="decimal" disabled={busy} value={draft.distance} onChange={e => setDraft({ ...draft, distance: e.target.value })} />
         </label>
       )}
-      <label className="field" htmlFor={`${id}-date`}>
+      {!fixedDate && <label className="field" htmlFor={`${id}-date`}>
         <span className="field-label">Race date</span>
         <input id={`${id}-date`} className="input" type="date" disabled={busy} max={today} min={chapter.startDate} value={draft.date} onChange={e => setDraft({ ...draft, date: e.target.value, activityId: '' })} />
-      </label>
+      </label>}
       {draft.outcome !== 'DidNotStart' && candidates.length > 0 && (
         <label className="field" htmlFor={`${id}-run`}>
           <span className="field-label">Link a recorded run (optional)</span>

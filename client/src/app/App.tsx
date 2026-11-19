@@ -19,10 +19,8 @@ import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
 import { Runner as TaperdayRunner } from '../features/shared/Runner'
 import { ThemeToggle } from './ThemeToggle'
-import { ScrollProgress } from './ScrollProgress'
 import { ScreenRecovery } from './ScreenRecovery'
 import { SignInWait } from '../features/account/SignInWait'
-import { InstallCard } from '../features/install/InstallApp'
 import { RemindersSection } from '../features/reminders/Reminders'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
@@ -523,7 +521,8 @@ export function App() {
     if (item === 'runs') return go('runs')
     if (item === 'journey') return go('journey')
     if (item === 'account') return go('account')
-    if (view === 'beginner' && item === 'plan') return
+    // Couch to 5K is a plan of its own: Plan stays lit on it, and tapping Plan there opens the runner's race plan if they have one.
+    if (view === 'beginner') return ownPlan ? openOwnPlan('week') : undefined
     if (!ownPlan && (recovering || maintaining) && !(view === 'build' && plan.kind === 'ready' && plan.plan.race.date >= today && !editing)) return go('recovery')
     const tab = 'week'
     if (view === 'build' && plan.kind === 'ready' && !editing) {
@@ -794,6 +793,9 @@ export function App() {
   // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
   // Strength is part of Plan, so training always has one navigation destination.
   const onPlan = view === 'build' && plan.kind === 'ready' && !editing
+  // Every plan lights Plan: a training plan, the builder while changing it, Couch to 5K and a recovery or easy-running plan.
+  // The bar shows Plan whenever one of these is on screen, so the highlight never points at a missing item. Recovery is
+  // also reachable from Journey, but it is a plan, so it lights Plan wherever it was opened from.
   const barCurrent: TabBarItem | null =
     view === 'home' ? new URLSearchParams(locationSearch).get('from') === 'runs' ? 'runs' : 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
@@ -814,7 +816,7 @@ export function App() {
         ? {
             key: 'profile',
             title: 'A bit about you',
-            hint: 'So your plans and emails fit you. Then on to your race.',
+            hint: 'Your name and time zone, then on to your race.',
             body: <ProfileForm submitLabel="Continue" onSaved={signedUp} />,
           }
         : state.kind === 'error'
@@ -891,25 +893,9 @@ export function App() {
       {/* Keep appearance controls reachable on every route, even after scrolling. */}
       <ThemeToggle />
 
-      <ScrollProgress />
-      {ready && !ready.needsPrivacyConsent && synced.newArrival && (
-        <section className="strava-arrival-notice" role="status" aria-live="polite" aria-label="Run imported from Strava">
-          <div>
-            <strong>Run received from Strava!</strong>
-            <p>Nice work showing up. Your run is ready to review in Taperday.</p>
-          </div>
-          <div className="strava-arrival-actions">
-            <button type="button" className="button button-primary" onClick={() => {
-              const id = synced.newArrival?.id
-              synced.dismissArrival()
-              if (id) showRun(id)
-            }}>View run</button>
-            <button type="button" className="button button-quiet" onClick={synced.dismissArrival} aria-label="Dismiss run notification">Dismiss</button>
-          </div>
-        </section>
-      )}
-      {state.kind === 'ready' && !state.runner.needsPrivacyConsent && !(view === 'home' && isPostTrainingHome(journey.state.kind === 'ready' ? journey.state.journey : null, ownPlan === undefined ? undefined : ownPlan?.id ?? null, today)) && (
-        <div hidden={view === 'account' || view === 'privacy' || view === 'unsubscribe'}><RemindersSection key={state.runner.id} offer /></div>
+      {/* The one invitation to turn on reminders: on Home only, and not after training has ended. Setup lives in Account. */}
+      {view === 'home' && state.kind === 'ready' && !state.runner.needsPrivacyConsent && !isPostTrainingHome(journey.state.kind === 'ready' ? journey.state.journey : null, ownPlan === undefined ? undefined : ownPlan?.id ?? null, today) && (
+        <RemindersSection key={state.runner.id} offer />
       )}
       <main id="main-content" tabIndex={-1} key={view} className={navigated ? 'view-enter' : undefined}>
         <OfflineRunDrafts activePlanId={view === 'home' ? ownPlan?.id : showPlan ? savedOnScreen : null} />
@@ -968,7 +954,7 @@ export function App() {
             <h2 className="plan-title" id="sign-up-title">
               Finish signing up
             </h2>
-            <p className="plan-focus">Two quick things, then your plans are saved to your account.</p>
+            <p className="plan-focus">A few details, then your plans are saved to your account.</p>
             <ProfileForm
               onSaved={(saved) => {
                 signedUp(saved)
@@ -1183,7 +1169,6 @@ export function App() {
                 onKeep={() => openOwnPlan()}
               />
             )}
-            {showPlan && <InstallCard />}
             {showPlan && savedOnScreen && <CheckInLoadState {...checkIns} />}
 
             {/* The calendar menu: the runner's own plan subscribes to their personal feed, which follows the plan through
@@ -1266,7 +1251,7 @@ export function App() {
           variant={compact ? 'bar' : 'rail'}
           current={barCurrent}
           // Journey remains available even after the runner archives their last current plan.
-          hasPlan={!!ownPlan || onPlan || recovering || maintaining || view === 'recovery'}
+          hasPlan={!!ownPlan || onPlan || recovering || maintaining || view === 'recovery' || view === 'beginner'}
           onPick={pickFromBar}
           account={state.kind === 'ready' ? { name: state.runner.displayName, photo } : cachedAccount && copy?.runner ? { name: copy.runner.displayName, photo: null } : undefined}
         />

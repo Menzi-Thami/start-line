@@ -34,7 +34,7 @@ describe('the goal step', () => {
     const onSubmit = vi.fn()
     const { container } = render(<BuilderForm races={{ kind: 'ready', races: racesFixture }} onRetryRaces={vi.fn()} initial={inputs} units="km" busy={false} serverErrors={{}} today="2026-10-28" onSubmit={onSubmit} />)
     const user = userEvent.setup()
-    await user.click(screen.getByRole('button', { name: /Goal/ }))
+    await user.click(screen.getByRole('button', { name: 'Change goal' }))
     const [hours, minutes] = [...container.querySelectorAll<HTMLInputElement>('.wheel-input')]
     fireEvent.change(hours!, { target: { value: '3' } })
     fireEvent.change(minutes!, { target: { value: '10' } })

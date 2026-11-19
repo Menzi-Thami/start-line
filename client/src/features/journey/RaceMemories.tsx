@@ -39,7 +39,7 @@ export function RaceMemories({ store, today, units, selectedMajor, selectedRaceI
   return <section className="race-memories" aria-labelledby="race-memories-title">
     <header className="journey-section-head">
       <div><p className="plan-kicker">THE FINISH LINES YOU REMEMBER</p><h2 id="race-memories-title" ref={title} tabIndex={-1}>Your races.</h2>
-        <p>Every distance. Every chapter. Including the races you ran before Taperday.</p></div>
+        <p>Every race you’ve run, including the ones before Taperday.</p></div>
       <button type="button" className="button button-primary" onClick={() => setEditing('new')}>Add a past race</button>
     </header>
     {editing && <RaceMemoryEditor key={editing === 'new' ? `new-${newMajor ?? ''}` : editing.result.id}
@@ -136,23 +136,22 @@ function RaceMemoryEditor({ memory, initialMajor, initialLocal, majors, store, t
         </select>
         <span className="field-help">Its date is filled in here. Its actual distance and elapsed time are loaded when you confirm the result.</span>
       </label>}
-      <label className="field"><span className="field-label">Event collection</span><select className="input" value={major} onChange={event => {
+      {(initialMajor || memory) && <label className="field"><span className="field-label">Event collection</span><select className="input" value={major} onChange={event => {
         const nextMajor = majors.find(definition => definition.id === event.target.value)
         setMajor(nextMajor?.id ?? '')
         if (nextMajor) { setName(nextMajor.name); setDistance('42.195') }
-      }}><option value="">Any race</option>{majors.map(definition => <option value={definition.id} key={definition.id}>{definition.name}</option>)}</select></label>
+      }}><option value="">Any race</option>{majors.map(definition => <option value={definition.id} key={definition.id}>{definition.name}</option>)}</select></label>}
       <label className="field"><span className="field-label">Race name</span><input className="input" value={name} maxLength={120} required onChange={event => { setName(event.target.value); setMajor('') }} /></label>
       <div className="race-event-fields">
         <label className="field"><span className="field-label">Event date</span><input className="input" type="date" value={date} min="1900-01-01" max={today} required onChange={event => { setDate(event.target.value); if (chosenRecording?.localDate !== event.target.value) setRecordingId('') }} /></label>
         <label className="field"><span className="field-label">Event distance (km)</span><input className="input mono" inputMode="decimal" value={distance} required onChange={event => { setDistance(event.target.value); setMajor('') }} /></label>
       </div>
-      <p className="field-help">This is the event distance. You can keep a recording’s actual distance and elapsed time separately when confirming the result.</p>
-      <div className="journey-actions"><button type="submit" className="button">Continue to result</button><button type="button" className="button button-quiet" onClick={onCancel}>Cancel</button></div>
+            <div className="journey-actions"><button type="submit" className="button">Continue to result</button><button type="button" className="button button-quiet" onClick={onCancel}>Cancel</button></div>
     </form> : <>
       <p className="race-memory-editor-event">{name} · {formatDate(date, 'long')} · {formatDistance(Number(distance), units)}</p>
       {runs === undefined && <p className="field-help" role="status">Recordings are unavailable or still loading. You can save the result yourself.</p>}
-      <RaceResultForm chapter={{ raceName: name, raceDate: date, distanceKm: Number(distance), startDate: '1900-01-01', raceResult: memory?.result ?? null }}
-        startEditing={!!memory} today={today} units={units} runs={chosenRecording ? [chosenRecording] : runs}
+      <RaceResultForm chapter={{ raceName: name, raceDate: date, distanceKm: Number(distance), startDate: '1900-01-01', raceResult: memory ? { ...memory.result, raceDate: date } : null }}
+        startEditing={!!memory || !chosenRecording} fixedDate today={today} units={units} runs={chosenRecording ? [chosenRecording] : runs}
         onLoadActivity={async activityId => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to load this recording.'); return api.me.activity(token, activityId) }}
         onSave={async body => {
           const saved = await store.save(recordId, { eventName: name.trim(), eventDistanceKm: Number(distance), raceDate: body.raceDate ?? date,

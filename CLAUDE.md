@@ -133,7 +133,7 @@ app's own files**: the page network-first (so a deploy always shows; the last co
 it that way. Its one request elsewhere is a notification's "Tick it", which posts that push's key to the API it was
 registered with (https only). Bump its `VERSION` to
 drop an old cache. `sw.js` and the manifest are served `no-cache` (`staticwebapp.config.json`). The Add to home screen option
-is a one-time card on Home and a section in Account (`features/install`).
+is a section in Account, under Notifications (`features/install`).
 
 A plan's own calendar feed (`GET /api/v1/plans/calendar.ics?{inputs}`) is that plan as built, forever. A signed-in runner's
 own plan subscribes instead to their personal feed, `GET /api/v1/calendar/{token}.ics` (`Features/Calendar`): anonymous, as

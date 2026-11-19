@@ -22,7 +22,7 @@ async function chooseDate(page: Page) {
 async function finishQuestions(page: Page) {
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('group', { name: 'Suggested goal times' }).getByRole('button', { name: /Steady/ }).click()
-  for (let step = 0; step < 3; step++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  for (let step = 0; step < 2; step++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('button', { name: 'Build my plan', exact: true }).click()
 }
 
@@ -68,7 +68,7 @@ test.describe('network failure recovery', () => {
     await expect(page.getByRole('textbox', { name: 'Distance (km)', exact: true })).toHaveValue('15.75')
     await expect(page.getByLabel('Race date', { exact: true })).toHaveAccessibleDescription(formatDate(raceDate, 'long'))
     await page.getByRole('textbox', { name: 'Distance (km)', exact: true }).fill('15.76')
-    for (let step = 0; step < 4; step++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
+    for (let step = 0; step < 3; step++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
     await page.getByRole('button', { name: 'Build my plan', exact: true }).click()
     await expect(page.getByRole('heading', { name: raceName, exact: true })).toBeVisible()
     query = new URL(page.url()).searchParams
@@ -114,7 +114,6 @@ for (const width of [320, 375, 1440]) for (const mode of ['light', 'dark']) {
     expect(result.violations.map(v => ({ id: v.id, targets: v.nodes.map(n => n.target) }))).toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeInViewport()
-    await expect(page.locator('.back-to-top')).toBeHidden()
     if (info.project.name === 'desktop') {
       await mkdir(qa, { recursive: true })
       await page.getByRole('heading', { name: 'Which race?', exact: true }).evaluate(element => {

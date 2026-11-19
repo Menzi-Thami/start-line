@@ -3,6 +3,7 @@ import { useAuth } from '../../app/auth-context'
 import { api, ApiError } from '../../lib/api-client'
 import type { Runner, Units } from '../../lib/types'
 import { HeartRateConsentField, PrivacyNoticeSummary } from '../privacy/Privacy'
+import { unitsForLocale } from './locale-units'
 import { RaceBib } from './RaceBib'
 
 const detectedTimeZone = () => {
@@ -29,14 +30,17 @@ interface Props {
   submitLabel?: string
 }
 
-/** Sign-up and profile editing in one form. Sign-up adds the privacy notice, which must be accepted. */
+/**
+ * Sign-up and profile editing in one form. Sign-up asks only what it needs: a name, a time zone and the privacy notice.
+ * Units come from the browser's locale and the weekly recap starts on; both, with heart rate, are changed in Account.
+ */
 export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up' }: Props) {
   const auth = useAuth()
   const id = useId()
   const signingUp = runner === undefined
   const [name, setName] = useState(runner?.displayName ?? auth.account?.name ?? '')
   const [timeZone, setTimeZone] = useState(runner?.timeZone ?? detectedTimeZone())
-  const [units, setUnits] = useState<Units>(runner?.units ?? 'Kilometres')
+  const [units, setUnits] = useState<Units>(runner?.units ?? unitsForLocale(typeof navigator === 'undefined' ? undefined : navigator.language))
   const [weeklyEmails, setWeeklyEmails] = useState(runner?.weeklyEmails ?? true)
   const [updateEmails, setUpdateEmails] = useState(runner?.updateEmails ?? true)
   const [maxHeartRate, setMaxHeartRate] = useState(runner?.maxHeartRate == null ? '' : String(runner.maxHeartRate))
@@ -66,7 +70,8 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
         weeklyEmails,
         acceptPrivacyNotice: accepted,
         maxHeartRate: Number.isInteger(bpm) ? bpm : null,
-        heartRateConsent,
+        // Asked only in Account; signing up keeps the API's default (off).
+        heartRateConsent: signingUp ? undefined : heartRateConsent,
         // Only Account shows the choice; signing up leaves it as the API sets it (on).
         updateEmails: signingUp ? undefined : updateEmails,
       })
@@ -102,7 +107,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
         <p className="field-help">So your weekly email lands on a Sunday evening where you live, not ours.</p>
       </div>
 
-      <fieldset className="field" style={{ border: 0, padding: 0 }}>
+      {!signingUp && <fieldset className="field" style={{ border: 0, padding: 0 }}>
         <legend className="field-label">Distances in</legend>
         <div className="pills">
           {(['Kilometres', 'Miles'] as const).map((u) => (
@@ -112,7 +117,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
             </label>
           ))}
         </div>
-      </fieldset>
+      </fieldset>}
 
       {!signingUp && (
         <div className="field">
@@ -136,10 +141,10 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
 
       {!signingUp && <HeartRateConsentField checked={heartRateConsent} onChange={setHeartRateConsent} editing />}
 
-      <label className="session-done" style={{ color: 'var(--ink)' }}>
+      {!signingUp && <label className="session-done" style={{ color: 'var(--ink)' }}>
         <input type="checkbox" checked={weeklyEmails} onChange={(e) => setWeeklyEmails(e.target.checked)} />
         Send me a weekly recap of my recorded runs and upcoming training
-      </label>
+      </label>}
 
       {!signingUp && (
         <label className="session-done" style={{ color: 'var(--ink)' }}>
@@ -151,12 +156,12 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
       {signingUp && (
         <div className="notice">
           <h3>What we keep, and why</h3>
-          <PrivacyNoticeSummary />
+          <PrivacyNoticeSummary heartRateBelow={false} />
           <label className="session-done" style={{ color: 'var(--ink)' }}>
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
             I’ve read this and I’m happy for Taperday to keep this information.
           </label>
-          <HeartRateConsentField checked={heartRateConsent} onChange={setHeartRateConsent} />
+          <p className="field-help">We send a weekly recap on Sunday evenings. Turn it off, or choose units and heart rate, in Account.</p>
         </div>
       )}
 

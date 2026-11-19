@@ -9,8 +9,8 @@ Taperday keeps Night run's near-black surfaces, volt accent, wordmark and type f
 | Home | Today's prescription or actual recording and one next action; compact active-week preview | Manual logging is secondary; compact recent recording links to Runs; post-plan priority comes from the real Journey/recovery state |
 | Plan | This week's seven compact day rows (race prep on top in race week only) | Selected-date preview, then a dedicated day screen (logging, Move run); Calendar for monthly navigation; Progress for the weekly review (your week, check-in, coach's note, suggested change), the goal outlook, distance, consistency, easy-run pace, personal bests and training paces. One **Change my plan** entry and one tools row (Share link, Add to calendar, Export to watch, Save/Delete) sit under This week and Calendar |
 | Runs | Compact rows of imported activities and existing range filters | A row opens the activity; file-upload guidance opens on demand; Training log links to the plan calendar; named Running insights and Running tools controls retain historical editing, totals, personal bests and calculators |
-| Journey | Training chapters, races and trophy cabinet | Available between plans; chapter stories, versioned archive/result corrections, recovery and portrait sharing |
-| Account | Named settings groups | Profile/picture, connections/run sources, app/calendars, notifications, data/privacy; sign-out belongs here |
+| Journey | Two sections: Training chapters, and Races & trophies | Available between plans; chapter stories, versioned archive/result corrections, recovery and portrait sharing |
+| Account | Four settings groups | Profile (picture, details, shoes under More), Connections (Strava and file uploads), Notifications (one switch and a morning time, the rest under More options; add to home screen), Data & privacy (run data, download, calendar link, delete); then Sign out |
 
 Strength is a workout type within Plan. Its prescribed days remain in the agenda and its weekly exercise guide opens from Strength workouts. It does not take a main-navigation or plan-tab slot. Set progress remains device-local and shared by the day and guide views.
 
@@ -19,6 +19,7 @@ Home has no nested Today/Tools navigation or repeated weekly workout list. Legac
 ## Interaction rules
 
 - Five main destinations: Home, Plan, Runs, Journey, Account. Journey remains available without a plan; Plan has This week, Calendar and Progress.
+- Every plan lights Plan in the bar and rail: a training plan, the builder while changing it, Couch to 5K and a recovery or easy-running plan. Plan is shown whenever one of these is open, so the highlight never points at a missing item. Recovery lights Plan even when opened from Journey; tapping Plan from Couch to 5K opens the runner's race plan when they have one.
 - Keep the prescription separate from what happened. Imported activity does not silently complete training; saved logs, source availability, unknown measurements and failures retain their existing meaning.
 - Week and calendar select a compact day preview. Open day details navigates to one canonical screen, preserving the existing logging and strength controls. The day URL supports Back/Forward and refresh.
 - The dedicated day screen remains open during outside actions; Back/Close/Escape returns to the schedule.

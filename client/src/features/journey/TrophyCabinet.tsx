@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
-import { formatDate, formatDistance, type Units } from '../../lib/format'
+import { formatDistance, type Units } from '../../lib/format'
 import { AchievementShare } from './AchievementShare'
-import { distanceBadge, formatClock } from './journey-model'
 import type { CardContent } from './share-card'
 import type { MajorDefinition, MarathonMajor, RaceHistory, RaceMemory } from './types'
 import { SA_RACES, southAfricanFinish, type SouthAfricanRace } from './sa-races'
@@ -50,13 +49,12 @@ export function TrophyCabinet({ history, units, onMajor, onRace, onLocalRace }: 
   }, [earnedCount, finishes, history.majors, units])
   return <section className="trophy-cabinet" aria-labelledby="cabinet-title">
     <header className="cabinet-heading">
-      <p className="plan-kicker">NO TWO FINISH LINES FEEL THE SAME.</p>
-      <h2 id="cabinet-title">Earned in miles.</h2>
-      <p>Your trophy cabinet. Every confirmed finish has a place here.</p>
+      <h2 id="cabinet-title">Trophy cabinet.</h2>
+      <p>Every finish you confirm has a place here.</p>
       <dl className="cabinet-totals"><div><dt>Race finishes</dt><dd>{finishes.length}</dd></div><div><dt>Major events</dt><dd>{earnedCount}<span>/{history.majors.length}</span></dd></div><div><dt>Original six</dt><dd>{originalCount}<span>/{original.length}</span></dd></div></dl>
     </header>
-    {history.races.some(race => race.needsReview) && <p className="journey-state" role="status">Some older races have more than one saved result. Review them in Your races and remove the incorrect copies. They earn no cabinet trophies until resolved.</p>}
-    <div className="cabinet-collection-head"><h3>South African finish lines</h3><p className="field-help">From local favourites to ultras. These are places for your confirmed finishes, not automatically awarded medals.</p></div>
+    {history.races.some(race => race.needsReview) && <p className="journey-state" role="status">Some older races have more than one saved result. Review them in your race list and remove the incorrect copies. They earn no cabinet trophies until resolved.</p>}
+    <div className="cabinet-collection-head"><h3>South African finish lines</h3><p className="field-help">Places for the finishes you confirm.</p></div>
     <ul className="cabinet-grid" aria-label="South African race collection">
       {SA_RACES.map(event => {
         const finish = southAfricanFinish(event, finishes)
@@ -82,13 +80,5 @@ export function TrophyCabinet({ history, units, onMajor, onRace, onLocalRace }: 
     </ul>
     <p className="field-help cabinet-explainer">Your personal collection, based on results you confirm. It does not verify official Abbott World Marathon Majors stars. Sydney counts from 2025 and Cape Town from 2026; earlier finishes remain in your race history.</p>
     {finishes.length > 0 && <AchievementShare card={card} text={`My Taperday trophy cabinet: ${finishes.length} race ${finishes.length === 1 ? 'finish' : 'finishes'}.${earnedCount ? ` ${earnedCount} of ${history.majors.length} Major events: ${history.majors.filter(major => earned.has(major.id)).map(major => major.city).join(', ')}.` : ''} Every finish is a beginning. #Taperday`} fileName="taperday-trophy-cabinet" />}
-    <div className="cabinet-collection-head"><h3>Every finish counts</h3><p className="field-help">The local 5K. Your first half. The ultra you still talk about.</p></div>
-    {finishes.length === 0 ? <div className="journey-empty"><p>Your first medal starts with a race you confirm.</p><p className="field-help">Add a past race, or record the result from one of your training chapters.</p></div>
-      : <ul className="cabinet-finishes" aria-label="All race finishes">{finishes.map(race => <li key={race.result.id}>
-        <button type="button" className="cabinet-finish" onClick={() => onRace(race)}>
-          <span className="cabinet-finish-icon" aria-hidden="true">★</span><span><strong>{race.eventName}</strong><span>{formatDate(race.result.raceDate, 'dayMonth')} {race.result.raceDate.slice(0, 4)}{race.eventDistanceKm != null && <> · {distanceBadge(race.eventDistanceKm)}</>}</span></span>
-          <span className="mono">{formatClock(race.result.finishTime) ?? (race.eventDistanceKm != null ? formatDistance(race.eventDistanceKm, units) : 'Finished')}</span>
-        </button>
-      </li>)}</ul>}
   </section>
 }

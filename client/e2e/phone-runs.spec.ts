@@ -85,7 +85,7 @@ for (const mode of ['light', 'dark']) {
     // Exercise navigation at the real device size, before changing emulation for visual audits.
     await guide.getByRole('button', { name: 'Open connection settings', exact: true }).click()
     await expect(page).toHaveURL(/view=account&settings=connections/)
-    const connections = page.getByText('Connections & run sources', { exact: true }).locator('..')
+    const connections = page.locator('summary', { hasText: /^Connections$/ }).locator('..')
     await expect(connections).toHaveAttribute('open', '')
     await expect(connections.getByRole('button', { name: 'Connect with Strava', exact: true })).toBeVisible()
     await connections.getByText('How do my runs get into Strava?', { exact: true }).click()

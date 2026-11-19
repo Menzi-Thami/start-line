@@ -49,8 +49,8 @@ async function addStrength(user: ReturnType<typeof userEvent.setup>) {
   await findPlanControl('Delete plan')
   await openStrengthWorkouts()
   await user.click(screen.getByRole('button', { name: 'Add strength days' }))
-  await user.click(screen.getByText('Add strength and mobility sessions'))
-  await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
+  await user.click(screen.getByText('More options', { selector: 'summary' }))
+  await user.click(within(screen.getByRole('group', { name: 'Strength and mobility days' })).getByRole('checkbox', { name: 'Monday' }))
   await user.dblClick(screen.getByRole('button', { name: 'Build my plan' }))
 }
 

@@ -29,7 +29,7 @@ test('after arriving from another page, Continue and the plan-building screen st
 
   await form.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('group', { name: 'Goal finish time' }).getByLabel('Hours').fill('6')
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
   await page.getByRole('button', { name: 'Build my plan' }).click()
   await expect(page.locator('.plan-build-loading')).toBeInViewport({ ratio: 1 })

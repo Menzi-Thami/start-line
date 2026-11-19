@@ -80,11 +80,12 @@ test('Journey remains reachable after archiving the last plan, with its result a
 test('past race save → failed retry → reload → correction → trophy withdrawal follows the real screens @phone', async ({ page }) => {
   const state = await fixture(page, { failSave: true })
   await page.goto(`${FIXTURE}?view=journey&section=races`)
-  await page.getByRole('button', { name: 'Add a past race', exact: true }).click()
-  await page.getByLabel('Event collection').selectOption('London')
+  // A Major is recorded from its medal; the result form asks for one outcome and no second date.
+  await page.getByRole('button', { name: /^London A finish still to come Record a finish$/ }).click()
   await page.getByLabel('Event date', { exact: true }).fill('2026-04-26')
   await page.getByRole('button', { name: 'Continue to result', exact: true }).click()
-  await page.getByRole('button', { name: 'I finished', exact: true }).click()
+  await expect(page.getByRole('radio', { name: 'Finished', exact: true })).toBeChecked()
+  await expect(page.getByLabel('Race date', { exact: true })).toHaveCount(0)
   await page.getByRole('textbox', { name: 'Hours', exact: true }).fill('4')
   await page.getByLabel('Time source', { exact: true }).selectOption('OfficialChip')
   await page.getByRole('button', { name: 'Save race result', exact: true }).click()
@@ -95,7 +96,6 @@ test('past race save → failed retry → reload → correction → trophy withd
   await page.getByRole('button', { name: 'Back to my journey', exact: true }).click()
   expect(state.writes).toHaveLength(2)
   expect(state.writes[0].id).toBe(state.writes[1].id)
-  await page.getByRole('button', { name: 'Trophy cabinet', exact: true }).click()
   await expect(page.getByRole('button', { name: /^London Finished.*View finishes$/ })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('button', { name: /^London Finished.*View finishes$/ })).toBeVisible()
@@ -105,7 +105,6 @@ test('past race save → failed retry → reload → correction → trophy withd
   await page.getByRole('radio', { name: 'Didn’t finish', exact: true }).check()
   await page.getByRole('button', { name: 'Save race result', exact: true }).click()
   await expect(page.getByRole('list', { name: 'Saved races', exact: true })).toContainText('Didn’t finish')
-  await page.getByRole('button', { name: 'Trophy cabinet', exact: true }).click()
   await expect(page.getByRole('button', { name: /^London A finish still to come Record a finish$/ })).toBeVisible()
   await expect(page.getByRole('list', { name: 'All race finishes', exact: true })).toHaveCount(0)
   expect(state.races).toHaveLength(1)
@@ -114,11 +113,10 @@ test('past race save → failed retry → reload → correction → trophy withd
 test('adding a past race reuses the selected recording date and elapsed metrics before explicit confirmation @phone', async ({ page }) => {
   const state = await fixture(page, { recording: true })
   await page.goto(`${FIXTURE}?view=journey&section=races`)
-  await page.getByRole('button', { name: 'Add a past race', exact: true }).click()
+  await page.getByRole('button', { name: /^London A finish still to come Record a finish$/ }).click()
+  await expect(page.getByLabel('Event distance (km)', { exact: true })).toHaveValue('42.195')
   await page.getByRole('combobox', { name: 'Use a recorded run (optional)', exact: true }).selectOption('eeeeeeee-0000-4000-8000-000000000005')
   await expect(page.getByLabel('Event date', { exact: true })).toHaveValue('2026-04-26')
-  await page.getByLabel('Event collection').selectOption('London')
-  await expect(page.getByLabel('Event distance (km)', { exact: true })).toHaveValue('42.195')
   await page.getByRole('button', { name: 'Continue to result', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'We found your London Marathon.', exact: true })).toBeVisible()
   expect(state.writes).toHaveLength(0)
@@ -141,7 +139,9 @@ test('cabinet uses the Night Run identity, wraps across screen sizes and passes 
       await fixture(page, { races: seedMemories() })
       await page.addInitScript(value => localStorage.setItem('taperday:theme', value), theme)
       await page.goto(`${FIXTURE}?view=journey&section=cabinet`)
-      await expect(page.getByRole('heading', { name: 'Earned in miles.', exact: true })).toBeVisible()
+      // An old link to the separate cabinet opens the combined Races & trophies section.
+      await expect(page.getByRole('heading', { name: 'Trophy cabinet.', exact: true })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Races & trophies', exact: true })).toHaveAttribute('aria-current', 'page')
       await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
       await expect(page.getByRole('button', { name: 'Dark mode', exact: true })).toHaveAttribute('aria-pressed', String(theme === 'dark'))
       await page.evaluate(() => document.fonts.ready)
@@ -152,7 +152,7 @@ test('cabinet uses the Night Run identity, wraps across screen sizes and passes 
       expect(smallTargets).toEqual([])
       await page.screenshot({ path: info.outputPath(`cabinet-${width}-${theme}.png`), fullPage: true })
       if (width === 1440 && theme === 'dark') {
-        await page.getByRole('button', { name: 'Your races', exact: true }).click()
+        await page.getByRole('heading', { name: 'Your races.', exact: true }).scrollIntoViewIfNeeded()
         await page.screenshot({ path: info.outputPath('race-history-desktop.png'), fullPage: true })
       }
     } finally {

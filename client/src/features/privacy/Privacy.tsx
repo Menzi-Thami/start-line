@@ -6,8 +6,11 @@ import { PRIVACY_CONTACT, PRIVACY_NOTICE_DATE } from './privacy-notice'
 
 const POLICY_HREF = '/?view=privacy'
 
-/** The short version, shown wherever a runner is asked to agree. The full policy is one link away. */
-export function PrivacyNoticeSummary() {
+/**
+ * The short version, shown wherever a runner is asked to agree. The full policy is one link away. Signing up asks for
+ * heart rate later, in Account; a runner agreeing to an updated notice answers it just below.
+ */
+export function PrivacyNoticeSummary({ heartRateBelow = true }: { heartRateBelow?: boolean }) {
   return (
     <>
       <ul>
@@ -17,7 +20,7 @@ export function PrivacyNoticeSummary() {
           how each run went against your plan. Never your route or GPS.
         </li>
         <li>Runs from Strava are kept for 7 days at a time and refreshed while you stay connected. Disconnecting deletes them.</li>
-        <li>Heart rate only if you agree below. It’s health information, so it’s your choice.</li>
+        <li>{heartRateBelow ? 'Heart rate only if you agree below.' : 'Heart rate only if you turn it on in Account.'} It’s health information, so it’s your choice.</li>
         <li>
           Reminders only if you turn them on in Account: your device’s push address, kept encrypted. They say what your plan has for the
           day and, on Mondays, the week ahead and how many runs you checked in. If a run from Strava matches a planned session, one asks

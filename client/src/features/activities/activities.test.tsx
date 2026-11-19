@@ -163,7 +163,7 @@ describe('my runs', () => {
     await user.click(within(phone).getByRole('button', { name: 'Open connection settings' }))
     expect(window.location.search).toBe('?view=account&settings=connections')
     expect(await screen.findByRole('button', { name: 'Connect with Strava' })).toBeVisible()
-    expect(screen.getByText('Connections & run sources').closest('details')).toHaveAttribute('open')
+    expect(screen.getByText('Connections', { selector: 'summary' }).closest('details')).toHaveAttribute('open')
   })
 
   it('filters the journal by source when runs come from both Strava and uploads', async () => {

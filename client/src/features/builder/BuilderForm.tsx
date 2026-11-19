@@ -11,7 +11,7 @@ import { RaceSearch } from './RaceSearch'
 import { api } from '../../lib/api-client'
 import { goalProblem } from './goal-limits'
 import { suggestedGoals } from './goal-suggestions'
-import { describeRecent, emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
+import { emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 import { useQuestionFrame } from './useQuestionFrame'
 import './builder-navigation.css'
 
@@ -56,18 +56,18 @@ type StartChoice = 'monday' | 'today' | 'day'
 /** The Monday a plan starts on when the runner doesn't choose: today if it's a Monday, otherwise the next one. */
 const nextMonday = (today: string) => addDays(today, (8 - new Date(`${today}T00:00:00Z`).getUTCDay()) % 7)
 
-// One question per screen. Each field lives on exactly one step, so an error (ours or the server's) can send the
-// runner straight back to the screen that needs fixing.
+// One question per screen: race, goal, days, then review. Each field lives on exactly one step, so an error (ours or the
+// server's) can send the runner straight back to the screen that needs fixing. Experience, weekly distance, run/walk, a
+// recent race and strength are optional and wait under Review's "More options", with defaults that suit most runners.
 const STEPS = [
   { title: 'Which race?', hint: 'Choose your own goal or pick an upcoming race.', fields: ['race', 'distance', 'date'] },
   { title: 'What’s your goal time?', hint: 'Your goal sets your training paces.', fields: ['goal'] },
   { title: 'When can you run?', hint: 'Choose the days that work for you.', fields: ['runDays', 'longRunDay', 'startOn'] },
-  { title: 'About you', hint: 'Start at your current fitness level.', fields: ['currentKm'] },
-  { title: 'Check and build', hint: 'Review your choices before building.', fields: ['strength'] },
+  { title: 'Check and build', hint: 'Review your choices before building.', fields: ['currentKm', 'strength'] },
 ] as const satisfies readonly { title: string; hint: string; fields: readonly Field[] }[]
 
 const LAST_STEP = STEPS.length - 1
-const STEP_NAMES = ['Race', 'Goal', 'Days', 'You', 'Review'] as const
+const MORE_FIELDS: readonly Field[] = ['currentKm', 'strength']
 
 function firstStepWith(errors: FieldErrors): number | null {
   const index = STEPS.findIndex((step) => step.fields.some((field) => errors[field]))
@@ -191,7 +191,12 @@ const onStep = (errors: FieldErrors, step: number): FieldErrors =>
 
 const dayList = (days: DayOfWeek[]) => WEEK.filter((d) => days.includes(d)).map((d) => SHORT_DAY[d]).join(', ')
 
-/** New plans begin on the chosen date, with easy foundation weeks if the race block starts later. */
+/** Answers the runner changed from the defaults open "More options", so nothing set is out of sight. */
+const hasMoreAnswers = (draft: Draft, today: string) =>
+  draft.experience !== 'Regular' || draft.currentKm.trim() !== '' || draft.runWalk !== 'Auto' || draft.strengthDays.length > 0
+  || recentInputs(draft.recent, today) !== undefined
+
+/** New plans begin on the chosen date. */
 function startSummary(draft: Draft, today: string): string {
   const day = draft.start === 'today' ? today : draft.start === 'day' ? draft.startOn : nextMonday(today)
   return day ? formatDate(day, 'long') : 'Pick a day'
@@ -219,7 +224,7 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
   return (
     <fieldset className="field" style={{ border: 0, padding: 0 }}>
       <legend className="field-label">When do you want to start?</legend>
-      <p className="field-help">Your training starts on the day you choose. For a distant race, you'll begin with easy foundation runs before the race-specific weeks.</p>
+      <p className="field-help">If your race is far away, your plan starts with a few easy weeks.</p>
       <div className="segmented" role="radiogroup" aria-label="When to start">
         {options.map((o) => (
           <label className="segment" key={o.value}>
@@ -254,13 +259,12 @@ function StartDay({ draft, today, raceDate, onChange, error }: {
 export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverErrors, today, onSubmit, intro, onCancel, gate, onOpenBeginner }: Props) {
   // Latch the kind of wizard: loading can change initial props while an existing plan is being edited.
   const [creatingPlan] = useState(() => initial === null)
-  const [strengthOpen, setStrengthOpen] = useState(() => (initial?.strengthDays.length ?? 0) > 0)
   const id = useId()
   const [draft, setDraft] = useState<Draft>(() => draftFrom(initial, units, today))
+  const [moreOpen, setMoreOpen] = useState(() => hasMoreAnswers(draft, today) || MORE_FIELDS.some((field) => serverErrors[field]))
   const [clientErrors, setClientErrors] = useState<FieldErrors>({})
   // Changing an existing plan opens on the summary: every answer is already there.
   const [step, setStep] = useState(() => firstStepWith(serverErrors) ?? (initial ? LAST_STEP : 0))
-  const [furthestStep, setFurthestStep] = useState(() => initial ? LAST_STEP : firstStepWith(serverErrors) ?? 0)
   const [direction, setDirection] = useState<'forward' | 'back' | null>(null)
   const [seenServerErrors, setSeenServerErrors] = useState(serverErrors)
   const titleRef = useRef<HTMLHeadingElement>(null)
@@ -286,13 +290,14 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
   if (serverErrors !== seenServerErrors) {
     setSeenServerErrors(serverErrors)
     const target = firstStepWith(serverErrors)
+    if (MORE_FIELDS.some((field) => serverErrors[field])) setMoreOpen(true)
     if (target !== null && target !== step) {
       setDirection(target > step ? 'forward' : 'back')
       setStep(target)
     }
   }
 
-  // Once a gate has been shown it stays in the step count, so finishing it reads as progress ("Step 2 of 6").
+  // Once a gate has been shown it stays in the step count, so finishing it reads as progress ("Step 2 of 5").
   const gateKey = gate?.key ?? null
   const [seenGateKey, setSeenGateKey] = useState(gateKey)
   const [gateCounted, setGateCounted] = useState(gateKey !== null)
@@ -349,9 +354,9 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
 
   const goTo = (next: number, keepErrors: FieldErrors = {}) => {
     setClientErrors(keepErrors)
+    if (MORE_FIELDS.some((field) => keepErrors[field])) setMoreOpen(true)
     setDirection(next > step ? 'forward' : 'back')
     setStep(next)
-    setFurthestStep(previous => Math.max(previous, next))
   }
 
   const sameRace = initial !== null && (initial.raceSlug ? draft.race === initial.raceSlug
@@ -374,6 +379,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       const here = onStep(found, step)
       if (Object.keys(here).length > 0) {
         setClientErrors(here)
+        if (MORE_FIELDS.some((field) => here[field])) setMoreOpen(true)
         titleRef.current?.focus()
         return
       }
@@ -426,7 +432,6 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
     : `${draft.otherName.trim() || 'Your race'}: ${otherKm > 0 ? formatDistance(toKilometres(otherKm, units), units) : '?'}${
         draft.otherDate ? `, ${formatDate(draft.otherDate, 'long')}` : ''
       }`
-  const experience = EXPERIENCE.find((e) => e.value === draft.experience)!
 
   const reviewRow = (label: string, value: ReactNode, target: number) => (
     <div className="review-row">
@@ -447,41 +452,17 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       {position === 0 && intro}
       {creatingPlan && step === 0 && !gate && <section className="panel" aria-label="Start running with Couch to 5K"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" onClick={() => onOpenBeginner?.()} disabled={!onOpenBeginner}>Open Couch to 5K</button></section>}
 
+      {/* One progress marker. Back and Review's Change links move between steps. */}
       <div className="wizard-progress">
         <p className="wizard-count">
           Step {position + 1} of {totalSteps}
         </p>
-        {/* The taper again: the bars step down towards the last step, which is a race-day dot. Only while signing up, when
-            the numbered steps below aren't shown: one progress marker at a time. */}
-        {gate && (
-        <ol className="wizard-bar" aria-hidden="true">
-          {Array.from({ length: totalSteps }, (_, i) => (
-            <li
-              key={i}
-              className={i <= position ? 'is-done' : undefined}
-              style={i < totalSteps - 1 ? { height: `${16 - (9 * i) / Math.max(totalSteps - 2, 1)}px` } : undefined}
-            />
-          ))}
-        </ol>
-        )}
         {onCancel && !gate && (
           <button type="button" className="link-button wizard-cancel" onClick={onCancel}>
             Back to your plan
           </button>
         )}
       </div>
-
-      {!gate && (
-        <nav className="wizard-steps" aria-label="Plan builder steps">
-          <ol>{STEP_NAMES.map((name, index) => (
-            <li key={name}>
-              <button type="button" aria-current={index === step ? 'step' : undefined} disabled={index > furthestStep} onClick={() => goTo(index)}>
-                <span>{index + offset + 1}</span>{' '}{name}
-              </button>
-            </li>
-          ))}</ol>
-        </nav>
-      )}
 
       <div className="wizard-viewport">
         {gate ? (
@@ -650,11 +631,6 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       <p className="field-help">You can change it any time. Your plan’s paces follow your goal.</p>
                     </div>
                   )}
-                  <details className="disclosure">
-                    <summary>Add a recent race, so the coach can tell you if your goal is realistic</summary>
-                    <p className="field-help">Optional. A race or time trial from the last six weeks, at least 3 km. It never changes your plan: it lets the coach say whether {goalSeconds > 0 ? formatDuration(goalSeconds) : 'your goal'} is realistic, or whether you could aim higher.</p>
-                    <GoalEstimator targetKm={targetKm} value={draft.recent} onChange={(v) => set('recent', v)} onUse={(seconds) => set('goal', toDuration(seconds))} />
-                  </details>
                 </>
               )}
     
@@ -678,78 +654,70 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                 </>
               )}
     
-              {step === 3 && (
-                <>
-                  <div className="segmented" role="radiogroup" aria-label="Running experience">
-                    {EXPERIENCE.map((e) => (
-                      <label className="segment" key={e.value}>
-                        <input type="radio" name="experience" checked={draft.experience === e.value} onChange={() => set('experience', e.value)} />
-                        <strong>{e.title}</strong>
-                        <span>{e.note}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="field">
-                    <label className="field-label" htmlFor="current-km">
-                      Roughly how far do you run a week now? <span className="field-help">(optional, {units})</span>
-                    </label>
-                    <input
-                      id="current-km"
-                      className="input"
-                      inputMode="decimal"
-                      value={draft.currentKm}
-                      onChange={(e) => set('currentKm', e.target.value)}
-                      aria-invalid={errors.currentKm ? true : undefined}
-                      aria-describedby={errors.currentKm ? 'km-error' : undefined}
-                      style={{ maxWidth: '10rem' }}
-                    />
-                    <p className="field-help">We build from here by no more than 10% a week.</p>
-                    <FieldError id="km-error" message={errors.currentKm} />
-                  </div>
-                  <fieldset className="field" style={{ border: 0, padding: 0 }}>
-                    <legend className="field-label">Run/walk</legend>
-                    <p className="field-help" id={`${id}-run-walk-help`}>
-                      Short walk breaks from the start of your long runs and on race day. Automatic uses them for marathons of 5 h 30 min or slower and ultras of 10 hours or more.
-                    </p>
-                    <div className="segmented" role="radiogroup" aria-label="Run/walk" aria-describedby={`${id}-run-walk-help`}>
-                      {RUN_WALK.map((r) => (
-                        <label className="segment" key={r.value}>
-                          <input type="radio" name="run-walk" checked={draft.runWalk === r.value} onChange={() => set('runWalk', r.value)} />
-                          <strong>{r.title}</strong>
-                          <span>{r.note}</span>
-                        </label>
-                      ))}
-                    </div>
-                    {olderPlan && <p className="field-help">Your plan was built before run/walk was added, so it keeps the sessions it had.</p>}
-                  </fieldset>
-                </>
-              )}
-    
               {step === LAST_STEP && (
                 <>
                   <dl className="review">
                     {reviewRow('Race', raceSummary, 0)}
                     {reviewRow('Goal', `${formatDuration(goalSeconds)}${pacePreview ? `. ${pacePreview}` : ''}`, 1)}
-                    {recentInputs(draft.recent, today) && reviewRow('Recent race', describeRecent(draft.recent, formatDuration(durationSeconds(draft.recent.time))), 1)}
                     {reviewRow('Days', `${dayList(draft.runDays)}. Long run on ${draft.longRunDay ?? '?'}.`, 2)}
                     {reviewRow('Preferred start', startSummary(draft, today), 2)}
-                    {reviewRow(
-                      'You',
-                      `${experience.title} runner${Number(draft.currentKm) > 0 ? `, about ${draft.currentKm} ${units} a week now` : ''}.`,
-                      3,
-                    )}
-                    {reviewRow('Run/walk', RUN_WALK.find((r) => r.value === draft.runWalk)!.title, 3)}
-                    {reviewRow('Strength', draft.strengthDays.length ? dayList(draft.strengthDays) : 'Not scheduled', LAST_STEP)}
                   </dl>
-                  <p className="field-help">Your training starts on your chosen day. Distant races begin with easy foundation running before the race-specific build.</p>
-                  <p className="field-help" role="status">{draft.strengthDays.length > 0
-                    ? `Strength days: ${dayList(draft.strengthDays)}. These sessions will appear alongside your runs.`
-                    : 'You can add strength and mobility sessions before building your plan.'}</p>
-                  <details className="disclosure" open={strengthOpen} onToggle={(event) => setStrengthOpen(event.currentTarget.open)}>
-                    <summary>Add strength and mobility sessions</summary>
+                  {/* Optional answers with sensible defaults: a runner can build without opening this. */}
+                  <details className="disclosure builder-more" open={moreOpen} onToggle={(event) => setMoreOpen(event.currentTarget.open)}>
+                    <summary>More options</summary>
+                    <fieldset className="field" style={{ border: 0, padding: 0 }}>
+                      <legend className="field-label">Your running</legend>
+                      <div className="segmented" role="radiogroup" aria-label="Running experience">
+                        {EXPERIENCE.map((e) => (
+                          <label className="segment" key={e.value}>
+                            <input type="radio" name="experience" checked={draft.experience === e.value} onChange={() => set('experience', e.value)} />
+                            <strong>{e.title}</strong>
+                            <span>{e.note}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                    <div className="field">
+                      <label className="field-label" htmlFor="current-km">
+                        Roughly how far do you run a week now? <span className="field-help">(optional, {units})</span>
+                      </label>
+                      <input
+                        id="current-km"
+                        className="input"
+                        inputMode="decimal"
+                        value={draft.currentKm}
+                        onChange={(e) => set('currentKm', e.target.value)}
+                        aria-invalid={errors.currentKm ? true : undefined}
+                        aria-describedby={errors.currentKm ? 'km-error' : undefined}
+                        style={{ maxWidth: '10rem' }}
+                      />
+                      <p className="field-help">Your plan starts from here and builds up gently.</p>
+                      <FieldError id="km-error" message={errors.currentKm} />
+                    </div>
+                    <fieldset className="field" style={{ border: 0, padding: 0 }}>
+                      <legend className="field-label">Run/walk</legend>
+                      <p className="field-help" id={`${id}-run-walk-help`}>
+                        Short walking breaks on long runs and race day; Automatic adds them for slower marathons and ultras.
+                      </p>
+                      <div className="segmented" role="radiogroup" aria-label="Run/walk" aria-describedby={`${id}-run-walk-help`}>
+                        {RUN_WALK.map((r) => (
+                          <label className="segment" key={r.value}>
+                            <input type="radio" name="run-walk" checked={draft.runWalk === r.value} onChange={() => set('runWalk', r.value)} />
+                            <strong>{r.title}</strong>
+                            <span>{r.note}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {olderPlan && <p className="field-help">Your plan was built before run/walk was added, so it keeps the sessions it had.</p>}
+                    </fieldset>
+                    <div className="field">
+                      <p className="field-label">A recent race <span className="field-help">(optional)</span></p>
+                      <p className="field-help">A race or time trial from the last six weeks lets the coach check your goal; it never changes your plan.</p>
+                      <GoalEstimator targetKm={targetKm} value={draft.recent} onChange={(v) => set('recent', v)} onUse={(seconds) => set('goal', toDuration(seconds))} />
+                    </div>
                     <DayPills
-                      legend="Strength days"
-                      hint={`Up to three. ${draft.longRunDay ?? 'Your long-run day'} is reserved for your long run. Strength can share another running day.`}
+                      legend="Strength and mobility days"
+                      hint={`Up to three, on any day but ${draft.longRunDay ?? 'your long-run day'}.`}
                       selected={draft.strengthDays}
                       onChange={(d) => set('strengthDays', d)}
                       max={3}
@@ -757,8 +725,6 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                       error={errors.strength}
                     />
                   </details>
-                  <p className="field-help">Your plan also lives in its link, so you can share it with anyone.</p>
-                  
                 </>
               )}
             </section>

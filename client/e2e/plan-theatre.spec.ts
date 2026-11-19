@@ -7,8 +7,8 @@ async function reviewPlan(page: Page) {
   await page.locator('label.race-bib').filter({ hasText: 'Two Oceans' }).click()
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('group', { name: 'Goal finish time' }).getByLabel('Hours').fill('6')
-  for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
-  await expect(page.getByText('Step 5 of 5')).toBeVisible()
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await expect(page.getByText('Step 4 of 4')).toBeVisible()
 }
 
 test('plan review is calm and Build my plan opens a real loading screen @phone', async ({ page }, info) => {
@@ -92,7 +92,7 @@ test('adding strength to a plan with a past custom start preserves its running s
   await openStrengthWorkouts(page)
   await page.getByRole('button', { name: 'Change strength days' }).click()
   await expect(page.getByRole('complementary', { name: 'Running tips' })).toHaveCount(0)
-  const days = page.getByRole('group', { name: 'Strength days' })
+  const days = page.getByRole('group', { name: 'Strength and mobility days' })
   await expect(days.getByRole('checkbox', { name: 'Monday' })).toBeChecked()
   await days.getByRole('checkbox', { name: 'Monday' }).uncheck()
   await expect(days.getByRole('checkbox', { name: 'Monday' })).toBeVisible()

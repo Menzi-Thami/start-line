@@ -1,42 +1,4 @@
 /* Interaction polish extends the established Night run language. */
-.scroll-progress {
-  position: fixed;
-  z-index: 65;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent), var(--accent-strong) 65%, var(--coral));
-  box-shadow: none;
-  transform: scaleX(0);
-  transform-origin: left center;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.back-to-top {
-  position: fixed;
-  z-index: 35;
-  right: clamp(1rem, 3vw, 2.5rem);
-  bottom: 1.5rem;
-  display: grid;
-  place-items: center;
-  width: 3rem;
-  height: 3rem;
-  padding: 0;
-  color: var(--accent);
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  border-radius: 50%;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
-  cursor: pointer;
-  animation: polish-rise 250ms var(--ease-out) both;
-  transition: transform 180ms ease, border-color 180ms ease;
-}
-.back-to-top svg { width: 21px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.back-to-top:hover { border-color: var(--accent); transform: translateY(-3px); }
-.back-to-top:active { transform: scale(0.94); }
 
 /* Animated placeholders communicate that a plan is loading without layout jumps. */
 .skeleton-stack { display: grid; gap: 0.85rem; width: 100%; padding-block: 0.4rem; }
@@ -74,13 +36,12 @@
 }
 
 @media (max-width: 47.99rem) {
-  .back-to-top { bottom: calc(5rem + env(safe-area-inset-bottom)); right: 1rem; width: 2.7rem; height: 2.7rem; }
   .home-hello { align-items: flex-start; }
   .home-title { text-wrap: balance; }
 }
 
 /* New pages feel composed: headline first, then the actionable content. */
-.view-enter > :first-child:not(.scroll-progress) {
+.view-enter > :first-child {
   /* backwards, not both: a transform kept after the rise would make this block the frame of anything fixed inside it
      (the race step's Continue, the plan-building screen, the Move run pop-up), pinning them to the page, not the screen. */
   animation: polish-rise 380ms var(--ease-emphasis) backwards;
@@ -158,15 +119,12 @@
 
 /* Content animation stays lightweight and doesn't hide anything from assistive tech. */
 @media (prefers-reduced-motion: reduce) {
-  .view-enter > :first-child:not(.scroll-progress),
+  .view-enter > :first-child,
   .button-primary:hover::after { animation: none !important; }
   .panel, .home-card, .home-tile, .overview-card, .week-glance { transform: none !important; }
   .skeleton-line { animation: none !important; }
 }
 
-@media print {
-  .scroll-progress, .back-to-top { display: none; }
-}
 
 /* Compact screens, including 320px phones and enlarged text, must never force a card wider than the page. */
 .home-hello > div, .home-panel > *, .home-week-body > div { min-width: 0; }
@@ -226,7 +184,7 @@
 .plan-calendar-nav { transition: background-color var(--dur-fast), border-color var(--dur-fast); }
 .plan-calendar-nav:not(:disabled):hover, button.plan-calendar-day:hover { background: var(--accent-soft); border-color: var(--accent); }
 button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(--on-accent); }
-.plan-calendar-day:focus-visible, .plan-calendar-nav:focus-visible, .back-to-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.plan-calendar-day:focus-visible, .plan-calendar-nav:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .volume-tooltip { max-width: min(16rem, 80vw); text-wrap: balance; pointer-events: none; }
 
 @media (min-width: 48rem) {
@@ -243,11 +201,8 @@ button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(
   .home-history, .home-records { align-self: stretch; margin-top: var(--space-3); }
 }
 
-/* Clear the dock on short landscape tablets too. */
-.page:has(> .tab-bar) .back-to-top { bottom: calc(5rem + env(safe-area-inset-bottom)); }
 @media (prefers-reduced-motion: reduce) {
-  .home-panel, .home-panel.slide-forward, .home-panel.slide-back, .back-to-top { animation: none; }
-  .back-to-top:hover, .back-to-top:active { transform: none; }
+  .home-panel, .home-panel.slide-forward, .home-panel.slide-back { animation: none; }
 }
 @media print {
   .home-history, .home-records { background: none; }

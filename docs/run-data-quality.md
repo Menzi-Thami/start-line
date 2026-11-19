@@ -1,7 +1,7 @@
 # Run data quality
 
 **Where it lives:**
-- A runner's **Runs** page has a collapsed **Your run data** panel.
+- A runner's **Account** page has a collapsed **Your run data** panel under Your data (it moved from Runs, so Runs stays one Add runs button and the list).
 - An uploaded run's page has a one-line source.
 - Both read from `api/v1/me/run-data` and the run's `source` (`SourceDto`).
 

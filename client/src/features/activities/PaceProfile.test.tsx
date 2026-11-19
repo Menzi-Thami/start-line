@@ -7,13 +7,13 @@ import { PaceProfile } from './PaceProfile'
 const run = fixture as Activity
 
 describe('recorded split pace profile', () => {
-  it('exposes recorded pace by keyboard and states the stage-assessment limit', async () => {
+  it('exposes recorded pace by keyboard and shows the work target band', async () => {
     render(<PaceProfile splits={run.splits} plan={run.plan} units="km" />)
     const point = screen.getByRole('button', { name: 'Split 2: 6:36/km' })
     point.focus()
     await userEvent.keyboard('{Enter}')
     expect(screen.getByRole('status')).toHaveTextContent('Split 2 · 6:36/km')
-    expect(screen.getByText(/does not assess individual stages/)).toBeInTheDocument()
+    expect(screen.getByText(/Shaded band: the work target/)).toBeInTheDocument()
   })
   it('does not draw a chart from missing or invalid pace evidence', () => {
     render(<PaceProfile splits={[{ ...run.splits[0]!, paceSecondsPerKm: NaN }]} plan={null} units="mi" />)

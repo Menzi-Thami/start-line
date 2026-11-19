@@ -1,28 +1,18 @@
 import { WorkoutStages } from './WorkoutStages'
 import { PaceProfile } from './PaceProfile'
 import { RunSummaryHero, PlanExecutionCard, PaceSplitsVisual } from './RunAnalysis/RunAnalysisHighlights'
-import './activity-tabs.css'
-import { useEffect, useId, useState } from 'react'
+import './activity-page.css'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
-import { formatDate, formatDistance, formatDuration, formatPace, type Units } from '../../lib/format'
-import type { Activity, BestEffort, HeartRate, Split } from '../../lib/types'
+import { formatDate, formatDuration, formatPace, formatShortDay, type Units } from '../../lib/format'
+import type { Activity, BestEffort, HeartRate } from '../../lib/types'
 import { RunSticker } from '../sharing/RunSticker'
-import { RunProvenance } from './RunProvenance'
 import { ShoePicker } from './ShoePicker'
 import { PoweredByStrava, ViewOnStrava } from '../sync/StravaBrand'
-import {
-  actualLine,
-  distanceDifference,
-  driftText,
-  halvesSummary,
-  KIND_LABEL,
-  plannedLine,
-  runVerdict,
-  splitFit,
-  ZONE_COLOUR,
-  ZONE_LABEL,
-} from './activity-copy'
+import { halvesSummary, KIND_LABEL } from './activity-copy'
+
+const FORMAT_LABEL = { Fit: 'a FIT file', Gpx: 'a GPX file', Tcx: 'a TCX file' } as const
 
 type LoadState = { kind: 'loading' } | { kind: 'ready'; activity: Activity; checkedAt: number } | { kind: 'error'; message: string }
 
@@ -40,13 +30,12 @@ interface Props {
   onOpenPlanDay?: (date: string) => void
 }
 
-/** One run, judged against what it was for: the verdict, the numbers, km by km, heart rate, and any bests worth a mention. */
-type AnalysisTab = 'Overview' | 'Splits' | 'Charts' | 'Details'
-
+/**
+ * One run on a single scroll: the numbers, how it went against the plan, its splits and pace, the workout's parts, any
+ * bests, the shoe and a sticker to share, then removing it.
+ */
 export function ActivityPage({ id, initial, units, onBack, backLabel, onDeleted, onOpenAccount, onOpenPlanDay }: Props) {
   const auth = useAuth()
-  const tabId = useId()
-  const [selectedTab, setSelectedTab] = useState<AnalysisTab>('Overview')
   const [state, setState] = useState<LoadState>(() => (initial?.id === id ? { kind: 'ready', activity: initial, checkedAt: Date.now() } : { kind: 'loading' }))
   const [attempt, setAttempt] = useState(0)
   const [confirming, setConfirming] = useState(false)
@@ -131,11 +120,9 @@ export function ActivityPage({ id, initial, units, onBack, backLabel, onDeleted,
   }
 
   const run = state.activity
-  // A tab shows only when this run has the data behind it: no empty Splits or Pacing for a run recorded without them.
-  const tabs: AnalysisTab[] = ['Overview', ...(run.splits.length > 0 ? ['Splits' as const] : []), ...(run.splits.length > 0 || run.heartRate ? ['Charts' as const] : []), 'Details']
   const execution = run.source.kind === 'Strava' && (!run.source.cachedUntil || !Number.isFinite(Date.parse(run.source.cachedUntil))) ? null : run.workoutExecution
   const title = run.plan?.title ?? KIND_LABEL[run.kind]
-  const verdict = runVerdict(run, units)
+  const halves = run.splits.length > 0 ? halvesSummary(run.halves, units) : ''
 
   return (
     <article className="activity" aria-labelledby="activity-title">
@@ -146,82 +133,33 @@ export function ActivityPage({ id, initial, units, onBack, backLabel, onDeleted,
       <h2 className="plan-title" id="activity-title">
         {title}
       </h2>
-      {run.source.kind === 'Strava' && (
+      {run.source.kind === 'Strava' ? (
         <p className="activity-source">
-          <span>From Strava{run.source.recordedOnGarmin ? ' · recorded on Garmin' : ''}</span>
+          <span>From Strava{run.source.recordedOnGarmin ? ' · recorded on Garmin' : ''} · kept for 7 days</span>
           {run.source.viewUrl && <ViewOnStrava href={run.source.viewUrl} />}
           <PoweredByStrava />
         </p>
+      ) : (
+        <p className="activity-source">
+          Uploaded from {run.source.format ? FORMAT_LABEL[run.source.format] : 'a file'}
+          {run.source.addedAt ? ` · ${formatShortDay(run.source.addedAt)}` : ''}
+        </p>
       )}
-      <div role="tablist" aria-label="Run analysis" className="activity-tabs" onKeyDown={event => {
-        const current = tabs.indexOf(selectedTab)
-        const next = event.key === 'ArrowRight' ? (current + 1) % tabs.length
-          : event.key === 'ArrowLeft' ? (current + tabs.length - 1) % tabs.length
-            : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : -1
-        if (next < 0) return
-        event.preventDefault()
-        setSelectedTab(tabs[next]!)
-        document.getElementById(`${tabId}-tab-${tabs[next]}`)?.focus()
-      }}>
-        {tabs.map(tab => <button type="button" role="tab" key={tab} id={`${tabId}-tab-${tab}`} aria-controls={`${tabId}-panel-${tab}`} aria-selected={selectedTab === tab} tabIndex={selectedTab === tab ? 0 : -1} className="button button-quiet" onClick={() => setSelectedTab(tab)}>{tab}</button>)}
-      </div>
-      <div role="tabpanel" id={`${tabId}-panel-Overview`} aria-labelledby={`${tabId}-tab-Overview`} hidden={selectedTab !== 'Overview'} tabIndex={0}>
       <RunSummaryHero run={run} units={units} />
-      {run.splits.length > 0 && <PaceSplitsVisual splits={run.splits} units={units} compact onViewAll={() => { setSelectedTab('Splits'); document.getElementById(`${tabId}-tab-Splits`)?.focus() }} />}
-      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
-
-
-      </div>
-      {tabs.includes('Charts') && <div role="tabpanel" id={`${tabId}-panel-Charts`} aria-labelledby={`${tabId}-tab-Charts`} hidden={selectedTab !== 'Charts'} tabIndex={0}>
-        <h3>Charts and pacing</h3>
+      <PlanExecutionCard run={run} units={units} onOpenPlanDay={onOpenPlanDay} />
+      {run.splits.length > 0 ? <>
+        <PaceSplitsVisual splits={run.splits} units={units} />
+        <p className="field-help">{halves} Splits show the pace you recorded, not whether each rep was done.</p>
         <PaceProfile splits={run.splits} plan={run.plan} units={units} />
-        <p>{halvesSummary(run.halves, units) || 'Pacing comparison is unavailable for this run.'}</p>
-        <p className="field-help">Kilometre splits describe recorded pace. They cannot confirm precise interval or recovery completion.</p>
-        {run.heartRate ? <HeartRateSection heartRate={run.heartRate} drift={driftText(run)} onOpenAccount={onOpenAccount} /> : <p>Heart-rate analysis is unavailable for this run.</p>}
-      </div>}
-      <div role="tabpanel" id={`${tabId}-panel-Details`} aria-labelledby={`${tabId}-tab-Details`} hidden={selectedTab !== 'Details'} tabIndex={0}>
-        <h3>Details and coaching</h3>
-        <PlanExecutionCard run={run} units={units} onOpenPlanDay={onOpenPlanDay} />
+      </> : <p className="field-help">This recording has no kilometre splits.</p>}
+      {run.heartRate && <HeartRateSection heartRate={run.heartRate} onOpenAccount={onOpenAccount} />}
+      {execution && <>
         <WorkoutStages execution={execution} units={units} />
-      <section className="panel verdict" aria-labelledby="verdict-title" data-pace={run.plan?.pace ?? 'Unplanned'}>
-        <h3 id="verdict-title" className="verdict-headline">
-          {verdict.headline}
-        </h3>
-        {verdict.details.map((line) => (
-          <p key={line} className="verdict-detail">
-            {line}
-          </p>
-        ))}
-        {run.plan && (
-          <div className="vs-rows">
-            <p>
-              <span className="vs-label">Planned</span> <strong className="mono">{plannedLine(run.plan, units)}</strong>
-            </p>
-            <p>
-              <span className="vs-label">You ran</span> <strong className="mono">{actualLine(run.plan, units)}</strong>{' '}
-              <span className="tag">{distanceDifference(run.plan, units)}</span>
-            </p>
-            <p className="field-help">From your plan “{run.plan.planName}”.</p>
-            {onOpenPlanDay && <button type="button" className="link-button" onClick={() => onOpenPlanDay(run.localDate)}>Open this day in your plan →</button>}
-          </div>
-        )}
-        {verdict.next && <p className="verdict-next">{verdict.next}</p>}
-      </section>
-        <ShoePicker run={run} />
-        <RunProvenance run={run} />
-        <dl className="activity-stats activity-stats-secondary">
-          <Stat label="Distance" value={formatDistance(run.distanceKm, units)} />
-          <Stat label="Moving time" value={formatDuration(run.movingSeconds)} />
-          <Stat label="Pace" value={formatPace(run.paceSecondsPerKm, units)} />
-          {run.averageHeartRate != null && <Stat label="Avg heart rate" value={run.averageHeartRate + ' bpm'} />}
-          {run.maxHeartRate != null && <Stat label="Max heart rate" value={run.maxHeartRate + ' bpm'} />}
-          {run.calories != null && <Stat label="Calories" value={String(run.calories)} />}
-          {run.elevationGainMetres != null && <Stat label="Elevation gain" value={run.elevationGainMetres + ' m'} />}
-          <Stat label="Elapsed time" value={formatDuration(run.elapsedSeconds)} />
-        </dl>
-        {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
-        {execution && <p>{execution.stages.filter(stage => stage.coverage >= .995).length} of {execution.stages.length} parts of the workout done. Changed the session on purpose? Say so in your check-in.</p>}
-        <p className="field-help">Based on what your run recorded and your plan’s targets. It’s a guide: your check-in is what counts.</p>
+        <p className="field-help">A guide from your recording: your check-in is what counts.</p>
+      </>}
+      {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
+      <ShoePicker run={run} />
+      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
       {run.source.kind === 'Strava' ? (
         <section className="section">
           <h3>Removing this run</h3>
@@ -255,118 +193,16 @@ export function ActivityPage({ id, initial, units, onBack, backLabel, onDeleted,
           )}
         </section>
       )}
-      </div>
-      {tabs.includes('Splits') && <div role="tabpanel" id={`${tabId}-panel-Splits`} aria-labelledby={`${tabId}-tab-Splits`} hidden={selectedTab !== 'Splits'} tabIndex={0}>
-        <PaceSplitsVisual splits={run.splits} units={units} />
-        <p className="field-help">{halvesSummary(run.halves, units)}</p>
-        <details className="ra-evidence"><summary>Detailed zone and split evidence</summary>
-          <Splits splits={run.splits} summary={halvesSummary(run.halves, units)} />
-        </details>
-      </div>}
-      {run.splits.length === 0 && <p className="field-help activity-tabs-note">{run.heartRate ? 'This recording has no kilometre splits, so there’s no Splits tab.' : 'This recording has no kilometre splits or heart rate, so there are no Charts or Splits tabs.'}</p>}
-
-
     </article>
   )
 }
 
-function Stat({ label, value, lead = false }: { label: string; value: string; lead?: boolean }) {
-  return (
-    <div className={lead ? 'stat stat-lead' : 'stat'}>
-      <dt>{label}</dt>
-      <dd className="mono">{value}</dd>
-    </div>
-  )
-}
-
-const ROLE_LABEL = { WarmUp: 'Warm-up', Work: 'Work', CoolDown: 'Cool-down', Steady: '' } as const
-
-/**
- * Kilometre splits. Each bar is coloured by the effort that km was meant to be (the effort ramp), longer is faster,
- * and the words beside it say whether it was in that zone. Splits are always per km, whatever the units.
- */
-function Splits({ splits, summary }: { splits: Split[]; summary: string }) {
-  if (splits.length === 0) return null
-  const paces = splits.map((s) => s.paceSecondsPerKm)
-  const fastest = Math.min(...paces)
-  const slowest = Math.max(...paces)
-  const width = (pace: number) => (slowest === fastest ? 100 : 45 + (55 * (slowest - pace)) / (slowest - fastest))
-  const scored = splits.some((s) => s.fit !== 'Unscored')
-
-  return (
-    <section className="section" aria-labelledby="splits-title">
-      <h3 id="splits-title">Splits</h3>
-      <p>
-        {summary}
-        {scored && ' Each km is checked against the pace it was meant to be.'}
-      </p>
-      <table className="splits">
-        <thead>
-          <tr>
-            <th scope="col">Km</th>
-            <th scope="col">Pace</th>
-            <th scope="col">
-              <span className="visually-hidden">Speed</span>
-            </th>
-            {scored && <th scope="col">Zone</th>}
-            <th scope="col" className="split-elev">
-              Elev
-            </th>
-            <th scope="col">HR</th>
-          </tr>
-        </thead>
-        <tbody>
-          {splits.map((split) => (
-            <tr
-              key={split.number}
-              className={split.isQuickest ? 'split-quickest' : split.isHardest ? 'split-hardest' : undefined}
-              data-fit={split.fit}
-            >
-              <th scope="row" className="mono">
-                {split.distanceKm < 0.995 ? split.distanceKm.toFixed(2) : split.number}
-              </th>
-              <td className="mono">
-                {formatPace(split.paceSecondsPerKm, 'km')}
-                {split.isQuickest && <span className="tag tag-quickest">Quickest</span>}
-                {split.isHardest && <span className="tag tag-hardest">Hardest</span>}
-              </td>
-              <td className="split-bar-cell" aria-hidden="true">
-                <span
-                  className="split-bar"
-                  style={{ width: `${width(split.paceSecondsPerKm)}%`, background: split.zone ? ZONE_COLOUR[split.zone] : undefined }}
-                />
-              </td>
-              {scored && (
-                <td className="split-zone">
-                  {split.zone && (
-                    <span className="split-zone-name">
-                      {ROLE_LABEL[split.role] || ZONE_LABEL[split.zone]}
-                    </span>
-                  )}
-                  <span className="split-fit">{splitFit(split)}</span>
-                </td>
-              )}
-              <td className="mono split-elev">
-                {split.elevationChangeMetres == null
-                  ? '–'
-                  : `${split.elevationChangeMetres > 0 ? '+' : ''}${Math.round(split.elevationChangeMetres)} m`}
-              </td>
-              <td className="mono">{split.averageHeartRate ?? '–'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  )
-}
-
-function HeartRateSection({ heartRate, drift, onOpenAccount }: { heartRate: HeartRate; drift: string | null; onOpenAccount?: () => void }) {
+function HeartRateSection({ heartRate, onOpenAccount }: { heartRate: HeartRate; onOpenAccount?: () => void }) {
   const zones = heartRate.zones
   const total = zones?.reduce((sum, z) => sum + z.seconds, 0) ?? 0
   return (
     <section className="section" aria-labelledby="hr-title">
       <h3 id="hr-title">Heart rate</h3>
-      {drift && <p>{drift}</p>}
       {zones && total > 0 ? (
         <>
           <ul className="hr-zones">

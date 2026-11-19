@@ -1,4 +1,3 @@
-import { openHomeLibrary } from './navigation'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import type { CheckIn } from '../src/lib/types'
@@ -54,7 +53,6 @@ test('training stays focused while all detail remains reachable @phone', async (
     await page.screenshot({ path: info.outputPath(`focused-home-${width}.png`) })
   }
   const tools = page.locator('summary').filter({ hasText: /^Running tools/ })
-  await openHomeLibrary(page)
   await navigation.getByRole('button', { name: 'Plan', exact: true }).click()
   await page.getByRole('tab', { name: 'Progress', exact: true }).click()
   await expect(navigation.getByRole('button', { name: 'Plan', exact: true })).toHaveAttribute('aria-current', 'page')
@@ -65,14 +63,12 @@ test('training stays focused while all detail remains reachable @phone', async (
   await page.locator('.plan-weekly-review > summary').click()
   await expect(page.locator('.plan-weekly-review')).toContainText('Last week')
   await expect(page.locator('.plan-weekly-review details.readiness > summary')).toBeVisible()
-  await navigation.getByRole('button', { name: 'Home', exact: true }).click()
-  await openHomeLibrary(page)
+  // The calculators sit at the foot of Runs, one small entry rather than a separate page.
+  await navigation.getByRole('button', { name: 'Runs', exact: true }).click()
   await tools.focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()
   await tools.click()
-  await expect(page.getByRole('region', { name: 'Personal bests', exact: true })).toBeVisible()
-  await page.locator('summary').filter({ hasText: /^Running insights/ }).click()
   await navigation.getByRole('button', { name: 'Plan', exact: true }).click()
   await expect(page.getByRole('tablist', { name: 'Your plan', exact: true }).getByRole('tab')).toHaveText(['This week', 'Calendar', 'Progress'])
   await expect(page.locator('#plan-panel-week .days')).toHaveCount(0)
@@ -117,7 +113,7 @@ test('training stays focused while all detail remains reachable @phone', async (
   await navigation.getByRole('button', { name: 'Runs', exact: true }).click()
   await expect(page.getByRole('button', { name: /Run analysis/ })).toBeVisible()
   await expect(page.getByText('Upload runs', { exact: true })).not.toBeVisible()
-  await page.locator('summary').filter({ hasText: /^Add runs from a file$/ }).click()
+  await page.getByRole('button', { name: 'Add runs', exact: true }).click()
   await expect(page.getByText('Upload runs', { exact: true })).toBeVisible()
   await navigation.getByRole('button', { name: 'Account', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Sign out', exact: true })).toBeVisible()

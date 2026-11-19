@@ -32,9 +32,9 @@ for (const scheme of ['dark', 'light'] as const) for (const width of [320, 768, 
       await page.getByRole('heading').first().waitFor()
       if (screen === 'account') await openDisclosure(page, 'Connections')
       await scan(screen)
-      if (screen === 'home') {
-        await openDisclosure(page, /^Running insights/)
-        await scan('home-history')
+      if (screen === 'runs') {
+        await page.getByRole('button', { name: 'Add runs', exact: true }).click()
+        await scan('runs-add')
       }
     }
     await page.goto('/e2e/fixtures/redesign.html?progress=1&stages=1')
@@ -52,10 +52,9 @@ for (const scheme of ['dark', 'light'] as const) for (const width of [320, 768, 
     await page.getByRole('button', { name: /Open day details/ }).click()
     await scan('day')
     await page.getByRole('button', { name: 'View run analysis', exact: true }).click()
-    for (const name of ['Overview', 'Splits', 'Charts', 'Details']) {
-      await page.getByRole('tab', { name, exact: true }).click()
-      await scan(`run-${name.toLowerCase()}`)
-    }
+    // The run is one scroll, so one scan covers summary, splits, charts, stages, bests and delete.
+    await page.getByRole('region', { name: 'Run summary' }).waitFor()
+    await scan('run')
   })
 }
 

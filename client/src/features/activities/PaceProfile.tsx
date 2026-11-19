@@ -20,7 +20,7 @@ export function PaceProfile({ splits, plan, units }: { splits: readonly Split[];
   const active = points[selectedIndex]!
   return <section className="pace-profile" aria-labelledby={titleId}>
     <h4 id={titleId}>Recorded pace by split</h4>
-    <p className="field-help">Higher on this chart means faster. Select a point for its pace. Splits are recorded per kilometre, including any final partial kilometre.</p>
+    <p className="field-help">Higher means faster. Select a point for its pace.</p>
     <svg viewBox="0 0 600 210" role="group" aria-label="Recorded split pace profile">
       {hasTarget && <rect x="30" width="540" y={y(fast)} height={Math.max(2, y(slow) - y(fast))} fill="var(--accent)" opacity="0.18" />}
       <path d={points.map((split, index) => `${index ? 'L' : 'M'}${x(index)},${y(split.paceSecondsPerKm)}`).join(' ')} fill="none" stroke="var(--accent)" strokeWidth="3" />
@@ -33,7 +33,6 @@ export function PaceProfile({ splits, plan, units }: { splits: readonly Split[];
       {points.map((split, index) => <option key={split.number} value={index}>Split {split.number} · {formatPace(split.paceSecondsPerKm, units)}</option>)}
     </select>
     <p role="status">Split {active.number} · {formatPace(active.paceSecondsPerKm, units)}</p>
-    {hasTarget && <p className="field-help">Shaded band: the session's work target, {formatPace(fast, units)} to {formatPace(slow, units)}. Warm-up and recovery may have different targets. The band does not assess individual stages.</p>}
-    <p className="field-help">Exact recorded values are available in the Splits tab.</p>
+    {hasTarget && <p className="field-help">Shaded band: the work target, {formatPace(fast, units)} to {formatPace(slow, units)}.</p>}
   </section>
 }

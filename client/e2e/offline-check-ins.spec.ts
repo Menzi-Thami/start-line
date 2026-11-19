@@ -2,7 +2,7 @@ import { accessibility } from './accessibility'
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import type { CheckIn, CheckInRequest } from '../src/lib/types'
-import { openRecentRun } from './navigation'
+import { openRunDay } from './navigation'
 
 const plan = JSON.parse(readFileSync(new URL('../src/test/fixtures/plan-5k.json', import.meta.url), 'utf8'))
 const fixture = 'http://127.0.0.1:5176/e2e/fixtures/run-history.html?empty=1'
@@ -61,7 +61,7 @@ for (const mode of ['light', 'dark'] as const) {
     const status = page.getByRole('region', { name: 'Runs waiting to sync' })
     await expect(status).toContainText('1 run change waiting to sync')
     await page.getByRole('button', { name: 'Return home', exact: true }).click()
-    await openRecentRun(page, '2026-10-14')
+    await openRunDay(page, '2026-10-14')
     const entry = page.getByRole('article', { name: 'Additional run on Wednesday 14 October 2026', exact: true })
     await expect(entry).toContainText('7 km · 42:00')
     await entry.getByRole('button', { name: 'Change how Additional run went', exact: true }).click()
@@ -74,12 +74,12 @@ for (const mode of ['light', 'dark'] as const) {
     await page.reload()
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
     await expect(status).toContainText('Saved on this device')
-    await openRecentRun(page, '2026-10-14')
+    await openRunDay(page, '2026-10-14')
     await expect(entry).toContainText('8 km · 42:00')
     await status.getByRole('button', { name: 'Review device drafts' }).click()
     await expect(status).toContainText('Device draft: Done · 8 km · 00:42:00')
-    // Audit the actual Home alert after leaving the deliberately opened running history.
-    await page.getByRole('button', { name: '← Back to Home', exact: true }).click()
+    // Audit the actual Home alert after leaving the plan day.
+    await page.getByRole('button', { name: 'Return home', exact: true }).click()
     await page.reload()
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
     await expect(page.getByRole('region', { name: 'Today', exact: true })).toBeVisible()
@@ -90,7 +90,7 @@ for (const mode of ['light', 'dark'] as const) {
     const audit = await accessibility(page).analyze()
     expect(audit.violations).toEqual([])
     await status.screenshot({ path: info.outputPath(`offline-run-${mode}.png`) })
-    await openRecentRun(page, '2026-10-14')
+    await openRunDay(page, '2026-10-14')
     await expect(entry).toContainText('8 km · 42:00')
     accountConnected = true
     await connection(page, true)
@@ -100,7 +100,7 @@ for (const mode of ['light', 'dark'] as const) {
     expect(entries).toHaveLength(1)
     await page.reload()
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
-    await openRecentRun(page, '2026-10-14')
+    await openRunDay(page, '2026-10-14')
     await expect(entry).toContainText('8 km · 42:00')
     expect(writes).toBe(1)
   })

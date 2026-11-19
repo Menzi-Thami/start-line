@@ -1,4 +1,3 @@
-import { openHomeLibrary } from './navigation'
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { readFile, mkdir } from 'node:fs/promises'
@@ -285,7 +284,7 @@ test('easy-running Home has one action and keeps race choice in the plan @phone'
   await expect(page).not.toHaveURL(/view=recovery/)
 })
 
-test('Home stays simple after recovery and months later, with running details available on request @phone', async ({ page }, info) => {
+test('Home stays simple after recovery and months later, with running tools on Runs @phone', async ({ page }, info) => {
   const { state } = await setup(page, { recovering: true })
   state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
   await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
@@ -293,10 +292,8 @@ test('Home stays simple after recovery and months later, with running details av
   await expect(page.getByRole('button', { name: "Choose my next challenge", exact: true })).toBeVisible()
   expect(state.detailsReads).toBe(0)
   await calmHome(page)
-  await openHomeLibrary(page)
-  await expect(page.getByRole('heading', { name: 'Your running', exact: true })).toBeVisible()
-  await expect.poll(() => state.detailsReads).toBeGreaterThan(0)
-  await page.locator('.home-tools > summary').click()
+  await page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Runs', exact: true }).click()
+  await page.locator('.runs-tools > summary').click()
   await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()

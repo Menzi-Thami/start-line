@@ -51,7 +51,5 @@
 .home-simple .home-latest-actions button, .home-week-preview button { min-height: 44px; }
 .home-simple .home-recent-recording { background: none; box-shadow: none; border-radius: 0; }
 .home-library > .plan-title { margin-block: var(--space-4); }
-.runs-detail-links { display: flex; gap: var(--space-5); flex-wrap: wrap; margin-block: var(--space-3); }
-.runs-detail-links button { min-height: 44px; }
 @media (max-width: 390px) { .home-simple .home-recent-recording { align-items: flex-start; flex-direction: column; gap: var(--space-2); } }
 .home-simple .home-card .button-primary { font-size: 1rem; }

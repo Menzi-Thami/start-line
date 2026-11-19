@@ -42,7 +42,7 @@ import { useSyncedRuns } from '../features/sync/useSyncedRuns'
 import { api, ApiError, apiOrigin } from '../lib/api-client'
 import { calendarLinks, personalCalendarLinks } from '../lib/calendar-links'
 import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/home-snapshot'
-import { localToday, type Units } from '../lib/format'
+import { localToday, parseTimeSpan, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
 import { prefersMotion, type IntroAudience } from '../lib/motion'
 import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
@@ -102,8 +102,20 @@ const runFromUrl = (): OpenRun | null => {
   return id ? { id } : null
 }
 
+/**
+ * The old Running insights / Running tools page is gone: totals live on Runs and the calculators sit at its foot, so those
+ * links (including the ones opened from Runs) land on Runs, with the calculators open for a tools link.
+ */
+function redirectRunningDetails() {
+  const params = new URLSearchParams(window.location.search)
+  const tab = params.get('tab')
+  if (params.get('view') !== 'home' || (tab !== 'insights' && tab !== 'tools')) return
+  window.history.replaceState(window.history.state, '', tab === 'tools' ? '?view=runs&tab=tools' : '?view=runs')
+}
+
 const viewFromUrl = (): View => {
   if (window.location.pathname === STRAVA_CALLBACK_PATH) return 'account'
+  redirectRunningDetails()
   const view = new URLSearchParams(window.location.search).get('view')
   // Old saved-plan links now open the permanent journey, including when there is no current plan.
   if (view === 'plans') return 'journey'
@@ -149,8 +161,8 @@ export function App() {
   const compact = useMediaQuery('(max-width: 63.99rem)')
   // Bumped when a run is deleted, so the journal beside it on a desktop loads again.
   const [runsVersion, setRunsVersion] = useState(0)
-  // Keep phone setup open when the Runs panel moves between mobile and desktop layouts.
-  const [phoneHelpOpen, setPhoneHelpOpen] = useState(false)
+  // Keep Add runs open when the Runs panel moves between mobile and desktop layouts.
+  const [addRunsOpen, setAddRunsOpen] = useState(false)
   // Plan navigation can return to the current week from any training detail.
   // The runner's own picture, if they added one; initials show until it arrives, or without one.
   const [photo, setPhoto] = useState<string | null>(null)
@@ -770,14 +782,17 @@ export function App() {
     }
     window.scrollTo?.({ top: 0 })
   }
-  const openRunningDetails = (section: 'insights' | 'tools') => {
-    go('home')
-    window.history.replaceState(null, '', `?view=home&tab=${section}&from=runs`)
-    window.dispatchEvent(new PopStateEvent('popstate'))
-  }
   const openStravaConnections = () => {
     go('account')
     window.history.replaceState(null, '', '?view=account&settings=connections')
+  }
+  const goalSeconds = ownPlan ? parseTimeSpan(ownPlan.inputs.goalTime) : null
+  const runsProps = {
+    units, onOpen: showRun, onOpenConnections: openStravaConnections, onOpenPlan: ownPlan ? () => openOwnPlan() : undefined,
+    addRuns: { open: addRunsOpen, onChange: setAddRunsOpen }, today,
+    runnerId: state.kind === 'ready' ? state.runner.id : undefined,
+    maxHeartRate: state.kind === 'ready' ? state.runner.maxHeartRate : null,
+    race: ownPlan?.inputs.distanceKm && goalSeconds ? { distanceKm: ownPlan.inputs.distanceKm, goalSeconds } : null,
   }
   const builderInitial = plan.kind === 'ready' || plan.kind === 'error' ? plan.inputs : initial
   const showBuilder = view === 'build' && (editing || plan.kind === 'idle')
@@ -797,7 +812,7 @@ export function App() {
   // The bar shows Plan whenever one of these is on screen, so the highlight never points at a missing item. Recovery is
   // also reachable from Journey, but it is a plan, so it lights Plan wherever it was opened from.
   const barCurrent: TabBarItem | null =
-    view === 'home' ? new URLSearchParams(locationSearch).get('from') === 'runs' ? 'runs' : 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
+    view === 'home' ? 'home' : view === 'runs' ? 'runs' : view === 'journey' ? 'journey' : view === 'account' ? 'account' : view === 'recovery' || view === 'beginner' || onPlan || (view === 'build' && editing && state.kind === 'ready') ? 'plan' : null
   // The bar is for signed-in runners. It steps aside while the plan-building film plays, so the film has the whole screen.
   const cachedAccount = !!auth.account && knownHere && (state.kind === 'loading' || state.kind === 'error')
   const showBar =
@@ -1013,12 +1028,12 @@ export function App() {
             openRun ? (
               <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={returnFromRun} backLabel={new URLSearchParams(window.location.search).has('returnTo') ? 'Back to previous page' : undefined} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />
             ) : (
-              <MyRuns onOpenInsights={openRunningDetails} units={units} onOpen={showRun} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
+              <MyRuns {...runsProps} />
             )
           ) : (
             // On a desktop the journal stays on the left and the open run fills the right.
             <div className="runs-split">
-              <MyRuns onOpenInsights={openRunningDetails} key={runsVersion} units={units} onOpen={showRun} selectedId={openRun?.id} onOpenConnections={openStravaConnections} onOpenPlan={ownPlan ? () => openOwnPlan() : undefined} phoneHelp={{ open: phoneHelpOpen, onChange: setPhoneHelpOpen }} />
+              <MyRuns {...runsProps} key={runsVersion} selectedId={openRun?.id} />
               <div className="runs-split-detail">
                 {openRun ? (
                   <ActivityPage key={openRun.id} id={openRun.id} initial={openRun.uploaded} units={units} onBack={returnFromRun} backLabel={new URLSearchParams(window.location.search).has('returnTo') ? 'Back to previous page' : undefined} onDeleted={() => { setRunsVersion(v => v + 1); go('runs') }} onOpenAccount={() => go('account')} onOpenPlanDay={ownPlan ? openOwnDay : undefined} />

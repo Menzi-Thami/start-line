@@ -1,13 +1,12 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { accountsOff, AuthContext } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
-import type { ActivitySummary, LoggedRun, Runner, TrainingPlan } from '../../lib/types'
+import type { ActivitySummary, Runner, TrainingPlan } from '../../lib/types'
 import plan from '../../test/fixtures/plan-5k.json'
 import { server } from '../../test/server'
-import { openHomeLibrary } from '../../test/user-navigation'
 import { defaultBeginnerProgress } from '../beginner/beginner-progress'
 import { chapter, journeyOf, maintenance, PLAN_ID, raceResult, recovery } from '../journey/journey-fixtures'
 import type { Journey } from '../journey/types'
@@ -117,36 +116,10 @@ it('keeps experienced runners on Home months after training without restarting o
   await opened.user.click(screen.getByRole('button', { name: 'Choose my next challenge' }))
   expect(opened.onBuildPlan).toHaveBeenCalledOnce()
 })
-it('defers detailed totals and calculators until an explicit destination is opened', async () => {
-  let resolve!: (runs: LoggedRun[]) => void
-  const running = vi.spyOn(api.me, 'running').mockImplementation(() => new Promise(done => { resolve = done }))
-  const allTime = vi.spyOn(api.me, 'allTimeRunning').mockResolvedValue([]), readiness = vi.spyOn(api.me, 'readiness')
+it('keeps totals, readiness and calculators off the after-training Home (they live on Runs and the plan)', async () => {
+  const running = vi.spyOn(api.me, 'running'), allTime = vi.spyOn(api.me, 'allTimeRunning'), readiness = vi.spyOn(api.me, 'readiness')
   show(journeyOf([chapter({ status: 'Concluded' })], { recovery: recovery() }))
   expectQuietHome()
   for (const request of [running, allTime, readiness]) expect(request).not.toHaveBeenCalled()
-  await openHomeLibrary('insights')
-  await waitFor(() => expect(running).toHaveBeenCalledWith('test-token', true))
-  expect(allTime).toHaveBeenCalledWith('test-token')
-  expect(screen.getByRole('status', { name: 'Loading running totals' })).toBeVisible()
-  await act(async () => resolve([]))
-  await userEvent.click(screen.getByText(/^Running tools/, { selector: 'summary' }))
-  expect(await screen.findByRole('region', { name: 'Calculators' })).toBeVisible()
-  expect(readiness).not.toHaveBeenCalled()
-})
-it('keeps bookmarked tools usable after recovery without opening training', async () => {
-  window.history.replaceState(null, '', '/?view=home&tab=tools')
-  show(journeyOf([chapter({ status: 'Concluded' })], { recovery: recovery({ status: 'Completed' }) }))
-  expect(await screen.findByRole('region', { name: 'Calculators' })).toBeVisible()
-  expect(screen.queryByRole('region', { name: 'Today' })).not.toBeInTheDocument()
-})
-it('retains a saved beginner programme in the deliberately opened running details', async () => {
-  const onOpenBeginner = vi.fn()
-  server.use(http.get('*/api/v1/me/beginner', () => HttpResponse.json({ ...defaultBeginnerProgress('2026-11-09'), week: 2, completed: ['0:1:1'] })))
-  show(journeyOf([chapter({ status: 'Concluded' })]), { onOpenBeginner })
-  expectQuietHome()
-  await openHomeLibrary('insights')
-  expect(await screen.findByRole('heading', { name: 'Couch to 5K' })).toBeVisible()
-  expect(screen.getByText('Week 2 of 9')).toBeVisible()
-  await userEvent.click(screen.getByRole('button', { name: 'Open Couch to 5K' }))
-  expect(onOpenBeginner).toHaveBeenCalledOnce()
+  expect(screen.queryByRole('button', { name: /Back to (Home|Runs)/ })).not.toBeInTheDocument()
 })

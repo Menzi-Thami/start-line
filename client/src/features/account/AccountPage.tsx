@@ -1,15 +1,14 @@
+import { RunDataPanel } from '../activities/RunDataPanel'
 import './account-layout.css'
-import { useRef, useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { Runner } from '../../lib/types'
-import { RunDataPanel } from '../activities/RunDataPanel'
 import { InstallSection } from '../install/InstallApp'
 import { RemindersSection } from '../reminders/Reminders'
 import { StravaSection } from '../sync/StravaSection'
 import { PhotoPicker } from './PhotoPicker'
 import { ProfileForm } from './ProfileForm'
-import { RunSources } from './RunSources'
 import { ShoeTracker } from './ShoeTracker'
 
 interface Props {
@@ -27,19 +26,42 @@ interface Props {
   stravaConnecting?: boolean
   /** A new calendar link was made here, so the plan's calendar menu offers it rather than the old one. */
   onNewCalendarLink?: (token: string) => void
+  /** "Your run data" (where totals come from), shown first under Data & privacy. Its own download is not repeated here. */
 }
 
-/** Profile, where runs come from, a copy of everything we hold, and the way out. */
+type Group = 'profile' | 'connections' | 'notifications' | 'data'
+
+/** Deep links (?settings=…) open their group. Shoes live under Profile's More; a shoe reminder opens both. */
+const linkedGroup = (): { group: Group | null; shoes: boolean } => {
+  const wanted = new URLSearchParams(window.location.search).get('settings')
+  if (wanted === 'shoes') return { group: 'profile', shoes: true }
+  return { group: wanted === 'profile' || wanted === 'connections' || wanted === 'notifications' || wanted === 'data' ? wanted : null, shoes: false }
+}
+
+/** Profile, connections, notifications, a copy of everything we hold, and the way out. */
 export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
-  const connectionsRef = useRef<HTMLDetailsElement>(null)
-
-  // A shoe reminder links straight here (?settings=shoes).
-  const [shoesOpen, setShoesOpen] = useState(new URLSearchParams(window.location.search).get('settings') === 'shoes')
-  const [connectionsOpen, setConnectionsOpen] = useState(!!stravaNotice || stravaConnecting || new URLSearchParams(window.location.search).get('settings') === 'connections')
+  const [linked] = useState(linkedGroup)
+  const [open, setOpen] = useState<Record<Group, boolean>>(() => ({
+    profile: linked.group === 'profile',
+    connections: linked.group === 'connections' || !!stravaNotice || stravaConnecting,
+    notifications: linked.group === 'notifications',
+    data: linked.group === 'data',
+  }))
+  const [shoesOpen, setShoesOpen] = useState(linked.shoes)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [newCalendarLink, setNewCalendarLink] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'error'; message: string }>({ kind: 'idle' })
+
+  const group = (id: Group, title: string, body: ReactNode) => (
+    <details className="settings-group" id={`account-${id}`} open={open[id]} onToggle={(event) => {
+      const next = event.currentTarget.open
+      setOpen((current) => current[id] === next ? current : { ...current, [id]: next })
+    }}>
+      <summary>{title}</summary>
+      {body}
+    </details>
+  )
 
   const withToken = async (action: (token: string) => Promise<void>) => {
     setStatus({ kind: 'busy' })
@@ -84,105 +106,89 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
       </h2>
       <p className="plan-focus">Signed in as {runner.email ?? runner.displayName}.</p>
 
-      <section className="account-overview panel" aria-label="Account overview">
-        <div><h3>{runner.displayName}</h3><p>{runner.units === 'Miles' ? 'Miles' : 'Kilometres'} · {runner.timeZone}</p></div>
-      </section>
       <div className="account-groups">
-      <section className="account-group" aria-labelledby="account-group-you">
-      <h3 className="account-group-title" id="account-group-you">You</h3>
-      <details className="settings-group"><summary>Profile & picture</summary>
-      <div className="settings-columns">
-      {onPhotoChange && (
-        <div className="section">
-          <h3>Your picture</h3>
-          <PhotoPicker name={runner.displayName} photo={photo} onChange={onPhotoChange} />
-        </div>
-      )}
+        {group('profile', 'Profile', <>
+          <div className="settings-columns">
+            {onPhotoChange && (
+              <div className="section">
+                <h3>Your picture</h3>
+                <PhotoPicker name={runner.displayName} photo={photo} onChange={onPhotoChange} />
+              </div>
+            )}
+            <div className="section">
+              <h3>Your details</h3>
+              <ProfileForm runner={runner} onSaved={onSaved} />
+            </div>
+          </div>
+          {/* Shoes are also picked on each run's page; the list and back-filling past runs wait here. */}
+          <details className="disclosure account-more" open={shoesOpen} onToggle={(event) => setShoesOpen(event.currentTarget.open)}>
+            <summary>More</summary>
+            <div className="section">
+              <h3>Shoes</h3>
+              <ShoeTracker units={runner.units === 'Miles' ? 'mi' : 'km'} />
+            </div>
+          </details>
+        </>)}
 
-      <div className="section">
-        <h3>Your details</h3>
-        <ProfileForm runner={runner} onSaved={onSaved} />
-      </div>
+        {group('connections', 'Connections', <>
+          <StravaSection key={runner.id} notice={stravaNotice} connecting={stravaConnecting} onOpenRuns={onOpenRuns} />
+          <p className="field-help account-uploads">
+            No Strava? Upload a .fit, .gpx or .tcx file from your watch or app in{' '}
+            <button type="button" className="link-button" onClick={onOpenRuns}>Runs</button>.
+          </p>
+        </>)}
 
-      </div>
-      </details>
-      </section>
-      <section className="account-group" aria-labelledby="account-group-running">
-      <h3 className="account-group-title" id="account-group-running">Running</h3>
-      <details ref={connectionsRef} className="settings-group" open={connectionsOpen} onToggle={event => setConnectionsOpen(event.currentTarget.open)}><summary>Connections & run sources</summary>
-      <div className="settings-columns">
-      <StravaSection key={runner.id} notice={stravaNotice} connecting={stravaConnecting} onOpenRuns={onOpenRuns} />
+        {group('notifications', 'Notifications', <>
+          <RemindersSection />
+          <InstallSection />
+        </>)}
 
-      <RunSources onOpenRuns={onOpenRuns} />
-      </div>
-      </details>
-      <details className="settings-group" open={shoesOpen} onToggle={event => setShoesOpen(event.currentTarget.open)}><summary>Shoes</summary>
-        <ShoeTracker units={runner.units === 'Miles' ? 'mi' : 'km'} />
-      </details>
-      </section>
-      <section className="account-group" aria-labelledby="account-group-app">
-      <h3 className="account-group-title" id="account-group-app">App & reminders</h3>
-      <details className="settings-group"><summary>App & calendars</summary>
-      <InstallSection />
-
-
-
-      <div className="section">
-        <h3>Calendar link</h3>
-        <p>
-          Added your plan to a calendar? It follows your plan, even when it changes. If someone else has the link, get a new
-          one: the old link stops working, so add your plan to your calendar again from the plan.
-        </p>
-        {newCalendarLink ? (
-          <p role="status">Done. The old link no longer works.</p>
-        ) : (
-          <button type="button" className="button button-quiet" onClick={() => void resetCalendarLink()} disabled={status.kind === 'busy'}>
-            Get a new link
-          </button>
-        )}
-      </div>
-
-      </details>
-      <details className="settings-group"><summary>Notifications</summary><RemindersSection /></details>
-      </section>
-      <section className="account-group" aria-labelledby="account-group-data">
-      <h3 className="account-group-title" id="account-group-data">Your data</h3>
-      <RunDataPanel units={runner.units === 'Miles' ? 'mi' : 'km'} />
-      <details className="settings-group"><summary>Data & privacy</summary>
-      <div className="section">
-        <h3>Your data</h3>
-        <p>
-          Everything Taperday holds about you, as one file.
-        </p>
-        <button type="button" className="button" onClick={() => void download()} disabled={status.kind === 'busy'}>
-          Download my data
-        </button>
-      </div>
-
-      <div className="section danger-zone">
-        <h3>Delete account</h3>
-        <p>
-          This deletes your profile, every saved plan, every run and your reminders straight away, and ends Taperday’s access to Strava if you connected it. It can’t be undone. Your sign-in itself is kept by
-          Microsoft; ask us if you want that removed too.
-        </p>
-        {confirmingDelete ? (
-          <div className="submit-row">
-            <button type="button" className="button button-danger" onClick={() => void deleteEverything()} disabled={status.kind === 'busy'}>
-              {status.kind === 'busy' ? 'Deleting…' : 'Yes, delete everything'}
-            </button>
-            <button type="button" className="button button-quiet" onClick={() => setConfirmingDelete(false)}>
-              Keep my account
+        {group('data', 'Data & privacy', <>
+          <RunDataPanel units={runner.units === 'Miles' ? 'mi' : 'km'} />
+          <div className="section">
+            <h3>Your data</h3>
+            <p>Everything Taperday holds about you, as one file.</p>
+            <button type="button" className="button" onClick={() => void download()} disabled={status.kind === 'busy'}>
+              Download my data
             </button>
           </div>
-        ) : (
-          <button type="button" className="button button-quiet" onClick={() => setConfirmingDelete(true)}>
-            Delete my account
-          </button>
-        )}
-      </div>
 
-      </details>
-      </section>
+          <div className="section">
+            <h3>Calendar link</h3>
+            <p>
+              Shared your plan’s calendar link by mistake? Get a new one; the old link stops working.{' '}
+              {newCalendarLink ? (
+                <span role="status">Done. Add your plan to your calendar again from the plan.</span>
+              ) : (
+                <button type="button" className="link-button" onClick={() => void resetCalendarLink()} disabled={status.kind === 'busy'}>
+                  Get a new link
+                </button>
+              )}
+            </p>
+          </div>
+
+          <div className="section danger-zone">
+            <h3>Delete account</h3>
+            <p>
+              This deletes your profile, every saved plan, every run and your reminders straight away, and ends Taperday’s access to Strava if you connected it. It can’t be undone. Your sign-in itself is kept by
+              Microsoft; ask us if you want that removed too.
+            </p>
+            {confirmingDelete ? (
+              <div className="submit-row">
+                <button type="button" className="button button-danger" onClick={() => void deleteEverything()} disabled={status.kind === 'busy'}>
+                  {status.kind === 'busy' ? 'Deleting…' : 'Yes, delete everything'}
+                </button>
+                <button type="button" className="button button-quiet" onClick={() => setConfirmingDelete(false)}>
+                  Keep my account
+                </button>
+              </div>
+            ) : (
+              <button type="button" className="button button-quiet" onClick={() => setConfirmingDelete(true)}>
+                Delete my account
+              </button>
+            )}
+          </div>
+        </>)}
       </div>
       <button type="button" className="button button-quiet account-sign-out" onClick={auth.signOut}>Sign out</button>
 

@@ -196,7 +196,7 @@ describe('signing up comes first', () => {
     const user = renderWith(auth)
 
     expect(await screen.findByRole('heading', { name: 'Your race, your week, your plan' })).toBeInTheDocument()
-    expect(screen.getByText('Step 1 of 6')).toBeInTheDocument()
+    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument()
     expect(screen.getByText('A pace and a reason for every run')).toBeInTheDocument()
     // Nothing unbuilt is promised as if it were there.
     expect(screen.queryByText('Coming soon')).not.toBeInTheDocument()
@@ -218,6 +218,12 @@ describe('signing up comes first', () => {
     // Signing up is the only thing on screen: no landing hero, no race ticker.
     expect(screen.queryByRole('heading', { name: /Your race.s*Your plan./ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Start your free plan' })).not.toBeInTheDocument()
+    // Sign-up asks only for a name, a time zone and the privacy notice. Units follow the browser's locale; the weekly
+    // recap starts on; units, heart rate and email choices are changed later in Account.
+    expect(screen.queryByRole('group', { name: 'Distances in' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /weekly recap/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /Keep heart rate/ })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Your time zone')).toBeInTheDocument()
     const name = screen.getByLabelText('What should we call you?')
     await user.clear(name)
     await user.type(name, 'Thandi M')
@@ -233,7 +239,8 @@ describe('signing up comes first', () => {
     await user.click(screen.getByRole('button', { name: "I'll connect later" }))
     expect(await screen.findByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Runs' })).toBeInTheDocument()
-    expect(db.profiles[0]).toMatchObject({ displayName: 'Thandi M', acceptPrivacyNotice: true, units: 'Kilometres' })
+    expect(db.profiles[0]).toMatchObject({ displayName: 'Thandi M', acceptPrivacyNotice: true, units: navigator.language.endsWith('-US') ? 'Miles' : 'Kilometres', weeklyEmails: true })
+    expect(db.profiles[0]).not.toHaveProperty('heartRateConsent')
     expect(typeof (db.profiles[0] as { timeZone: string }).timeZone).toBe('string')
   })
 
@@ -242,7 +249,7 @@ describe('signing up comes first', () => {
     renderWith(signedIn())
 
     expect(await screen.findByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
-    expect(screen.getByText('Step 1 of 5')).toBeInTheDocument()
+    expect(screen.getByText('Step 1 of 4')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Your race, your week, your plan' })).not.toBeInTheDocument()
   })
 
@@ -291,15 +298,14 @@ describe('a signed-up runner', () => {
     await user.type(within(goal).getByLabelText('Hours'), '11')
     await next()
     await next()
-    await next()
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
     expect(await findPlanControl('Delete plan')).toBeInTheDocument()
     expect(db.saved).toHaveLength(1)
 
     await user.click(await screen.findByRole('button', { name: 'Edit plan' }))
-    await user.click(screen.getByText('Add strength and mobility sessions'))
-    await user.click(within(screen.getByRole('group', { name: 'Strength days' })).getByRole('checkbox', { name: 'Monday' }))
+    await user.click(screen.getByText('More options', { selector: 'summary' }))
+    await user.click(within(screen.getByRole('group', { name: 'Strength and mobility days' })).getByRole('checkbox', { name: 'Monday' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
 
     await waitFor(() => expect(db.saved).toHaveLength(2))
@@ -518,16 +524,23 @@ describe('a signed-up runner', () => {
     window.history.replaceState(null, '', '/')
     const user = renderWith(signedIn())
     await user.click(await screen.findByRole('button', { name: 'Account' }))
-    await screen.findByRole('region', { name: 'You' })
+    const account = await screen.findByRole('region', { name: 'Account' })
     expect(screen.queryByRole('navigation', { name: 'Jump to account settings' })).toBeNull()
-    for (const group of ['You', 'Running', 'App & reminders', 'Your data']) expect(screen.getByRole('region', { name: group })).toBeInTheDocument()
+    // Four groups, then Sign out. No overview panel repeating who is signed in.
+    expect([...account.querySelectorAll('.account-groups > details > summary')].map(summary => summary.textContent))
+      .toEqual(['Profile', 'Connections', 'Notifications', 'Data & privacy'])
+    expect(within(account).getAllByText(/Signed in as/)).toHaveLength(1)
+    expect(screen.queryByRole('region', { name: 'Account overview' })).toBeNull()
+    expect(within(account).getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
 
-    await user.click(screen.getByText('Profile & picture'))
-    expect(screen.getByText('Profile & picture').closest('details')).toHaveAttribute('open')
-    await user.click(screen.getByText('App & calendars'))
-    expect(screen.getByText('App & calendars').closest('details')).toHaveAttribute('open')
-    await user.click(screen.getByText('Data & privacy'))
-    expect(screen.getByText('Data & privacy').closest('details')).toHaveAttribute('open')
+    for (const group of ['Profile', 'Notifications', 'Data & privacy']) {
+      await user.click(screen.getByText(group, { selector: 'summary' }))
+      expect(screen.getByText(group, { selector: 'summary' }).closest('details')).toHaveAttribute('open')
+    }
+    // Shoes wait under Profile's More; adding Taperday to the home screen sits with Notifications; one data download.
+    expect(screen.getByText('More', { selector: 'summary' }).closest('details')).not.toHaveAttribute('open')
+    expect(within(account).getByRole('heading', { name: 'Taperday on your home screen' })).toBeInTheDocument()
+    expect(within(account).getAllByRole('button', { name: /^Download/ })).toHaveLength(1)
   })
 
   it('gets a new calendar link from Account, and their plan then offers that one', async () => {
@@ -547,12 +560,12 @@ describe('a signed-up runner', () => {
     await waitFor(() => expect(screen.getByRole('link', { name: /Apple Calendar/ }).getAttribute('href')).toContain(calendarToken))
 
     await user.click(screen.getByRole('button', { name: 'Account' }))
-    await openDisclosure('App & calendars')
+    await openDisclosure('Data & privacy')
     const row = (await screen.findByRole('heading', { name: 'Calendar link' })).closest('.section') as HTMLElement
     expect(within(row).getByText(/the old link stops working/)).toBeInTheDocument()
     await user.click(within(row).getByRole('button', { name: 'Get a new link' }))
 
-    expect(await within(row).findByText('Done. The old link no longer works.')).toBeInTheDocument()
+    expect(await within(row).findByText('Done. Add your plan to your calendar again from the plan.')).toBeInTheDocument()
     expect(resets).toBe(1)
     window.history.back()
     await screen.findByRole('heading', { name: 'Parkrun PB' }, { timeout: 3000 })

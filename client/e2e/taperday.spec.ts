@@ -50,9 +50,8 @@ test('builds a plan one question at a time, from a race on the list', async ({ p
   await continueOn(page)
   await expect(page.getByRole('group', { name: 'Which days can you run?' })).toBeVisible()
   await continueOn(page)
-  await continueOn(page)
 
-  await expect(page.getByText('Step 5 of 5')).toBeVisible()
+  await expect(page.getByText('Step 4 of 4')).toBeVisible()
   await page.getByRole('button', { name: 'Build my plan' }).click()
 
   await expect(page.getByRole('heading', { name: /Comrades/ })).toBeVisible()

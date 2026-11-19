@@ -31,7 +31,6 @@ describe('finding a race that isn’t on the rack', () => {
     await user.click(days.getByRole('checkbox', { name: 'Tuesday' }))
     await user.click(days.getByRole('checkbox', { name: 'Wednesday' }))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
     expect(onSubmit).toHaveBeenCalledOnce()
     expect(onSubmit.mock.calls[0]![0]).toMatchObject({ raceSlug: knysna.slug, raceSnapshot: initial.raceSnapshot, version: 2, planFrom: initial.planFrom })

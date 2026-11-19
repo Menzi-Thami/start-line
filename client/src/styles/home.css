@@ -559,77 +559,7 @@
   margin: 0 0 var(--space-2);
 }
 
-/* ---------- Taperday on the home screen: the one-time card on Home, and the same option in Account ---------- */
-/* The add-to-home-screen banner: near the top of Home and of a plan, hard to miss, quiet for two weeks after Not now. */
-.install-card {
-  display: flex;
-  gap: var(--space-4);
-  align-items: center;
-  margin: var(--space-4) 0;
-  border-color: var(--accent);
-  background: var(--glass);
-}
-
-.install-pitch {
-  margin: 0;
-  color: var(--ink-2);
-}
-
-.install-button {
-  min-height: 48px;
-  padding-inline: var(--space-6);
-  font-size: var(--text-lg);
-}
-
-@media (max-width: 34rem) {
-  .install-card {
-    flex-direction: column;
-    align-items: stretch;
-    text-align: center;
-  }
-
-  .install-card .install-icon {
-    align-self: center;
-  }
-
-  .install-card .install-actions {
-    flex-direction: column;
-  }
-
-  .install-button {
-    width: 100%;
-  }
-}
-
-.install-icon {
-  flex: none;
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.install-body {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.install-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.install-steps {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding-left: 1.2rem;
-  color: var(--ink-2);
-}
-
+/* ---------- Taperday on the home screen: the option in Account, and its guide ---------- */
 .install-share {
   width: 18px;
   height: 18px;
@@ -872,27 +802,3 @@
   }
 }
 
-/* New Strava runs are surfaced inside Taperday without requiring push permission.
-   The notice uses existing theme tokens, and remains readable in both themes. */
-.strava-arrival-notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-  width: min(100%, 72rem);
-  margin: 0 auto 1rem;
-  padding: 1rem clamp(1rem, 3vw, 1.5rem);
-  background: var(--accent-soft);
-  color: var(--ink);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-md);
-}
-.strava-arrival-notice strong { color: var(--ink); font-weight: 750; }
-.strava-arrival-notice p { color: var(--ink-2); margin: .35rem 0 0; }
-.strava-arrival-actions { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; }
-.strava-arrival-actions .button { min-height: 44px; }
-@media (max-width: 40rem) {
-  .strava-arrival-actions { width: 100%; }
-  .strava-arrival-actions .button:first-child { flex: 1; }
-}

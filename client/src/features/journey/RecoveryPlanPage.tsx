@@ -18,7 +18,6 @@ export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onO
   const wanted = new URLSearchParams(window.location.search).get('race')
   const chapter = data?.chapters.find(chapter => recoveryWelcome(chapter.raceResult?.outcome) && (!wanted || chapter.raceResult?.id === wanted))
   const races = useRaceHistory(!maintaining && !chapter?.raceResult && (!existing || !!wanted))
-  const [manual, setManual] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const recorded = races.state.kind === 'ready' ? races.state.history.races.filter(race => recoveryWelcome(race.result.outcome) && !race.needsReview) : []
   const memory = wanted ? recorded.find(race => race.result.id === wanted) : recorded[0]
@@ -65,13 +64,11 @@ export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onO
     {!maintaining && !recovery && !chapter?.raceResult && races.state.kind === 'error' && <section className="panel" role="alert">
       <p>{races.state.message}</p><button type="button" className="button" onClick={races.refresh}>Try again</button>
     </section>}
-    {!maintaining && !recovery && !source && races.state.kind === 'ready' && !manual && <section className="panel">
+    {!maintaining && !recovery && !source && races.state.kind === 'ready' && <section className="panel">
       <h2 className="journey-subtitle">Ready when you are.</h2>
-      <p>Review your race to use its saved details for recovery.</p>
+      <p>Recovery starts from a saved race. Review your race, or add one you ran outside Taperday under Races &amp; trophies.</p>
       <button type="button" className="button button-primary" onClick={onOpenJourney}>Review my race</button>
-      <details className="race-result-alternatives"><summary>Recovery from another race</summary><button type="button" className="button" onClick={() => setManual(true)}>Add a recovery plan</button></details>
     </section>}
-    {!maintaining && !recovery && manual && <div className="panel"><RecoveryOffer today={today} runDays={[]} onStart={actions.startRecovery} onDecline={() => setManual(false)} /></div>}
     {maintaining && data?.maintenance && <div className="panel"><MaintenanceCard maintenance={data.maintenance} today={today} onEnd={actions.endMaintenance} onNewRace={onNewRace} /></div>}
     <div className="journey-actions">
       <button type="button" className="button button-quiet" onClick={onOpenJourney}>View my journey</button>

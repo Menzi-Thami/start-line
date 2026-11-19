@@ -48,14 +48,14 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     await page.goto('/e2e/fixtures/redesign-screens.html?screen=builder')
     const actions = page.getByRole('group', { name: 'Plan builder actions' })
     const pane = page.locator('.wizard-question')
-    await expect(page.getByRole('button', { name: '5 Review' })).toHaveAttribute('aria-current', 'step')
+    await expect(page.getByText('Step 4 of 4', { exact: true })).toBeVisible()
     if (width < 768) {
       // Mobile builder uses natural page scrolling: the action row must follow
       // the complete question, not float ahead of options in a nested scroller.
       await expect(page.locator('.plan-builder-flow')).toHaveCSS('display', 'block')
       const box = (await pane.boundingBox())!
       expect((await actions.boundingBox())!.y).toBeGreaterThanOrEqual(box.y + box.height)
-      const lastHint = page.getByText('Your plan also lives in its link, so you can share it with anyone.')
+      const lastHint = page.locator('summary', { hasText: /^More options$/ })
       await lastHint.scrollIntoViewIfNeeded()
       await expect(lastHint).toBeInViewport()
       await actions.scrollIntoViewIfNeeded()
@@ -64,9 +64,9 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await page.screenshot({ path: screenshotPath(test.info(), 'refinements', `builder-after-${width}.png`), fullPage: true })
-    await page.getByRole('button', { name: '2 Goal' }).click()
+    await page.getByRole('button', { name: 'Change goal' }).click()
     await page.getByRole('group', { name: 'Goal finish time', exact: true }).getByLabel('Minutes', { exact: true }).fill('25')
-    await page.getByRole('button', { name: '5 Review' }).click()
+    for (let i = 0; i < 2; i++) await actions.getByRole('button', { name: 'Continue', exact: true }).click()
     await expect(page.locator('.review')).toContainText('25:30')
     expect(errors).toEqual([])
   })
@@ -76,16 +76,16 @@ test('review shortcuts preserve drafts and cannot submit an invalid goal', async
   await mockApi(page)
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/e2e/fixtures/redesign-screens.html?screen=builder')
-  await page.getByRole('button', { name: '2 Goal' }).click()
+  await page.getByRole('button', { name: 'Change goal' }).click()
   const goal = page.getByRole('group', { name: 'Goal finish time', exact: true })
   for (const label of ['Hours', 'Minutes', 'Seconds']) await goal.getByLabel(label, { exact: true }).fill('')
-  await page.getByRole('button', { name: '5 Review' }).click()
-  await page.getByRole('button', { name: 'Build my plan', exact: true }).click()
-  await expect(page.getByRole('button', { name: '2 Goal' })).toHaveAttribute('aria-current', 'step')
+  // An emptied goal can't be carried on to Review or built: the goal step says what to fix.
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await expect(page.getByText('Step 2 of 4', { exact: true })).toBeVisible()
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.getByTestId('builder-submission')).toHaveCount(0)
   await goal.getByLabel('Minutes', { exact: true }).fill('25')
-  await page.getByRole('button', { name: '5 Review' }).click()
+  for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await page.getByRole('button', { name: 'Build my plan', exact: true }).click()
   await expect(page.getByTestId('builder-submission')).toBeVisible()
   expect(JSON.parse((await page.getByTestId('builder-submission').textContent())!)).toMatchObject({ goalSeconds: 1500, distanceKm: 5, runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'] })
@@ -119,7 +119,9 @@ test('a fresh Builder cannot skip unanswered steps and retains its draft after v
   await mockApi(page)
   await page.setViewportSize({ width: 375, height: 812 })
   await page.goto('/e2e/fixtures/redesign-screens.html?screen=builder&fresh=1')
-  await expect(page.getByRole('button', { name: '2 Goal' })).toBeDisabled()
+  // No step jumping: the one progress marker isn't a control, and the race step is first.
+  await expect(page.getByText('Step 1 of 4', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Change goal' })).toHaveCount(0)
   await page.getByRole('radio', { name: /^Add a race manually/ }).check()
   const name = page.getByRole('textbox', { name: 'Name (optional)', exact: true })
   await name.fill('A summer race')
@@ -138,19 +140,24 @@ for (const scheme of ['light', 'dark'] as const) {
     await page.emulateMedia({ colorScheme: scheme })
     await page.setViewportSize({ width: 375, height: 900 })
     await page.goto('/e2e/fixtures/redesign-screens.html?screen=builder')
-    const ratio = await page.getByRole('button', { name: '5 Review' }).locator('span').evaluate(element => {
+    // The one progress marker, against the surface it sits on.
+    const ratio = await page.locator('.wizard-count').evaluate(element => {
       const style = getComputedStyle(element)
+      let surface: Element | null = element
+      const clear = (color: string) => color === 'transparent' || /^rgba\(\d+,\s*\d+,\s*\d+,\s*0\)$/.test(color)
+      while (surface && clear(getComputedStyle(surface).backgroundColor)) surface = surface.parentElement
+      const backgroundColor = surface ? getComputedStyle(surface).backgroundColor : 'rgb(255, 255, 255)'
       const luminance = (color: string) => {
         const channels = color.match(/[\d.]+/g)!.slice(0, 3).map(value => Number(value) / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
         return channels[0]! * .2126 + channels[1]! * .7152 + channels[2]! * .0722
       }
-      const foreground = luminance(style.color), background = luminance(style.backgroundColor)
+      const foreground = luminance(style.color), background = luminance(backgroundColor)
       return (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05)
     })
     expect(ratio).toBeGreaterThanOrEqual(4.5)
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.evaluate(() => { document.documentElement.style.zoom = '2' })
-    await page.getByRole('button', { name: '2 Goal' }).click()
+    await page.getByRole('button', { name: 'Change goal' }).click()
     await expect(page.getByRole('group', { name: 'Goal finish time', exact: true })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
   })

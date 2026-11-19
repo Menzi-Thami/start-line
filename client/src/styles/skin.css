@@ -94,7 +94,6 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
   color: var(--paper);
   box-shadow: none;
 }
-.scroll-progress { background: var(--sage); box-shadow: none; }
 
 /* Landing hero: a grey-gradient panel, the serif headline, and the runner card with frosted cards over it. */
 .intro.hero {
@@ -201,7 +200,7 @@ h3 { font-family: var(--font-body); font-weight: 600; letter-spacing: -0.01em; t
   .countdown::after { left: 12px; top: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hero, .home-bar-ran, .home-ring-fill, .sparkline, .home-panel, .scroll-progress, .home-done-chip {
+  .hero, .home-bar-ran, .home-ring-fill, .sparkline, .home-panel, .home-done-chip {
     animation: none !important;
   }
   :is(.home-card, .home-tile, .overview-card, .week-glance, .button-primary) {

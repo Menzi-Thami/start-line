@@ -1,6 +1,6 @@
 # Your journey, races and trophy cabinet
 
-Journey is a permanent account destination, available with or without a current training plan. Its URL is `?view=journey`; `section=training`, `section=races` and `section=cabinet` reopen the chosen section. Old `?view=plans` links also open Journey. Training Plan includes This week, Calendar and Progress. The main navigation is Home, Plan, Runs, Journey, Account. Plan opens the independent recovery screen while recovery is running, and stays available for easy-running maintenance after recovery. It is omitted when none of these plans is active.
+Journey is a permanent account destination, available with or without a current training plan. Its URL is `?view=journey`; Journey has two sections: Training chapters (`section=training`) and Races & trophies (`section=races`), where the race list sits above the trophy cabinet. Older `section=cabinet` links open Races & trophies. Old `?view=plans` links also open Journey. Training Plan includes This week, Calendar and Progress. The main navigation is Home, Plan, Runs, Journey, Account. Plan opens the independent recovery screen while recovery is running, and stays available for easy-running maintenance after recovery. It is omitted when none of these plans is active.
 
 ## Training chapters
 
@@ -16,7 +16,7 @@ There is no lifetime count limit on saved plans. Journey reads 20 chapters at a 
 
 A race result can belong to a plan or exist independently. Add a past race for an event run before joining Taperday, or confirm an existing plan's result. Both screens read and change the same stored result. Name, event distance and date are retained independently of the live race catalogue.
 
-Choose an existing recorded run while adding a past race to fill its date without typing it again. Choosing a Major supplies its advertised marathon distance. The selected recording's actual distance and full elapsed time are loaded for explicit result confirmation; moving time is never substituted. Changing the event date clears a recording selected for another day.
+Choose an existing recorded run while adding a past race to fill its date without typing it again. A Marathon Major is recorded from its medal in the cabinet, which supplies the event and its advertised marathon distance; the collection choice otherwise appears only when correcting a saved race. The result step asks for one outcome (Finished by default) and never asks for the date a second time. The selected recording's actual distance and full elapsed time are loaded for explicit result confirmation; moving time is never substituted. Changing the event date clears a recording selected for another day.
 
 The plan’s finish screen leads with the race result. A single likely recording on the race’s local date is loaded automatically, showing its real elapsed time and distance before one confirmation saves it. GPS distance may differ by up to 5% (or 400 m for short races); this is only a suggestion, not a finisher award. Repeated copies of one activity ID collapse; different activity IDs still require a choice. Unavailable recordings can be retried or replaced with a manual result. Existing saved results remain visible without the recording.
 
@@ -28,7 +28,7 @@ Saving uses a stable client-generated result id; retrying a lost response does n
 
 Legacy plans can contain more than one result for the same event. These originals remain visible with a review message and earn no cabinet trophies or personal best labels. Review the outcomes and remove the incorrect result. Removing it preserves its training chapter; the remaining result becomes eligible only once the ambiguity is resolved. The app never silently chooses a winning outcome from conflicting history.
 
-Confirmed finishes and DNFs can lead to optional recovery. Recent races offer recovery from the result itself. Recovery remains available from Journey and Home after archiving the last current plan. Older races are memories, not prompts to start recovery months or years later.
+Confirmed finishes and DNFs can lead to optional recovery. Recent races offer recovery from the result itself: a race run outside Taperday is added under Races & trophies, then its Plan recovery starts it. That is the one entry for an outside race. Recovery remains available from Journey and Home after archiving the last current plan. Older races are memories, not prompts to start recovery months or years later.
 
 ## Trophy cabinet
 

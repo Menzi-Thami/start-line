@@ -14,6 +14,16 @@ const EXISTING_PREFERENCES: NotificationPreferences = {
   quietStart: null, quietEnd: null,
 }
 
+// Home offers reminders once: "Not now" is remembered on this device, and Account keeps the setting.
+const OFFER_DISMISSED_KEY = 'taperday:reminder-offer-dismissed'
+const offerDismissed = () => {
+  try {
+    return window.localStorage.getItem(OFFER_DISMISSED_KEY) !== null
+  } catch {
+    return false
+  }
+}
+
 type State =
   | { kind: 'loading' }
   | { kind: 'hidden' }
@@ -44,7 +54,15 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
   const [preferences, setPreferences] = useState<NotificationPreferences>(NEW_PREFERENCES)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ tone: 'done' | 'error'; text: string } | null>(null)
-  const [dismissed, setDismissed] = useState(false)
+  const [dismissed, setDismissed] = useState(offerDismissed)
+  const dismiss = () => {
+    try {
+      window.localStorage.setItem(OFFER_DISMISSED_KEY, new Date().toISOString())
+    } catch {
+      // Storage blocked: the offer simply comes back on a later visit.
+    }
+    setDismissed(true)
+  }
   const validPreferences = preferences.quietStart == null || preferences.quietStart !== preferences.quietEnd
 
   useEffect(() => {
@@ -156,14 +174,14 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
       <section className="section callout" aria-label="Enable notifications">
         <h3>Want a reminder for your day?</h3>
         {support === 'home-screen-first' ? (
-          <p>On iPhone or iPad, add Taperday to your Home Screen from Safari’s Share menu, then open it from its icon to enable notifications.</p>
+          <p>On iPhone or iPad, add Taperday to your Home Screen from Safari’s Share menu, then open it from there to turn reminders on.</p>
         ) : (
           <>
-            <p>Get workout reminders around 06:00, training review alerts, preparation tips and Strava updates. Quiet hours are 22:00–06:00 in your profile’s time zone. Choose what you receive in Account → Notifications.</p>
+            <p>A short note about the day’s training, around 06:00. Change it any time in Account.</p>
             <button type="button" className="button" disabled={busy || !validPreferences} onClick={() => void turnOn(state.publicKey)}>Enable notifications</button>
           </>
         )}
-        <button type="button" className="button button-quiet" disabled={busy} onClick={() => setDismissed(true)}>Not now</button>
+        <button type="button" className="button button-quiet" disabled={busy} onClick={dismiss}>Not now</button>
         {message && <p role="alert" className="field-error">{message.text}</p>}
       </section>
     )
@@ -172,10 +190,7 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
   return (
     <section className="section" aria-labelledby={ids.heading}>
       <h3 id={ids.heading}>Reminders</h3>
-      <p>
-        Choose your morning reminders, preparation tips and Strava updates for this device. Times use your profile’s time zone.
-        A synced run opens for review; it never marks a planned workout complete for you.
-      </p>
+      <p>Reminders on this device, at times in your profile’s time zone.</p>
 
       {state.kind === 'loading' && <p className="loading-line">Checking reminders…</p>}
       {state.kind === 'error' && (
@@ -225,77 +240,79 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
               }}
             />
           </div>
-          <label className="session-done" htmlFor={ids.daily}>
-            <input
-              id={ids.daily}
-              type="checkbox"
-              checked={daily}
-              disabled={busy}
-              onChange={(e) => {
-                setDaily(e.target.checked)
-                if (state.device) void save(state.publicKey, time, weekAhead, e.target.checked)
-              }}
-            />
-            Include recovery and strength days
-          </label>
-          <label className="session-done" style={{ color: 'var(--ink)' }} htmlFor={ids.week}>
-            <input
-              id={ids.week}
-              type="checkbox"
-              checked={weekAhead}
-              disabled={busy}
-              onChange={(e) => {
-                setWeekAhead(e.target.checked)
-                if (state.device) void save(state.publicKey, time, e.target.checked, daily)
-              }}
-            />
-            On Mondays, tell me when a new week starts
-          </label>
-          <fieldset disabled={busy} className="notification-choices">
-            <legend>Choose your updates</legend>
-            {([
-              ['runCongratulations', 'Congratulations when a Strava run arrives'],
-              ['trainingReviews', 'Training adjustments ready to review'],
-              ['longRunPreparation', 'Preparation the evening before a long run'],
-              ['racePreparation', 'A checklist the evening before race day'],
-              ['connectionAlerts', 'Let me know when Strava needs reconnecting'],
-            ] as const).map(([key, label]) => (
-              <label className="session-done" key={key}>
-                <input type="checkbox" checked={preferences[key]} onChange={e => changePreferences({ [key]: e.target.checked })} />
-                {label}
-              </label>
-            ))}
-            <div className="field">
-              <label className="field-label" htmlFor={`${ids.time}-prep`}>Preparation reminder time</label>
-              <input id={`${ids.time}-prep`} className="input" type="time" required value={preferences.preparationAt.slice(0, 5)} onChange={e => {
-                if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ preparationAt: `${e.target.value}:00` })
-              }} />
-            </div>
-            <label className="session-done">
-              <input type="checkbox" checked={preferences.quietStart != null} onChange={e => changePreferences(e.target.checked
-                ? { quietStart: '22:00:00', quietEnd: '06:00:00' } : { quietStart: null, quietEnd: null })} />
-              Quiet hours
+          {/* Everything else waits behind one disclosure; the defaults suit most runners. */}
+          <details className="disclosure notification-more">
+            <summary>More options</summary>
+            <label className="session-done" htmlFor={ids.daily}>
+              <input
+                id={ids.daily}
+                type="checkbox"
+                checked={daily}
+                disabled={busy}
+                onChange={(e) => {
+                  setDaily(e.target.checked)
+                  if (state.device) void save(state.publicKey, time, weekAhead, e.target.checked)
+                }}
+              />
+              Include recovery and strength days
             </label>
-            {preferences.quietStart != null && (
-              <div className="notification-quiet-times">
-                <label className="field">From
-                  <input className="input" type="time" required value={preferences.quietStart.slice(0, 5)} onChange={e => {
-                    if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ quietStart: `${e.target.value}:00` })
-                  }} />
+            <label className="session-done" style={{ color: 'var(--ink)' }} htmlFor={ids.week}>
+              <input
+                id={ids.week}
+                type="checkbox"
+                checked={weekAhead}
+                disabled={busy}
+                onChange={(e) => {
+                  setWeekAhead(e.target.checked)
+                  if (state.device) void save(state.publicKey, time, e.target.checked, daily)
+                }}
+              />
+              On Mondays, tell me when a new week starts
+            </label>
+            <fieldset disabled={busy} className="notification-choices">
+              <legend>Choose your updates</legend>
+              {([
+                ['runCongratulations', 'Congratulations when a Strava run arrives'],
+                ['trainingReviews', 'Training adjustments ready to review'],
+                ['longRunPreparation', 'Preparation the evening before a long run'],
+                ['racePreparation', 'A checklist the evening before race day'],
+                ['connectionAlerts', 'Let me know when Strava needs reconnecting'],
+              ] as const).map(([key, label]) => (
+                <label className="session-done" key={key}>
+                  <input type="checkbox" checked={preferences[key]} onChange={e => changePreferences({ [key]: e.target.checked })} />
+                  {label}
                 </label>
-                <label className="field">Until
-                  <input className="input" type="time" required value={(preferences.quietEnd ?? '06:00').slice(0, 5)} onChange={e => {
-                    if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ quietEnd: `${e.target.value}:00` })
-                  }} />
-                </label>
+              ))}
+              <div className="field">
+                <label className="field-label" htmlFor={`${ids.time}-prep`}>Preparation reminder time</label>
+                <input id={`${ids.time}-prep`} className="input" type="time" required value={preferences.preparationAt.slice(0, 5)} onChange={e => {
+                  if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ preparationAt: `${e.target.value}:00` })
+                }} />
               </div>
-            )}
-            <p className="field-help">Quiet hours use your profile’s time zone. Updates wait until quiet hours end; preparation tips that would arrive after the preparation day are skipped. Review alerts never apply changes to your plan.</p>
-          </fieldset>
+              <label className="session-done">
+                <input type="checkbox" checked={preferences.quietStart != null} onChange={e => changePreferences(e.target.checked
+                  ? { quietStart: '22:00:00', quietEnd: '06:00:00' } : { quietStart: null, quietEnd: null })} />
+                Quiet hours
+              </label>
+              {preferences.quietStart != null && (
+                <div className="notification-quiet-times">
+                  <label className="field">From
+                    <input className="input" type="time" required value={preferences.quietStart.slice(0, 5)} onChange={e => {
+                      if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ quietStart: `${e.target.value}:00` })
+                    }} />
+                  </label>
+                  <label className="field">Until
+                    <input className="input" type="time" required value={(preferences.quietEnd ?? '06:00').slice(0, 5)} onChange={e => {
+                      if (/^\d{2}:\d{2}$/.test(e.target.value)) changePreferences({ quietEnd: `${e.target.value}:00` })
+                    }} />
+                  </label>
+                </div>
+              )}
+              <p className="field-help">Updates wait until quiet hours end.</p>
+            </fieldset>
+          </details>
           <p className="field-help">
-            In your own time zone, from Your details. Delivery can be delayed by your phone, connection or Taperday’s server; the app does
-            not need to be open. Congratulations arrive when Strava syncs. Turning reminders off forgets this device; other devices keep
-            theirs.
+            Turning reminders off forgets only this device.
             {notificationsBlocked() && ' Notifications are blocked for Taperday in this browser: allow them in its site settings first.'}
           </p>
         </div>

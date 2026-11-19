@@ -16,16 +16,18 @@ const setup = (initial = inputs) => {
 describe('strength days alongside an existing running plan', () => {
   it('explains and disables the long-run day rather than silently accepting work the generator omits', async () => {
     const { user } = setup()
-    await user.click(screen.getByText('Add strength and mobility sessions'))
-    const days = within(screen.getByRole('group', { name: 'Strength days' }))
+    await user.click(screen.getByText('More options', { selector: 'summary' }))
+    const days = within(screen.getByRole('group', { name: 'Strength and mobility days' }))
     expect(days.getByRole('checkbox', { name: 'Sunday' })).toBeDisabled()
     expect(days.getByRole('checkbox', { name: 'Monday' })).toBeEnabled()
-    expect(screen.getByText(/Sunday is reserved for your long run/)).toBeInTheDocument()
+    expect(screen.getByText(/on any day but Sunday/)).toBeInTheDocument()
   })
 
   it('lets an old conflicting selection be corrected instead of silently dropping it', async () => {
     const { user, onSubmit } = setup({ ...inputs, strengthDays: ['Sunday'] })
-    const days = within(screen.getByRole('group', { name: 'Strength days' }))
+    // Saved strength days open More options, so the conflicting day is in view.
+    expect(screen.getByText('More options', { selector: 'summary' }).closest('details')).toHaveAttribute('open')
+    const days = within(screen.getByRole('group', { name: 'Strength and mobility days' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Choose a strength day other than Sunday')
     expect(onSubmit).not.toHaveBeenCalled()
@@ -43,7 +45,6 @@ describe('strength days alongside an existing running plan', () => {
     const days = within(screen.getByRole('group', { name: 'Which days can you run?' }))
     await user.click(days.getByRole('checkbox', { name: 'Tuesday' }))
     await user.click(days.getByRole('checkbox', { name: 'Wednesday' }))
-    await user.click(screen.getByRole('button', { name: 'Continue' }))
     await user.click(screen.getByRole('button', { name: 'Continue' }))
     await user.click(screen.getByRole('button', { name: 'Build my plan' }))
     expect(onSubmit).toHaveBeenCalledOnce()

@@ -69,6 +69,10 @@ public static class OnboardingEmail
         _ => throw new ArgumentOutOfRangeException(nameof(campaign)),
     };
 
+    /// <summary>The onboarding emails themselves; <see cref="OnboardingCampaign.CoachingTip"/> only shares their delivery record.</summary>
+    public static readonly IReadOnlyList<OnboardingCampaign> Campaigns =
+        [OnboardingCampaign.StartPlan, OnboardingCampaign.FirstRun, OnboardingCampaign.ReturnToRunning, OnboardingCampaign.Welcome];
+
     public static string Subject(OnboardingCampaign campaign) => For(campaign).Subject;
 
     /// <summary>The button's address on taperday.run: the plan builder for a runner without a plan, otherwise Home.</summary>

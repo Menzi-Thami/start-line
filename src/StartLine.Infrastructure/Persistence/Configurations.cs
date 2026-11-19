@@ -451,6 +451,7 @@ internal sealed class OnboardingDeliveryConfiguration : IEntityTypeConfiguration
         builder.Property(d => d.Id).ValueGeneratedNever();
         builder.Property(d => d.Campaign).HasConversion<string>().HasMaxLength(24);
         builder.Property(d => d.Episode).HasMaxLength(OnboardingDelivery.MaxEpisodeLength);
+        builder.Property(d => d.TipKey).HasMaxLength(OnboardingDelivery.MaxTipKeyLength).IsUnicode(false);
         builder.Property(d => d.Status).HasConversion<string>().HasMaxLength(16);
         builder.Ignore(d => d.CanRetry);
         builder.Ignore(d => d.MayHaveGone);

@@ -1,12 +1,15 @@
-name: Ops - Wake API for weekly recap
+name: Ops - Wake API for weekly emails
 
 # The free (F1) API may sleep after idle time. Keep it awake through the 07:00–08:00
-# Monday morning send window across runner time zones (UTC+14 through UTC-12).
-# The worker checks every 15 minutes, and the delivery claim prevents duplicates.
+# send windows across runner time zones (UTC+14 through UTC-12): Monday morning for the
+# weekly recap, Thursday morning for the coaching tip (docs/coaching-tips.md).
+# The workers check every 15 minutes, and the delivery claims prevent duplicates.
 on:
   schedule:
     - cron: '*/15 16-23 * * 0'
     - cron: '*/15 0-20 * * 1'
+    - cron: '*/15 16-23 * * 3'
+    - cron: '*/15 0-20 * * 4'
   workflow_dispatch:
 
 permissions: {}

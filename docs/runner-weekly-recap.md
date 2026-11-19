@@ -24,7 +24,7 @@ Figures only, with no claims the numbers don't support. Built with `EmailLayout`
 
 ## Unsubscribing
 
-Each recap carries the runner's own **weekly** key (`w1`), in the footer link (`?view=unsubscribe&t=KEY&list=weekly`) and the one-click header. It turns the recap off and nothing else: update emails stay as they were. See [email.md](email.md).
+Each recap carries the runner's own **weekly** key (`w1`), in the footer link (`?view=unsubscribe&t=KEY&list=weekly`) and the one-click header. It turns the weekly emails off, the recap and the Thursday coaching tip together ([coaching-tips.md](coaching-tips.md)), and nothing else: update emails stay as they were. See [email.md](email.md).
 
 ## Settings (App Service, `app-taperday-api-3ghg5t`)
 

@@ -161,7 +161,7 @@ public sealed record EmailMessage(string To, string Subject, string Html, string
 /// </summary>
 public sealed record UnsubscribeLinks(Uri Page, Uri OneClick)
 {
-    /// <param name="weekly">A weekly recap's link: the page words itself for the recap. The key itself says which list it stops.</param>
+    /// <param name="weekly">A weekly email's link (the recap or the coaching tip): the page words itself for the weekly emails. The key itself says which list it stops.</param>
     public static UnsubscribeLinks For(string token, Uri apiBaseUrl, bool weekly = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(token);

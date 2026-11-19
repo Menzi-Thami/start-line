@@ -1145,6 +1145,11 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)");
 
+                    b.Property<string>("TipKey")
+                        .HasMaxLength(16)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(16)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RunnerId", "Campaign", "Episode")

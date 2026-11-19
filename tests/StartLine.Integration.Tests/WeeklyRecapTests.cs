@@ -92,7 +92,7 @@ public sealed class WeeklyRecapTests
         recap.Subject.ShouldBe("Your Taperday week");
         recap.Html.ShouldContain("10 km over 1 run.");
         recap.Html.ShouldContain("2 Nov – 8 Nov");
-        recap.Html.ShouldContain("Taperday sends every runner a weekly recap.");
+        recap.Html.ShouldContain("Part of your weekly emails from Taperday: this recap on Mondays and a coaching tip on Thursdays.");
         recap.Html.ShouldContain("The week ahead");
         recap.Text.ShouldContain("Mon 9 Nov");
 

@@ -12,6 +12,9 @@ namespace StartLine.Application.Features.Insights;
 public static class EmailLayout
 {
     public const string Site = "https://taperday.run";
+
+    /// <summary>The list a weekly key stops (<c>Runner.WeeklyEmails</c>): the Monday recap and the Thursday coaching tip.</summary>
+    public const string WeeklyEmails = "your weekly emails (the Monday recap and the Thursday tip)";
     public const string Paper = "#e4e4e4";
     public const string Surface = "#ffffff";
     public const string Ink = "#111111";

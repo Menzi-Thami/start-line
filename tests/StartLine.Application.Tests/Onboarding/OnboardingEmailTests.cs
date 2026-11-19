@@ -64,7 +64,7 @@ public sealed class OnboardingEmailTests
     [Fact]
     public void Previews_are_made_up_marked_as_tests_and_carry_no_unsubscribe_key()
     {
-        foreach (var campaign in Enum.GetValues<OnboardingCampaign>())
+        foreach (var campaign in OnboardingEmail.Campaigns)
         {
             var preview = OnboardingEmail.Preview("maker@example.com", campaign);
             preview.Subject.ShouldBe("[Test] " + OnboardingEmail.Subject(campaign));

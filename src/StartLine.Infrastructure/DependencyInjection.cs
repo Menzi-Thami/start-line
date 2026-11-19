@@ -124,6 +124,8 @@ public static class DependencyInjection
         services.AddHostedService<RunnerWeeklyRecapWorker>();
         services.AddOptions<OnboardingReminderOptions>().BindConfiguration(OnboardingReminderOptions.Section);
         services.AddHostedService<OnboardingReminderWorker>();
+        services.AddOptions<CoachingTipOptions>().BindConfiguration(CoachingTipOptions.Section);
+        services.AddHostedService<CoachingTipWorker>();
         services.AddOptions<UpdateAnnouncementOptions>().BindConfiguration(UpdateAnnouncementOptions.Section);
         services.AddHostedService<UpdateAnnouncementWorker>();
         services.AddOptions<PushTestOptions>().BindConfiguration("PushTest").ValidateOnStart();

@@ -219,9 +219,9 @@ describe('signing up comes first', () => {
     expect(screen.queryByRole('heading', { name: /Your race.s*Your plan./ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Start your free plan' })).not.toBeInTheDocument()
     // Sign-up asks only for a name, a time zone and the privacy notice. Units follow the browser's locale; the weekly
-    // recap starts on; units, heart rate and email choices are changed later in Account.
+    // emails start on; units, heart rate and email choices are changed later in Account.
     expect(screen.queryByRole('group', { name: 'Distances in' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('checkbox', { name: /weekly recap/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('checkbox', { name: /Weekly emails/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('checkbox', { name: /Keep heart rate/ })).not.toBeInTheDocument()
     expect(screen.getByLabelText('Your time zone')).toBeInTheDocument()
     const name = screen.getByLabelText('What should we call you?')

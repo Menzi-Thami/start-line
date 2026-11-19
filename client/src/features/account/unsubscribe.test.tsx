@@ -55,15 +55,15 @@ describe('unsubscribing from an email', () => {
     expect(screen.getByRole('button', { name: 'Account' })).toBeInTheDocument()
   })
 
-  it('words itself for the weekly recap when the link comes from one', async () => {
+  it('words itself for the weekly emails when the link comes from one', async () => {
     server.use(http.post('*/api/v1/unsubscribe', () => new HttpResponse(null, { status: 204 })))
     window.history.replaceState(null, '', '/?view=unsubscribe&t=weekly-key&list=weekly')
     const user = userEvent.setup()
     render(<App />)
 
-    expect(screen.getByRole('heading', { name: 'Stop the weekly recap' })).toBeVisible()
+    expect(screen.getByRole('heading', { name: 'Stop your weekly emails' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Unsubscribe' }))
-    expect(await screen.findByRole('status')).toHaveTextContent('You can turn the weekly recap back on in Account.')
+    expect(await screen.findByRole('status')).toHaveTextContent('You can turn weekly emails back on in Account.')
   })
 
   it('says so when the link is broken, and offers no button that can’t work', async () => {

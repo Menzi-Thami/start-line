@@ -558,6 +558,23 @@ describe('dead ends', () => {
 
 
 describe('restoring an expired remembered session', () => {
+
+  it('keeps a renewal failure on the same account instead of opening account selection', async () => {
+    window.history.replaceState(null, '', '/?view=home')
+    const resumeSession = vi.fn()
+    const signIn = vi.fn()
+    renderApp(signedIn({
+      getToken: () => Promise.resolve(null),
+      resumeSession,
+      signIn,
+      error: { message: 'Microsoft could not complete that request.', code: 'temporarily_unavailable' },
+    }))
+    const actions = await screen.findAllByRole('button', { name: 'Continue securely' })
+    expect(actions.length).toBeGreaterThan(0)
+    fireEvent.click(actions[0]!)
+    expect(resumeSession).toHaveBeenCalledTimes(1)
+    expect(signIn).not.toHaveBeenCalled()
+  })
   it('offers Continue securely instead of telling a remembered runner to sign up again', async () => {
     window.history.replaceState(null, '', '/?view=home')
     const resumeSession = vi.fn()

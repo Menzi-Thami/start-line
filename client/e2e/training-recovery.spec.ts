@@ -258,13 +258,14 @@ test('recovery has its own days; concluded training is read-only, responsive and
   }
 })
 
-test('easy-running Home has one action and keeps race choice in the plan @phone', async ({ page }) => {
+test('easy-running Home keeps one primary action and offers the new-race builder directly @phone', async ({ page }) => {
   const { state } = await setup(page, { recovering: true })
   state.recovery = { ...state.recovery!, status: 'Completed', endedOn: '2026-11-24' }
   await page.clock.setFixedTime(new Date('2026-11-29T08:00:00Z'))
   await page.goto(`${fixture}?view=home`)
-  await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Choose my next challenge', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Choose my next challenge', exact: true })).toBeVisible()
+  // Home now goes directly to the builder. The optional easy-running choice remains on the Recovery Plan.
+  await page.goto(`${fixture}?view=recovery`)
   await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
   await page.getByRole('button', { name: /Keep running comfortably/ }).click()
   await page.getByRole('button', { name: 'Start easy running', exact: true }).click()
@@ -275,10 +276,13 @@ test('easy-running Home has one action and keeps race choice in the plan @phone'
     await page.setViewportSize({ width, height: 900 })
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, theme)
     await expect(page.getByRole('button', { name: 'Open easy running', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Train for another race', exact: true })).toBeVisible()
     await accessible(page)
   }
+  // The optional maintenance screen still works, but another race no longer requires entering it first.
   await page.getByRole('button', { name: 'Open easy running', exact: true }).click()
+  await expect(page.getByRole('heading', { name: /easy runs a week/i })).toBeVisible()
+  await nav.getByRole('button', { name: 'Home', exact: true }).click()
   await page.getByRole('button', { name: 'Train for another race', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
   await expect(page).not.toHaveURL(/view=recovery/)
@@ -362,7 +366,8 @@ test('ending recovery offers a direct new-race action on Home and keeps recent a
   await expect(page.getByRole('button', { name: "Choose my next challenge", exact: true })).toBeVisible()
   await calmHome(page)
   await page.getByRole('button', { name: "Choose my next challenge", exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
+  await expect(page).not.toHaveURL(/view=recovery/)
 })
 
 for (const phase of ['Concluded', 'Recovering', 'Recovered']) {

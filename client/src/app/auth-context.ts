@@ -22,7 +22,9 @@ export interface Auth {
   /** Signs in or up with Google directly. Absent until Google is added to the tenant (VITE_AUTH_GOOGLE). */
   signInWithGoogle?: () => void
   signOut: () => void
-  /** An access token for the API, or null if the runner isn't signed in. */
+  /** Renews the remembered runner's session on a deliberate tap, without choosing a new account or clearing drafts. */
+  resumeSession?: () => void
+  /** An access token for the API, or null when renewed sign-in is required. */
   getToken: () => Promise<string | null>
 }
 

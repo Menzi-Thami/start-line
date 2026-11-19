@@ -555,3 +555,17 @@ describe('dead ends', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Connect with Strava' })).not.toBeInTheDocument())
   })
 })
+
+
+describe('restoring an expired remembered session', () => {
+  it('offers Continue securely instead of telling a remembered runner to sign up again', async () => {
+    window.history.replaceState(null, '', '/?view=home')
+    const resumeSession = vi.fn()
+    renderApp(signedIn({ getToken: () => Promise.resolve(null), resumeSession }))
+    const continueButton = await screen.findByRole('button', { name: 'Continue securely' })
+    expect(screen.getByText(/Your sign-in needs renewing/)).toBeInTheDocument()
+    expect(screen.queryByText(/Sign in to see your saved plans/)).not.toBeInTheDocument()
+    fireEvent.click(continueButton)
+    expect(resumeSession).toHaveBeenCalledTimes(1)
+  })
+})

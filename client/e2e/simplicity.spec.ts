@@ -2,13 +2,13 @@ import { accessibility } from './accessibility'
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync, mkdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { chapter, journeyOf, raceResult, recovery } from '../src/features/journey/journey-fixtures'
+import { chapter, journeyOf, maintenance, raceResult, recovery } from '../src/features/journey/journey-fixtures'
 const plan = JSON.parse(readFileSync(new URL('../src/test/fixtures/plan-5k.json', import.meta.url), 'utf8'))
 const recording = JSON.parse(readFileSync(new URL('../src/test/fixtures/activity-tempo.json', import.meta.url), 'utf8'))
 const baseline = process.env.SIMPLICITY_BASELINE === '1'
 const root = fileURLToPath(new URL(`../../docs/qa/2026-11-17/simplicity/${baseline ? 'before' : 'after'}/`, import.meta.url))
 const fixture = `http://127.0.0.1:${process.env.SIMPLICITY_FIXTURE_PORT ?? '5176'}/e2e/fixtures/journey.html?view=home`
-const scenes = ['training', 'synced', 'race-review', 'race-saved', 'recovery', 'paused', 'recovery-ended', 'safety', 'settled', 'failed'] as const
+const scenes = ['training', 'synced', 'race-review', 'race-saved', 'recovery', 'paused', 'recovery-ended', 'maintenance', 'safety', 'settled', 'failed'] as const
 async function mock(page: Page, scene: typeof scenes[number]) {
   const training = scene === 'training' || scene === 'synced'
   const today = training ? '2026-10-20' : scene === 'race-review' || scene === 'race-saved' ? '2026-11-16' : scene === 'recovery' ? '2026-11-18' : '2026-12-02'
@@ -18,7 +18,7 @@ async function mock(page: Page, scene: typeof scenes[number]) {
   const inputs = { raceName: plan.race.name, distanceKm: 5, raceDate: plan.race.date, goalTime: '00:24:30', runDays: ['Tuesday', 'Thursday', 'Saturday', 'Sunday'], longRunDay: 'Sunday', strengthDays: ['Monday'], planFrom: '2026-10-08', version: 1, experience: 'Regular' }
   const ended = chapter({ status: 'Concluded', lifecycle: 'Concluded', raceResult: scene === 'race-review' ? null : raceResult({ timeKind: 'RecordedElapsed', finishTime: '02:06:15', distanceKm: 20.3 }), achievements: [] })
   const rec = scene === 'recovery' ? recovery() : scene === 'paused' ? recovery({ status: 'Paused', dayNumber: 2 }) : scene === 'recovery-ended' ? recovery() : scene === 'safety' ? recovery({ seekCare: true, phase: 'SeekCare', safetyMessage: 'Please get medical advice before exercising.', readiness: 'PainOrInjury' }) : null
-  const journey = journeyOf(training ? [] : [ended], { recovery: rec })
+  const journey = journeyOf(training ? [] : [ended], { recovery: rec, maintenance: scene === 'maintenance' ? maintenance() : null })
   const writes: string[] = []
   await page.route('**/api/v1/**', async route => {
     const request = route.request(), path = new URL(request.url()).pathname
@@ -156,6 +156,20 @@ for (const entry of ['Home link', 'fresh device'] as const) test(`failed current
   await expect(page.getByRole('button', { name: 'Retry current plan', exact: true })).toHaveCount(0)
 })
 
+for (const scene of ['maintenance', 'recovery-ended'] as const) {
+  test(`post-training Home starts a new race directly from ${scene} @phone`, async ({ page }) => {
+    const state = await mock(page, scene)
+    await page.goto(fixture)
+    const action = scene === 'maintenance' ? 'Train for another race' : 'Choose my next challenge'
+    await expect(page.getByRole('button', { name: action, exact: true })).toBeVisible()
+    await page.getByRole('button', { name: action, exact: true }).click()
+    await expect(page.locator('.builder')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Ready when you are.' })).toHaveCount(0)
+    // Selecting a different goal must not end a maintenance plan, overwrite recovery or create an account mutation.
+    expect(state.writes.filter(path => !path.endsWith('/sync/strava/catch-up'))).toEqual([])
+  })
+}
+
 for (const mode of ['light', 'dark'] as const) {
   test(`Home remains usable with reduced motion, wide screens and 200% text: ${mode} @phone`, async ({ page }) => {
     await mock(page, 'training')
@@ -195,6 +209,7 @@ for (const scene of scenes) for (const mode of ['light', 'dark'] as const) {
       if (scene === 'race-saved') { await expect(primary).toHaveText('Start recovery plan'); await expect(page.locator('.journey-home')).toContainText('Recording elapsed time') }
       if (['recovery', 'paused', 'safety'].includes(scene)) await expect(primary).toHaveText('Open recovery plan')
       if (['recovery-ended', 'settled'].includes(scene)) { await expect(primary).toHaveText('Choose my next challenge'); await expect(page.getByText('Recovered', { exact: true })).toHaveCount(0) }
+      if (scene === 'maintenance') { await expect(primary).toHaveText('Open easy running'); await expect(page.getByRole('button', { name: 'Train for another race' })).toBeVisible() }
       if (scene === 'safety') await expect(page.getByRole('alert')).toContainText('medical advice')
       await expect(page.getByRole('region', { name: 'Recent activity', exact: true })).toBeVisible()
       // Background Strava catch-up is expected; Home must never submit a result, check-in or recovery change.

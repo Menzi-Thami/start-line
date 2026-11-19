@@ -21,7 +21,10 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
   }
   if (maintenance?.status === 'Active') return <section className="panel home-card journey-home" aria-label="Easy running">
     <p className="plan-kicker">Easy running</p><h2 className="home-card-heading">Keep running comfortably.</h2><p>Your easy-running plan is ready whenever you are. Every run is optional.</p>
-    <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Open easy running</button>
+    <div className="journey-actions">
+      <button type="button" className="button button-primary" onClick={() => (onOpenRecovery ?? onOpenPlan)()}>Open easy running</button>
+      <button type="button" className="link-button" onClick={onNewRace}>Train for another race</button>
+    </div>
   </section>
   // A finished schedule is not a declaration of physical recovery. No Complete mutation is sent here.
   const concluded = !recovery ? recentConclusion(journey.state.journey, today) ?? journey.state.journey.chapters.find(chapter => chapter.raceDate === today && chapter.raceResult) : null
@@ -37,6 +40,6 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
   return <section className="panel home-card journey-home" aria-labelledby="journey-home-next">
     <p className="plan-kicker">{recovery ? 'Your next chapter' : 'Your running'}</p><h2 id="journey-home-next" className="home-card-heading">Ready when you are.</h2>
     <p>{recovery ? 'Your recovery schedule is saved. Take more time, run comfortably, or choose another goal.' : 'Your runs and training chapters stay with you. Choose a goal whenever you’re ready.'}</p>
-    <button type="button" className="button button-primary" onClick={() => recovery && onOpenRecovery ? onOpenRecovery() : onNewRace()}>Choose my next challenge</button>
+    <button type="button" className="button button-primary" onClick={onNewRace}>Choose my next challenge</button>
   </section>
 }

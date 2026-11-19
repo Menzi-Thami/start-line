@@ -906,8 +906,8 @@ export function App() {
           <div className="callout" role="alert">
             <p>
               {auth.error.message}{' '}
-              <button type="button" className="link-button" onClick={auth.signIn}>
-                Try again
+              <button type="button" className="link-button" onClick={auth.account ? (auth.resumeSession ?? auth.signIn) : auth.signIn}>
+                {auth.account ? 'Continue securely' : 'Try again'}
               </button>
             </p>
             {auth.error.code && <p className="field-help">Error code {auth.error.code}, if you contact us.</p>}

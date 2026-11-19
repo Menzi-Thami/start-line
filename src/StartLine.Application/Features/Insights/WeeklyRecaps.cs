@@ -108,9 +108,9 @@ public static class WeeklyRecap
             body: body.ToString(),
             buttonText: "Open this week",
             buttonUrl: EmailLayout.Site,
-            footer: "Taperday sends every runner a weekly recap. Stop it any time with the button below, or in Account.",
+            footer: "Part of your weekly emails from Taperday: this recap on Mondays and a coaching tip on Thursdays. Stop both any time with the button below, or in Account.",
             unsubscribeUrl: unsubscribe?.Page.AbsoluteUri,
-            unsubscribeFrom: "the weekly recap");
+            unsubscribeFrom: EmailLayout.WeeklyEmails);
 
         var text = new StringBuilder($"Hi {name}.\n\nYour running week, {span}: {Plural(recap.Runs, "run")}, {km} km.");
         if (recap is { SessionsPlanned: > 0, SessionsDone: { } ran })
@@ -145,7 +145,7 @@ public static class WeeklyRecap
         text.Append($"\n{EmailLayout.Site}\n");
         if (unsubscribe is not null)
         {
-            text.Append("\nStop the weekly recap: ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
+            text.Append("\nStop your weekly emails (the Monday recap and the Thursday tip): ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
         }
 
         return new EmailMessage(to, (test ? "[Test] " : "") + "Your Taperday week", html, text.ToString(), unsubscribe);

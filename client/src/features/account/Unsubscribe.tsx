@@ -5,7 +5,7 @@ interface Props {
   /** The key from the email's link (?t=). Missing or cut short when a mail app mangled the link. */
   token: string | null
   onOpenAccount: () => void
-  /** The weekly recap's link says so (?list=weekly), for the wording. Which emails stop is in the key itself. */
+  /** A weekly email's link (the Monday recap or the Thursday tip) says so (?list=weekly), for the wording. Which emails stop is in the key itself. */
   weekly?: boolean
 }
 
@@ -37,12 +37,12 @@ export function Unsubscribe({ token, onOpenAccount, weekly = false }: Props) {
     <section className="panel" aria-labelledby="unsubscribe-title" style={{ maxWidth: '32rem', margin: '0 auto' }}>
       <p className="plan-kicker">Emails</p>
       <h2 className="plan-title" id="unsubscribe-title">
-        {status.kind === 'done' ? (weekly ? 'No more weekly recaps' : 'No more update emails') : weekly ? 'Stop the weekly recap' : 'Unsubscribe from updates'}
+        {status.kind === 'done' ? (weekly ? 'No more weekly emails' : 'No more update emails') : weekly ? 'Stop your weekly emails' : 'Unsubscribe from updates'}
       </h2>
 
       {status.kind === 'done' ? (
         <p className="plan-focus" role="status">
-          You’re unsubscribed. You can turn {weekly ? 'the weekly recap' : 'updates'} back on in{' '}
+          You’re unsubscribed. You can turn {weekly ? 'weekly emails' : 'updates'} back on in{' '}
           <button type="button" className="link-button" onClick={onOpenAccount}>
             Account
           </button>
@@ -50,7 +50,7 @@ export function Unsubscribe({ token, onOpenAccount, weekly = false }: Props) {
         </p>
       ) : (
         <>
-          <p className="plan-focus">{weekly ? 'Stop the weekly recap of your running. Your account, plans, reminders and other emails stay just as they are.' : 'Stop Taperday’s news and update emails. Your account, plans and reminders stay just as they are.'}</p>
+          <p className="plan-focus">{weekly ? 'Stop your weekly emails: the Monday recap of your running and the Thursday coaching tip. Your account, plans, reminders and other emails stay just as they are.' : 'Stop Taperday’s news and update emails. Your account, plans and reminders stay just as they are.'}</p>
           {status.kind === 'error' && (
             <p className="field-error" role="alert">
               {status.message}

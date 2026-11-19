@@ -82,7 +82,7 @@ public static class UpdateEmails
             body: body.ToString(),
             buttonText: "Open Taperday",
             buttonUrl: EmailLayout.Site + "/?view=home",
-            footer: "You're getting this because you said yes to Taperday news and updates. Your weekly recap isn't affected.",
+            footer: "You're getting this because you said yes to Taperday news and updates. Your weekly emails aren't affected.",
             unsubscribeUrl: unsubscribe?.Page.AbsoluteUri);
 
         var text = new StringBuilder("Your code's stuck in traffic.\n\n").Append(greeting).Append("\n\n").Append(OutageOpening).Append("\n\n").Append(OutageCause).Append("\n\nWhat you can do\n");
@@ -94,7 +94,7 @@ public static class UpdateEmails
         text.Append('\n').Append(OutageClosing).Append("\n\nOpen Taperday: https://taperday.run/?view=home\n");
         if (unsubscribe is not null)
         {
-            text.Append("\nUnsubscribe from Taperday news and updates (your weekly recap isn't affected): ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
+            text.Append("\nUnsubscribe from Taperday news and updates (your weekly emails aren't affected): ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
         }
 
         return new EmailMessage(to, (test ? "[Test] " : "") + OutageSubject, html, text.ToString(), unsubscribe);
@@ -133,7 +133,7 @@ public static class UpdateEmails
             body: body.ToString(),
             buttonText: "Take it for a spin",
             buttonUrl: EmailLayout.Site + "/?view=home",
-            footer: "You're getting this because you said yes to Taperday news and updates. Your weekly recap isn't affected.",
+            footer: "You're getting this because you said yes to Taperday news and updates. Your weekly emails aren't affected.",
             unsubscribeUrl: unsubscribe?.Page.AbsoluteUri);
 
         var text = new StringBuilder("Fresh legs. Fresh look.\n\n").Append(greeting).Append("\n\n").Append(RedesignOpening).Append("\n\n");
@@ -145,7 +145,7 @@ public static class UpdateEmails
         text.Append('\n').Append(RedesignClosing).Append("\n\nTake it for a spin: https://taperday.run/?view=home\n");
         if (unsubscribe is not null)
         {
-            text.Append("\nUnsubscribe from Taperday news and updates (your weekly recap isn't affected): ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
+            text.Append("\nUnsubscribe from Taperday news and updates (your weekly emails aren't affected): ").Append(unsubscribe.Page.AbsoluteUri).Append('\n');
         }
 
         return new EmailMessage(to, (test ? "[Test] " : "") + RedesignSubject, html, text.ToString(), unsubscribe);

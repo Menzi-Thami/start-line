@@ -32,7 +32,7 @@ interface Props {
 
 /**
  * Sign-up and profile editing in one form. Sign-up asks only what it needs: a name, a time zone and the privacy notice.
- * Units come from the browser's locale and the weekly recap starts on; both, with heart rate, are changed in Account.
+ * Units come from the browser's locale and weekly emails start on; both, with heart rate, are changed in Account.
  */
 export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up' }: Props) {
   const auth = useAuth()
@@ -104,7 +104,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
             <option key={zone} value={zone} />
           ))}
         </datalist>
-        <p className="field-help">So your weekly email lands on a Sunday evening where you live, not ours.</p>
+        <p className="field-help">So your weekly emails land on Monday and Thursday mornings where you live, not ours.</p>
       </div>
 
       {!signingUp && <fieldset className="field" style={{ border: 0, padding: 0 }}>
@@ -143,7 +143,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
 
       {!signingUp && <label className="session-done" style={{ color: 'var(--ink)' }}>
         <input type="checkbox" checked={weeklyEmails} onChange={(e) => setWeeklyEmails(e.target.checked)} />
-        Send me a weekly recap of my recorded runs and upcoming training
+        Weekly emails: a Monday recap of my runs and the week ahead, and a Thursday coaching tip
       </label>}
 
       {!signingUp && (
@@ -161,7 +161,7 @@ export function ProfileForm({ runner, onSaved, submitLabel = 'Finish signing up'
             <input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} />
             I’ve read this and I’m happy for Taperday to keep this information.
           </label>
-          <p className="field-help">We send a weekly recap on Sunday evenings. Turn it off, or choose units and heart rate, in Account.</p>
+          <p className="field-help">We send a recap of your running on Monday mornings and a coaching tip on Thursdays. Turn them off, or choose units and heart rate, in Account.</p>
         </div>
       )}
 

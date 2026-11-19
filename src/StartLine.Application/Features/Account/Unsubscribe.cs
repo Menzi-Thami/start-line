@@ -11,7 +11,7 @@ public enum EmailList
     /// <summary>News and update emails about Taperday itself.</summary>
     Updates,
 
-    /// <summary>The runner's weekly recap of their running.</summary>
+    /// <summary>The runner's weekly emails: the Monday recap of their running and the Thursday coaching tip.</summary>
     Weekly,
 }
 

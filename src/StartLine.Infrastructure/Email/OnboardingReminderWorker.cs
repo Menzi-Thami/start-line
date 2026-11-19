@@ -103,7 +103,7 @@ internal sealed partial class OnboardingReminderWorker(
     {
         try
         {
-            foreach (var campaign in Enum.GetValues<OnboardingCampaign>())
+            foreach (var campaign in OnboardingEmail.Campaigns)
             {
                 await email.SendAsync(OnboardingEmail.Preview(to, campaign), cancellationToken);
             }

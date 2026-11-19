@@ -40,9 +40,20 @@ The runner's own weekly email, for runners who tick **weekly recap** in their pr
 - `RunnerWeeklyRecap__TestTo`: set it to an address and the app sends one made-up preview (subject starts `[Test]`) when it next starts. Saving the setting restarts the app. **Clear it afterwards**, or every restart sends another.
 - No `Email__BrevoApiKey` means nothing is sent, and the log says so.
 
+## The weekly coaching tip
+
+The other half of the runner's **weekly emails**: one short, evidence-based running tip on each runner's own Thursday,
+07:00–07:59, for runners with `Runner.WeeklyEmails` on. It carries the same weekly key as the recap, so one unsubscribe
+stops both, and nothing else. **Off by default.** The full write-up (selection rules, tip bank, rollout) is in
+[coaching-tips.md](coaching-tips.md).
+
+- `CoachingTips__Enabled`: `true` sends tips. **Off by default.**
+- `CoachingTips__TestTo`: three made-up previews (subjects start `[Test]`) when the app next starts. **Clear it afterwards.**
+- `CoachingTips__DailyEmailBudget` (250): tips come after the recap and before onboarding nudges in the shared daily budget.
+
 ## Onboarding emails
 
-One-off nudges for runners who haven't built a plan, haven't started it, or have gone quiet: three cohorts, each sent once (the third once per quiet spell), on the **news and updates** list, so unsubscribing never touches the weekly recap. **Off by default.** The full write-up is in [onboarding-reminders.md](onboarding-reminders.md).
+One-off nudges for runners who haven't built a plan, haven't started it, or have gone quiet: three cohorts, each sent once (the third once per quiet spell), on the **news and updates** list, so unsubscribing never touches the weekly emails. **Off by default.** The full write-up is in [onboarding-reminders.md](onboarding-reminders.md).
 
 - `OnboardingReminder__Enabled`: `true` sends them, within a daily limit that leaves room under Brevo's 300 a day for the weekly recap.
 - `OnboardingReminder__TestTo`: one made-up preview of each email (subject starts `[Test]`) when the app next starts. **Clear it afterwards.**
@@ -60,7 +71,7 @@ One-off nudges for runners who haven't built a plan, haven't started it, or have
 
 ### The unsubscribe key
 
-`IUnsubscribeTokens` (`DataProtectionUnsubscribeTokens`) encrypts and authenticates the runner's id with Data Protection under its own purpose, `StartLine.Email.Unsubscribe.v1`, on the same key ring as Strava tokens and "Tick it" keys. It has **no expiry**: an old email's link must still work. Data Protection keeps retired keys for reading, so key rotation doesn't break old links; only losing the key ring would. A key that's been tampered with, cut short or made for another purpose is refused (`ValidationException`, a 400). A key names its list: `u1` keys (all keys issued before the recap) turn update emails off, `w1` keys turn the weekly recap off. A key can only ever turn its own list off.
+`IUnsubscribeTokens` (`DataProtectionUnsubscribeTokens`) encrypts and authenticates the runner's id with Data Protection under its own purpose, `StartLine.Email.Unsubscribe.v1`, on the same key ring as Strava tokens and "Tick it" keys. It has **no expiry**: an old email's link must still work. Data Protection keeps retired keys for reading, so key rotation doesn't break old links; only losing the key ring would. A key that's been tampered with, cut short or made for another purpose is refused (`ValidationException`, a 400). A key names its list: `u1` keys (all keys issued before the recap) turn update emails off, `w1` keys turn the weekly emails off (the Monday recap and the Thursday coaching tip, see [coaching-tips.md](coaching-tips.md)). A key can only ever turn its own list off.
 
 ### Two ways out of every email
 

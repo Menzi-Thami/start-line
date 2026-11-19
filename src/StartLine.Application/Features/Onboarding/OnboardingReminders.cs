@@ -73,7 +73,7 @@ internal sealed partial class OnboardingReminderSender(
             .Where(d => d.Decision is not null)
             .ToList();
         var ids = due.Select(d => d.Row.Id).ToList();
-        var past = (await db.OnboardingDeliveries.AsNoTracking().Where(d => ids.Contains(d.RunnerId)).ToListAsync(cancellationToken))
+        var past = (await OnboardingOnly().Where(d => ids.Contains(d.RunnerId)).ToListAsync(cancellationToken))
             .ToLookup(d => d.RunnerId);
 
         var queue = due
@@ -113,7 +113,7 @@ internal sealed partial class OnboardingReminderSender(
             return OnboardingOutcome.NotDue;
         }
 
-        var past = await db.OnboardingDeliveries.AsNoTracking().Where(d => d.RunnerId == runnerId).ToListAsync(cancellationToken);
+        var past = await OnboardingOnly().Where(d => d.RunnerId == runnerId).ToListAsync(cancellationToken);
         if (!OnboardingEligibility.Allowed(decision, past.Select(Past), now))
         {
             return OnboardingOutcome.NotDue;
@@ -156,8 +156,12 @@ internal sealed partial class OnboardingReminderSender(
     private async Task<int> AllowanceAsync(OnboardingBudget budget, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var since = now - Day;
-        var onboarding = await db.OnboardingDeliveries.CountAsync(
+        var onboarding = await OnboardingOnly().CountAsync(
             d => (d.Status == OnboardingDeliveryStatus.Sent && d.SentAt > since && d.SentAt <= now) || (d.Status == OnboardingDeliveryStatus.Sending && d.ClaimedAt > since && d.ClaimedAt <= now),
+            cancellationToken);
+        // Coaching tips share the delivery record but are weekly emails: they come before onboarding, not out of its limit.
+        var tips = await db.OnboardingDeliveries.CountAsync(
+            d => d.Campaign == OnboardingCampaign.CoachingTip && ((d.Status == OnboardingDeliveryStatus.Sent && d.SentAt > since && d.SentAt <= now) || (d.Status == OnboardingDeliveryStatus.Sending && d.ClaimedAt > since && d.ClaimedAt <= now)),
             cancellationToken);
         var recaps = await db.WeeklyRecapDeliveries.CountAsync(
             d => (d.Status == RecapDeliveryStatus.Sent && d.SentAt > since && d.SentAt <= now) || (d.Status == RecapDeliveryStatus.Sending && d.ClaimedAt > since && d.ClaimedAt <= now),
@@ -166,8 +170,13 @@ internal sealed partial class OnboardingReminderSender(
             d => (d.Status == AnnouncementDeliveryStatus.Sent && d.SentAt > since && d.SentAt <= now) || (d.Status == AnnouncementDeliveryStatus.Sending && d.ClaimedAt > since && d.ClaimedAt <= now),
             cancellationToken);
         var reserve = await db.Runners.CountAsync(r => r.WeeklyEmails && r.Email != null && r.Email != "", cancellationToken);
-        return budget.Allowance(onboarding, recaps + announcements, reserve);
+        return budget.Allowance(onboarding, recaps + tips + announcements, reserve);
     }
+
+    // The onboarding emails' own rows. The weekly coaching tip shares the table (OnboardingCampaign.CoachingTip) and never
+    // counts towards the onboarding rules: not the 14-day gap, not the episodes, not the daily limit.
+    private IQueryable<OnboardingDelivery> OnboardingOnly() =>
+        db.OnboardingDeliveries.AsNoTracking().Where(d => d.Campaign != OnboardingCampaign.CoachingTip);
 
     // Whether the runner's email may be tried now: allowed by what's gone before, and its own row (if any) open for a retry.
     private static bool Open(OnboardingDecision decision, IEnumerable<OnboardingDelivery> past, DateTimeOffset now)

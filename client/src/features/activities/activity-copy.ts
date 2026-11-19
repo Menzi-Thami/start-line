@@ -1,30 +1,11 @@
 import { formatDate, formatDistance, formatPace, formatPaceRange, KM_PER_MILE, type Units } from '../../lib/format'
-import type { Activity, ActivityKind, Halves, PaceZone, PlannedVsActual, SessionType, Split } from '../../lib/types'
+import type { Activity, ActivityKind, Halves, PlannedVsActual, SessionType } from '../../lib/types'
 
 export const KIND_LABEL: Record<ActivityKind, string> = {
   Run: 'Run',
   TrailRun: 'Trail run',
   TreadmillRun: 'Treadmill run',
   Other: 'Activity',
-}
-
-export const ZONE_LABEL: Record<PaceZone, string> = {
-  Recovery: 'Recovery',
-  Easy: 'Easy',
-  LongRun: 'Long',
-  Tempo: 'Tempo',
-  Interval: 'Interval',
-  Race: 'Race',
-}
-
-/** The effort ramp from tokens.css. Always shown beside a text label, never as the only signal. */
-export const ZONE_COLOUR: Record<PaceZone, string> = {
-  Recovery: 'var(--effort-recovery)',
-  Easy: 'var(--effort-easy)',
-  LongRun: 'var(--effort-long)',
-  Tempo: 'var(--effort-tempo)',
-  Interval: 'var(--effort-interval)',
-  Race: 'var(--effort-race)',
 }
 
 // Sessions whose whole point is staying easy: running them fast takes away what they're for.
@@ -150,29 +131,6 @@ export function runVerdict(run: Activity, units: Units): Verdict {
 
   const next = plan.nextTitle && plan.nextDate ? `Next up: ${plan.nextTitle}, ${formatDate(plan.nextDate, 'long')}.${tip}` : null
   return { headline, details, next }
-}
-
-/** Heart rate against pace, said neutrally: drift is information, not a diagnosis. */
-export function driftText(run: Activity): string | null {
-  const drift = run.review.heartRateDriftPercent
-  if (drift == null) return null
-  return run.review.heartRateDriftIsNotable
-    ? `Heart rate rose ${drift}% against pace from the first half to the second. Heat, fluids and tiredness all push it up, and it tends to shrink as your endurance builds.`
-    : `Heart rate held steady against pace (${Math.max(drift, 0)}% drift).`
-}
-
-/** "12 s fast", "8 s slow", "In zone", or nothing when the km isn't scored. */
-export function splitFit(split: Split): string {
-  switch (split.fit) {
-    case 'Faster':
-      return `${Math.round(split.secondsPerKmOffZone)} s fast`
-    case 'Slower':
-      return `${Math.round(split.secondsPerKmOffZone)} s slow`
-    case 'In':
-      return 'In zone'
-    default:
-      return ''
-  }
 }
 
 /** "Second half 12 s/km slower", or a negative split worth noticing. */

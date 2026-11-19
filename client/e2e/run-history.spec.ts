@@ -1,4 +1,4 @@
-import { openSyncedRuns, openRecentRun, openDisclosure } from './navigation'
+import { openRunDay, openRunningTotals } from './navigation'
 import { expect, test } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import type { CheckIn, CheckInRequest } from '../src/lib/types'
@@ -27,9 +27,8 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
       await route.fulfill({ json: data })
     })
     await page.goto(`http://127.0.0.1:5176/e2e/fixtures/run-history.html?date=${date}`)
-    const running = page.getByRole('region', { name: 'Your running', exact: true })
-    await openSyncedRuns(page)
-    await page.getByRole('button', { name: 'Log this run', exact: true }).click()
+    const logDay = await openRunDay(page, date!)
+    await logDay.getByRole('button', { name: 'Log this run', exact: true }).click()
     await expect(page.getByLabel('Run date')).toHaveValue(date!)
     await page.getByLabel('Run details').selectOption('')
     await expect(page.getByLabel('Distance (km)', { exact: true })).toHaveValue('')
@@ -37,16 +36,12 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     await page.getByLabel('Hours', { exact: true }).fill('1')
     await page.getByRole('button', { name: 'Save check-in', exact: true }).dblclick()
     const name = `Additional run on ${formatDate(date!, 'long')}`
-    await openRecentRun(page, date!)
-    await expect(running.getByRole('article', { name, exact: true })).toContainText('10 km · 1:00:00')
+    await expect(logDay.getByRole('article', { name, exact: true })).toContainText('10 km · 1:00:00')
+    const running = await openRunningTotals(page)
     await expect(running.locator('.home-tiles .home-tile').filter({ hasText: 'This month' }).locator('.home-tile-value .mono')).toHaveText('10')
     expect(entries).toHaveLength(1)
     expect(entries[0]?.activityId).toBe('synthetic-strava')
-    await page.getByRole('button', { name: 'Visit calendar', exact: true }).click()
-    const calendar = page.getByRole('tabpanel', { name: 'This week', exact: true })
-    await calendar.getByRole('button', { name: new RegExp(`^${formatDate(date!, 'long')}:`) }).click()
-    await page.getByRole('button', { name: /Open day details/ }).click()
-    const day = page.getByRole('region', { name: formatDate(date!, 'long'), exact: true })
+    const day = await openRunDay(page, date!)
     const saved = day.getByRole('article', { name, exact: true })
     await expect(saved).toBeVisible()
     await expect(saved).toHaveCount(1)
@@ -77,12 +72,10 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     await page.keyboard.press('Escape')
     await expect(marker).toBeFocused()
     await page.getByRole('button', { name: 'Return home', exact: true }).click()
-    await openRecentRun(page, date!)
-    await expect(running.getByRole('article', { name, exact: true })).toContainText('10 km · 1:00:00')
+    await expect((await openRunDay(page, date!)).getByRole('article', { name, exact: true })).toContainText('10 km · 1:00:00')
     await page.reload()
-    await openRecentRun(page, date!)
-    await expect(running.getByRole('article', { name, exact: true })).toBeVisible()
-    await openDisclosure(page, /^Running insights/)
+    await expect((await openRunDay(page, date!)).getByRole('article', { name, exact: true })).toBeVisible()
+    await openRunningTotals(page)
     await expect(running.getByText('1 run', { exact: true })).toHaveCount(2)
     expect(entries).toHaveLength(1)
     expect(pageErrors).toEqual([])

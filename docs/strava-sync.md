@@ -144,7 +144,7 @@ Strava ──push──▶ POST /api/v1/webhooks/strava/{hookSecret}   (anonymou
 - **Database:** the worker never polls while idle, so the Azure SQL free offer can still pause.
 - **Backfill:** connecting fetches the last 6 weeks (`StravaCache.Backfill`), enough for the trend and volume charts.
 - **Missing recordings:** totals-only and manually typed activities cannot supply sampled time/distance for analysis.
-  These produce a skipped-import reason in Runs → Your run data rather than disappearing silently. A daily negative
+  These produce a skipped-import reason in Account → Your data → Your run data rather than disappearing silently. A daily negative
   cache avoids re-fetching them on every listing; an activity-update webhook bypasses it. A new fetch supersedes old
   issues for that same runner/provider/activity. No GPS, heart rate or splits are invented.
 - **Client progress:** pending work is checked every 15 seconds (for up to 10 minutes), and visible active connections

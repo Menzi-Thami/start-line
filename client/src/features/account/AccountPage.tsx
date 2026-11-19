@@ -1,3 +1,4 @@
+import { RunDataPanel } from '../activities/RunDataPanel'
 import './account-layout.css'
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '../../app/auth-context'
@@ -25,8 +26,6 @@ interface Props {
   stravaConnecting?: boolean
   /** A new calendar link was made here, so the plan's calendar menu offers it rather than the old one. */
   onNewCalendarLink?: (token: string) => void
-  /** "Your run data" (where totals come from), shown first under Data & privacy. Its own download is not repeated here. */
-  runData?: ReactNode
 }
 
 type Group = 'profile' | 'connections' | 'notifications' | 'data'
@@ -39,7 +38,7 @@ const linkedGroup = (): { group: Group | null; shoes: boolean } => {
 }
 
 /** Profile, connections, notifications, a copy of everything we hold, and the way out. */
-export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange, runData }: Props) {
+export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNotice, stravaConnecting = false, onNewCalendarLink, photo = null, onPhotoChange }: Props) {
   const auth = useAuth()
   const [linked] = useState(linkedGroup)
   const [open, setOpen] = useState<Record<Group, boolean>>(() => ({
@@ -144,7 +143,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         </>)}
 
         {group('data', 'Data & privacy', <>
-          {runData}
+          <RunDataPanel units={runner.units === 'Miles' ? 'mi' : 'km'} />
           <div className="section">
             <h3>Your data</h3>
             <p>Everything Taperday holds about you, as one file.</p>

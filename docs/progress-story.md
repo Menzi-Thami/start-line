@@ -1,6 +1,6 @@
 # Progress story (#143)
 
-**Where it lives:** Home › Running insights › **Your progress**, under the training trends. A 4, 8 or 12-week switch picks the span, and each span is compared with the same length just before it.
+**Where it lives:** nowhere in the app at the moment. The Runs simplification removed the Home running-details page that showed it, and the Plan simplification (#277) left it out of Plan › Progress. The API endpoint and the `ProgressStory` component (with its unit tests) remain, unrendered, for an owner decision.
 
 | Part | What it says | Worked out from |
 |---|---|---|

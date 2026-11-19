@@ -1,21 +1,8 @@
 import { formatDate } from '../lib/format'
-import { act, screen, waitFor } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-/** Follow the same disclosure controls a runner uses, rather than querying hidden actions. */
-export async function openHomeLibrary(section: 'insights' | 'tools' | 'review' = 'insights') {
-  const url = new URL(window.location.href)
-  url.searchParams.set('view', 'home')
-  if (section === 'review') url.searchParams.set('review', '1')
-  else url.searchParams.set('tab', section)
-  act(() => { window.history.pushState(null, '', url); window.dispatchEvent(new PopStateEvent('popstate')) })
-  await screen.findByRole('button', { name: '← Back to Home' })
-}
-
 export async function openDisclosure(label: string | RegExp) {
-  if (!screen.queryByText(label, { selector: 'summary', exact: true }) && /Running (insights|tools)|Weekly coaching review|synced/.test(String(label))) {
-    await openHomeLibrary(String(label).includes('tools') ? 'tools' : String(label).includes('review') ? 'review' : 'insights')
-  }
   const summary = await screen.findByText(label, { selector: 'summary', exact: true }, { timeout: 10000 })
   // Open containing disclosures before operating their actual controls.
   const closed: HTMLDetailsElement[] = []
@@ -52,17 +39,9 @@ export async function openTrainingGuide(label: 'Training paces' | 'Running insig
 export async function openWeekDay(date: string) {
   await closePlanDay()
   const name = formatDate(date, 'long')
-  await userEvent.setup().click(await screen.findByRole('button', { name: new RegExp(`^${name}:`) }))
+  await userEvent.setup().click(await screen.findByRole('button', { name: new RegExp(`^${name}:`) }, { timeout: 10000 }))
   await userEvent.setup().click(await screen.findByRole('button', { name: /Open day details/ }))
   return screen.findByRole('region', { name }, { timeout: 10000 })
-}
-
-export async function openRecentRun(date: string) {
-  if (!screen.queryAllByText(formatDate(date), { selector: '.activity-row > summary > span:first-child' }).length) await openHomeLibrary('insights')
-  const summaries = await screen.findAllByText(formatDate(date), { selector: '.activity-row > summary > span:first-child' })
-  const more = summaries[0]?.closest('.home-more') as HTMLDetailsElement | null
-  if (more && !more.open) await userEvent.setup().click(more.querySelector<HTMLElement>(':scope > summary')!)
-  for (const summary of summaries) if (!summary.closest('details')?.open) await userEvent.setup().click(summary.closest('summary')!)
 }
 
 export async function closePlanDay() {

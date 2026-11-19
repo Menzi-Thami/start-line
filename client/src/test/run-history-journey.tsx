@@ -7,6 +7,7 @@ import { Home } from '../features/runner-home/Home'
 import { useCheckIns } from '../features/coaching/useCheckIns'
 import { completionsKey, useSyncedCompletions } from '../features/coaching/useSyncedCompletions'
 import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
+import { RunningTotals } from '../features/activities/RunningTotals'
 import { current, today } from './run-history-data'
 
 const planFixture = plan as TrainingPlan
@@ -27,7 +28,8 @@ export function Journey({ runs }: { runs: ActivitySummary[] }) {
   return <AuthContext.Provider value={auth}>
     <button className="button button-quiet" onClick={() => setView('home')}>Return home</button>
     <button className="button button-quiet" onClick={() => setView('plan')}>Visit calendar</button>
-    {view === 'home' ? <Home runner={{ id: 'synthetic-runner', displayName: 'QA runner' } as Runner} today={today} units="km" current={current}
+    <button className="button button-quiet" onClick={() => setView('runs')}>Visit runs</button>
+    {view === 'runs' ? <RunningTotals ownerId="synthetic-runner" units="km" today={today} runs={runs} /> : view === 'home' ? <Home runner={{ id: 'synthetic-runner', displayName: 'QA runner' } as Runner} today={today} units="km" current={current}
       initialPlan={{ id: current.id, plan: planFixture }} runs={runs} onOpenPlan={() => setView('plan')}
       onOpenAccount={noop} onOpenRun={noop} onOpenRuns={noop} onBuildPlan={noop} /> : <SavedPlan runs={runs} />}
   </AuthContext.Provider>

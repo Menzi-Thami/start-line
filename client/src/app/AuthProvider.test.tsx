@@ -129,7 +129,7 @@ describe('one runner per device', () => {
     await waitFor(() => expect(msal.acquireTokenRedirect).toHaveBeenCalledTimes(1))
     expect(readCheckInCopies('t:remembered').plan?.pending).toHaveLength(1)
     expect(msal.clearCache).not.toHaveBeenCalled()
-    expect(active?.homeAccountId).toBe('remembered')
+    expect(msal.getActiveAccount()).toEqual(remembered)
   })
 
   it('does not attempt interactive renewal without internet', async () => {

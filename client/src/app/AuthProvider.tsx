@@ -8,8 +8,7 @@ import { signInRequest, type SignInKind } from './sign-in-requests'
 
 const toAccount = (info: AccountInfo) => ({ id: `${info.tenantId}:${info.localAccountId}`, name: info.name || info.username, email: info.username || null })
 
-// Several parts of a page can ask for a token at once. Only the first may start the sign-in redirect: a second one
-// would fail with interaction_in_progress and its raw text would reach the runner.
+// Interactive renewal is user initiated; guard repeat taps until the redirect completes.
 let redirecting = false
 
 /**
@@ -17,8 +16,9 @@ let redirecting = false
  * runner next time it opens and goes straight to their plan from the device's copy, with no sign-in and no wait for the
  * database. MSAL keeps it past closing the app only for a runner who said yes to "Stay signed in?" (External ID asks by
  * default); otherwise it's encrypted with a key held in a session cookie and is gone once the browser closes, as before.
- * Either way signing out clears it. Tokens are requested per call, so they're always fresh. Storage an injected script
- * could read is a risk either way; the strict Content-Security-Policy (no inline or outside scripts) is the defence.
+ * Either way signing out clears it. Tokens are requested per call and silently renewed where possible. When Microsoft's
+ * session needs interaction, the runner chooses when to continue; never redirect out of an unsynced workout.
+ * Storage an injected script could read is a risk; the strict Content-Security-Policy limits that exposure.
  */
 export function AuthProvider({ config, children }: { config: AuthConfig | null; children: ReactNode }) {
   const msal = useMemo(
@@ -93,6 +93,25 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       signIn: () => start('sign-in'),
       signUp: () => start('sign-up'),
       signInWithGoogle: config.google ? () => start('google') : undefined,
+      resumeSession: () => {
+        if (!info || redirecting) return
+        if (!navigator.onLine) {
+          setError({ message: 'You’re offline. Reconnect to the internet, then continue securely.', code: null })
+          return
+        }
+        // Keep the same remembered identity and its local run drafts. Unlike signIn, this must not reset
+        // the active account or open an account chooser.
+        redirecting = true
+        void msal.acquireTokenRedirect({
+          scopes: [config.scope],
+          account: info,
+          redirectStartPage: window.location.href,
+        }).catch((failure: unknown) => {
+          setError(describeSignInError(failure))
+        }).finally(() => {
+          redirecting = false
+        })
+      },
       // Signing out leaves nothing of anyone's on this device: every remembered account (MSAL's logout only removes the one
       // it's given, and an older one would then open as signed in), and the copy of their Home. Then Microsoft ends its session.
       signOut: () => {
@@ -110,17 +129,11 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         try {
           return (await msal.acquireTokenSilent({ scopes: [config.scope], account: info })).accessToken
         } catch (error) {
-          const unsynced = Object.values(readCheckInCopies(toAccount(info).id)).some(copy => copy.pending.length > 0)
-          if (error instanceof InteractionRequiredAuthError && navigator.onLine && !redirecting && !unsynced) {
-            redirecting = true
-            // The page is about to leave for Microsoft; nothing useful can be done with a failure to start that here.
-            await msal
-              .acquireTokenRedirect({ scopes: [config.scope], account: info, redirectStartPage: window.location.href })
-              .catch(() => {
-                redirecting = false
-              })
-          }
-          return null
+          // A silent attempt can fail after a PWA has been closed for days, or because Safari blocks
+          // identity-provider cookies. Never navigate automatically from a background API call.
+          // The account stays remembered; the UI offers a deliberate "Continue securely" action.
+          if (error instanceof InteractionRequiredAuthError) return null
+          throw error
         }
       },
     }

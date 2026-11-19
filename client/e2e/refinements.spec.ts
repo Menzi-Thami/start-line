@@ -11,6 +11,9 @@ async function mockApi(page: Page, fail = false) {
   await page.route('**/api/v1/**', route => {
     const path = new URL(route.request().url()).pathname
     if (path.endsWith('/me/journey')) return route.fulfill({ json: journeyOf([]) })
+    // No enrolled Couch to 5K program. An invalid [] response is parsed as a fresh beginner
+    // program, which hides the no-plan Home action and makes this fixture nondeterministic.
+    if (path.endsWith('/me/beginner')) return route.fulfill({ status: 204 })
     if (path.endsWith('/progress')) { state.progressRequests++; return route.fulfill({ json: [] }) }
     if ((fail && (path.endsWith('/coach') || path.endsWith('/running'))) || path.endsWith('/insights')) return route.fulfill({ status: 503, json: { title: 'Synthetic unavailable data', status: 503 } })
     const json = path.endsWith('/coach') ? { id: 'visibility-plan', plan, coaching: [] }

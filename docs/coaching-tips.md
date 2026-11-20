@@ -33,23 +33,39 @@ The first rule that matches wins (`CoachingTipSelector.Choose`; every threshold 
 | 1 | **Race week** | The current plan's race is 0–6 days after the Thursday | `race-1` … `race-3`, a different one each race |
 | 2 | **Taper** | The race is 7–20 days away | `taper-1`, `taper-2` |
 | 3 | **Long-run jump** | The longest single run in the 7 days to yesterday is **more than** 10% beyond the longest in the 30 days before that (exactly 10% isn't). Skipped when those 30 days have no run of at least 2 km | `spike`, in the runner's own numbers: both distances and a suggested cap of 1.1 × the earlier longest |
-| 4 | **Comeback** | The current plan had running sessions in the 7 days to yesterday (since the plan was made, before race day) and no run was logged | `comeback` |
-| 5 | **The runner's track** | Otherwise: one step a week | Track A or B below |
+| 4 | **Easy runs too fast** | Of last week's kept easy runs with a pace (see below), at least 2 were more than 10 s/km quicker than the fast end of the plan's easy range (exactly 10 s/km isn't), and they were at least half of them | `easy-fast`, in the runner's own paces and units: the too-fast runs' average and the plan's easy range, then "easy should feel easy" |
+| 5 | **Comeback** | The current plan had running sessions in the 7 days to yesterday (since the plan was made, before race day) and no run was logged | `comeback` |
+| 6 | **The runner's track** | Otherwise: one step a week | Track A or B below |
 
-- **No repeats.** An override tip (rules 1–4) sent in the last 4 weeks (fewer than 28 days) is never sent again: the
+- **No repeats.** An override tip (rules 1–5) sent in the last 4 weeks (fewer than 28 days) is never sent again: the
   rules fall through to the next one. Within race week and the taper, a tip never sent comes first, then the one sent
   longest ago.
 - **Tracks.** Track A (new runners): the current plan is for a new runner (`Experience.New`), a Couch to 5K programme
   is under way (`Runner.BeginnerProgressJson`, not all 27 runs done), or there's no current plan. Track B: everyone else.
   Each has 12 tips in order.
 - **The step** is the number of tips the runner has already been sent from that track, read from the delivery records.
-  Overrides and the other track's tips don't move it. After the twelfth, the general rotation (`g-1` … `g-8`) follows,
+  Overrides and the other track's tips don't move it. After the twelfth, the general rotation (`g-1` … `g-20`, 20 tips) follows,
   round and round.
 
 ### Running figures: read now, never kept
 
-Rule 3 (the long-run jump) reads **kept runs only** through `RunningLogReader` with `includeSynced: false`: the runner's own check-ins and uploads. Rule 4 (comeback) also counts the Strava runs Taperday holds **right now**, as Home does, but only so a runner who did run never gets a "quiet week" tip. Both are worked out on every read. The delivery row keeps only the tip's key and the Thursday, never a distance, and no tip that fires is decided from Strava data (Strava API Policy, see [strava-sync.md](strava-sync.md)).
+Rule 3 (the long-run jump) reads **kept runs only** through `RunningLogReader` with `includeSynced: false`: the runner's own check-ins and uploads. Rule 5 (comeback) also counts the Strava runs Taperday holds **right now**, as Home does, but only so a runner who did run never gets a "quiet week" tip. Both are worked out on every read. The delivery row keeps only the tip's key and the Thursday, never a distance, and no tip that fires is decided from Strava data (Strava API Policy, see [strava-sync.md](strava-sync.md)).
 A runner whose runs only come from Strava never gets rule 3, since it uses kept runs only.
+
+### Easy runs too fast (rule 4)
+
+- **Which runs:** kept runs only, never Strava-held runs, in the 7 days to yesterday, on a day whose planned session (on
+  the current plan) is Easy, Recovery or EasyWithStrides. Kept runs are uploads, and check-ins on the current plan that
+  give both a distance and a time (the runner's own figures). A check-in linked to an upload counts once, as the upload.
+- **Their pace:** total time over distance. On a day of easy running with strides, an upload's pace is the median of its
+  full kilometres, so a few quick strides don't make it look fast; a check-in only has its overall average.
+- **Compared with** the plan's easy range (`plan.Paces[PaceZone.Easy]`, as built for that Thursday).
+- **The copy:** "Your easy runs last week averaged 5:00/km; your plan's easy pace is 6:20–6:50/km." (or "2 of your 3 easy
+  runs …" when only some were too fast; the average is the too-fast runs' own, weighted by distance), per mile for Miles
+  runners, in the app's usual fast–slow order. Then the talk test, "slow is the point", and that running every run
+  moderately hard tires you without making you fitter any faster.
+- Only the key `easy-fast` is stored: no paces. Thresholds: `EasyTooFastSeconds` (10), `MinEasyRunsTooFast` (2),
+  `MinEasyShareTooFast` (0.5).
 
 ## The tip bank
 
@@ -60,7 +76,14 @@ on delivery records, so **never rename a key or reuse one for different advice**
 The content comes from the owner's research: 80/20 easy running and the talk test; the 2025 finding that single-run
 spikes (more than weekly totals) predict overuse injuries; Couch to 5K and run–walk for new runners; heavy strength work
 plus plyometrics for running economy; the IOC 2023 consensus on REDs (relative energy deficiency in sport); and the taper
-meta-analyses. Claims stay within that outline: no exact g/kg numbers and no paces beyond what the tips state.
+meta-analyses. The rotation (20 tips) adds heat acclimatisation (10–14 days), at most two harder days a week with
+48–72 hours between, hills by effort, drinking to thirst (salt for salty sweaters over two hours), refuelling with
+carbohydrate and some protein, carbon-plated race shoes saved for key days, testing coffee before a long run, rebuilding
+after time off (about two weeks per month missed), strength twice a week, sleep, running with others and noting how runs
+feel. Claims stay within that outline: no exact g/kg or caffeine mg/kg numbers, and no paces beyond what the tips state.
+
+The bank holds 52 tips in all: 3 race-week, 2 taper, the long-run jump, easy runs too fast, the comeback, 12 per track
+and 20 in the rotation (four of the rotation reuse track wording under their own keys).
 
 ## Sending once: the delivery record
 
@@ -139,19 +162,28 @@ Counts and ids only, never personal data:
 - `tests/StartLine.Application.Tests/CoachingTips/CoachingTipSelectionTests.cs`: each override and their order, the race
   week and taper boundaries (0, 6, 7, 20, 21 days, a race already run), the jump's edges (exactly 10%, just over, an
   earlier run of exactly 2 km and of 1.99 km, nothing to compare), the comeback, the track choice, the step from history
-  (overrides and the other track don't count), after twelve and round again, the four-week no-repeat (27 vs 28 days) and
+  (overrides and the other track don't count), after twelve, the twentieth rotation tip and round again, the four-week no-repeat (27 vs 28 days) and
   a retry's own row not counting as history.
-- `tests/StartLine.Application.Tests/CoachingTips/CoachingTipEmailTests.cs`: the bank's shape (12/12/8, unique keys that
-  fit the column, 2–4 sentences, no g/kg), the copy, first name and encoding, the button, the weekly unsubscribe, the
+- `tests/StartLine.Application.Tests/CoachingTips/EasyTooFastSelectionTests.cs`: fires and doesn't, the exact 10 s/km
+  boundary (330 vs 329.9 s/km against a 340 s/km fast end), fewer than 2 runs, the half-of-easy-runs share, the copy in
+  kilometres and miles, the distance-weighted average, its place between the jump and the comeback, and the four-week
+  no-repeat.
+- `tests/StartLine.Application.Tests/CoachingTips/CoachingTipEmailTests.cs`: the bank's shape (12/12/20, `g-1` … `g-20`,
+  unique keys that fit the column, 2–4 sentences, no g/kg or mg/kg), the copy, first name and encoding, the button, the weekly unsubscribe, the
   plain text and the previews.
 - `tests/StartLine.Integration.Tests/CoachingTipTests.cs` (disposable SQL, fake clock, fake outbox): the Thursday hour per
   time zone, a missed hour, competing workers, a failed send retried, the weekly unsubscribe, weekly emails off and no
   address, the track step across Thursdays, a long-run jump from logged runs (and not again within four weeks), comeback
-  then taper then race week from a real plan, a tip not holding back an onboarding email, the budget, off by default, the
+  then taper then race week from a real plan, fast easy check-ins giving `easy-fast`, fast Strava-only easy runs ignored
+  while fast uploads count (in miles), a tip not holding back an onboarding email, the budget, off by default, the
   worker on its schedule, and the preview writing nothing.
 
 ## Not yet
 
+- **Easy runs with strides, checked in by hand.** A check-in only has a distance and a time, so on an EasyWithStrides day
+  its pace includes the strides and reads slightly quick. Uploads use the median kilometre instead.
+- **Easy runs on unplanned days.** Only runs on days whose planned session was easy count; an extra easy run on a rest
+  day isn't judged.
 - **Strava-only runners** never get the long-run jump tip: it's judged on kept runs (uploads and ticks) only, so nothing stored is decided from Strava.
 - **Couch to 5K detail.** A programme counts as under way until all 27 runs are ticked; a programme abandoned part-way
   keeps a runner on Track A even with a regular plan beside it.

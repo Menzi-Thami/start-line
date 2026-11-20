@@ -1,4 +1,7 @@
 using System.Globalization;
+using StartLine.Domain.Notifications;
+using StartLine.Domain.Runners;
+using StartLine.Domain.Running;
 
 namespace StartLine.Application.Features.CoachingTips;
 
@@ -25,6 +28,9 @@ public static class CoachingTipBank
 {
     private static readonly CultureInfo En = CultureInfo.GetCultureInfo("en-GB");
 
+    private const string EasyFeelsEasy =
+        "Easy runs should pass the talk test: you could chat in full sentences. Slow is the point. Running every run moderately hard tires you without making you fitter any faster.";
+
     /// <summary>Race week (the race is 0–6 days after the Thursday): one each race, in turn.</summary>
     public static readonly IReadOnlyList<CoachingTip> RaceWeek =
     [
@@ -50,6 +56,10 @@ public static class CoachingTipBank
         "Your longest run this week was more than 10% beyond your longest in the previous month. Big single jumps, more than weekly totals, are what tend to cause overuse injuries. Keep the next one within about 10% of your longest from the month before, and never squeeze missed runs into one long run.");
 
     /// <summary>A quiet week on the plan.</summary>
+    /// <summary>Easy runs run too fast, as it reads without a runner's paces (see <see cref="EasyTooFast"/>).</summary>
+    public static readonly CoachingTip EasyFast = new("easy-fast", "Easy should feel easy",
+        "Your easy runs last week were quicker than your plan's easy pace. " + EasyFeelsEasy);
+
     public static readonly CoachingTip Comeback = new("comeback", "Pick up where the plan is",
         "A quiet week costs very little fitness. Don't cram the missed runs into the weekend. Do this week's plan as it's written, and start easy.");
 
@@ -122,11 +132,35 @@ public static class CoachingTipBank
         SoreOrHurt("g-6"),
         Fuel("g-7"),
         Cadence("g-8"),
+        new("g-9", "The first hot week is the hardest",
+            "Your body takes 10–14 days to get used to heat. Expect the first hot week of the season to feel hardest, and slow down by effort until it settles."),
+        new("g-10", "Two harder days at most",
+            "Keep to two harder days a week at most, with 48–72 hours between them. The easy days in between are what let the hard ones count."),
+        new("g-11", "Hills by effort, not pace",
+            "On a climb, let your pace drop and keep your effort steady. Pushing to hold your flat pace uphill turns an easy run into a hard one."),
+        new("g-12", "Drink to thirst",
+            "On long or hot runs, drink when you're thirsty rather than forcing fluid down. If you're a salty sweater, some salt can help on runs over two hours."),
+        new("g-13", "Refuel after the big ones",
+            "After a hard or long run, have a meal with carbohydrate and some protein within a couple of hours. It helps you recover for the next session."),
+        new("g-14", "Save the race shoes",
+            "Carbon-plated race shoes can save a little effort. Do most of your training in everyday shoes and save the race pair for key days, as their foam wears faster."),
+        new("g-15", "Coffee: test it first",
+            "If you like a coffee before a race, try it before a long run first. More isn't better: stick with what sits well."),
+        new("g-16", "Coming back from time off",
+            "Fitness fades slowly over the first two or three weeks off. After a longer break, rebuild gradually: allow about two weeks for each month you missed."),
+        new("g-17", "Strength twice a week",
+            "Two short strength sessions a week help your running and your resilience. Put them on easy days so your key runs stay fresh."),
+        new("g-18", "Sleep is when you adapt",
+            "Training is the stimulus; sleep is when your body adapts to it. A regular, decent night's sleep does more for your running than most extras."),
+        new("g-19", "Run with others",
+            "Easy days pass more quickly with company. Run at a pace where everyone can chat, and the run stays easy too."),
+        new("g-20", "Write down how it felt",
+            "After each run, note how it felt, not just the numbers. Over a few weeks, those notes show tiredness, niggles and progress that the figures miss."),
     ];
 
     /// <summary>Every tip, for looking one up by the key on a delivery record.</summary>
     public static IEnumerable<CoachingTip> All =>
-        [.. RaceWeek, .. Taper, Spike, Comeback, .. NewRunner, .. Improving, .. Rotation];
+        [.. RaceWeek, .. Taper, Spike, EasyFast, Comeback, .. NewRunner, .. Improving, .. Rotation];
 
     /// <summary>A track's twelve tips.</summary>
     public static IReadOnlyList<CoachingTip> For(CoachingTrack track) => track == CoachingTrack.NewRunner ? NewRunner : Improving;
@@ -139,6 +173,24 @@ public static class CoachingTipBank
     {
         Body = $"Your longest run this week ({Km(longestKm)} km) was more than 10% beyond your longest in the previous month ({Km(earlierLongestKm)} km). Big single jumps, more than weekly totals, are what tend to cause overuse injuries. Keep the next one nearer {Km(earlierLongestKm * 1.1)} km, and never squeeze missed runs into one long run.",
     };
+
+    /// <summary>
+    /// Easy runs run too fast, in the runner's own paces and units: the too-fast runs' average and the plan's easy range.
+    /// Worked out when the email is composed and never kept.
+    /// </summary>
+    /// <param name="averageSecondsPerKm">The too-fast runs' average pace.</param>
+    /// <param name="easy">The plan's easy pace range.</param>
+    /// <param name="units">Kilometres or miles, as the runner chose.</param>
+    /// <param name="tooFast">How many easy runs were too fast.</param>
+    /// <param name="easyRuns">How many easy runs had a pace.</param>
+    public static CoachingTip EasyTooFast(double averageSecondsPerKm, PaceRange easy, Units units, int tooFast, int easyRuns)
+    {
+        ArgumentNullException.ThrowIfNull(easy);
+        var which = tooFast >= easyRuns ? "Your easy runs" : $"{tooFast.ToString(En)} of your {easyRuns.ToString(En)} easy runs";
+        var pace = Pace.FromSecondsPerKilometre(averageSecondsPerKm);
+        var average = Reminders.PaceText(new PaceRange(pace, pace), units);
+        return EasyFast with { Body = $"{which} last week averaged {average}; your plan's easy pace is {Reminders.PaceText(easy, units)}. " + EasyFeelsEasy };
+    }
 
     private static string Km(double km) => Math.Round(km, 1).ToString("0.#", En);
 

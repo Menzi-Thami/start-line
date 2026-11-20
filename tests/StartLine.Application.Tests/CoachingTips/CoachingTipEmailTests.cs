@@ -1,6 +1,8 @@
 using System.Text.RegularExpressions;
 using StartLine.Application.Features.CoachingTips;
 using StartLine.Application.Features.Insights;
+using StartLine.Domain.Runners;
+using StartLine.Domain.Running;
 
 namespace StartLine.Application.Tests.CoachingTips;
 
@@ -9,13 +11,14 @@ public sealed partial class CoachingTipEmailTests
 {
     private static readonly UnsubscribeLinks Weekly = UnsubscribeLinks.For("KEY", new Uri("https://api.example.test"), weekly: true);
     private static readonly DateOnly Thursday = new(2026, 11, 19);
+    private static readonly PaceRange Easy = new(Pace.FromSecondsPerKilometre(340), Pace.FromSecondsPerKilometre(370));
 
     [Fact]
-    public void The_bank_has_twelve_tips_per_track_eight_in_rotation_and_every_key_once()
+    public void The_bank_has_twelve_tips_per_track_twenty_in_rotation_and_every_key_once()
     {
         CoachingTipBank.NewRunner.Count.ShouldBe(12);
         CoachingTipBank.Improving.Count.ShouldBe(12);
-        CoachingTipBank.Rotation.Count.ShouldBe(8);
+        CoachingTipBank.Rotation.Count.ShouldBe(20);
         CoachingTipBank.RaceWeek.Count.ShouldBe(3);
         CoachingTipBank.Taper.Count.ShouldBe(2);
         var keys = CoachingTipBank.All.Select(t => t.Key).ToList();
@@ -23,16 +26,19 @@ public sealed partial class CoachingTipEmailTests
         keys.ShouldAllBe(k => k.Length <= 16);
         CoachingTipBank.NewRunner.Select(t => t.Key).ShouldBe(Enumerable.Range(1, 12).Select(i => $"a-{i}"));
         CoachingTipBank.Improving.Select(t => t.Key).ShouldBe(Enumerable.Range(1, 12).Select(i => $"b-{i}"));
+        CoachingTipBank.Rotation.Select(t => t.Key).ShouldBe(Enumerable.Range(1, 20).Select(i => $"g-{i}"));
+        CoachingTipBank.All.ShouldContain(CoachingTipBank.EasyFast);
     }
 
     [Fact]
     public void Every_tip_is_a_title_and_two_to_four_short_sentences_with_no_exact_fuelling_numbers()
     {
-        foreach (var tip in CoachingTipBank.All.Append(CoachingTipBank.LongRunJump(14, 12)))
+        foreach (var tip in CoachingTipBank.All.Append(CoachingTipBank.LongRunJump(14, 12)).Append(CoachingTipBank.EasyTooFast(320, Easy, Units.Kilometres, 2, 3)))
         {
             tip.Title.ShouldNotBeNullOrWhiteSpace();
             Sentences().Count(tip.Body).ShouldBeInRange(2, 4, tip.Key);
             tip.Body.ShouldNotContain("g/kg");
+            tip.Body.ShouldNotContain("mg/kg");
             tip.Body.ShouldNotContain("  ");
         }
 

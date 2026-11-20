@@ -11,10 +11,12 @@ using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.Insights;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Plans;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Coaching;
 using StartLine.Domain.Common;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Runners;
+using StartLine.Domain.Running;
 
 namespace StartLine.Application.Features.CoachingTips;
 
@@ -230,6 +232,8 @@ internal sealed partial class CoachingTipSender(
             .FirstOrDefaultAsync(cancellationToken);
         DateOnly? race = saved?.Inputs.RaceDate;
         var planned = false;
+        IReadOnlyList<EasyRunPace> easyRuns = [];
+        PaceRange? easyPaces = null;
         if (saved is not null)
         {
             try
@@ -241,6 +245,11 @@ internal sealed partial class CoachingTipSender(
                 var made = DateOnly.FromDateTime(saved.CreatedAt.UtcDateTime);
                 planned = plan.Weeks.SelectMany(w => w.Sessions).Any(s =>
                     s.Date >= weekFrom && s.Date <= yesterday && s.Date >= made && SessionCheckIn.IsCheckable(s.Type));
+                if (plan.Paces.TryGetValue(PaceZone.Easy, out var easy))
+                {
+                    easyPaces = easy;
+                    easyRuns = await EasyRunsAsync(runner, saved.Id, [.. plan.Weeks.SelectMany(w => w.Sessions)], weekFrom, yesterday, cancellationToken);
+                }
             }
             catch (Exception e) when (e is NotFoundException or DomainException)
             {
@@ -253,7 +262,55 @@ internal sealed partial class CoachingTipSender(
             Longest(kept, weekFrom, yesterday),
             Longest(kept, monthFrom, weekFrom.AddDays(-1)),
             planned,
-            lastWeek.Count > 0);
+            lastWeek.Count > 0,
+            easyRuns,
+            easyPaces,
+            runner.Units);
+    }
+
+    /// <summary>
+    /// Last week's kept runs on days the plan had an easy session (Easy, Recovery, EasyWithStrides), with their pace: the
+    /// runner's uploads, and their check-ins on the current plan that give both a distance and a time. Strava runs are never
+    /// read, so nothing stored is decided from them. A check-in linked to an upload counts once, as the upload. On a day of
+    /// easy running with strides an upload's pace is the median of its full kilometres, so the strides don't make it look fast.
+    /// </summary>
+    private async Task<IReadOnlyList<EasyRunPace>> EasyRunsAsync(Runner runner, Guid planId, IReadOnlyList<PlannedSession> sessions, DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    {
+        // Each easy day, and whether its easy session is the one with strides.
+        var easyDays = sessions
+            .Where(s => s.Date >= from && s.Date <= to && s.Type is SessionType.Easy or SessionType.Recovery or SessionType.EasyWithStrides)
+            .GroupBy(s => s.Date)
+            .ToDictionary(g => g.Key, g => g.All(s => s.Type == SessionType.EasyWithStrides));
+        if (easyDays.Count == 0)
+        {
+            return [];
+        }
+
+        var uploads = await db.Activities.AsNoTracking()
+            .Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.Kind != ActivityKind.Other && a.LocalDate >= from && a.LocalDate <= to)
+            .ToListAsync(cancellationToken);
+        var checkIns = await db.SessionCheckIns.AsNoTracking()
+            .Where(c => c.SavedPlanId == planId && c.Date >= from && c.Date <= to && c.Status != CheckInStatus.Skipped)
+            .ToListAsync(cancellationToken);
+
+        List<EasyRunPace> runs = [];
+        foreach (var upload in uploads.Where(a => easyDays.ContainsKey(a.LocalDate) && a.DistanceMetres > 0 && a.MovingTime > TimeSpan.Zero))
+        {
+            var kilometres = upload.Splits.Where(s => s.IsFullKilometre).Select(s => s.PaceSecondsPerKm).Order().ToList();
+            var pace = easyDays[upload.LocalDate] && kilometres.Count > 0 ? kilometres[kilometres.Count / 2] : upload.PaceSecondsPerKm;
+            runs.Add(new(pace, upload.DistanceKm));
+        }
+
+        var uploadIds = uploads.Select(a => a.Id).ToHashSet();
+        foreach (var checkIn in checkIns.Where(c => easyDays.ContainsKey(c.Date) && !(c.ActivityId is { } id && uploadIds.Contains(id))))
+        {
+            if (checkIn.Answers is { DistanceKm: > 0 and var km, Duration: { } time, DistanceUnreported: false } && time > TimeSpan.Zero)
+            {
+                runs.Add(new(time.TotalSeconds / km, km));
+            }
+        }
+
+        return runs;
     }
 
     private static double? Longest(IReadOnlyList<LoggedRun> runs, DateOnly from, DateOnly to) => runs

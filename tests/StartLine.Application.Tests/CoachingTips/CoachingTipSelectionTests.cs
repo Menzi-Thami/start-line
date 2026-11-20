@@ -185,8 +185,11 @@ public sealed class CoachingTipSelectionTests
         afterTwelve.Tip.Key.ShouldBe("g-1");
 
         Choose(Facts(), [.. twelve, Sent("g-1", 2), Sent("g-2", 1)]).Tip.Key.ShouldBe("g-3");
-        var round = Enumerable.Range(0, 8).Select(i => Sent(CoachingTipBank.Rotation[i].Key, 20 - i)).ToArray();
+        var nineteen = Enumerable.Range(0, 19).Select(i => Sent(CoachingTipBank.Rotation[i].Key, 39 - i)).ToArray();
+        Choose(Facts(), [.. twelve, .. nineteen]).Tip.Key.ShouldBe("g-20");
+        var round = Enumerable.Range(0, CoachingTipBank.Rotation.Count).Select(i => Sent(CoachingTipBank.Rotation[i].Key, 39 - i)).ToArray();
         Choose(Facts(), [.. twelve, .. round]).Tip.Key.ShouldBe("g-1");
+        Choose(Facts(), [.. twelve, .. round, Sent("g-1", 3), Sent("g-2", 2), Sent("g-3", 1)]).Tip.Key.ShouldBe("g-4");
     }
 
     [Fact]

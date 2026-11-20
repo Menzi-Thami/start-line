@@ -1,10 +1,12 @@
 using StartLine.Domain.Plans;
+using StartLine.Domain.Runners;
+using StartLine.Domain.Running;
 
 namespace StartLine.Application.Features.CoachingTips;
 
 /// <summary>
-/// What decides a runner's tip on one Thursday, read fresh when it's due. Running figures come from kept runs plus the
-/// Strava runs Taperday holds right now; they're used for this choice and this email only, and never stored.
+/// What decides a runner's tip on one Thursday, read fresh when it's due. The long-run jump and easy paces come from kept
+/// runs only; only "ran last week" also counts the Strava runs held now. Used for this choice and this email, never stored.
 /// </summary>
 /// <param name="Thursday">The runner's own Thursday the tip goes on.</param>
 /// <param name="RaceDate">The current plan's race day; null without a current plan.</param>
@@ -13,6 +15,12 @@ namespace StartLine.Application.Features.CoachingTips;
 /// <param name="LongestBeforeKm">The longest single run in the 30 days before those seven; null when there's none.</param>
 /// <param name="PlannedLastWeek">The current plan had running sessions in the seven days to yesterday (since it was made).</param>
 /// <param name="RanLastWeek">A run was logged in the seven days to yesterday.</param>
+/// <param name="EasyRuns">
+/// Kept runs (uploads, and check-ins with both a distance and a time) in the seven days to yesterday on days whose planned
+/// session was easy: Easy, Recovery, or EasyWithStrides (its easy part). Never Strava runs. Empty without a current plan.
+/// </param>
+/// <param name="EasyPaces">The current plan's easy pace range; null without one.</param>
+/// <param name="Units">The runner's units, for paces in the email.</param>
 public sealed record CoachingTipFacts(
     DateOnly Thursday,
     DateOnly? RaceDate,
@@ -20,20 +28,26 @@ public sealed record CoachingTipFacts(
     double? LongestLastWeekKm = null,
     double? LongestBeforeKm = null,
     bool PlannedLastWeek = false,
-    bool RanLastWeek = false);
+    bool RanLastWeek = false,
+    IReadOnlyList<EasyRunPace>? EasyRuns = null,
+    PaceRange? EasyPaces = null,
+    Units Units = Units.Kilometres);
+
+/// <summary>One kept easy run's pace and distance, read for this choice only and never stored.</summary>
+public sealed record EasyRunPace(double SecondsPerKm, double Km);
 
 /// <summary>A tip already sent (or mid-send) to this runner, on their Thursday.</summary>
 public sealed record PastCoachingTip(DateOnly Thursday, string Key);
 
 /// <summary>Why a tip was chosen: which rule matched first.</summary>
-public enum CoachingTipReason { RaceWeek, Taper, LongRunJump, Comeback, Track, Rotation }
+public enum CoachingTipReason { RaceWeek, Taper, LongRunJump, EasyTooFast, Comeback, Track, Rotation }
 
 /// <summary>The tip to send, already in the runner's own numbers where it has any.</summary>
 public sealed record CoachingTipChoice(CoachingTip Tip, CoachingTipReason Reason);
 
 /// <summary>
-/// Which tip a runner gets on a Thursday. First match wins: race week, the taper, a long-run jump, a quiet week on the
-/// plan, then the next step on their track (and after its twelve, the rotation, round and round). An override tip sent in
+/// Which tip a runner gets on a Thursday. First match wins: race week, the taper, a long-run jump, easy runs run too
+/// fast, a quiet week on the plan, then the next step on their track (and after its twelve, the rotation, round and round). An override tip sent in
 /// the last four weeks is never sent again: the rules fall through to the next one instead. Every threshold is a named
 /// constant with a test (CoachingTipSelectionTests).
 /// </summary>
@@ -50,6 +64,15 @@ public static class CoachingTipSelector
 
     /// <summary>Without an earlier run at least this long there's nothing fair to compare with, so no jump is called.</summary>
     public const double MinEarlierLongestKm = 2;
+
+    /// <summary>An easy run more than this many seconds per km quicker than the fast end of the easy range is too fast. Exactly this isn't.</summary>
+    public const double EasyTooFastSeconds = 10;
+
+    /// <summary>At least this many easy runs must be too fast before the tip is sent.</summary>
+    public const int MinEasyRunsTooFast = 2;
+
+    /// <summary>And they must be at least this share of the week's easy runs that have a pace.</summary>
+    public const double MinEasyShareTooFast = 0.5;
 
     /// <summary>The same override tip never goes twice within this many days.</summary>
     public const int NoRepeatDays = 28;
@@ -78,6 +101,11 @@ public static class CoachingTipSelector
             && Fresh([CoachingTipBank.Spike], past, facts.Thursday) is not null)
         {
             return new(CoachingTipBank.LongRunJump(longest, before), CoachingTipReason.LongRunJump);
+        }
+
+        if (EasyTooFast(facts) is { } easyTip && Fresh([CoachingTipBank.EasyFast], past, facts.Thursday) is not null)
+        {
+            return new(easyTip, CoachingTipReason.EasyTooFast);
         }
 
         if (facts is { PlannedLastWeek: true, RanLastWeek: false } && (facts.RaceDate is null || facts.RaceDate >= facts.Thursday)
@@ -113,6 +141,40 @@ public static class CoachingTipSelector
     public static bool IsLongRunJump(double longestKm, double earlierLongestKm) =>
         earlierLongestKm >= MinEarlierLongestKm
         && Math.Round(longestKm, 3) > Math.Round(earlierLongestKm * (1 + LongRunJumpShare), 3);
+
+    /// <summary>
+    /// Whether an easy run was more than <see cref="EasyTooFastSeconds"/> per km quicker than the fast end of the easy range.
+    /// Compared to the tenth of a second, so exactly 10 s/km quicker isn't too fast.
+    /// </summary>
+    public static bool IsTooFastForEasy(double secondsPerKm, PaceRange easy)
+    {
+        ArgumentNullException.ThrowIfNull(easy);
+        return Math.Round(secondsPerKm, 1) < Math.Round(easy.Fastest.SecondsPerKilometre - EasyTooFastSeconds, 1);
+    }
+
+    /// <summary>
+    /// The "easy runs too fast" tip in the runner's own paces, when at least <see cref="MinEasyRunsTooFast"/> of last week's
+    /// kept easy runs were too fast and they were at least <see cref="MinEasyShareTooFast"/> of those with a pace; otherwise
+    /// null. The pace shown is the too-fast runs' average (total time over total distance).
+    /// </summary>
+    public static CoachingTip? EasyTooFast(CoachingTipFacts facts)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        if (facts is not { EasyPaces: { } easy, EasyRuns: { Count: > 0 } runs })
+        {
+            return null;
+        }
+
+        var paced = runs.Where(r => r.Km > 0 && r.SecondsPerKm > 0).ToList();
+        var fast = paced.Where(r => IsTooFastForEasy(r.SecondsPerKm, easy)).ToList();
+        if (fast.Count < MinEasyRunsTooFast || fast.Count < paced.Count * MinEasyShareTooFast)
+        {
+            return null;
+        }
+
+        var average = fast.Sum(r => r.SecondsPerKm * r.Km) / fast.Sum(r => r.Km);
+        return CoachingTipBank.EasyTooFast(average, easy, facts.Units, fast.Count, paced.Count);
+    }
 
     // The group's tips not sent in the last four weeks: one never sent first (in order), otherwise the one sent longest ago.
     private static CoachingTip? Fresh(IReadOnlyList<CoachingTip> group, List<PastCoachingTip> past, DateOnly thursday) => group

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -277,6 +277,32 @@ describe('Completed via Strava', () => {
     expect(await within(todayCard).findByRole('button', { name: 'Change how Fartlek went' })).toBeInTheDocument()
     expect(within(todayCard).queryByText('Completed via Strava')).not.toBeInTheDocument()
     expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
+  })
+
+  it('offers the tick straight on Home when a Strava run did today’s session, and keeps only the runner’s Done', async () => {
+    localStorage.removeItem('taperday.tick-prompt.dismissed.2026-10-20')
+    const puts: unknown[] = []
+    server.use(coached(), saving(puts), http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([completion('2026-10-20', 'Fartlek')])))
+    const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
+
+    const prompt = await screen.findByRole('region', { name: 'Tick off today’s session' })
+    expect(within(prompt).getByText('You ran today. Tick off this session?')).toBeInTheDocument()
+    expect(puts).toEqual([])
+    await user.click(within(prompt).getByRole('button', { name: 'Keep this tick' }))
+    expect(puts).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'Tick off today’s session' })).not.toBeInTheDocument())
+  })
+
+  it('lets the runner say Not now, and remembers it for the day on this device', async () => {
+    localStorage.removeItem('taperday.tick-prompt.dismissed.2026-10-20')
+    server.use(coached(), http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([completion('2026-10-20', 'Fartlek')])))
+    const first = renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
+
+    const prompt = await screen.findByRole('region', { name: 'Tick off today’s session' })
+    await first.user.click(within(prompt).getByRole('button', { name: 'Not now' }))
+    expect(screen.queryByRole('region', { name: 'Tick off today’s session' })).not.toBeInTheDocument()
+    expect(localStorage.getItem('taperday.tick-prompt.dismissed.2026-10-20')).toBe('1')
+    localStorage.removeItem('taperday.tick-prompt.dismissed.2026-10-20')
   })
 
   it('counts a session done via Strava in this week’s runs', async () => {

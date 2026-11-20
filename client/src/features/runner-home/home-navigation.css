@@ -41,6 +41,9 @@
 .home-simple .home-today-title { font-size: clamp(1.5rem, 5vw, 2.2rem); margin-block: var(--space-3); line-height: 1.2; }
 .home-simple .home-today .button-primary { margin-top: var(--space-4); }
 .home-simple .home-today .home-manual { margin-top: var(--space-3); }
+/* The optional tick prompt: a held Strava run did today's session; one tap keeps the runner's own Done. */
+.home-simple .home-tick-prompt { display: grid; gap: var(--space-2); margin-block: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line-strong); }
+.home-simple .home-tick-prompt > .link-button { justify-self: start; min-height: 44px; color: var(--on-sage); }
 .home-simple .home-today .home-manual > .link-button { min-height: 44px; color: var(--on-sage); }
 .home-simple .home-today .field-help, .home-simple .home-recorded-source { color: var(--on-sage); }
 .home-simple .home-workout-facts { gap: var(--space-5); margin-bottom: var(--space-3); }

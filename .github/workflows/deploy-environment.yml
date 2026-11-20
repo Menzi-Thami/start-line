@@ -74,6 +74,7 @@ jobs:
           # Optional: "true" once Google is in the tenant's user flow (docs/accounts-setup.md). Unset hides the button.
           VITE_AUTH_GOOGLE: ${{ vars.VITE_AUTH_GOOGLE }}
           VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
+          VITE_AI_COACH_ENABLED: ${{ vars.VITE_AI_COACH_ENABLED }}
         run: |
           npm ci
           npm run build

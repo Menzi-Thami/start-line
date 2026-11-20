@@ -1,6 +1,10 @@
 import { toTimeSpan } from './format'
 import type {
   AcceptPrivacyRequest,
+  AiCoachStatus,
+  CoachAnswer,
+  SessionAdjustment,
+  SessionAdjustmentRequest,
   Activity,
   ActivitySummary,
   BulkImport,
@@ -53,12 +57,6 @@ import type {
   RaceMemory,
   SaveRaceMemory,
 } from '../features/journey/types'
-
-export interface AiCoachAnswer {
-  reply: string
-  change: LifeChange | null
-  proposal: LifeProposal | null
-}
 
 /** The one place the app talks to the network. Every failure becomes an ApiError with words a runner can act on. */
 export class ApiError extends Error {
@@ -258,10 +256,24 @@ export const api = {
     applyCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
     /** Declines the reviewed suggestion: nothing changes, and the answer goes into the coaching history. */
     declineCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/decline`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
-    /** Planned sessions a held Strava run completes, worked out on each read and never stored. */
+    /** Whether the coach is on, whether its AI part is available and agreed to, and the AI questions left today. */
+    aiStatus: (token: string) => request<AiCoachStatus>('/api/v1/me/ai/status', { cache: 'no-store' }, token),
+    /** Gives or withdraws agreement to questions, the plan and the runner's own logged runs going to the AI provider. */
+    setAiConsent: (token: string, consent: boolean) =>
+      request<AiCoachStatus>('/api/v1/me/ai/consent', { method: 'PUT', body: JSON.stringify({ consent }) }, token),
+    /** Asks the coach about the current plan. Never changes it: a suggested change comes back as a preview. */
     askAiCoach: (token: string, id: string, question: string) =>
-      request<AiCoachAnswer>(`/api/v1/me/plans/${encodeURIComponent(id)}/ai/ask`,
+      request<CoachAnswer>(`/api/v1/me/plans/${encodeURIComponent(id)}/ai/ask`,
         { method: 'POST', body: JSON.stringify({ question }) }, token),
+    /** Previews an exact change to one upcoming run (a time, a distance or a pace), checked by the training rules. */
+    previewSessionAdjustment: (token: string, id: string, change: SessionAdjustmentRequest) =>
+      request<SessionAdjustment>(`/api/v1/me/plans/${encodeURIComponent(id)}/session-adjustment/preview`,
+        { method: 'POST', body: JSON.stringify(change) }, token),
+    /** Applies exactly the previewed change; 409 session_adjustment_changed when the plan changed since. */
+    applySessionAdjustment: (token: string, id: string, change: SessionAdjustmentRequest, previewToken: string) =>
+      request<SessionAdjustment>(`/api/v1/me/plans/${encodeURIComponent(id)}/session-adjustment/apply`,
+        { method: 'POST', body: JSON.stringify({ request: change, token: previewToken }) }, token),
+    /** Planned sessions a held Strava run completes, worked out on each read and never stored. */
     stravaCompletions: (token: string, id: string) => request<SyncedCompletion[]>(`/api/v1/me/plans/${encodeURIComponent(id)}/strava-completions`, { cache: 'no-store' }, token),
     /** The runner's daily readiness check-ins, newest first (today and up to 13 days before). */
     readiness: (token: string) => request<Readiness[]>('/api/v1/me/readiness', { cache: 'no-store' }, token),

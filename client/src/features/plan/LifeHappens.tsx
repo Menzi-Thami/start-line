@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { LifeChange, LifeProposal, LifeSituation, SessionRevision, TrainingPlan } from '../../lib/types'
+import { runTypeName } from '../coaching/run-types'
 
 export interface LifeHappensActions {
   preview: (change: LifeChange) => Promise<LifeProposal>
@@ -25,11 +26,18 @@ function weekStart(iso: string): string {
   return addDays(iso, -((d.getUTCDay() + 6) % 7))
 }
 
-/** One change in words: "Tue 3 Nov · Intervals 9 km → easy 5 km", "→ rest", or a move. */
+/** What a run becomes, without the "→": "rest", "easy 5 km", or for a run that keeps its type, "Long run 7 km". */
+function revisedTo(r: SessionRevision, units: Units): string {
+  if (r.easyKm == null) return 'rest'
+  if (r.type) return `${r.type === r.originalType ? r.originalTitle : runTypeName(r.type)} ${formatDistance(r.easyKm, units)}`
+  return `easy ${formatDistance(r.easyKm, units)}`
+}
+
+/** One change in words: "Tue 3 Nov · Intervals 9 km → easy 5 km", "→ rest", "→ Long run 7 km", or a move. */
 function describe(r: SessionRevision, units: Units): string {
   const day = formatDate(r.date)
   if (r.movedFrom) return `${r.originalTitle} moves from ${formatDate(r.movedFrom)} to ${day}`
-  return `${day} · ${r.originalTitle} ${formatDistance(r.originalKm, units)} → ${r.easyKm == null ? 'rest' : `easy ${formatDistance(r.easyKm, units)}`}`
+  return `${day} · ${r.originalTitle} ${formatDistance(r.originalKm, units)} → ${revisedTo(r, units)}`
 }
 
 /**

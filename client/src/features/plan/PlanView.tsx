@@ -38,6 +38,8 @@ import { useJourney } from '../journey/useJourney'
 import { OutlookCard } from './OutlookCard'
 import { ProgressInsights } from './ProgressInsights'
 import { PlanCalendar } from './PlanCalendar'
+import { AiCoachPanel } from './AiCoachPanel'
+import type { AiCoachAnswer } from '../../lib/api-client'
 import { WeekGlance } from './WeekGlance'
 
 const DaySummary = lazy(() => import('./DaySummary'))
@@ -86,6 +88,7 @@ interface Props {
   /** Takes a goal the coach suggested. */
   onUseGoal?: (goalSeconds: number) => void
   /** The saved plan's id when this is the signed-in runner's own plan: its Finish Line, race result and recovery. */
+  onAskAi?: (question: string) => Promise<AiCoachAnswer>
   journeyPlanId?: string | null
   /** The journey's "Train for another race": the builder, which asks before replacing a saved plan. */
   onNewRace?: () => void
@@ -122,7 +125,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, shareUrl, today, toolbarExtra, onReplan, calendar, runs, onOpenRun, bests, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, journeyPlanId, onNewRace, onOpenJourney, onOpenRecovery, onSignIn, onLoadActivity }: Props) {
+export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, shareUrl, today, toolbarExtra, onReplan, calendar, runs, onOpenRun, bests, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, journeyPlanId, onNewRace, onOpenJourney, onOpenRecovery, onSignIn, onLoadActivity, onAskAi }: Props) {
   const journey = useJourney(!!journeyPlanId)
   const journeyData = journey.state.kind === 'ready' ? journey.state.journey : null
   const completedRace = !!chapterFor(journeyData, journeyPlanId)?.raceResult
@@ -497,6 +500,10 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
             ))}
           </ul>
         </div>
+      )}
+
+      {!trainingEnded && onAskAi && coach?.adjustments?.life && (
+        <AiCoachPanel ask={onAskAi} apply={coach.adjustments.life.apply} />
       )}
 
       <div className="tabs tabs-frame" hidden={progressInBar && tab === 'progress'}>

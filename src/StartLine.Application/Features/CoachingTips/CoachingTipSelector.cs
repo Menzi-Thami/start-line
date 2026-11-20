@@ -21,6 +21,11 @@ namespace StartLine.Application.Features.CoachingTips;
 /// </param>
 /// <param name="EasyPaces">The current plan's easy pace range; null without one.</param>
 /// <param name="Units">The runner's units, for paces in the email.</param>
+/// <param name="HeldEasyRuns">
+/// The Strava runs Taperday holds right now (the 7-day cache) on the same easy days, less any that are also uploaded or
+/// counted through a check-in with the runner's own figures. They never choose the tip: they only feed the personal note
+/// (<see cref="CoachingTipSelector.StravaEasyNote"/>), which is sent and stored nowhere.
+/// </param>
 public sealed record CoachingTipFacts(
     DateOnly Thursday,
     DateOnly? RaceDate,
@@ -31,10 +36,14 @@ public sealed record CoachingTipFacts(
     bool RanLastWeek = false,
     IReadOnlyList<EasyRunPace>? EasyRuns = null,
     PaceRange? EasyPaces = null,
-    Units Units = Units.Kilometres);
+    Units Units = Units.Kilometres,
+    IReadOnlyList<EasyRunPace>? HeldEasyRuns = null);
 
-/// <summary>One kept easy run's pace and distance, read for this choice only and never stored.</summary>
+/// <summary>One easy run's pace and distance, read for this email only and never stored.</summary>
 public sealed record EasyRunPace(double SecondsPerKm, double Km);
+
+/// <summary>A short personal note added to one week's email, worked out when it's built and stored nowhere.</summary>
+public sealed record CoachingNote(string Heading, string Text);
 
 /// <summary>A tip already sent (or mid-send) to this runner, on their Thursday.</summary>
 public sealed record PastCoachingTip(DateOnly Thursday, string Key);
@@ -165,6 +174,34 @@ public static class CoachingTipSelector
             return null;
         }
 
+        return TooFast(runs, easy) is { } verdict
+            ? CoachingTipBank.EasyTooFast(verdict.AverageSecondsPerKm, easy, facts.Units, verdict.TooFast, verdict.WithPace)
+            : null;
+    }
+
+    /// <summary>
+    /// The personal note for Strava-only easy running: the same test as <see cref="EasyTooFast"/> on the Strava runs held
+    /// right now, worked out as the email is built and stored nowhere, so it may come again each week. None when the main
+    /// tip is already <c>easy-fast</c> or race week, when the kept-runs rule fired (whether or not its tip went this week),
+    /// or when the held runs pass.
+    /// </summary>
+    public static CoachingNote? StravaEasyNote(CoachingTipFacts facts, CoachingTipChoice choice)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        ArgumentNullException.ThrowIfNull(choice);
+        if (choice.Reason is CoachingTipReason.EasyTooFast or CoachingTipReason.RaceWeek || EasyTooFast(facts) is not null
+            || facts is not { EasyPaces: { } easy, HeldEasyRuns: { Count: > 0 } held } || TooFast(held, easy) is not { } verdict)
+        {
+            return null;
+        }
+
+        return CoachingTipBank.StravaEasyNote(verdict.AverageSecondsPerKm, easy, facts.Units, verdict.TooFast, verdict.WithPace);
+    }
+
+    // At least MinEasyRunsTooFast runs too fast, and at least MinEasyShareTooFast of those with a pace: their average
+    // (total time over total distance) and the counts. Null when the runs pass.
+    private static (double AverageSecondsPerKm, int TooFast, int WithPace)? TooFast(IReadOnlyList<EasyRunPace> runs, PaceRange easy)
+    {
         var paced = runs.Where(r => r.Km > 0 && r.SecondsPerKm > 0).ToList();
         var fast = paced.Where(r => IsTooFastForEasy(r.SecondsPerKm, easy)).ToList();
         if (fast.Count < MinEasyRunsTooFast || fast.Count < paced.Count * MinEasyShareTooFast)
@@ -172,8 +209,7 @@ public static class CoachingTipSelector
             return null;
         }
 
-        var average = fast.Sum(r => r.SecondsPerKm * r.Km) / fast.Sum(r => r.Km);
-        return CoachingTipBank.EasyTooFast(average, easy, facts.Units, fast.Count, paced.Count);
+        return (fast.Sum(r => r.SecondsPerKm * r.Km) / fast.Sum(r => r.Km), fast.Count, paced.Count);
     }
 
     // The group's tips not sent in the last four weeks: one never sent first (in order), otherwise the one sent longest ago.

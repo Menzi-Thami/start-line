@@ -77,6 +77,24 @@ public sealed partial class CoachingTipEmailTests
     }
 
     [Fact]
+    public void A_personal_note_goes_under_the_tip_in_the_html_and_the_plain_text_and_is_absent_otherwise()
+    {
+        var tip = CoachingTipBank.Improving[0];
+        var note = CoachingTipBank.StravaEasyNote(300, Easy, Units.Kilometres, 2, 2);
+        var mail = CoachingTipEmail.Compose("naledi@example.com", tip, Thursday, "Naledi", Weekly, note: note);
+
+        mail.Subject.ShouldBe("Your Taperday tip: Trust your plan's paces");
+        mail.Html.ShouldContain("About your easy runs</h2>");
+        mail.Html.ShouldContain(EmailLayout.Encode(note.Text));
+        mail.Html.IndexOf("About your easy runs", StringComparison.Ordinal).ShouldBeGreaterThan(mail.Html.IndexOf(EmailLayout.Encode(tip.Body), StringComparison.Ordinal));
+        mail.Text.ShouldContain(tip.Body + "\n\nAbout your easy runs\n" + note.Text + "\n\nOpen this week: https://taperday.run");
+
+        var plain = CoachingTipEmail.Compose("naledi@example.com", tip, Thursday, "Naledi", Weekly);
+        plain.Html.ShouldNotContain("About your easy runs");
+        plain.Text.ShouldNotContain("About your easy runs");
+    }
+
+    [Fact]
     public void A_title_that_asks_keeps_its_question_mark_and_a_name_is_encoded()
     {
         var mail = CoachingTipEmail.Compose("a@example.com", CoachingTipBank.NewRunner[6], Thursday, "<b>Eve</b>", Weekly);

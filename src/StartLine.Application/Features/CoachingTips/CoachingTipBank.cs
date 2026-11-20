@@ -192,6 +192,21 @@ public static class CoachingTipBank
         return EasyFast with { Body = $"{which} last week averaged {average}; your plan's easy pace is {Reminders.PaceText(easy, units)}. " + EasyFeelsEasy };
     }
 
+    /// <summary>
+    /// The personal note about easy runs held from Strava, in the runner's own paces and units. It's sent with that week's
+    /// tip and stored nowhere: no key, no flag, no paces (docs/coaching-tips.md, Strava's 7-day cache).
+    /// </summary>
+    public static CoachingNote StravaEasyNote(double averageSecondsPerKm, PaceRange easy, Units units, int tooFast, int easyRuns)
+    {
+        ArgumentNullException.ThrowIfNull(easy);
+        var which = tooFast >= easyRuns ? "Your easy runs" : $"{tooFast.ToString(En)} of your {easyRuns.ToString(En)} easy runs";
+        var pace = Pace.FromSecondsPerKilometre(averageSecondsPerKm);
+        var average = Reminders.PaceText(new PaceRange(pace, pace), units);
+        return new("About your easy runs",
+            $"{which} from Strava last week averaged {average}; your plan's easy pace is {Reminders.PaceText(easy, units)}. "
+            + "Slow is the point on easy days: you should be able to chat in full sentences, and running them moderately hard tires you without making you fitter any faster.");
+    }
+
     private static string Km(double km) => Math.Round(km, 1).ToString("0.#", En);
 
     private static CoachingTip WarmUp(string key) => new(key, "Warm up by moving",

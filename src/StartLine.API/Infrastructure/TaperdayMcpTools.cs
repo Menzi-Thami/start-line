@@ -45,7 +45,9 @@ public sealed class TaperdayMcpTools(IDispatcher dispatcher)
             .Select(entry => new
             {
                 entry.Date, entry.SessionType, entry.Status,
-                entry.DistanceKm, entry.Duration, entry.Effort
+                entry.DistanceKm,
+                entry.Duration,
+                entry.Effort
             }).ToArray();
     }
 }

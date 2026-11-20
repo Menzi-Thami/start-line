@@ -23,8 +23,11 @@ public static class CoachingTipEmail
         return "Your Taperday tip: " + tip.Title;
     }
 
-    /// <summary>One runner's tip. With <paramref name="unsubscribe"/> (their weekly key) the footer and one-click header stop the weekly emails.</summary>
-    public static EmailMessage Compose(string to, CoachingTip tip, DateOnly thursday, string? displayName, UnsubscribeLinks? unsubscribe, bool test = false)
+    /// <summary>
+    /// One runner's tip. With <paramref name="unsubscribe"/> (their weekly key) the footer and one-click header stop the
+    /// weekly emails. A <paramref name="note"/> (worked out for this email and stored nowhere) goes under the tip.
+    /// </summary>
+    public static EmailMessage Compose(string to, CoachingTip tip, DateOnly thursday, string? displayName, UnsubscribeLinks? unsubscribe, bool test = false, CoachingNote? note = null)
     {
         ArgumentNullException.ThrowIfNull(tip);
         var greeting = OnboardingEmail.FirstName(displayName) is { } first ? $"Hi {first}." : "Hi there.";
@@ -32,6 +35,12 @@ public static class CoachingTipEmail
 
         var body = new StringBuilder(EmailLayout.Paragraph(greeting));
         body.Append(EmailLayout.Paragraph(tip.Body));
+        if (note is not null)
+        {
+            body.Append(EmailLayout.Heading(note.Heading));
+            body.Append(EmailLayout.Paragraph(note.Text));
+        }
+
         var html = EmailLayout.Wrap(
             preheader: FirstSentence(tip.Body),
             kicker: $"Your Thursday tip · {thursday.ToString("d MMMM", En)}",
@@ -45,6 +54,11 @@ public static class CoachingTipEmail
 
         var text = new StringBuilder();
         text.Append(title).Append("\n\n").Append(greeting).Append("\n\n").Append(tip.Body).Append("\n\n");
+        if (note is not null)
+        {
+            text.Append(note.Heading).Append('\n').Append(note.Text).Append("\n\n");
+        }
+
         text.Append(Button).Append(": ").Append(EmailLayout.Site).Append("\n\n").Append(Why).Append('\n');
         text.Append(unsubscribe is null
             ? "\nTurn emails off in Account: " + EmailLayout.Site + "/?view=account\n"

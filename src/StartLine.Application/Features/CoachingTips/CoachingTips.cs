@@ -175,7 +175,12 @@ internal sealed partial class CoachingTipSender(
             .Select(d => DateOnly.TryParseExact(d.Episode, EpisodeFormat, CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? new PastCoachingTip(day, d.TipKey!) : null)
             .OfType<PastCoachingTip>()
             .ToList();
-        var choice = CoachingTipSelector.Choose(await FactsAsync(runner, thursday, cancellationToken), history);
+        var facts = await FactsAsync(runner, thursday, now, cancellationToken);
+        var choice = CoachingTipSelector.Choose(facts, history);
+
+        // The personal note about Strava-held easy runs: worked out here, put in this email, and stored nowhere. The claim
+        // below records the main tip's key only.
+        var note = CoachingTipSelector.StravaEasyNote(facts, choice);
 
         if (await ClaimAsync(runnerId, episode, choice.Tip.Key, own, now, cancellationToken) is not { } claim)
         {
@@ -194,7 +199,7 @@ internal sealed partial class CoachingTipSender(
         try
         {
             var links = UnsubscribeLinks.For(tokens.Issue(runnerId, EmailList.Weekly), settings.ApiBaseUrl, weekly: true);
-            await email.SendAsync(CoachingTipEmail.Compose(fresh.Email!, choice.Tip, thursday, fresh.DisplayName, links), cancellationToken);
+            await email.SendAsync(CoachingTipEmail.Compose(fresh.Email!, choice.Tip, thursday, fresh.DisplayName, links, note: note), cancellationToken);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -216,7 +221,7 @@ internal sealed partial class CoachingTipSender(
     /// runner ran last week also counts the Strava runs held right now, as Home does. The current plan gives the race day
     /// and whether it had running sessions last week.
     /// </summary>
-    private async Task<CoachingTipFacts> FactsAsync(Runner runner, DateOnly thursday, CancellationToken cancellationToken)
+    private async Task<CoachingTipFacts> FactsAsync(Runner runner, DateOnly thursday, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var yesterday = thursday.AddDays(-1);
         var weekFrom = thursday.AddDays(-7);
@@ -233,6 +238,7 @@ internal sealed partial class CoachingTipSender(
         DateOnly? race = saved?.Inputs.RaceDate;
         var planned = false;
         IReadOnlyList<EasyRunPace> easyRuns = [];
+        IReadOnlyList<EasyRunPace> heldEasyRuns = [];
         PaceRange? easyPaces = null;
         if (saved is not null)
         {
@@ -248,7 +254,7 @@ internal sealed partial class CoachingTipSender(
                 if (plan.Paces.TryGetValue(PaceZone.Easy, out var easy))
                 {
                     easyPaces = easy;
-                    easyRuns = await EasyRunsAsync(runner, saved.Id, [.. plan.Weeks.SelectMany(w => w.Sessions)], weekFrom, yesterday, cancellationToken);
+                    (easyRuns, heldEasyRuns) = await EasyRunsAsync(runner, saved.Id, [.. plan.Weeks.SelectMany(w => w.Sessions)], weekFrom, yesterday, now, cancellationToken);
                 }
             }
             catch (Exception e) when (e is NotFoundException or DomainException)
@@ -265,16 +271,24 @@ internal sealed partial class CoachingTipSender(
             lastWeek.Count > 0,
             easyRuns,
             easyPaces,
-            runner.Units);
+            runner.Units,
+            heldEasyRuns);
     }
 
     /// <summary>
     /// Last week's kept runs on days the plan had an easy session (Easy, Recovery, EasyWithStrides), with their pace: the
-    /// runner's uploads, and their check-ins on the current plan that give both a distance and a time. Strava runs are never
-    /// read, so nothing stored is decided from them. A check-in linked to an upload counts once, as the upload. On a day of
+    /// runner's uploads, and their check-ins on the current plan that give both a distance and a time. Strava runs never
+    /// count as kept, so nothing stored is decided from them. A check-in linked to an upload counts once, as the upload. On a day of
     /// easy running with strides an upload's pace is the median of its full kilometres, so the strides don't make it look fast.
     /// </summary>
-    private async Task<IReadOnlyList<EasyRunPace>> EasyRunsAsync(Runner runner, Guid planId, IReadOnlyList<PlannedSession> sessions, DateOnly from, DateOnly to, CancellationToken cancellationToken)
+    /// <remarks>
+    /// <c>Held</c> is the separate, read-only view for the personal note: the Strava runs Taperday holds right now
+    /// (<c>CachedUntil</c> after <paramref name="now"/>, the 7-day cache) on the same easy days. A held run that's also an
+    /// upload (the same start or <see cref="RunMatch.IsSameRun(Activity, Activity)"/>), or that a counted check-in carries
+    /// the runner's own figures for, is left out: it counts once, as the kept run. Nothing worked out from them is stored.
+    /// </remarks>
+    private async Task<(IReadOnlyList<EasyRunPace> Kept, IReadOnlyList<EasyRunPace> Held)> EasyRunsAsync(
+        Runner runner, Guid planId, IReadOnlyList<PlannedSession> sessions, DateOnly from, DateOnly to, DateTimeOffset now, CancellationToken cancellationToken)
     {
         // Each easy day, and whether its easy session is the one with strides.
         var easyDays = sessions
@@ -283,34 +297,45 @@ internal sealed partial class CoachingTipSender(
             .ToDictionary(g => g.Key, g => g.All(s => s.Type == SessionType.EasyWithStrides));
         if (easyDays.Count == 0)
         {
-            return [];
+            return ([], []);
         }
 
-        var uploads = await db.Activities.AsNoTracking()
-            .Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.Kind != ActivityKind.Other && a.LocalDate >= from && a.LocalDate <= to)
+        var recorded = await db.Activities.AsNoTracking().Visible(now)
+            .Where(a => a.RunnerId == runner.Id && a.Kind != ActivityKind.Other && a.LocalDate >= from && a.LocalDate <= to
+                && (a.Source == ActivitySource.Upload || (a.Source == ActivitySource.Strava && a.CachedUntil > now)))
             .ToListAsync(cancellationToken);
+        var uploads = recorded.Where(a => a.Source == ActivitySource.Upload).ToList();
         var checkIns = await db.SessionCheckIns.AsNoTracking()
             .Where(c => c.SavedPlanId == planId && c.Date >= from && c.Date <= to && c.Status != CheckInStatus.Skipped)
             .ToListAsync(cancellationToken);
 
-        List<EasyRunPace> runs = [];
-        foreach (var upload in uploads.Where(a => easyDays.ContainsKey(a.LocalDate) && a.DistanceMetres > 0 && a.MovingTime > TimeSpan.Zero))
-        {
-            var kilometres = upload.Splits.Where(s => s.IsFullKilometre).Select(s => s.PaceSecondsPerKm).Order().ToList();
-            var pace = easyDays[upload.LocalDate] && kilometres.Count > 0 ? kilometres[kilometres.Count / 2] : upload.PaceSecondsPerKm;
-            runs.Add(new(pace, upload.DistanceKm));
-        }
+        EasyRunPace? Paced(Activity run) => easyDays.TryGetValue(run.LocalDate, out var strides) && run.DistanceMetres > 0 && run.MovingTime > TimeSpan.Zero
+            ? new(strides && run.Splits.Where(s => s.IsFullKilometre).Select(s => s.PaceSecondsPerKm).Order().ToList() is { Count: > 0 } kilometres
+                ? kilometres[kilometres.Count / 2]
+                : run.PaceSecondsPerKm, run.DistanceKm)
+            : null;
 
+        List<EasyRunPace> kept = [.. uploads.Select(Paced).OfType<EasyRunPace>()];
         var uploadIds = uploads.Select(a => a.Id).ToHashSet();
+        HashSet<Guid> counted = [];
         foreach (var checkIn in checkIns.Where(c => easyDays.ContainsKey(c.Date) && !(c.ActivityId is { } id && uploadIds.Contains(id))))
         {
             if (checkIn.Answers is { DistanceKm: > 0 and var km, Duration: { } time, DistanceUnreported: false } && time > TimeSpan.Zero)
             {
-                runs.Add(new(time.TotalSeconds / km, km));
+                kept.Add(new(time.TotalSeconds / km, km));
+                if (checkIn.ActivityId is { } linked)
+                {
+                    counted.Add(linked);
+                }
             }
         }
 
-        return runs;
+        List<EasyRunPace> held = [.. recorded
+            .Where(a => a.Source == ActivitySource.Strava && !counted.Contains(a.Id)
+                && !uploads.Any(u => u.StartedAt == a.StartedAt || RunMatch.IsSameRun(u, a)))
+            .Select(Paced)
+            .OfType<EasyRunPace>()];
+        return (kept, held);
     }
 
     private static double? Longest(IReadOnlyList<LoggedRun> runs, DateOnly from, DateOnly to) => runs

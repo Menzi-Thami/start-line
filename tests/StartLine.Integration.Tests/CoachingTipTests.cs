@@ -380,12 +380,13 @@ public sealed class CoachingTipTests
         return (runner, plan.GetProperty("id").GetGuid(), easyDays);
     }
 
-    // A recorded 6 km in 30 minutes (5:00/km), far quicker than this plan's easy pace, kept as an upload or held from Strava.
-    private static async Task Recorded(OnboardingFactory factory, Guid runner, string day, ActivityOrigin origin)
+    // A recorded 6 km, by default in 30 minutes (5:00/km, far quicker than this plan's easy pace), kept as an upload or held
+    // from Strava.
+    private static async Task Recorded(OnboardingFactory factory, Guid runner, string day, ActivityOrigin origin, int minutes = 30, int startMinute = 0)
     {
         var date = DateOnly.ParseExact(day, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
-        var recording = new ActivityRecording(new DateTimeOffset(date.ToDateTime(new TimeOnly(6, 0)), TimeSpan.Zero), ActivityKind.Run,
-            [new(TimeSpan.Zero, 0), new(TimeSpan.FromMinutes(30), 6000)], DeviceTotals.None);
+        var recording = new ActivityRecording(new DateTimeOffset(date.ToDateTime(new TimeOnly(6, startMinute)), TimeSpan.Zero), ActivityKind.Run,
+            [new(TimeSpan.Zero, 0), new(TimeSpan.FromMinutes(minutes), 6000)], DeviceTotals.None);
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
         db.Activities.Add(Activity.Record(runner, recording, date, [], origin));
@@ -415,7 +416,7 @@ public sealed class CoachingTipTests
     }
 
     [Fact]
-    public async Task Fast_easy_runs_held_only_from_Strava_are_never_read_but_uploads_are_and_miles_runners_see_miles()
+    public async Task Fast_easy_runs_held_only_from_Strava_never_choose_the_tip_but_uploads_do_and_miles_runners_see_miles()
     {
         await using var factory = new OnboardingFactory();
         var (stravaOnly, _, stravaDays) = await EasyRunner(factory);
@@ -423,7 +424,7 @@ public sealed class CoachingTipTests
         factory.Time.SetUtcNow(Utc(2026, 11, 26, 4, 0));
         foreach (var day in stravaDays.Take(2))
         {
-            await Recorded(factory, stravaOnly.Id, day, ActivityOrigin.Strava(Random.Shared.NextInt64(1, long.MaxValue), factory.Time.GetUtcNow(), recordedOnGarmin: false));
+            await Recorded(factory, stravaOnly.Id, day, Strava(factory));
         }
 
         foreach (var day in uploadDays.Take(2))
@@ -442,6 +443,76 @@ public sealed class CoachingTipTests
         tip.Text.ShouldContain("Your easy runs last week averaged 8:03/mi; your plan's easy pace is ");
         tip.Text.ShouldContain("/mi.");
         tip.Text.ShouldNotContain("/km");
+
+        // The main tip is already easy-fast: no note saying it twice.
+        tip.Text.ShouldNotContain("About your easy runs");
+    }
+
+    private static ActivityOrigin Strava(OnboardingFactory factory) =>
+        ActivityOrigin.Strava(Random.Shared.NextInt64(1, long.MaxValue), factory.Time.GetUtcNow(), recordedOnGarmin: false);
+
+    [Fact]
+    public async Task Fast_Strava_held_easy_runs_add_a_personal_note_that_is_sent_and_stored_nowhere()
+    {
+        await using var factory = new OnboardingFactory();
+        var (runner, _, easyDays) = await EasyRunner(factory);
+        var (miles, _, milesDays) = await EasyRunner(factory, units: "Miles");
+        factory.Time.SetUtcNow(Utc(2026, 11, 26, 4, 0));
+        foreach (var day in easyDays.Take(2))
+        {
+            await Recorded(factory, runner.Id, day, Strava(factory));
+        }
+
+        foreach (var day in milesDays.Take(2))
+        {
+            await Recorded(factory, miles.Id, day, Strava(factory));
+        }
+
+        factory.Time.SetUtcNow(Utc(2026, 11, 26, 5, 30));
+        (await SendTo(factory, runner.Id)).ShouldBe(CoachingTipOutcome.Sent);
+        (await SendTo(factory, miles.Id)).ShouldBe(CoachingTipOutcome.Sent);
+
+        var tip = factory.Mail.To(runner.Email).ShouldHaveSingleItem();
+        tip.Subject.ShouldBe("Your Taperday tip: Trust your plan's paces");
+        tip.Html.ShouldContain("About your easy runs</h2>");
+        tip.Html.ShouldContain("Your easy runs from Strava last week averaged 5:00/km; your plan&#39;s easy pace is ");
+        tip.Text.ShouldContain("About your easy runs\nYour easy runs from Strava last week averaged 5:00/km; your plan's easy pace is ");
+        tip.Text.ShouldContain("Slow is the point on easy days");
+        factory.Mail.To(miles.Email).ShouldHaveSingleItem().Text.ShouldContain("Your easy runs from Strava last week averaged 8:03/mi; your plan's easy pace is ");
+
+        // Nothing about the note is written: one delivery row each, holding the main tip's key and nothing else.
+        await using var scope = factory.Services.CreateAsyncScope();
+        var rows = await scope.ServiceProvider.GetRequiredService<StartLineDbContext>().OnboardingDeliveries.AsNoTracking()
+            .Where(d => d.RunnerId == runner.Id || d.RunnerId == miles.Id).ToListAsync();
+        rows.Count.ShouldBe(2);
+        rows.ShouldAllBe(d => d.Campaign == OnboardingCampaign.CoachingTip && d.TipKey == "b-1" && d.Episode == "2026-11-26");
+    }
+
+    [Fact]
+    public async Task No_note_for_Strava_easy_runs_within_the_easy_range_or_for_a_held_copy_of_an_upload()
+    {
+        await using var factory = new OnboardingFactory();
+        var (steady, _, steadyDays) = await EasyRunner(factory);
+        var (duplicated, _, duplicatedDays) = await EasyRunner(factory);
+        factory.Time.SetUtcNow(Utc(2026, 11, 26, 4, 0));
+
+        // 6 km in 45 minutes (7:30/km): no quicker than the plan's easy range.
+        foreach (var day in steadyDays.Take(2))
+        {
+            await Recorded(factory, steady.Id, day, Strava(factory), minutes: 45);
+        }
+
+        // One fast run uploaded and also held from Strava (its watch started a minute later: the same run), and one more fast
+        // Strava run: the copy counts once, as the upload, so there's one fast kept run and one fast held run, and neither is enough.
+        await Recorded(factory, duplicated.Id, duplicatedDays[0], ActivityOrigin.Uploaded("easy.fit"));
+        await Recorded(factory, duplicated.Id, duplicatedDays[0], Strava(factory), startMinute: 1);
+        await Recorded(factory, duplicated.Id, duplicatedDays[1], Strava(factory));
+
+        factory.Time.SetUtcNow(Utc(2026, 11, 26, 5, 30));
+        (await SendTo(factory, steady.Id)).ShouldBe(CoachingTipOutcome.Sent);
+        (await SendTo(factory, duplicated.Id)).ShouldBe(CoachingTipOutcome.Sent);
+        factory.Mail.To(steady.Email).ShouldHaveSingleItem().Text.ShouldNotContain("About your easy runs");
+        factory.Mail.To(duplicated.Email).ShouldHaveSingleItem().Text.ShouldNotContain("About your easy runs");
     }
 
     private static async Task<T> Eventually<T>(Func<T?> read, Action? tick = null)

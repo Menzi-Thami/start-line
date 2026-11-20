@@ -49,7 +49,7 @@ The first rule that matches wins (`CoachingTipSelector.Choose`; every threshold 
 
 ### Running figures: read now, never kept
 
-Rule 3 (the long-run jump) reads **kept runs only** through `RunningLogReader` with `includeSynced: false`: the runner's own check-ins and uploads. Rule 5 (comeback) also counts the Strava runs Taperday holds **right now**, as Home does, but only so a runner who did run never gets a "quiet week" tip. Both are worked out on every read. The delivery row keeps only the tip's key and the Thursday, never a distance, and no tip that fires is decided from Strava data (Strava API Policy, see [strava-sync.md](strava-sync.md)).
+Rule 3 (the long-run jump) reads **kept runs only** through `RunningLogReader` with `includeSynced: false`: the runner's own check-ins and uploads. Rule 5 (comeback) also counts the Strava runs Taperday holds **right now**, as Home does, but only so a runner who did run never gets a "quiet week" tip. Both are worked out on every read. The delivery row keeps only the tip's key and the Thursday, never a distance, and no tip that fires is decided from Strava data (Strava API Policy, see [strava-sync.md](strava-sync.md)). Held Strava runs only ever word the personal note below, which is sent and stored nowhere.
 A runner whose runs only come from Strava never gets rule 3, since it uses kept runs only.
 
 ### Easy runs too fast (rule 4)
@@ -66,6 +66,28 @@ A runner whose runs only come from Strava never gets rule 3, since it uses kept 
   moderately hard tires you without making you fitter any faster.
 - Only the key `easy-fast` is stored: no paces. Thresholds: `EasyTooFastSeconds` (10), `MinEasyRunsTooFast` (2),
   `MinEasyShareTooFast` (0.5).
+
+### Personal note: easy runs held from Strava (computed on read, stored nowhere)
+
+Strava-only runners can't trigger rule 4, because it reads kept runs only. So when a runner's tip email is built,
+Taperday also reads the Strava runs it **holds right now** for that runner (the 7-day cache, `CachedUntil` still ahead) on
+the same easy days of the last 7 days, and applies **the same test**: the plan's easy range, more than 10 s/km quicker than
+its fast end, at least 2 runs, at least half of those easy runs with a pace (`CoachingTipSelector.StravaEasyNote`).
+
+- **If it fires,** that week's email gets a short note under the main tip, in the HTML and the plain text, headed
+  "About your easy runs": "Your easy runs from Strava last week averaged 5:00/km; your plan's easy pace is
+  6:20–6:50/km." (or "2 of your 3 easy runs from Strava …"), per mile for Miles runners, then one sentence of "slow is the
+  point".
+- **It is computed on read, sent, and never stored.** No delivery-row change, no key, no flag, no paces: the row keeps only
+  the main tip's key, exactly as before. That's deliberate. Strava's API terms let Taperday hold Strava data only as a
+  short rolling cache (7 days), and nothing derived from it may be kept for good ([strava-sync.md](strava-sync.md)). Using
+  held runs to word one email is fine; recording that the note fired would be keeping something derived from them.
+- **Because nothing records it, it can come again every week** while the runner keeps running their easy days too fast.
+  The owner chose weekly.
+- **Skipped when** the main tip is already `easy-fast` (so it isn't said twice), when the main tip is race week (so race
+  week stays uncluttered), and when the kept-runs rule fired at all, even if its tip is held back by the four-week rule.
+- **No double counting:** a held run that's also uploaded (the same start, or `RunMatch.IsSameRun`) counts once, as the
+  upload, and so does one a check-in carries the runner's own distance and time for. It never chooses the main tip.
 
 ## The tip bank
 
@@ -168,14 +190,18 @@ Counts and ids only, never personal data:
   boundary (330 vs 329.9 s/km against a 340 s/km fast end), fewer than 2 runs, the half-of-easy-runs share, the copy in
   kilometres and miles, the distance-weighted average, its place between the jump and the comeback, and the four-week
   no-repeat.
+- `tests/StartLine.Application.Tests/CoachingTips/StravaEasyNoteTests.cs`: the note for fast held runs (and "2 of your 3"), in miles,
+  none within the range or at exactly 10 s/km, none for one run or under half, none when the main tip is `easy-fast`, when
+  the kept rule fired but its tip is held back, or in race week (but one in the taper), and that it can come weekly.
 - `tests/StartLine.Application.Tests/CoachingTips/CoachingTipEmailTests.cs`: the bank's shape (12/12/20, `g-1` … `g-20`,
   unique keys that fit the column, 2–4 sentences, no g/kg or mg/kg), the copy, first name and encoding, the button, the weekly unsubscribe, the
-  plain text and the previews.
+  plain text and the previews. The note sits under the tip in both parts and is absent without one.
 - `tests/StartLine.Integration.Tests/CoachingTipTests.cs` (disposable SQL, fake clock, fake outbox): the Thursday hour per
   time zone, a missed hour, competing workers, a failed send retried, the weekly unsubscribe, weekly emails off and no
   address, the track step across Thursdays, a long-run jump from logged runs (and not again within four weeks), comeback
   then taper then race week from a real plan, fast easy check-ins giving `easy-fast`, fast Strava-only easy runs ignored
-  while fast uploads count (in miles), a tip not holding back an onboarding email, the budget, off by default, the
+  while fast uploads count (in miles), the Strava note sent with only the main key stored (one row per runner), in km and miles, and no note within the
+  range or for a held copy of an upload, a tip not holding back an onboarding email, the budget, off by default, the
   worker on its schedule, and the preview writing nothing.
 
 ## Not yet

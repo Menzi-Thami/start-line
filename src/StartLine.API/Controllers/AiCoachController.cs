@@ -30,9 +30,12 @@ public sealed class AiCoachController(
     IConfiguration configuration) : ControllerBase
 {
     [HttpGet("status")]
-    public IActionResult Status() =>
-        Ok(new { enabled = configuration.GetValue<bool>("AiCoach:Enabled")
-            && !string.IsNullOrWhiteSpace(configuration["AiCoach:ApiKey"]) });
+    public IActionResult Status()
+    {
+        var enabled = configuration.GetValue<bool>("AiCoach:Enabled")
+            && !string.IsNullOrWhiteSpace(configuration["AiCoach:ApiKey"]);
+        return Ok(new { enabled });
+    }
 
     [HttpPost("ask")]
     [EnableRateLimiting(PresentationDependencyInjection.AiRateLimitPolicy)]
@@ -54,12 +57,26 @@ public sealed class AiCoachController(
         // linked entry are excluded; this is deliberately more conservative than the UI.
         var ownEntries = checkIns.Where(c => c.ActivityId is null)
             .OrderByDescending(c => c.Date).Take(24)
-            .Select(c => new { c.Date, c.SessionType, c.Status, c.DistanceKm, c.Duration, c.Effort })
+            .Select(c => new
+            {
+                c.Date,
+                c.SessionType,
+                c.Status,
+                c.DistanceKm,
+                c.Duration,
+                c.Effort,
+            })
             .ToList();
         var upcoming = saved.Plan.Weeks.SelectMany(w => w.Sessions)
             .Where(s => s.Date >= DateOnly.FromDateTime(DateTime.UtcNow) && s.Type is not SessionType.Strength and not SessionType.Race)
             .OrderBy(s => s.Date).Take(14)
-            .Select(s => new { s.Date, s.Type, s.DistanceKm, s.Title })
+            .Select(s => new
+            {
+                s.Date,
+                s.Type,
+                s.DistanceKm,
+                s.Title,
+            })
             .ToList();
 
         var context = JsonSerializer.Serialize(new

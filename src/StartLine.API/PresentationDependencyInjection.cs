@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Identity.Web;
+using ModelContextProtocol.AspNetCore;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -29,6 +30,7 @@ internal static class PresentationDependencyInjection
     public const string UploadRateLimitPolicy = "uploads";
     public const string BulkUploadRateLimitPolicy = "bulk-uploads";
     public const string WebhookRateLimitPolicy = "webhooks";
+    public const string AiRateLimitPolicy = "ai-coach";
     public const string RunnerPolicy = "runner";
     public const string DefaultScope = "Plans.ReadWrite";
 
@@ -160,6 +162,15 @@ internal static class PresentationDependencyInjection
                     QueueLimit = 0,
                 }));
 
+            // A burst limit on questions. The money limit is durable (AiBudget, in the database); this one resets on restart.
+            o.AddPolicy(AiRateLimitPolicy, ctx =>
+                RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 30,
+                    Window = TimeSpan.FromHours(1),
+                    QueueLimit = 0,
+                }));
+
             // Strava pushes one event per change and retries at most twice; this is far above that and still caps a flood.
             o.AddPolicy(WebhookRateLimitPolicy, ctx =>
                 RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
@@ -169,6 +180,11 @@ internal static class PresentationDependencyInjection
                     QueueLimit = 0,
                 }));
         });
+
+        // External tool access is off by default, and hosted by this same App Service: no second billable server. Stateless,
+        // so a restart (the F1 plan sleeps when idle) loses nothing. Registering it exposes nothing: only Program.cs maps /mcp,
+        // when AiCoach:McpEnabled is on, and every MCP route needs the runner scope.
+        services.AddMcpServer().WithHttpTransport(o => o.Stateless = true).WithTools<TaperdayMcpTools>();
 
         services.AddHealthChecks()
             .AddCheck<RaceCatalogueHealthCheck>("race-catalogue", tags: ["ready"]);

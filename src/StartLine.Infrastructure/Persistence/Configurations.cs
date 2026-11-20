@@ -37,6 +37,18 @@ internal sealed class RunnerConfiguration : IEntityTypeConfiguration<Runner>
         builder.HasMany<ProviderConnection>().WithOne().HasForeignKey(c => c.RunnerId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany<SyncJob>().WithOne().HasForeignKey(j => j.RunnerId).OnDelete(DeleteBehavior.Cascade);
         builder.HasMany<PushSubscription>().WithOne().HasForeignKey(s => s.RunnerId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany<StartLine.Domain.AiCoach.AiUsageDay>().WithOne().HasForeignKey(u => u.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+/// <summary>Counts only: one row per runner per UTC day of AI coach use, gone with the account.</summary>
+internal sealed class AiUsageDayConfiguration : IEntityTypeConfiguration<StartLine.Domain.AiCoach.AiUsageDay>
+{
+    public void Configure(EntityTypeBuilder<StartLine.Domain.AiCoach.AiUsageDay> builder)
+    {
+        builder.ToTable("AiUsageDays");
+        builder.HasKey(u => new { u.RunnerId, u.Day });
+        builder.HasIndex(u => u.Day);
     }
 }
 

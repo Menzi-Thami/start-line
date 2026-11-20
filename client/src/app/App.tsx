@@ -45,7 +45,7 @@ import { ownerOf, readSnapshot, saveSnapshot, type HomeSnapshot } from '../lib/h
 import { localToday, parseTimeSpan, type Units } from '../lib/format'
 import { fromRequest, fromSearchParams, toRequest, toSearchParams, type PlanInputs, type ReplanInputs } from '../lib/plan-url'
 import { prefersMotion, type IntroAudience } from '../lib/motion'
-import type { Activity, CoachNote, GeneratePlanRequest, Runner, TrainingPlan } from '../lib/types'
+import type { Activity, CoachNote, GeneratePlanRequest, Runner, SessionAdjustmentRequest, TrainingPlan } from '../lib/types'
 import { useAuth } from './auth-context'
 
 const AccountPage = lazy(() => import('../features/account/AccountPage').then((module) => ({ default: module.AccountPage })))
@@ -1200,6 +1200,25 @@ export function App() {
                 plan={plan.plan}
                 reveal={revealPlan}
                 journeyPlanId={savedOnScreen && state.kind === 'ready' ? savedOnScreen : null}
+                // The coach: only on the runner's own current plan, and only while the pilot flag is on (off by default).
+                aiCoach={savedOnScreen && state.kind === 'ready' && import.meta.env.VITE_AI_COACH_ENABLED === 'true' ? (() => {
+                  const signedIn = async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to use the coach.'); return token }
+                  return {
+                    status: async () => api.me.aiStatus(await signedIn()),
+                    setConsent: async (consent: boolean) => api.me.setAiConsent(await signedIn(), consent),
+                    ask: async (question: string) => api.me.askAiCoach(await signedIn(), savedOnScreen, question),
+                    preview: async (change: SessionAdjustmentRequest) => api.me.previewSessionAdjustment(await signedIn(), savedOnScreen, change),
+                    // As with "Change my plan": the plan on screen becomes the saved plan, changed day included.
+                    apply: async (change: SessionAdjustmentRequest, previewToken: string) => {
+                      const token = await signedIn()
+                      const result = await api.me.applySessionAdjustment(token, savedOnScreen, change, previewToken)
+                      const saved = await api.me.plan(token, savedOnScreen)
+                      setPlan({ kind: 'ready', plan: saved.plan, inputs: plan.inputs })
+                      return result
+                    },
+                    restore: async (dates: string[]) => { const result = await api.me.restoreSessions(await signedIn(), savedOnScreen, dates); setPlan({ kind: 'ready', plan: result.plan, inputs: plan.inputs }) },
+                  }
+                })() : undefined}
                 onNewRace={startFresh}
                 onOpenJourney={() => openChapter()}
                 onOpenRecovery={() => openRecovery()}

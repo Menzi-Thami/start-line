@@ -21,6 +21,8 @@ public interface IApplicationDbContext
 {
     DbSet<Runner> Runners { get; }
 
+    DbSet<StartLine.Domain.AiCoach.AiUsageDay> AiUsage { get; }
+
     DbSet<SavedPlan> SavedPlans { get; }
 
     DbSet<Activity> Activities { get; }

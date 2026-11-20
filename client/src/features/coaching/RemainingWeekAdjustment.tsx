@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from 'react'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
-import type { RemainingWeekProposal, TrainingPlan } from '../../lib/types'
+import type { RemainingWeekProposal, SessionRevision, TrainingPlan } from '../../lib/types'
+import { runTypeName } from './run-types'
 
 export interface RemainingWeekActions {
   reviewRemaining: () => Promise<RemainingWeekProposal>
@@ -38,7 +39,11 @@ export function RemainingWeekAdjustment({
       setBusy(false)
     }
   }
-  const describe = (km: number | null | undefined) => (km == null ? 'Rest day' : `Easy run · ${formatDistance(km, units)}`)
+  // A run that keeps its type (a long run stays a long run) says so; otherwise it becomes an easy run or a rest day.
+  const describe = (c: SessionRevision) =>
+    c.easyKm == null ? 'Rest day'
+      : c.type ? `${c.type === c.originalType ? c.originalTitle : runTypeName(c.type)} · ${formatDistance(c.easyKm, units)}`
+        : `Easy run · ${formatDistance(c.easyKm, units)}`
   return (
     <section className="section" aria-labelledby={id}>
       <h3 id={id}>Ease the rest of this week</h3>
@@ -72,7 +77,7 @@ export function RemainingWeekAdjustment({
           <ul>
             {proposal.changes.map((c) => (
               <li key={c.date}>
-                {formatDate(c.date)}: {c.originalTitle} · {formatDistance(c.originalKm, units)} → {describe(c.easyKm)}
+                {formatDate(c.date)}: {c.originalTitle} · {formatDistance(c.originalKm, units)} → {describe(c)}
               </li>
             ))}
           </ul>
@@ -109,7 +114,7 @@ export function RemainingWeekAdjustment({
           <ul>
             {current.adjustments.map((c) => (
               <li key={c.date}>
-                {formatDate(c.date)}: originally {c.originalTitle} · {formatDistance(c.originalKm, units)} → {describe(c.easyKm)} (accepted{' '}
+                {formatDate(c.date)}: originally {c.originalTitle} · {formatDistance(c.originalKm, units)} → {describe(c)} (accepted{' '}
                 {formatDate(c.appliedOn)})
               </li>
             ))}

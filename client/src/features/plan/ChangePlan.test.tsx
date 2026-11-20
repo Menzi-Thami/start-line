@@ -68,6 +68,14 @@ describe('Change my plan: day-to-day changes', () => {
     expect(life.restore).toHaveBeenCalledExactlyOnceWith(['2026-10-24'])
   })
 
+  it('says a changed run that keeps its type stays that run, not an easy one', async () => {
+    const user = userEvent.setup()
+    const longer: SessionRevision = { appliedOn: today, date: '2026-10-25', originalType: 'LongRun', originalTitle: 'Long run', originalKm: 6.5, easyKm: 7.5, type: 'LongRun' }
+    setup({ ...planFixture, adjustments: [longer] })
+    await open(user)
+    expect(screen.getByText(/Long run 6.5 km → Long run 7.5 km/)).toBeVisible()
+  })
+
   it('offers one list of choices, and sends a single move to the run’s own day', async () => {
     const user = userEvent.setup()
     render(<ChangePlan plan={planFixture} today={today} units="km" life={{ preview: vi.fn(), apply: vi.fn(), restore: vi.fn() }} week={{ reviewRemaining: vi.fn(), applyRemaining: vi.fn() }} onReplan={vi.fn()} />)

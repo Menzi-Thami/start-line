@@ -210,7 +210,13 @@ public sealed record AccountExportDto(
     IReadOnlyList<ShoeExportDto>? Shoes = null,
     IReadOnlyList<CoachingDecisionExportDto>? CoachingDecisions = null,
     IReadOnlyList<ReadinessDto>? Readiness = null,
-    Journey.JourneyExportDto? Journey = null);
+    Journey.JourneyExportDto? Journey = null,
+    AiCoachExportDto? AiCoach = null);
+
+/// <summary>The runner's AI coach agreement and daily usage counts. Taperday keeps no questions or answers, so there are none to export.</summary>
+public sealed record AiCoachExportDto(bool Consent, DateTimeOffset? ConsentChangedAt, IReadOnlyList<AiUsageExportDto> Usage);
+
+public sealed record AiUsageExportDto(DateOnly Day, int Calls, long InputTokens, long OutputTokens);
 
 /// <summary>An answer to a weekly coaching suggestion, with the plan it belongs to.</summary>
 public sealed record CoachingDecisionExportDto(Guid PlanId, CoachingDecisionDto Decision);
@@ -298,7 +304,10 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             [.. (await db.CoachingDecisions.AsNoTracking().Where(d => planIds.Contains(d.SavedPlanId)).OrderBy(d => d.DecidedAt).ToListAsync(cancellationToken))
                 .Select(d => new CoachingDecisionExportDto(d.SavedPlanId, CoachingDecisionDto.From(d)))],
             [.. (await db.Readiness.AsNoTracking().Where(r => r.RunnerId == runner.Id).OrderBy(r => r.Date).ToListAsync(cancellationToken)).Select(ReadinessDto.From)],
-            await JourneyAsync(runner, plans, cancellationToken));
+            await JourneyAsync(runner, plans, cancellationToken),
+            new AiCoachExportDto(runner.AiCoachConsent, runner.AiCoachConsentChangedAt,
+                await db.AiUsage.AsNoTracking().Where(u => u.RunnerId == runner.Id).OrderBy(u => u.Day)
+                    .Select(u => new AiUsageExportDto(u.Day, u.Calls, u.InputTokens, u.OutputTokens)).ToListAsync(cancellationToken)));
     }
 
     private async Task<Journey.JourneyExportDto> JourneyAsync(Runner runner, List<SavedPlan> plans, CancellationToken cancellationToken)

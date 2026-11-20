@@ -74,6 +74,26 @@ public sealed class Runner
     public DateTimeOffset? HeartRateConsentChangedAt { get; private set; }
 
     /// <summary>
+    /// Whether the runner agreed to their questions, plan and own check-ins being sent to the AI provider to understand and word
+    /// coaching answers. Optional and off by default: without it the coach answers from Taperday's rules alone, and nothing
+    /// leaves Taperday. Never covers Strava data, which no AI path ever receives.
+    /// </summary>
+    public bool AiCoachConsent { get; private set; }
+
+    /// <summary>When the runner last gave or withdrew AI coach consent.</summary>
+    public DateTimeOffset? AiCoachConsentChangedAt { get; private set; }
+
+    /// <summary>Gives or withdraws AI coach consent. Taperday keeps no chat history, so withdrawing leaves nothing to delete.</summary>
+    public void SetAiCoachConsent(bool consent, DateTimeOffset at)
+    {
+        if (consent != AiCoachConsent || AiCoachConsentChangedAt is null)
+        {
+            AiCoachConsent = consent;
+            AiCoachConsentChangedAt = at;
+        }
+    }
+
+    /// <summary>
     /// The secret in the runner's personal calendar link, which always shows their current plan. Calendar apps can't sign
     /// in, so whoever has the link can read the plan: it's issued only when asked for, and a reset stops the old link working.
     /// </summary>

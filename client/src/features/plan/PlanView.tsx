@@ -38,6 +38,7 @@ import { useJourney } from '../journey/useJourney'
 import { OutlookCard } from './OutlookCard'
 import { ProgressInsights } from './ProgressInsights'
 import { PlanCalendar } from './PlanCalendar'
+import { AiCoachPanel, type AiCoachActions } from './AiCoachPanel'
 import { WeekGlance } from './WeekGlance'
 
 const DaySummary = lazy(() => import('./DaySummary'))
@@ -85,6 +86,8 @@ interface Props {
   onInjuryReplan?: () => Promise<void>
   /** Takes a goal the coach suggested. */
   onUseGoal?: (goalSeconds: number) => void
+  /** The coach on the runner's own current plan (behind VITE_AI_COACH_ENABLED). Without it, no coach shows. */
+  aiCoach?: AiCoachActions
   /** The saved plan's id when this is the signed-in runner's own plan: its Finish Line, race result and recovery. */
   journeyPlanId?: string | null
   /** The journey's "Train for another race": the builder, which asks before replacing a saved plan. */
@@ -122,7 +125,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, shareUrl, today, toolbarExtra, onReplan, calendar, runs, onOpenRun, bests, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, journeyPlanId, onNewRace, onOpenJourney, onOpenRecovery, onSignIn, onLoadActivity }: Props) {
+export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, shareUrl, today, toolbarExtra, onReplan, calendar, runs, onOpenRun, bests, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, journeyPlanId, onNewRace, onOpenJourney, onOpenRecovery, onSignIn, onLoadActivity, aiCoach }: Props) {
   const journey = useJourney(!!journeyPlanId)
   const journeyData = journey.state.kind === 'ready' ? journey.state.journey : null
   const completedRace = !!chapterFor(journeyData, journeyPlanId)?.raceResult
@@ -444,6 +447,18 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     })
   }
   const thisWeek = currentWeek === null ? null : plan.weeks.find(week => week.number === currentWeek) ?? null
+  // The coach hands "how should next week change?" to the weekly review in Progress: open it there, then land on it.
+  const [reviewRequest, setReviewRequest] = useState(0)
+  useEffect(() => {
+    if (reviewRequest === 0) return
+    adjustmentRef.current?.scrollIntoView?.({ block: 'start', behavior: prefersMotion() ? 'smooth' : 'auto' })
+    adjustmentRef.current?.focus({ preventScroll: true })
+  }, [reviewRequest])
+  const openWeeklyReview = () => {
+    showTab(tabs.findIndex(t => t.id === 'progress'))
+    setWeeklyReviewOpen(true)
+    setReviewRequest(n => n + 1)
+  }
   const suggestedGoal = plan.suggestedGoal ? parseTimeSpan(plan.suggestedGoal) : null
   const fasterGoal = suggestedGoal !== null && suggestedGoal < goalSeconds ? suggestedGoal : undefined
 
@@ -497,6 +512,10 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
             ))}
           </ul>
         </div>
+      )}
+
+      {!trainingEnded && aiCoach && (
+        <AiCoachPanel plan={plan} today={today} units={units} actions={aiCoach} onOpenWeeklyReview={coach?.adjustments && thisWeek ? openWeeklyReview : undefined} />
       )}
 
       <div className="tabs tabs-frame" hidden={progressInBar && tab === 'progress'}>
@@ -573,7 +592,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
           {!trainingEnded && coach && thisWeek && <details ref={reviewRef} className="disclosure plan-weekly-review" open={weeklyReviewOpen} onToggle={event => setWeeklyReviewOpen(event.currentTarget.open)}><summary>Weekly review</summary>{weeklyReviewOpen && <>
             <YourWeek plan={plan} week={thisWeek} coachNotes={coachNotes ?? []} today={today} units={units} runs={runs ?? []} checkInFor={coach.get} syncedFor={session => coach.synced?.(session)?.state === 'Completed'} noteActions={{ onInjuryReplan, fasterGoal, onUseGoal }} />
             <ReadinessCheckIn today={today} onReview={coach.adjustments ? () => adjustmentRef.current?.scrollIntoView?.({ block: 'start' }) : undefined} />
-            {coach.adjustments && <div ref={adjustmentRef}><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></div>}
+            {coach.adjustments && <div ref={adjustmentRef} tabIndex={-1}><PlanAdjustment current={plan} units={units} actions={coach.adjustments} /></div>}
           </>}</details>}
           {/* Progress does one job: how you're tracking. A headline, the outlook and one chart; the rest waits behind "More detail". */}
           <PlanProgress progress={progress} weeks={plan.weeks.length} currentWeek={currentWeek} />

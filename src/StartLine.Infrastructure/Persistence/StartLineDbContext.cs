@@ -14,6 +14,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 {
     public DbSet<Runner> Runners => Set<Runner>();
 
+    public DbSet<StartLine.Domain.AiCoach.AiUsageDay> AiUsage => Set<StartLine.Domain.AiCoach.AiUsageDay>();
+
     public DbSet<SavedPlan> SavedPlans => Set<SavedPlan>();
 
     public DbSet<Activity> Activities => Set<Activity>();

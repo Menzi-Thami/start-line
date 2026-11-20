@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.Identity.Web;
+using ModelContextProtocol.AspNetCore;
+using StartLine.API.Infrastructure;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
@@ -29,6 +31,7 @@ internal static class PresentationDependencyInjection
     public const string UploadRateLimitPolicy = "uploads";
     public const string BulkUploadRateLimitPolicy = "bulk-uploads";
     public const string WebhookRateLimitPolicy = "webhooks";
+    public const string AiRateLimitPolicy = "ai-coach";
     public const string RunnerPolicy = "runner";
     public const string DefaultScope = "Plans.ReadWrite";
 
@@ -160,6 +163,16 @@ internal static class PresentationDependencyInjection
                     QueueLimit = 0,
                 }));
 
+            // A runner can ask for at most six model calls a day. Provider-side project
+            // spending limits are still required: process restarts reset in-memory buckets.
+            o.AddPolicy(AiRateLimitPolicy, ctx =>
+                RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 6,
+                    Window = TimeSpan.FromDays(1),
+                    QueueLimit = 0,
+                }));
+
             // Strava pushes one event per change and retries at most twice; this is far above that and still caps a flood.
             o.AddPolicy(WebhookRateLimitPolicy, ctx =>
                 RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
@@ -169,6 +182,14 @@ internal static class PresentationDependencyInjection
                     QueueLimit = 0,
                 }));
         });
+
+        // Keep external tool access off by default. It is hosted by this same App Service,
+        // not a second billable server. All MCP routes require the runner scope.
+        if (configuration.GetValue<bool>("AiCoach:McpEnabled"))
+        {
+            services.AddMcpServer().WithHttpTransport().WithTools<TaperdayMcpTools>();
+        }
+        services.AddHttpClient("taperday-ai", client => client.Timeout = TimeSpan.FromSeconds(20));
 
         services.AddHealthChecks()
             .AddCheck<RaceCatalogueHealthCheck>("race-catalogue", tags: ["ready"]);

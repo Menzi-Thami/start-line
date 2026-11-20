@@ -4,6 +4,55 @@
 
 **Important change-control instruction:** PR #294 was merged to staging despite the owner not wanting an automatic merge. **Do not merge this corrective PR to staging, main, or prod without explicit owner approval.** Keep production untouched. The branch and PR exist for review, implementation and tests.
 
+## Product principle: zero-admin running (new owner feedback, 20 Nov 2026)
+
+**Core promise:** **Connect once → record runs as usual → Taperday does the bookkeeping → the plan reacts appropriately.** *Manual uploads and manual check-ins are exception/recovery paths, not the primary experience or the assumed source of all training data.* A runner should be able to complete most weeks without touching the app after connecting their provider, except to read their plan or approve a material change. The product should never punish runners for using a watch.
+
+**Top-priority acceptance KPI:** of runs recorded by runners with a healthy connected integration, target >95% appearing in Taperday without manual action, with a distinct measure of provider latency and match accuracy. This is a **target**, not an existing measured achievement. Track "run recorded → imported → matched to planned workout → reflected in current progress" latency and the percentage requiring user intervention. Persist no prohibited Strava metrics while collecting telemetry.
+
+### Automation tiers (user involvement only on exceptions)
+
+| Trigger | Default experience | User action |
+|---|---|---|
+| Runner first signs up | Offer Connect Strava at a sensible onboarding point, explain benefits, allow Skip; complete OAuth once | One-time consent |
+| Watch/phone records run, connects through supported service | Webhook/sync job imports it, retry/catch-up handles late uploads and outages, re-fetch relevant views | None |
+| Exactly one eligible run matches one planned run that day | Automatically display completion, comparison and source on Home/Plan/Calendar/Progress; never ask "Did you run?" if confident | None |
+| Two runs in a day, a missed-day mismatch, competing plans, an import issue | Do **not** guess or double-count; surface a quiet one-tap match/resolve action only when necessary | One tap only if ambiguous |
+| Workout is shorter or longer than prescribed | Show that the runner showed up, distinguish participation from completing exact intervals/intensity; do not nag to type known distance | None |
+| Runner moves/swaps a workout | Apply the selected move, immediately evaluate safe neighboring workouts; if a material compromise is required, show one contextual explanation | No extra steps for a safe move |
+| Independently eligible training evidence changes | Event-driven re-evaluation of volume, intensity, fatigue and pace; apply only provably safe mechanical corrections, otherwise offer one concise review | Only when material |
+| Sync provider outage/token revoked/API limit | Durable retries and backoff, catch up automatically, show unobtrusive status; request reconnection only when truly required | Usually none |
+| Runner has no supported integration or the recording failed | Existing quick manual completion or .FIT/.GPX/.TCX import remains available and accessible | Fallback |
+| New training week, no new activity | Evaluate on first next relevant API read / durable scheduled opportunity, with no dependence on always-on F1 | None |
+
+### What Taperday already has — preserve, don't rebuild
+
+Repository `docs/strava-sync.md` documents durable `SyncJobs` with webhook enqueue, worker retries/backoff, deduplication, six-week catch-up, a 10-minute scan throttle, visibility/foreground catch-up, status and reconnect, and source-aware import; **do not introduce a second sync pipeline**. `SyncedCompletions.Of` and `GET /api/v1/me/plans/{id}/strava-completions` already show eligible synced runs as completed **on read**, with no permanent check-in write; Home, calendar, progress, and weekly recap reflect this transient completion. It also handles shorter/longer runs, treadmill duration and conflict cases. Improve the flow and QA edge cases rather than remove these features or require runners to tap **Keep this tick** for normal current-week use.
+
+**Honesty about the existing gap:** although synced Strava runs appear completed automatically, the persisted weekly coach (`CoachWeek`) intentionally **does not** use Strava-derived measurements. This means seamless *visual tracking* works today, while fully automatic **durable adaptive training** from watch runs requires a compliant independent source. **Do not claim that merely connecting Strava will already personalize lasting paces and mileage.**
+
+### How to close the gap without putting work on the runner
+
+1. **Maximise existing automated Strava experience:** make connection prominent (but skippable), confirm success, improve high-confidence auto-matching, preserve sync latency/backoff and catch-up reliability; update Home/Plan without refresh; remove redundant "tick the run" prompts where auto-completion is already confident. The runner must never have to upload the exact run solely to see today's progress.
+2. **Build a compliant first-party automatic activity feed for persistent adaptation:** investigate direct approved provider APIs (Garmin **if partnership access approved**, Polar AccessLink, COROS where accessible, Apple ecosystem **through a supported native bridge if necessary**, not an imaginary browser-only HealthKit API). Prioritise providers by realistic access, developer obligations, costs, geography and watch coverage. Implement source provenance, explicit user consent, signed event validation, token refresh, backfill, dedup, deletion, retry, and retention rules. Import eligible data into the existing `ActivityRecorder` instead of duplicating it. This is **future integration work**; none is claimed implemented.
+3. **Do not falsely treat Strava as that durable adaptation source.** Its API policy bars third-party AI/MCP exposure and restricts cache/derived retention. Existing visual session completion can use the permitted transient cache as documented. Confirm exact derived-data rights with Strava/legal review before any different use. Never create a permanent check-in, training fitness estimate, coaching adaptation or separate "copy" of a Strava activity without a permitted independent basis. A manual **user-declared** completion can still count, but should not be an everyday requirement. Never fabricate a user declaration.
+4. **Use zero-LLM deterministic coaching initially:** run/event handling, date spacing, rest and volume protections don't require a paid model. Only eligible independent data feeds progression changes. This lets Taperday behave intelligently now while first-party integrations are added.
+5. **Treat raw file uploads as the safety net:** maintain drag/drop or share-file upload, fast parsing, clear duplicate detection and background processing, but never design primary screens/marketing around manual uploads.
+6. **Measure and close actual friction:** automated completion coverage, days until next user-required manual action, reconnection rate, unresolved activity conflicts, time to synced completion, and percentage of adaptations accepted/undone. Include feature-flagged telemetry without sensitive routes or raw third-party data.
+
+### No-friction QA cases required
+
+- Connect Strava once, record a Garmin-origin run, close the PWA: on next open, sync catches up without upload/check-in, matching the same local-date planned run on Home, day detail, Calendar, Progress and recap.
+- Late upload, missed webhook, provider rate limit, app idle/F1 sleeping, overnight timezone transition, partial sync failure: existing durable job/backoff plus foreground scan recover without the user tapping **Check for runs**; no duplicate activity or ghost completion.
+- Run is 4.5 km against a 6 km plan: automatically show "run recorded" and shortfall, not an unearned claim that prescribed intervals were met.
+- Two runs in one local day / run on a moved workout date: match only when unambiguous; never wrongly check a different session. If ambiguous, one-tap resolve rather than a full manual form.
+- Import a separate eligible direct-provider activity: auto-create source-attributed independent run evidence, de-duplicate any existing Strava display copy, trigger safe adaptation evaluation once.
+- Revoke connection / delete run / expire the Strava cache: transient displayed Strava figures disappear appropriately, without leaving stale stored coaching decisions derived from them.
+- Users with no connected provider: their plan still works, manual logging remains fast and optional, and the app doesn't harass them to connect every visit.
+- Prove that none of these background/foreground events triggers an LLM request, a chat UI, a billable assistant call, or an aggressive plan edit.
+
+**Do not** build a separate native app as a precondition of these initial improvements: Taperday remains a responsive PWA. An eventual HealthKit/native bridge or first-party provider partnership is a **later separately approved integration** if it proves essential.
+
 ## Current corrective PR status
 
 - Branch: `fix/adaptive-coaching-no-chat` created from staging after PR #294.
@@ -16,7 +65,7 @@
 
 The runner's ordinary journey:
 
-1. A runner logs a completed run (manual check-in or independently uploaded FIT/GPX/TCX), marks one missed, changes availability/strength days, or drags/swaps a workout in Calendar.
+1. A runner simply records their workout as usual on their watch/phone. Taperday's existing connected sync imports and displays eligible runs automatically. Independently eligible provider recordings (when added), manual check-ins and independent uploads can also become durable training evidence. Runners may mark a run missed or drag/swap a workout in Calendar.
 2. Taperday immediately **re-evaluates the affected remaining week** and the relevant part of the future plan using the **existing deterministic training rules**, without a new question from the runner. A small bounded compute path should run on the normal API request; do not depend on an always-on background worker (Azure App Service F1 sleeps).
 3. **No change needed:** do not show a popup or a "nothing changed" toast. No noisy notifications.
 4. **Safe mechanical calendar adjustment:** automatically realign affected *future* rest/easy days to prevent hard days stacking, keeping the runner's manually chosen moved workout on its new date; notify only if an actual prescription changed. Preserve the user's move as the source of truth unless unsafe, in which case **offer alternatives without silently moving their chosen session again**.
@@ -47,7 +96,7 @@ The runner's ordinary journey:
 
 - **Permitted inputs for persisted adaptive coaching:** Taperday plan, manually entered independent check-ins, independently uploaded activity files with validated provenance, readiness answers, and runner-initiated calendar changes. Deduplicate upload/check-in associations.
 - **Strava API-derived records must not be sent to AI/MCP and should not drive *persisted* adaptive training decisions.** See `docs/strava-sync.md` for the 7-day cache and presentational auto-completion semantics, and https://www.strava.com/legal/api_policy . Existing "completed via Strava" can continue to display transiently under current rules, but it is not permanent independently recorded coaching evidence. Do not "launder" Strava data through a derived metric, copied check-in or cached completion. If data source unclear, fail closed and exclude.
-- For runners using Garmin/Apple Watch via Strava, Taperday can show a live synced completion; to produce a durable evidence-driven training adjustment, they may need a permitted **independently uploaded** recording or their own manual log, until a compliant first-party device integration exists. This is a genuine product limitation, not a reason to silently break Strava policy.
+- For runners using Garmin/Apple Watch via Strava, Taperday can show a live synced completion with **no manual upload or tick**. To produce durable evidence-driven adaptation from watch metrics, prioritise a compliant direct automatic provider connection as defined above. Until such integration is in place, the existing optional independent upload/manual log is a fallback, **not an expected daily step**. Do not silently break Strava policy or promise automatic long-term coaching that this source cannot provide.
 - No AI provider is **necessary** to make a plan adaptive. Prefer deterministic analysis for pace/load, only consider a private backend model later for narrative summaries with opt-in/privacy and permitted data. Do not imply a paid LLM is required. No user chat.
 
 ## Architecture and implementation sequence
@@ -86,13 +135,13 @@ Provide before/after `date, type, distanceKm, estimatedDuration, pace zone, stru
 5. Log a 5 km run when 8 km prescribed: update actual progress without falsely declaring the prescribed intensity met; future adaptation only if supported by rule and enough evidence.
 6. Log multiple weeks of independent runs comfortably ahead of planned pace: offer a *future* pace adjustment only with enough valid evidence and without retrospectively changing already logged workouts.
 7. Pain/illness, beginners, run-walk ultras, taper/race week: never make aggressive increases; no medical diagnosis.
-8. Strava-only runner: synced run continues to appear as permitted display, but isn't copied into stored training evidence or AI payload; clearly handle insufficient independent evidence.
+8. Strava-only runner: synced run automatically appears as permitted display without upload/check-in; it isn't copied into stored training evidence or AI payload, and any lack of independent progression evidence is explained only when material.
 9. Move then log late, undo, swap twice, switch account, offline replay, 2 devices: idempotent, no stale overwrite or phantom sessions.
 10. App loads with AI env flags on: still **no Ask the coach** surface. Existing calendar, check-ins, weekly review and run modification remain functional.
 
 ## Definition of done
 
-- All adapted plans are driven by recorded data and explicit reschedule events, without users talking to a model.
+- All adapted plans are driven by eligible automatically ingested recorded data and reschedule events, without users talking to a model; manual logging/uploads remain fallback, not the default.
 - Suggestions are timely, visible only when meaningful; safe corrections apply consistently, larger ones are approved. Restoring old plans and training history works.
 - Event-driven updates and idempotency pass isolated domain/integration tests; provenance excludes Strava from persistent adaptive and model/MCP paths.
 - Backend unit/integration/SQL, frontend Vitest/lint/typecheck and browser E2E mobile/desktop both themes and reduced motion pass. Real staging QA with synthetic runner verifies full journeys; screenshots and test evidence attached to this PR.

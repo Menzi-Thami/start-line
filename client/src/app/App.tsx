@@ -1200,6 +1200,12 @@ export function App() {
                 plan={plan.plan}
                 reveal={revealPlan}
                 journeyPlanId={savedOnScreen && state.kind === 'ready' ? savedOnScreen : null}
+                onAskAi={savedOnScreen && state.kind === 'ready' && import.meta.env.VITE_AI_COACH_ENABLED === 'true'
+                  ? async (question) => {
+                    const token = await auth.getToken()
+                    if (!token) throw new Error('Sign in again to ask the coach.')
+                    return api.me.askAiCoach(token, savedOnScreen, question)
+                  } : undefined}
                 onNewRace={startFresh}
                 onOpenJourney={() => openChapter()}
                 onOpenRecovery={() => openRecovery()}

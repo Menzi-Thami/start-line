@@ -107,6 +107,8 @@ public sealed class AiCoachController(
             model,
             store = false,
             max_completion_tokens = 500,
+            reasoning_effort = "none",
+            response_format = new { type = "json_object" },
             messages = new object[]
             {
                 new { role = "system", content = rules },

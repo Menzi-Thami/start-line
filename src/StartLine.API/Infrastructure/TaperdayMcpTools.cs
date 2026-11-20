@@ -29,8 +29,13 @@ public sealed class TaperdayMcpTools(IDispatcher dispatcher)
         var saved = await dispatcher.Send(new GetMyPlanQuery(planId), cancellationToken);
         return new
         {
-            saved.Id, saved.Name, saved.Status, saved.Plan.Race, saved.Plan.GoalTime,
-            saved.Plan.Paces, saved.Plan.Weeks,
+            saved.Id,
+            saved.Name,
+            saved.Status,
+            saved.Plan.Race,
+            saved.Plan.GoalTime,
+            saved.Plan.Paces,
+            saved.Plan.Weeks,
         };
     }
 
@@ -44,7 +49,9 @@ public sealed class TaperdayMcpTools(IDispatcher dispatcher)
         return entries.Where(entry => entry.ActivityId is null)
             .Select(entry => new
             {
-                entry.Date, entry.SessionType, entry.Status,
+                entry.Date,
+                entry.SessionType,
+                entry.Status,
                 entry.DistanceKm,
                 entry.Duration,
                 entry.Effort

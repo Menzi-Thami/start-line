@@ -162,13 +162,12 @@ internal static class PresentationDependencyInjection
                     QueueLimit = 0,
                 }));
 
-            // A runner can ask for at most six model calls a day. Provider-side project
-            // spending limits are still required: process restarts reset in-memory buckets.
+            // A burst limit on questions. The money limit is durable (AiBudget, in the database); this one resets on restart.
             o.AddPolicy(AiRateLimitPolicy, ctx =>
                 RateLimitPartition.GetFixedWindowLimiter(ClientKey(ctx), _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 6,
-                    Window = TimeSpan.FromDays(1),
+                    PermitLimit = 30,
+                    Window = TimeSpan.FromHours(1),
                     QueueLimit = 0,
                 }));
 
@@ -182,13 +181,10 @@ internal static class PresentationDependencyInjection
                 }));
         });
 
-        // Keep external tool access off by default. It is hosted by this same App Service,
-        // not a second billable server. All MCP routes require the runner scope.
-        if (configuration.GetValue<bool>("AiCoach:McpEnabled"))
-        {
-            services.AddMcpServer().WithHttpTransport().WithTools<TaperdayMcpTools>();
-        }
-        services.AddHttpClient("taperday-ai", client => client.Timeout = TimeSpan.FromSeconds(20));
+        // External tool access is off by default, and hosted by this same App Service: no second billable server. Stateless,
+        // so a restart (the F1 plan sleeps when idle) loses nothing. Registering it exposes nothing: only Program.cs maps /mcp,
+        // when AiCoach:McpEnabled is on, and every MCP route needs the runner scope.
+        services.AddMcpServer().WithHttpTransport(o => o.Stateless = true).WithTools<TaperdayMcpTools>();
 
         services.AddHealthChecks()
             .AddCheck<RaceCatalogueHealthCheck>("race-catalogue", tags: ["ready"]);

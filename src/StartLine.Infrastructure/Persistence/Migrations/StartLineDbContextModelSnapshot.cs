@@ -261,6 +261,33 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("Activities", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.AiCoach.AiUsageDay", b =>
+                {
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("Day")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Calls")
+                        .HasColumnType("int");
+
+                    b.Property<long>("CostMicroUsd")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("InputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("OutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RunnerId", "Day");
+
+                    b.HasIndex("Day");
+
+                    b.ToTable("AiUsageDays", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1163,6 +1190,12 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("AiCoachConsent")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("AiCoachConsentChangedAt")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("BeginnerProgressJson")
                         .HasColumnType("nvarchar(max)");
 
@@ -1613,6 +1646,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Navigation("BestEfforts");
 
                     b.Navigation("Splits");
+                });
+
+            modelBuilder.Entity("StartLine.Domain.AiCoach.AiUsageDay", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("StartLine.Domain.Coaching.CoachWeek", b =>

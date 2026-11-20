@@ -124,6 +124,15 @@ public static class DependencyInjection
         services.AddHostedService<RunnerWeeklyRecapWorker>();
         services.AddOptions<OnboardingReminderOptions>().BindConfiguration(OnboardingReminderOptions.Section);
         services.AddHostedService<OnboardingReminderWorker>();
+        // The AI coach: off unless configured. No request logging: the provider key travels in a header (docs/ai-coach-mcp.md).
+        services.AddOptions<AiCoach.AiCoachOptions>().BindConfiguration(AiCoach.AiCoachOptions.Section);
+        services.AddSingleton(sp =>
+        {
+            var ai = sp.GetRequiredService<IOptions<AiCoach.AiCoachOptions>>().Value;
+            return new StartLine.Application.Features.AiCoach.AiCoachSettings(ai.Enabled, ai.DailyCallsPerRunner, ai.MonthlyBudgetUsd, ai.McpEnabled);
+        });
+        services.AddHttpClient<StartLine.Application.Features.AiCoach.ICoachLanguageModel, AiCoach.OpenAiCoachModel>(http => http.Timeout = Timeout.InfiniteTimeSpan)
+            .RemoveAllLoggers();
         services.AddOptions<CoachingTipOptions>().BindConfiguration(CoachingTipOptions.Section);
         services.AddHostedService<CoachingTipWorker>();
         services.AddOptions<UpdateAnnouncementOptions>().BindConfiguration(UpdateAnnouncementOptions.Section);

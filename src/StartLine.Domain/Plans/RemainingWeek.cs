@@ -8,9 +8,13 @@ namespace StartLine.Domain.Plans;
 /// An accepted change, including the original prescription. Null EasyKm means rest. With <paramref name="MovedFrom"/>, the
 /// session planned on that day is run on <paramref name="Date"/> instead, as written. A move from a day still to come also
 /// rests that day (its own revision); a missed day in the past keeps its history and is made up here.
+/// With <paramref name="Type"/> (an exact change from <see cref="SessionAdjuster"/>), the run stays that steady type at
+/// <paramref name="EasyKm"/>, which may be a little longer than the original, and the two paces are for its own zone.
+/// Without it, the run becomes an easy run of at most its original distance, as every change saved before it.
 /// </summary>
 public sealed record SessionRevision(DateOnly AppliedOn, DateOnly Date, SessionType OriginalType, string OriginalTitle,
-    double OriginalKm, double? EasyKm, double? EasyFastestSecondsPerKm = null, double? EasySlowestSecondsPerKm = null, DateOnly? MovedFrom = null);
+    double OriginalKm, double? EasyKm, double? EasyFastestSecondsPerKm = null, double? EasySlowestSecondsPerKm = null, DateOnly? MovedFrom = null,
+    SessionType? Type = null);
 
 public static class RemainingWeek
 {
@@ -79,6 +83,23 @@ public static class RemainingWeek
             if (revision is null || !SessionCheckIn.IsCheckable(session.Type)) return new[] { session };
             if (revision.EasyKm is not { } km) return Array.Empty<PlannedSession>();
             var paces = new Dictionary<PaceZone, PaceRange>(plan.Paces);
+            if (revision.Type is { } kept && SessionAdjuster.IsSteady(kept))
+            {
+                // An exact change keeps the run what it was: a long run stays a long run, with its run/walk, at its new distance.
+                if (revision is { EasyFastestSecondsPerKm: { } keptFast, EasySlowestSecondsPerKm: { } keptSlow })
+                    paces[SessionAdjuster.ZoneOf(kept)] = new(Pace.FromSecondsPerKilometre(keptFast), Pace.FromSecondsPerKilometre(keptSlow));
+                var builder = new WorkoutBuilder(plan.Category, paces, plan.RaceDistance, runWalk: session.RunWalk is not null);
+                return new[]
+                {
+                    kept switch
+                    {
+                        SessionType.LongRun => builder.Long(session.Date, SessionType.LongRun, km),
+                        SessionType.MediumLongRun => builder.MediumLong(session.Date, km),
+                        _ => builder.Easy(session.Date, kept, km),
+                    },
+                };
+            }
+
             if (revision is { EasyFastestSecondsPerKm: { } fast, EasySlowestSecondsPerKm: { } slow })
                 paces[PaceZone.Easy] = new(Pace.FromSecondsPerKilometre(fast), Pace.FromSecondsPerKilometre(slow));
             return new[] { new WorkoutBuilder(plan.Category, paces, plan.RaceDistance).Easy(session.Date, SessionType.Easy, Math.Min(km, session.DistanceKm)) };

@@ -59,6 +59,22 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseCors(PresentationDependencyInjection.SpaCorsPolicy);
+// MCP: a 401 points clients at the protected-resource metadata (RFC 9728). Before authentication, so it sees the challenge.
+var mcpEnabled = app.Configuration.GetValue<bool>("AiCoach:McpEnabled");
+if (mcpEnabled)
+{
+    app.UseWhen(c => c.Request.Path.StartsWithSegments("/mcp"), branch => branch.Use(async (context, next) =>
+    {
+        context.Response.OnStarting(() =>
+        {
+            if (context.Response.StatusCode == StatusCodes.Status401Unauthorized)
+                context.Response.Headers.Append("WWW-Authenticate", $"Bearer resource_metadata=\"{McpResourceMetadata.MetadataUri(context.Request)}\"");
+            return Task.CompletedTask;
+        });
+        await next();
+    }));
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
@@ -72,9 +88,11 @@ if (app.Environment.IsDevelopment())
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready", new() { Predicate = c => c.Tags.Contains("ready") }).AllowAnonymous();
 app.MapControllers();
-if (app.Configuration.GetValue<bool>("AiCoach:McpEnabled"))
+if (mcpEnabled)
 {
-    // Never expose runner data through an anonymous MCP handshake or tool call.
+    // Never expose runner data through an anonymous MCP handshake or tool call. The metadata names no runner.
+    app.MapGet(McpResourceMetadata.Path, (HttpRequest request, IConfiguration configuration) => Results.Json(McpResourceMetadata.For(request, configuration)))
+        .AllowAnonymous().ExcludeFromDescription();
     app.MapMcp("/mcp").RequireAuthorization(PresentationDependencyInjection.RunnerPolicy);
 }
 

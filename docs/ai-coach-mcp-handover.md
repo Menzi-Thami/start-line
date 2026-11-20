@@ -1,5 +1,13 @@
 # Taperday AI Coach + MCP — complete agent handover (PR #294)
 
+> **Status, 20 November 2026 (second pass):** the design now lives in [ai-coach-mcp.md](ai-coach-mcp.md), which is current. Built:
+> exact time/distance/pace changes for one upcoming run (`SessionAdjuster`, previewed, stale-safe, undoable, run keeps its type);
+> weekly adaptation routed to the existing weekly coach rather than a second engine; a rules-only question reader so the coach works
+> with no AI; AI as an opt-in reader behind a strict schema, fail-closed durable budget, Strava-free evidence projection with uploads;
+> stateless authenticated MCP with RFC 9728 discovery and a read-only `preview_run_change`. Still open, by design or for the owner:
+> third-party MCP client onboarding (Entra has no dynamic client registration), the privacy notice change before production AI,
+> a live provider test (needs a key on staging), and real-runner rollout. The sections below are the original brief, kept for history.
+
 **Purpose:** Finish the end-to-end vision: a personalised, opt-in training coach that can recommend and, **with explicit runner approval**, modify future workout **distance**, **duration**, **target pace** and, when justified by independent evidence, the remaining **week-by-week plan**. MCP makes approved read-only training tools available to authenticated external clients. Keep the current PWA, brand, animations and light/dark modes; **do not redesign the site**.
 
 **Owner's constraints (20 November 2026):** fewer than 10 active runners, comfortable piloting paid AI, initial target budget about **R100/month additional AI spend**, use current Azure hosting initially, protect existing plan functionality, use staging before production. AI is meant to be meaningfully **dynamic**, not only a chat window and not only shortening workouts.

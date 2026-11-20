@@ -149,6 +149,26 @@ public sealed class SavedPlan
     }
 
     /// <summary>
+    /// Applies one exact change to an upcoming run (<see cref="SessionAdjuster"/>): today to the next two weeks, never the race or
+    /// strength, a rest or a steady run no more than <see cref="SessionAdjuster.MaxRunIncreaseShare"/> longer than it is, or an easy
+    /// run no longer than the original. The adjuster decides what's allowed; this is the last check before anything is saved.
+    /// </summary>
+    public void ApplySessionAdjustment(SessionRevision revision, DateOnly today)
+    {
+        ArgumentNullException.ThrowIfNull(revision);
+        var ceiling = revision.Type is { } kept && SessionAdjuster.IsSteady(kept) && kept == revision.OriginalType
+            ? revision.OriginalKm * (1 + SessionAdjuster.MaxRunIncreaseShare) + 0.001
+            : revision.OriginalKm;
+        if (Status != SavedPlanStatus.Active || revision.AppliedOn != today || revision.Date < today || revision.MovedFrom is not null
+            || revision.Date >= today.AddDays(LifeHappens.HorizonDays) || revision.OriginalType is SessionType.Strength or SessionType.Race
+            || revision.EasyKm is { } km && (!double.IsFinite(km) || km < RemainingWeek.MinimumRunKm || km > ceiling)
+            || revision.EasyFastestSecondsPerKm is { } fast && (!double.IsFinite(fast) || fast <= 0)
+            || revision.EasySlowestSecondsPerKm is { } slow && (!double.IsFinite(slow) || slow <= 0))
+            throw new DomainException("Only upcoming runs in the next two weeks can change. Past sessions stay unchanged.");
+        Adjustments = [.. MergeAdjustments(Adjustments, [revision])];
+    }
+
+    /// <summary>
     /// Saved changes plus new ones, as the plan keeps them; used for the preview too, so it shows exactly what applying saves.
     /// A day changed before keeps its original prescription. A session is only ever in one place: moving it again replaces
     /// its earlier move, and moving it back to the day it was written cancels the move and that day's rest.

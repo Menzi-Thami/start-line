@@ -49,8 +49,10 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   const today = page.getByRole('region', { name: 'Today', exact: true })
   await expect(today.getByText('Imported from Strava', { exact: true })).toBeVisible()
   await expect(today.getByRole('button', { name: 'Open run details', exact: true })).toBeVisible()
-  await expect(today.getByRole('button', { name: 'Keep this tick', exact: true })).toHaveCount(0)
-  await today.getByRole('button', { name: 'Log a run manually', exact: true }).click()
+  // Home offers the optional one-tap tick straight away; nothing is saved until the runner keeps it.
+  const prompt = today.getByRole('region', { name: 'Tick off today’s session', exact: true })
+  await expect(prompt.getByText('You ran today. Tick off this session?', { exact: true })).toBeVisible()
+  await expect(prompt.getByRole('button', { name: 'Keep this tick', exact: true })).toHaveCount(1)
   await expect(today.getByText('Completed via Strava', { exact: true })).toBeVisible()
   await expect(today.locator('.home-done-chip')).toHaveCount(0)
   await expect(today.locator('.strava-completion-figures')).toHaveText('Planned 6 km · Ran 4.1 km')

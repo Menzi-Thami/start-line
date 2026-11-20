@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ModelContextProtocol.AspNetCore;
 using Scalar.AspNetCore;
 using StartLine.API;
 using StartLine.API.Infrastructure;
@@ -71,6 +72,11 @@ if (app.Environment.IsDevelopment())
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready", new() { Predicate = c => c.Tags.Contains("ready") }).AllowAnonymous();
 app.MapControllers();
+if (app.Configuration.GetValue<bool>("AiCoach:McpEnabled"))
+{
+    // Never expose runner data through an anonymous MCP handshake or tool call.
+    app.MapMcp("/mcp").RequireAuthorization(PresentationDependencyInjection.RunnerPolicy);
+}
 
 await app.RunAsync();
 

@@ -23,6 +23,18 @@ afterEach(() => {
 })
 
 
+describe('adaptive coaching does not ask runners to talk to AI', () => {
+  it('has no conversational coach entry, question input or AI opt-in control', () => {
+    view()
+    expect(screen.queryByRole('button', { name: /ask the coach/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: /what would you like help with/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('switch', { name: /AI/i })).not.toBeInTheDocument()
+    // Training and progress remain ordinary parts of the running plan.
+    expect(screen.getByRole('tab', { name: 'Calendar' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Progress' })).toBeInTheDocument()
+  })
+})
+
 describe('plan navigation and progress clarity', () => {
   it('returns directly to the starting week after browsing later weeks', async () => {
     view()

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using StartLine.Application.Features.CoachingTips;
 using StartLine.Application.Features.Onboarding;
+using StartLine.Domain.Activities;
 using StartLine.Domain.Runners;
 using StartLine.Infrastructure.Email;
 using StartLine.Infrastructure.Persistence;
@@ -29,11 +30,11 @@ public sealed class CoachingTipTests
 
     private sealed record Signup(HttpClient Client, string Email, Guid Id);
 
-    private static async Task<Signup> Runner(OnboardingFactory factory, string timeZone = "Africa/Johannesburg", bool weekly = true, bool withEmail = true)
+    private static async Task<Signup> Runner(OnboardingFactory factory, string timeZone = "Africa/Johannesburg", bool weekly = true, bool withEmail = true, string units = "Kilometres")
     {
         var email = $"{Guid.NewGuid():N}@example.com";
         var client = factory.CreateClient().As(Guid.NewGuid().ToString(), withEmail ? email : null);
-        var me = await Json(await client.PutAsJsonAsync(Url("/api/v1/me"), new { displayName = "Naledi Dlamini", timeZone, units = "Kilometres", weeklyEmails = weekly, acceptPrivacyNotice = true }));
+        var me = await Json(await client.PutAsJsonAsync(Url("/api/v1/me"), new { displayName = "Naledi Dlamini", timeZone, units, weeklyEmails = weekly, acceptPrivacyNotice = true }));
         return new(client, email, me.GetProperty("id").GetGuid());
     }
 
@@ -355,6 +356,92 @@ public sealed class CoachingTipTests
         previews.ShouldAllBe(p => p.Unsubscribe == null && p.Html.Contains("Hi Sample.", StringComparison.Ordinal));
         factory.Mail.Sent.Count.ShouldBe(3);
         (await Tips(factory)).ShouldNotContain(d => d.ClaimedAt >= started);
+    }
+
+    // A 10K plan built on 16 November 2026 for a runner in the given units, and the days of easy running (Easy, Recovery,
+    // EasyWithStrides) in the seven days before Thursday 26 November.
+    private static async Task<(Signup Runner, Guid Plan, List<string> EasyDays)> EasyRunner(OnboardingFactory factory, string units = "Kilometres")
+    {
+        factory.Time.SetUtcNow(Utc(2026, 11, 16, 9, 0));
+        var runner = await Runner(factory, units: units);
+        var saved = await Json(await runner.Client.PostAsJsonAsync(Url("/api/v1/me/plans"), new
+        {
+            plan = new { raceName = "Tip 10K", distanceKm = 10, raceDate = "2027-01-17", goalTime = "00:55:00", runDays = new[] { "Monday", "Wednesday", "Friday", "Saturday", "Sunday" }, longRunDay = "Sunday", currentWeeklyKm = 25, planFrom = "2026-11-09", version = 2 },
+        }));
+        var plan = await Json(await runner.Client.GetAsync(Url($"/api/v1/me/plans/{saved.GetProperty("id").GetGuid()}")));
+        var easyDays = plan.GetProperty("plan").GetProperty("weeks").EnumerateArray()
+            .SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .Where(s => s.GetProperty("type").GetString() is "Easy" or "Recovery" or "EasyWithStrides")
+            .Select(s => s.GetProperty("date").GetString()!)
+            .Where(d => string.CompareOrdinal(d, "2026-11-19") >= 0 && string.CompareOrdinal(d, "2026-11-25") <= 0)
+            .Distinct()
+            .ToList();
+        easyDays.Count.ShouldBeGreaterThanOrEqualTo(2);
+        return (runner, plan.GetProperty("id").GetGuid(), easyDays);
+    }
+
+    // A recorded 6 km in 30 minutes (5:00/km), far quicker than this plan's easy pace, kept as an upload or held from Strava.
+    private static async Task Recorded(OnboardingFactory factory, Guid runner, string day, ActivityOrigin origin)
+    {
+        var date = DateOnly.ParseExact(day, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        var recording = new ActivityRecording(new DateTimeOffset(date.ToDateTime(new TimeOnly(6, 0)), TimeSpan.Zero), ActivityKind.Run,
+            [new(TimeSpan.Zero, 0), new(TimeSpan.FromMinutes(30), 6000)], DeviceTotals.None);
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
+        db.Activities.Add(Activity.Record(runner, recording, date, [], origin));
+        await db.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Easy_runs_checked_in_well_under_the_easy_pace_get_the_easy_should_feel_easy_tip_with_their_paces()
+    {
+        await using var factory = new OnboardingFactory();
+        var (runner, plan, easyDays) = await EasyRunner(factory);
+        factory.Time.SetUtcNow(Utc(2026, 11, 26, 4, 0));
+        foreach (var day in easyDays.Take(2))
+        {
+            await Json(await runner.Client.PutAsJsonAsync(Url($"/api/v1/me/plans/{plan}/check-ins/additional/{Guid.NewGuid()}/{day}/Easy"), new { status = "Done", actualSessionType = "Easy", distanceKm = 6, duration = "00:30:00" }));
+        }
+
+        factory.Time.SetUtcNow(Utc(2026, 11, 26, 5, 30));
+        (await SendTo(factory, runner.Id)).ShouldBe(CoachingTipOutcome.Sent);
+        var tip = factory.Mail.To(runner.Email).ShouldHaveSingleItem();
+        tip.Subject.ShouldBe("Your Taperday tip: Easy should feel easy");
+        tip.Text.ShouldContain("Your easy runs last week averaged 5:00/km; your plan's easy pace is ");
+        tip.Text.ShouldContain("Slow is the point.");
+
+        // Only the key is kept: no paces.
+        (await Tips(factory, runner.Id)).ShouldHaveSingleItem().TipKey.ShouldBe("easy-fast");
+    }
+
+    [Fact]
+    public async Task Fast_easy_runs_held_only_from_Strava_are_never_read_but_uploads_are_and_miles_runners_see_miles()
+    {
+        await using var factory = new OnboardingFactory();
+        var (stravaOnly, _, stravaDays) = await EasyRunner(factory);
+        var (uploader, _, uploadDays) = await EasyRunner(factory, units: "Miles");
+        factory.Time.SetUtcNow(Utc(2026, 11, 26, 4, 0));
+        foreach (var day in stravaDays.Take(2))
+        {
+            await Recorded(factory, stravaOnly.Id, day, ActivityOrigin.Strava(Random.Shared.NextInt64(1, long.MaxValue), factory.Time.GetUtcNow(), recordedOnGarmin: false));
+        }
+
+        foreach (var day in uploadDays.Take(2))
+        {
+            await Recorded(factory, uploader.Id, day, ActivityOrigin.Uploaded("easy.fit"));
+        }
+
+        factory.Time.SetUtcNow(Utc(2026, 11, 26, 5, 30));
+        (await SendTo(factory, stravaOnly.Id)).ShouldBe(CoachingTipOutcome.Sent);
+        (await SendTo(factory, uploader.Id)).ShouldBe(CoachingTipOutcome.Sent);
+
+        // The Strava runs are held now, but nothing stored may be decided from them: the track's next tip instead.
+        (await Tips(factory, stravaOnly.Id)).ShouldHaveSingleItem().TipKey.ShouldBe("b-1");
+        (await Tips(factory, uploader.Id)).ShouldHaveSingleItem().TipKey.ShouldBe("easy-fast");
+        var tip = factory.Mail.To(uploader.Email).ShouldHaveSingleItem();
+        tip.Text.ShouldContain("Your easy runs last week averaged 8:03/mi; your plan's easy pace is ");
+        tip.Text.ShouldContain("/mi.");
+        tip.Text.ShouldNotContain("/km");
     }
 
     private static async Task<T> Eventually<T>(Func<T?> read, Action? tick = null)

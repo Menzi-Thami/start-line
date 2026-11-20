@@ -122,7 +122,7 @@ public sealed class AiCoachController(
                 && DateOnly.TryParseExact(date.GetString(), "yyyy-MM-dd", out var day)
                 && proposed.TryGetProperty("minutes", out var duration)
                 && duration.TryGetInt32(out var minutes)
-                && Domain.Plans.LifeHappens.ShortMinutes.Contains(minutes))
+                && LifeHappens.ShortMinutes.Contains(minutes))
             {
                 var suggestion = new LifeChange(LifeSituation.ShortOnTime, Date: day, Minutes: minutes);
                 try

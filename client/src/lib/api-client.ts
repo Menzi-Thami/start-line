@@ -54,6 +54,12 @@ import type {
   SaveRaceMemory,
 } from '../features/journey/types'
 
+export interface AiCoachAnswer {
+  reply: string
+  change: LifeChange | null
+  proposal: LifeProposal | null
+}
+
 /** The one place the app talks to the network. Every failure becomes an ApiError with words a runner can act on. */
 export class ApiError extends Error {
   readonly status: number
@@ -253,6 +259,9 @@ export const api = {
     /** Declines the reviewed suggestion: nothing changes, and the answer goes into the coaching history. */
     declineCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/decline`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
     /** Planned sessions a held Strava run completes, worked out on each read and never stored. */
+    askAiCoach: (token: string, id: string, question: string) =>
+      request<AiCoachAnswer>(`/api/v1/me/plans/${encodeURIComponent(id)}/ai/ask`,
+        { method: 'POST', body: JSON.stringify({ question }) }, token),
     stravaCompletions: (token: string, id: string) => request<SyncedCompletion[]>(`/api/v1/me/plans/${encodeURIComponent(id)}/strava-completions`, { cache: 'no-store' }, token),
     /** The runner's daily readiness check-ins, newest first (today and up to 13 days before). */
     readiness: (token: string) => request<Readiness[]>('/api/v1/me/readiness', { cache: 'no-store' }, token),

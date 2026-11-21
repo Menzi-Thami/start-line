@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { formatDate } from '../../lib/format'
 import type { ActivitySummary, CheckIn, CheckInRequest, Session } from '../../lib/types'
 import { planFixture } from '../../test/server'
@@ -37,6 +37,8 @@ function View({ selected = date, runs = [], saved = [], ready = true, signedIn =
 }
 const planned = () => screen.getByRole('region', { name: 'Planned' })
 const recorded = () => screen.getByRole('region', { name: 'Recorded' })
+
+afterEach(() => localStorage.clear())
 
 describe('calendar day summaries', () => {
   it('shows an automatic rest-day import without changing the plan or logging it', () => {
@@ -171,6 +173,38 @@ describe('calendar day summaries', () => {
     render(<View runs={[imported()]} units="mi" />)
     expect(recorded()).toHaveTextContent('6.2 mi')
     expect(recorded()).toHaveTextContent('11:16/mi')
+  })
+
+  it('shows one editable rating for a planned workout, not a second saved check-in editor under Recorded', () => {
+    render(<View selected="2026-10-13" saved={[entry({
+      date: '2026-10-13', sessionType: 'Hills', activityId: null, isAdditional: false, distanceKm: null, duration: null,
+    })]} />)
+    expect(within(planned()).getByText('Rated 3/10 · As planned')).toBeVisible()
+    expect(within(planned()).getByRole('button', { name: /Edit feedback/ })).toBeInTheDocument()
+    expect(within(recorded()).queryByText('Rated 3/10 · As planned')).not.toBeInTheDocument()
+    expect(within(recorded()).queryByRole('button', { name: /Edit check-in/ })).not.toBeInTheDocument()
+    expect(within(recorded()).queryByLabelText('Completed run')).not.toBeInTheDocument()
+  })
+
+  it('shows independently logged actual measurements in Recorded without duplicating the planned rating editor', () => {
+    render(<View selected="2026-10-13" saved={[entry({
+      date: '2026-10-13', sessionType: 'Hills', activityId: null, isAdditional: false,
+      distanceKm: 4, duration: '00:28:00', distanceUnreported: false,
+    })]} />)
+    expect(within(planned()).getByText('Rated 3/10 · As planned')).toBeVisible()
+    expect(within(recorded()).getByLabelText('Completed run')).toHaveTextContent('4 km · 28:00')
+    expect(within(recorded()).queryByRole('button', { name: /Edit check-in/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps an unlogged past workout quiet until chosen, then allows dismissing its optional rating', async () => {
+    render(<View selected="2026-10-13" />)
+    const user = userEvent.setup()
+    expect(within(planned()).queryByRole('group', { name: 'How hard did it feel?' })).not.toBeInTheDocument()
+    await user.click(within(planned()).getByRole('button', { name: 'Log how this run went' }))
+    expect(within(planned()).getByRole('group', { name: 'How hard did it feel?' })).toBeVisible()
+    await user.click(within(planned()).getByRole('button', { name: 'Not now' }))
+    expect(within(planned()).queryByRole('group', { name: 'How hard did it feel?' })).not.toBeInTheDocument()
+    expect(recorded()).toHaveTextContent('No activity recorded')
   })
 
   it('keeps taps inside the dropdown open and dismisses it with Escape', () => {

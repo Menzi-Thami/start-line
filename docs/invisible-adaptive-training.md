@@ -1,5 +1,7 @@
 # Taperday: Invisible Adaptive Training — corrected product brief and implementation handover
 
+> **AUTHORITATIVE HANDOVER:** For PR #295, read [docs/claude-pr295-execution-contract.md](claude-pr295-execution-contract.md) **first and follow it when any details below conflict**. This older planning document is retained for background, not as permission to merge/deploy, add new providers, or use Strava data in lasting coaching.
+
 **Owner decision (20 Nov 2026):** The user does **not** want runners interacting with an AI, typing prompts, choosing AI modes, or seeing an "Ask the coach" panel. The product should feel like an adaptive running plan similar in *experience* to Runna: recorded running and rescheduling influence **future** training, with concise, ordinary plan-update notices. This supersedes PR #294's conversational-coach product direction.
 
 **Important change-control instruction:** PR #294 was merged to staging despite the owner not wanting an automatic merge. **Do not merge this corrective PR to staging, main, or prod without explicit owner approval.** Keep production untouched. The branch and PR exist for review, implementation and tests.

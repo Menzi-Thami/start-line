@@ -6,6 +6,9 @@ import { calendarDayState, moveCalendarFocus } from './calendar-day'
 interface Props {
   statusFor?: (date: string) => ReturnType<typeof dayStatus>
   onRequestMove?: (from: string, to: string) => void
+  /** Days a run can be moved from and to (move-window.ts); without them, any day from today. */
+  canMoveFrom?: (date: string) => boolean
+  canMoveTo?: (date: string) => boolean
   weeks: readonly PlanWeek[]
   /** The day the plan really starts (a custom start can be mid-week). Days before it are outside the plan, not rest. */
   planStart?: string
@@ -42,7 +45,7 @@ function monthsBetween(from: string, to: string): string[] {
  * The whole plan as a calendar, a month at a time: run days ringed, ticked ones in volt, today filled, race day flagged.
  * Every date opens its day summary, including rest days. It opens on today's month.
  */
-export function PlanCalendar({ weeks, planStart, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId, statusFor, onRequestMove }: Props) {
+export function PlanCalendar({ weeks, planStart, raceDate, today, done, additionalDates = [], activityDates = [], historyDates = [], onSelectDate, selectedDate, daySummaryId, statusFor, onRequestMove, canMoveFrom = (date: string) => date >= today, canMoveTo = (date: string) => date >= today }: Props) {
   const touchDrag = useRef<{ date: string; x: number; y: number; at: number } | null>(null)
   const startTouch = (event: TouchEvent, date: string) => {
     const touch = event.touches[0]
@@ -54,7 +57,7 @@ export function PlanCalendar({ weeks, planStart, raceDate, today, done, addition
     const touch = event.changedTouches[0]
     if (!source || !touch || event.timeStamp - source.at < 450 || Math.hypot(touch.clientX - source.x, touch.clientY - source.y) < 24) return
     const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest<HTMLElement>('[data-date]')?.dataset.date
-    if (target && target !== source.date) { event.stopPropagation(); onRequestMove?.(source.date, target) }
+    if (target && target !== source.date && canMoveTo(target)) { event.stopPropagation(); onRequestMove?.(source.date, target) }
   }
   const sessions = weeks.flatMap((w) => w.sessions)
   const firstDate = [weeks[0]?.startDate ?? today, ...historyDates].sort()[0]!
@@ -106,9 +109,9 @@ export function PlanCalendar({ weeks, planStart, raceDate, today, done, addition
           const label = `${date.slice(8).replace(/^0/, '')} ${MONTH.format(utc(date)).split(' ')[0]}: ${isRace || day.length ? what : inPlan ? 'rest' : status?.kind === 'recovery' ? 'recovery plan' : 'outside this plan'}${status && status.kind !== 'outside' ? `, ${status.label.toLowerCase()}` : status ? '' : completion === 'done' && day.length > 0 ? ', done' : completion === 'missed' ? ', no completion recorded' : ''}${recorded && status?.kind !== 'recorded' ? ', activity recorded' : ''}${additional ? `, ${additional} additional ${additional === 1 ? 'run' : 'runs'} logged` : ''}`
           const cls = `plan-calendar-day is-${state}${completion === 'missed' ? ' is-missed' : ''}${date === today ? ' is-today' : ''}${recorded ? ' has-activity' : ''}`
           return (
-            <button key={date} data-date={date} draggable={!!onRequestMove && date >= today && runs.length > 0 && !isRace} onDragStart={event => { event.dataTransfer.setData('text/plain', date); event.dataTransfer.effectAllowed = 'move' }} onDragOver={event => { if (onRequestMove && date >= today && inPlan) event.preventDefault() }} onDrop={event => { event.preventDefault(); const from = event.dataTransfer.getData('text/plain'); if (from && from !== date && date >= today && inPlan) onRequestMove?.(from, date) }} data-what={isRace || day.length ? what : undefined} type="button" className={cls} data-status={status?.kind} aria-label={label} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
+            <button key={date} data-date={date} draggable={!!onRequestMove && canMoveFrom(date) && runs.length > 0 && !isRace} onDragStart={event => { event.dataTransfer.setData('text/plain', date); event.dataTransfer.effectAllowed = 'move' }} onDragOver={event => { if (onRequestMove && canMoveTo(date) && inPlan) event.preventDefault() }} onDrop={event => { event.preventDefault(); const from = event.dataTransfer.getData('text/plain'); if (from && from !== date && canMoveTo(date) && inPlan) onRequestMove?.(from, date) }} data-what={isRace || day.length ? what : undefined} type="button" className={cls} data-status={status?.kind} aria-label={label} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
               {Number(date.slice(8))}
-              {onRequestMove && date >= today && runs.length > 0 && !isRace && <span className="schedule-drag-handle" aria-hidden="true" onTouchStart={event => startTouch(event, date)} onTouchEnd={finishTouch} onTouchCancel={() => { touchDrag.current = null }}>⠿</span>}
+              {onRequestMove && canMoveFrom(date) && runs.length > 0 && !isRace && <span className="schedule-drag-handle" aria-hidden="true" onTouchStart={event => startTouch(event, date)} onTouchEnd={finishTouch} onTouchCancel={() => { touchDrag.current = null }}>⠿</span>}
               {status?.icon && <span className="calendar-status" aria-hidden="true">{status.icon}</span>}
             </button>
           )

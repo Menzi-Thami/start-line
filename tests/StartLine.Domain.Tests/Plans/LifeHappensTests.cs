@@ -18,6 +18,26 @@ public sealed class LifeHappensTests
         [new PlanWeek(1, Monday, TrainingPhase.Base, false, [Run(0, SessionType.Easy, 6), Run(1, SessionType.Intervals, 9), Run(3, SessionType.Easy, 7), Run(6, SessionType.LongRun, 16)])],
         []);
 
+    // Before the plan starts (Saturday 31 October; week 1 starts Monday 2 November), the runner can move a run in the week
+    // they're about to start, to a free day in that week, never onto the days before the plan.
+    [Fact]
+    public void Before_the_plan_starts_a_run_in_its_first_week_moves_within_that_week()
+    {
+        var saturdayBefore = Monday.AddDays(-2);
+        var offered = LifeHappens.Propose(Plan(), saturdayBefore, new(LifeSituation.MoveRun, Date: Monday.AddDays(1)), []);
+        offered.MoveTargets.ShouldBe([Monday.AddDays(2), Monday.AddDays(4), Monday.AddDays(5)]);
+
+        var moved = LifeHappens.Propose(Plan(), saturdayBefore, new(LifeSituation.MoveRun, Date: Monday.AddDays(1), MoveTo: Monday.AddDays(2)), []);
+        var sessions = RemainingWeek.Apply(Plan(), moved.Changes).Weeks[0].Sessions;
+        sessions.ShouldContain(s => s.Date == Monday.AddDays(2) && s.Type == SessionType.Intervals);
+        sessions.ShouldNotContain(s => s.Date == Monday.AddDays(1));
+
+        // The days before the plan aren't offered, and a run two weeks out still can't move.
+        Should.Throw<DomainException>(() => LifeHappens.Propose(Plan(), saturdayBefore, new(LifeSituation.MoveRun, Date: Monday.AddDays(1), MoveTo: saturdayBefore.AddDays(1)), []));
+        LifeHappens.Propose(Plan(), saturdayBefore, new(LifeSituation.MoveLongRun), []).MoveTargets.ShouldAllBe(d => d >= Monday && d < Monday.AddDays(7));
+        LifeHappens.Propose(Plan(), saturdayBefore, new(LifeSituation.SwapRuns, Date: Monday.AddDays(1)), []).MoveTargets.ShouldContain(Monday.AddDays(3));
+    }
+
     [Fact]
     public void Any_run_this_week_moves_to_any_free_day_this_week_even_next_to_a_hard_one()
     {

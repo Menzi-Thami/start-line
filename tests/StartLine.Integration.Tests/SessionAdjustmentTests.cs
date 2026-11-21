@@ -276,6 +276,29 @@ public sealed class SessionAdjustmentTests
         (await runner.CurrentPlanAsync()).GetRawText().ShouldBe(runner.Plan.GetRawText());
     }
 
+    // The runner's report from staging (21 November): moving a run before the plan starts was refused. Saturday 21, plan
+    // starts Monday 23: Tuesday's run moves to Wednesday, and the days before the plan aren't offered.
+    [Fact]
+    public async Task A_run_in_the_first_week_moves_before_the_plan_starts()
+    {
+        await using var factory = new StartLineApiFactory();
+        factory.Time.SetUtcNow(QaSaturday);
+        var runner = await SignUpAsync(factory, Marathon);
+        var preview = Url($"/api/v1/me/plans/{runner.PlanId}/life-happens/preview");
+
+        var offered = await Json(await runner.Client.PostAsJsonAsync(preview, new { situation = "MoveRun", date = "2026-11-24", canRun = true }));
+        var targets = offered.GetProperty("moveTargets").EnumerateArray().Select(t => t.GetString()!).ToList();
+        targets.ShouldContain("2026-11-25");
+        targets.ShouldAllBe(t => string.CompareOrdinal(t, "2026-11-23") >= 0 && string.CompareOrdinal(t, "2026-11-29") <= 0);
+
+        var change = new { situation = "MoveRun", date = "2026-11-24", moveTo = "2026-11-25", canRun = true };
+        var proposal = await Json(await runner.Client.PostAsJsonAsync(preview, change));
+        await Json(await runner.Client.PostAsJsonAsync(Url($"/api/v1/me/plans/{runner.PlanId}/life-happens/apply"), new { change, token = proposal.GetProperty("token").GetString() }));
+        var plan = await runner.CurrentPlanAsync();
+        Run(plan, "2026-11-25").GetProperty("type").GetString().ShouldBe(Run(runner.Plan, "2026-11-24").GetProperty("type").GetString());
+        Sessions(plan).Any(s => s.GetProperty("date").GetString() == "2026-11-24" && s.GetProperty("type").GetString() != "Strength").ShouldBeFalse();
+    }
+
     private static async Task SeedAsync(StartLineApiFactory factory, Action<StartLineDbContext> seed)
     {
         await using var scope = factory.Services.CreateAsyncScope();

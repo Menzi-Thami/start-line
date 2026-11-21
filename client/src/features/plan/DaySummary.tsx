@@ -16,6 +16,7 @@ import { SessionSteps } from './SessionSteps'
 import { compareWorkoutDistance } from './workout-distance-feedback'
 import { SessionItem } from './SessionItem'
 import { RunWalkChip } from './RunWalkChip'
+import { canMoveFrom } from './move-window'
 import { Runner } from '../shared/Runner'
 
 interface Props {
@@ -60,11 +61,8 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
   const completedStrength = sessions.filter(session => session.type === 'Strength' && done.has(sessionKey(session)))
   const inPlan = date >= plan.startDate && date <= plan.race.date
   const future = date > today
-  // A run can move from today to the end of this week (Monday to Sunday), as Life happens allows.
-  const thisMonday = new Date(`${today}T12:00:00Z`)
-  thisMonday.setUTCDate(thisMonday.getUTCDate() - ((thisMonday.getUTCDay() + 6) % 7))
-  const nextMonday = new Date(thisMonday.getTime() + 7 * 86_400_000).toISOString().slice(0, 10)
-  const movable = date >= today && date < nextMonday
+  // A run can move within the week Life happens works on: this week, or the first week before the plan starts.
+  const movable = canMoveFrom(plan, today, date)
   const historyReady = canCompleteRuns
   const hasRecordedRun = !future && dayRuns.length > 0
   const primaryRun = hasRecordedRun && dayRuns.length === 1 ? dayRuns[0] : undefined

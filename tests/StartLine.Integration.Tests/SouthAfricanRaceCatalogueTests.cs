@@ -21,7 +21,7 @@ public sealed class SouthAfricanRaceCatalogueTests
         var sql = migration.UpOperations.OfType<SqlOperation>().ShouldHaveSingleItem().Sql;
 
         // SQL guards each slug, so an event manually added earlier doesn't break an environment's deployment.
-        Regex.Matches(sql, "IF NOT EXISTS", RegexOptions.CultureInvariant).Count.ShouldBe(58);
+        Regex.Matches(sql, "IF NOT EXISTS", RegexOptions.CultureInvariant).Count.ShouldBe(70);
         sql.ShouldContain("WHERE [Slug]");
         sql.ShouldContain("'hoka-half-runfest-5km-2027'");
         sql.ShouldContain("'hoka-half-runfest-10km-2027'");
@@ -30,6 +30,10 @@ public sealed class SouthAfricanRaceCatalogueTests
         sql.ShouldContain("'capital-city-marathon-10km-2027'");
         sql.ShouldContain("'know-who-you-are-half-marathon-2027'");
         sql.ShouldContain("'cape-town-peace-run-5km-2027'");
+        sql.ShouldContain("'mielie-marathon-5km-2027'");
+        sql.ShouldContain("'pamoja-athletics-marathon-half-marathon-2027'");
+        sql.ShouldContain("'meerkat-marathon-10km-2027'");
+        sql.ShouldContain("'bieliemielie-marathon-half-marathon-2027'");
         sql.ShouldContain("'first-choice-15km-2027'");
         sql.ShouldNotContain("'two-oceans-half-marathon-2027'"); // Already exists, so don't duplicate it.
         sql.ShouldContain(", 1, 0);"); // Distance confirmed, but never place a short race on headline rack.

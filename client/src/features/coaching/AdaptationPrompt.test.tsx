@@ -47,6 +47,9 @@ describe('what the coach makes of a rating', () => {
   it('offers a suggested easier week to review, applies exactly it, and undoes it (R07)', async () => {
     const { user, applyRemaining, restore } = setup(async () => proposal())
     expect(await screen.findByRole('heading', { name: 'Ease the rest of this week?' })).toBeInTheDocument()
+    // One concise card: the reason first, the before/after only on Review change.
+    expect(screen.queryByText('Tempo run · 8.25 km', { exact: false })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Review change' }))
     expect(screen.getByText('26 Nov: Tempo run · 8.25 km → Easy run · 6.25 km', { exact: false })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Apply this easier week' }))
     expect(applyRemaining).toHaveBeenCalledWith('a'.repeat(64), true)
@@ -56,9 +59,9 @@ describe('what the coach makes of a rating', () => {
     expect(await screen.findByText('Back as planned.')).toBeInTheDocument()
   })
 
-  it('remembers Keep my plan for that suggestion, so it doesn’t ask again until something changes', async () => {
+  it('remembers Keep plan for that suggestion, so it doesn’t ask again until something changes', async () => {
     const first = setup(async () => proposal())
-    await first.user.click(await screen.findByRole('button', { name: 'Keep my plan' }))
+    await first.user.click(await screen.findByRole('button', { name: 'Keep plan' }))
     expect(screen.getByText('Your plan stays as it is.')).toBeInTheDocument()
     expect(first.applyRemaining).not.toHaveBeenCalled()
     first.unmount()
@@ -76,8 +79,10 @@ describe('what the coach makes of a rating', () => {
     let calls = 0
     const { user, applyRemaining, reviewRemaining } = setup(async () => proposal(++calls === 1 ? 'a'.repeat(64) : 'c'.repeat(64)))
     applyRemaining.mockRejectedValueOnce(new ApiError('Your running or plan has changed.', 409))
-    await user.click(await screen.findByRole('button', { name: 'Apply this easier week' }))
+    await user.click(await screen.findByRole('button', { name: 'Review change' }))
+    await user.click(screen.getByRole('button', { name: 'Apply this easier week' }))
     await vi.waitFor(() => expect(reviewRemaining).toHaveBeenCalledTimes(2))
+    // Still reviewing: the fresh preview is shown, ready to apply.
     expect(await screen.findByRole('button', { name: 'Apply this easier week' })).toBeEnabled()
   })
 

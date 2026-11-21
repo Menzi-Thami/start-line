@@ -14,12 +14,14 @@ chat, no new provider. Specification: [PR #295 contract](claude-pr295-execution-
    (`EXPECTED_EFFORT`, the same as the server's `ExpectedEffort`).
 2. **Save as planned**, disabled until an effort is chosen.
 
-Optional: **Did something different?** (Cut short, Easy instead, Skipped: skipped hides the scale), **Pain or more details**
-(pain, where, a note, and "Add your own distance and time", which opens the full run log), **Tick without rating** (a plain
-Done) and, on Home, **Not now** (nothing saved; remembered for the day on this device).
+Kept deliberately clean (owner's UX gate, UX01–UX10): the only other visible controls are **Did something different?** (Cut
+short, Easy instead, Skipped: skipped hides the scale) and, on Home, **Not now** (nothing saved; remembered for the day on this
+device). **More details** holds the rest: pain and where, a note, "Add your own distance and time" (the full run log; on Home
+it is the only way into the log while the rating is asking) and **Tick without rating** (a plain Done). Home shows the rating
+under "You ran today. Nice work." with no second copy of the Strava figures (the run itself is on the card).
 
-After saving, the control becomes "Rated 4/10 · As planned" with **Edit feedback** and "Saved" or "Saved on this device,
-syncing" (offline outbox), and takes focus without scrolling. Editing changes the same check-in. An answer that already has the
+After saving, the control becomes "Rated 4/10 · As planned" with **Edit** and "Saved" or "Saved on this device, syncing"
+(offline outbox), and takes focus without scrolling. Editing changes the same check-in. An answer that already has the
 runner's own distance, time, run type or a linked recording is edited in the full run log, so nothing they typed is lost.
 
 ## What is stored
@@ -51,10 +53,11 @@ Rules only, reusing what was there:
   `RemainingWeek.FeltHarderTwice`). A day without a check-in is **not** a missed run, so an unrated Strava run can't trigger
   anything, and nothing is ever made up.
   - No suggestion: nothing shows. One much-harder run alone: a quiet note, no change.
-  - A suggestion: "Ease the rest of this week?" with each change (exact quarter-km distances, `exactDistance`), **Apply this
-    easier week** or **Keep my plan**. Apply sends `{token, reported: true}`; the token covers the mode, the plan, the runner's
+  - A suggestion: one concise card, "Ease the rest of this week?" with its plain reason, **Review change** or **Keep plan**.
+    Review change shows each change (exact quarter-km distances, `exactDistance`) and **Apply this easier week**. Apply sends
+    `{token, reported: true}`; the token covers the mode, the plan, the runner's
     check-ins and the day, so a stale or mismatched one gets 409 and the prompt checks again. Applied: **Undo** (the existing
-    restore). Keep my plan is remembered for that suggestion (by its token) and asked again only when something changes.
+    restore). Keep plan is remembered for that suggestion (by its token) and asked again only when something changes.
 - There are no silent automatic changes: every change is reviewed (`NeedsApproval`). Pace never changes from a rating alone.
 
 ## Exact run changes (rules only)
@@ -70,5 +73,5 @@ Rules only, reusing what was there:
   the retired AI routes returning 404 with the old settings on).
 - Client: `PostRunRating.test.tsx`, `AdaptationPrompt.test.tsx`, `StravaCompletionPlan.test.tsx`, `Home.test.tsx`,
   `PlanTabs.test.tsx` (focus stays put on in-place changes), `MoveRunDialog.test.tsx`, `format.test.ts`.
-- Browser: `e2e/post-run-rating.spec.ts` (two taps, edit, expiry, suggestion apply/undo, Keep my plan, offline sync, keyboard
+- Browser: `e2e/post-run-rating.spec.ts` (two taps, edit, expiry, suggestion apply/undo, Keep plan, offline sync, keyboard
   with reduced motion, 320/390/1440 px in light and dark, no chat), `e2e/strava-completion.spec.ts`.

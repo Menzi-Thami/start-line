@@ -54,7 +54,7 @@ internal sealed class ReviewRemainingWeekHandler(IApplicationDbContext db, Curre
         if (request.AcceptToken is not null) await db.SaveChangesAsync(cancellationToken);
         var summary = changes.Count > 0 && Domain.Plans.RemainingWeek.FeltHarderTwice(entries.Where(c => !c.IsAdditional))
                 && !entries.Any(c => c.Pain == Domain.Coaching.PainLevel.ChangedRunning)
-            ? "Two runs this week felt harder than they should. Ease the rest of the week: hard sessions become easy runs, and no kilometres are made up."
+            ? "Two runs this week felt harder than they should. Want an easier rest of the week? Hard sessions become easy runs; nothing is made up."
             : changes.Count > 0
             ? "Ease the remaining runs without adding days or making up kilometres. Rest replaces running if you reported pain that changed your running or have already covered the week's distance."
             : week?.Phase == TrainingPhase.RaceWeek ? "Race week stays as written. Do not make up missed sessions; choose rest if unwell or in pain."

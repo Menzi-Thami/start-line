@@ -51,6 +51,8 @@ describe('the two-tap rating', () => {
 
   it('keeps the plain tick without a rating: Done, no effort invented (R05)', async () => {
     const { saves, user } = setup()
+    expect(screen.queryByRole('button', { name: 'Tick without rating' })).not.toBeVisible()
+    await user.click(screen.getByText('More details'))
     await user.click(screen.getByRole('button', { name: 'Tick without rating' }))
     expect(saves).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
     expect(screen.getByText('Done, not rated')).toBeInTheDocument()
@@ -64,10 +66,10 @@ describe('the two-tap rating', () => {
     expect(saves).toEqual([])
   })
 
-  it('keeps pain and a note behind Pain or more details, and saves them with the effort', async () => {
+  it('keeps pain and a note behind More details, and saves them with the effort', async () => {
     const { saves, user } = setup()
     await user.click(screen.getByRole('radio', { name: '5, Steady' }))
-    await user.click(screen.getByText('Pain or more details'))
+    await user.click(screen.getByText('More details'))
     await user.click(screen.getByRole('radio', { name: 'A niggle' }))
     await user.selectOptions(screen.getByLabelText('Where?'), 'Calf')
     await user.type(screen.getByLabelText(/Anything else/), 'Tight at the end')
@@ -78,7 +80,7 @@ describe('the two-tap rating', () => {
 
   it('sends the runner to the full run log for their own distance and time', async () => {
     const { onFullForm, user } = setup()
-    await user.click(screen.getByText('Pain or more details'))
+    await user.click(screen.getByText('More details'))
     await user.click(screen.getByRole('button', { name: 'Add your own distance and time' }))
     expect(onFullForm).toHaveBeenCalledTimes(1)
   })

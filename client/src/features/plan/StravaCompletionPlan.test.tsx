@@ -66,6 +66,7 @@ describe('a plan session completed via Strava', () => {
     const day = await openWeekDay('2026-10-13')
 
     expect(within(day).queryByRole('button', { name: 'Keep this tick' })).not.toBeInTheDocument()
+    await userEvent.click(within(day).getByText('More details'))
     await userEvent.click(within(day).getByRole('button', { name: 'Tick without rating' }))
 
     expect(saves).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])

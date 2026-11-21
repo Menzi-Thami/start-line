@@ -257,26 +257,25 @@ describe('Completed via Strava', () => {
   })
   const stravaRun = [run('2026-10-20', 4.1, 'Strava', 'Fartlek')]
 
-  it('shows today’s session done via Strava, planned against actual and the shorter-run words, without ticking it', async () => {
+  it('shows today’s Strava run on Home without ticking it; the full log and a plain tick are under More details', async () => {
     const puts: unknown[] = []
     server.use(coached(), saving(puts), http.get('*/api/v1/me/plans/:id/strava-completions', () => HttpResponse.json([completion('2026-10-20', 'Fartlek')])))
     const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
 
     const todayCard = screen.getByRole('region', { name: 'Today' })
-    await userEvent.click(await within(todayCard).findByRole('button', { name: /Log a run manually|Edit run log/ }))
-    expect(await within(todayCard).findByText('Completed via Strava')).toBeInTheDocument()
-    expect(within(todayCard).getByText('Imported from Strava')).toBeInTheDocument()
-    expect(todayCard.querySelector('.strava-completion-figures')).toHaveTextContent('Planned 6.5 km · Ran 4.1 km')
-    expect(within(todayCard).getByText(/You got out there — that counts\. You ran 4\.1 km of your planned 6\.5 km today\./)).toBeInTheDocument()
-    // Computed, not the runner's tick: nothing is saved until they keep it.
-    expect(within(todayCard).getByRole('button', { name: 'Log this workout' })).toBeInTheDocument()
+    // UX02: the run shows without any tap; nothing is saved until the runner answers.
+    expect(await within(todayCard).findByText('Imported from Strava')).toBeInTheDocument()
+    expect(await within(todayCard).findByRole('group', { name: 'How hard did it feel?' })).toBeInTheDocument()
+    expect(todayCard.querySelector('.home-done-chip')).toBeNull()
     expect(puts).toEqual([])
 
-    // The tick without a rating is still one tap.
+    // More details: the full run log (one way in) and the tick without a rating.
+    await user.click(within(todayCard).getByText('More details'))
+    await user.click(within(todayCard).getByRole('button', { name: 'Add your own distance and time' }))
+    expect(within(todayCard).getByRole('button', { name: 'Log this workout' })).toBeInTheDocument()
     await user.click(within(todayCard).getByRole('button', { name: 'Tick without rating' }))
     expect(puts).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
-    expect(await within(todayCard).findByRole('button', { name: 'Change how Fartlek went' })).toBeInTheDocument()
-    expect(within(todayCard).queryByText('Completed via Strava')).not.toBeInTheDocument()
+    expect(await within(todayCard).findByText('Done, not rated')).toBeInTheDocument()
     expect(todayCard.querySelector('.home-done-chip')).toHaveTextContent('Done')
   })
 
@@ -289,7 +288,9 @@ describe('Completed via Strava', () => {
 
     const prompt = await screen.findByRole('region', { name: 'Rate today’s run' })
     expect(within(prompt).getByText('You ran today. Nice work.')).toBeInTheDocument()
-    expect(within(prompt).getByText('Completed via Strava')).toBeInTheDocument()
+    // Clean: the rating and its two taps, no second copy of the run's figures, one way into the full log.
+    expect(within(prompt).queryByText('Completed via Strava')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Log a run manually' })).not.toBeInTheDocument()
     expect(puts).toEqual([])
     await user.click(within(prompt).getByRole('radio', { name: '6, Working' }))
     await user.click(within(prompt).getByRole('button', { name: 'Save as planned' }))
@@ -352,11 +353,11 @@ describe('Completed via Strava', () => {
     const { user } = renderHome({ ...withPlan, today: '2026-10-20', runs: stravaRun }, { signIn: true })
 
     const todayCard = screen.getByRole('region', { name: 'Today' })
-    await userEvent.click(await within(todayCard).findByRole('button', { name: /Log a run manually|Edit run log/ }))
     await user.click(await within(todayCard).findByRole('radio', { name: '4, Comfortable' }))
     await user.click(within(todayCard).getByRole('button', { name: 'Save as planned' }))
     expect(await within(todayCard).findByRole('alert')).toBeInTheDocument()
-    expect(within(todayCard).getAllByText('Completed via Strava').length).toBeGreaterThan(0)
+    // Nothing saved, so the run still shows as imported from Strava.
+    expect(within(todayCard).getByText('Imported from Strava')).toBeInTheDocument()
     // The choice is kept, so trying again is one tap.
     expect(within(todayCard).getByRole('radio', { name: '4, Comfortable' })).toBeChecked()
     expect(within(todayCard).getByRole('button', { name: 'Save as planned' })).toBeEnabled()

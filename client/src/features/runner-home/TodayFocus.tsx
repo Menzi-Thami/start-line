@@ -63,10 +63,10 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
     {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && onOpenRacePrep && <button type="button" className="link-button" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
     {tickPrompt && session && coach && <section className="home-tick-prompt" aria-label="Rate today’s run">
       <p className="home-today-title">You ran today. Nice work.</p>
-      <StravaCompletion session={session} coach={coach} withRating />
-      <PostRunRating session={session} coach={coach} quickTick onDismiss={() => { dismiss(today); setDismissed(true) }} />
+      <PostRunRating session={session} coach={coach} quickTick onFullForm={() => setLogging(true)} onDismiss={() => { dismiss(today); setDismissed(true) }} />
     </section>}
     {recording ? <button type="button" className="button button-primary" onClick={() => onOpenRun(recording.id)}>Open run details</button> : <button type="button" className="button button-primary" onClick={open}>{progress?.kind === 'race' ? 'Open race day' : plan && onOpenDay && progress?.kind !== 'before' ? "Open today's workout" : 'Open your plan'}</button>}
-    {session && coach && progress?.kind !== 'race' && <div className="home-manual"><button type="button" className="link-button" aria-expanded={logging} onClick={() => setLogging(value => !value)}>{logging ? 'Close run log' : coach.get(session) ? 'Edit run log' : 'Log a run manually'}</button>{logging && <>{!tickPrompt && <StravaCompletion session={session} coach={coach} />}<CheckInCard session={session} coach={coach} runs={runs} done={!!coach.get(session) && coach.get(session)!.status !== 'Skipped'} compactActions /></>}</div>}
+    {/* While the rating is asking, its More details opens this log: one way in, not two. */}
+    {session && coach && progress?.kind !== 'race' && (!tickPrompt || own || logging) && <div className="home-manual"><button type="button" className="link-button" aria-expanded={logging} onClick={() => setLogging(value => !value)}>{logging ? 'Close run log' : coach.get(session) ? 'Edit run log' : 'Log a run manually'}</button>{logging && <>{!tickPrompt && <StravaCompletion session={session} coach={coach} />}<CheckInCard session={session} coach={coach} runs={runs} done={!!coach.get(session) && coach.get(session)!.status !== 'Skipped'} compactActions /></>}</div>}
   </section>
 }

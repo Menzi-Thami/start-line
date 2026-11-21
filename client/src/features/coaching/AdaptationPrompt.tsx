@@ -31,6 +31,8 @@ export function AdaptationPrompt({ entry, coach }: { entry: CheckIn; coach: Sess
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  // One concise card first (the reason, Review change, Keep plan); the before/after only when the runner asks.
+  const [reviewing, setReviewing] = useState(false)
   const working = useRef(false)
 
   // One check per save (and per "check again"): the actions object is rebuilt on every render of its screen, and a re-run
@@ -83,21 +85,25 @@ export function AdaptationPrompt({ entry, coach }: { entry: CheckIn; coach: Sess
       <section className="adaptation-prompt" aria-label="Suggested change to this week">
         <h4>Ease the rest of this week?</h4>
         <p>{proposal.summary}</p>
-        <ul>
-          {proposal.changes.map(c => (
-            <li key={c.date}>{formatDate(c.date)}: {c.originalTitle} · {exactDistance(c.originalKm, coach.units)} → {describe(c)}</li>
-          ))}
-        </ul>
-        <p className="field-help">Nothing changes until you apply it. Past days, future weeks and the race stay as written.</p>
+        {reviewing && <>
+          <ul>
+            {proposal.changes.map(c => (
+              <li key={c.date}>{formatDate(c.date)}: {c.originalTitle} · {exactDistance(c.originalKm, coach.units)} → {describe(c)}</li>
+            ))}
+          </ul>
+          <p className="field-help">Nothing changes until you apply it. Past days, future weeks and the race stay as written.</p>
+        </>}
         <div className="post-run-rating-actions">
-          <button type="button" className="button button-primary" disabled={busy}
-            onClick={() => void run(async () => {
-              await actions.applyRemaining!(proposal.token, true)
-              setState({ kind: 'applied', dates: proposal.changes.map(c => c.date) })
-            })}>
-            {busy ? 'Applying…' : 'Apply this easier week'}
-          </button>
-          <button type="button" className="link-button" disabled={busy} onClick={() => { decline(proposal.token); setState({ kind: 'kept' }) }}>Keep my plan</button>
+          {reviewing
+            ? <button type="button" className="button button-primary" disabled={busy}
+              onClick={() => void run(async () => {
+                await actions.applyRemaining!(proposal.token, true)
+                setState({ kind: 'applied', dates: proposal.changes.map(c => c.date) })
+              })}>
+              {busy ? 'Applying…' : 'Apply this easier week'}
+            </button>
+            : <button type="button" className="button" onClick={() => setReviewing(true)}>Review change</button>}
+          <button type="button" className="link-button" disabled={busy} onClick={() => { decline(proposal.token); setState({ kind: 'kept' }) }}>Keep plan</button>
         </div>
         {error && <p className="field-error" role="alert">{error}</p>}
       </section>

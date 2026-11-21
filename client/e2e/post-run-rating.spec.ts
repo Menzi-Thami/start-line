@@ -61,8 +61,11 @@ test('rates today’s Strava run in two taps on Home, edits it, and the answer o
   await open(page)
   const today = page.getByRole('region', { name: 'Today', exact: true })
   const prompt = today.getByRole('region', { name: 'Rate today’s run', exact: true })
-  await expect(prompt.getByText('Completed via Strava', { exact: true })).toBeVisible()
+  // UX02: the run is on Home without a tap; UX01: one clean prompt, no second copy of the figures.
+  await expect(today.getByText('Imported from Strava', { exact: true })).toBeVisible()
   await expect(prompt.getByRole('group', { name: 'How hard did it feel?' })).toBeVisible()
+  await expect(prompt.getByText('Completed via Strava', { exact: true })).toHaveCount(0)
+  await expect(prompt.getByRole('button', { name: 'Tick without rating' })).toBeHidden()
   await expect(prompt.getByText('Expected for long run: 3–5/10.')).toBeVisible()
   await expect(prompt.getByRole('button', { name: 'Save as planned' })).toBeDisabled()
 
@@ -100,6 +103,9 @@ test('a rating that brings a suggestion: review, apply, undo; nothing changes by
 
   const suggestion = prompt.getByRole('region', { name: 'Suggested change to this week' })
   await expect(suggestion.getByRole('heading', { name: 'Ease the rest of this week?' })).toBeVisible()
+  // One concise card: Review change shows the before/after.
+  await expect(suggestion.getByText(/Fartlek · 6\.5 km/)).toHaveCount(0)
+  await suggestion.getByRole('button', { name: 'Review change' }).click()
   await expect(suggestion.getByText(/Fartlek · 6\.5 km → Easy run · 5\.25 km/)).toBeVisible()
   expect(state.applied).toEqual([])
   await suggestion.getByRole('button', { name: 'Apply this easier week' }).click()
@@ -110,13 +116,13 @@ test('a rating that brings a suggestion: review, apply, undo; nothing changes by
   expect(state.restored).toEqual([{ dates: ['2026-10-20'] }])
 })
 
-test('Keep my plan saves nothing and doesn’t ask again for the same suggestion', async ({ page }) => {
+test('Keep plan saves nothing and doesn’t ask again for the same suggestion', async ({ page }) => {
   const state = await api(page, { suggest: true })
   await open(page)
   const prompt = page.getByRole('region', { name: 'Rate today’s run', exact: true })
   await prompt.getByRole('radio', { name: '8, Very hard' }).check()
   await prompt.getByRole('button', { name: 'Save as planned' }).click()
-  await prompt.getByRole('button', { name: 'Keep my plan' }).click()
+  await prompt.getByRole('button', { name: 'Keep plan' }).click()
   await expect(prompt.getByText('Your plan stays as it is.')).toBeVisible()
 
   await prompt.getByRole('button', { name: 'Edit feedback for Long run' }).click()

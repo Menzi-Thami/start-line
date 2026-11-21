@@ -128,7 +128,7 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
           <strong>{ratingSummary(existing)}</strong>
           <span className="field-help" role="status">{pending ? 'Saved on this device, syncing' : 'Saved'}</span>
         </p>
-        <button type="button" className="link-button" onClick={edit} aria-label={`Edit feedback for ${session.title}`}>Edit feedback</button>
+        <button type="button" className="link-button" onClick={edit} aria-label={`Edit feedback for ${session.title}`}>Edit</button>
         {checks > 0 && <AdaptationPrompt key={checks} entry={existing} coach={coach} />}
       </div>
     )
@@ -171,17 +171,12 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
       <div className="post-run-rating-actions">
         <button type="submit" className="button button-primary" disabled={busy || !ready}>{busy ? 'Saving…' : SAVE_LABEL[status]}</button>
         {!different && <button type="button" className="link-button" onClick={() => setDifferent(true)} disabled={busy}>Did something different?</button>}
-        {quickTick && !existing && (
-          <button type="button" className="link-button" disabled={busy} onClick={() => void save({ status: 'Done', effort: null, distanceUnreported: false })}>
-            Tick without rating
-          </button>
-        )}
         {existing && <button type="button" className="link-button" onClick={() => { setEditing(false); setFocusTarget('summary') }} disabled={busy}>Cancel</button>}
         {!existing && onDismiss && <button type="button" className="link-button" onClick={onDismiss} disabled={busy}>Not now</button>}
       </div>
 
       <details className="disclosure post-run-rating-more" open={detailsOpen} onToggle={event => setDetailsOpen(event.currentTarget.open)}>
-        <summary>Pain or more details</summary>
+        <summary>More details</summary>
         {!skipped && (
           <>
             <fieldset className="field">
@@ -211,7 +206,14 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
           <label className="field-label" htmlFor={`${id}-note`}>Anything else? <span className="field-help">(optional)</span></label>
           <textarea id={`${id}-note`} className="input" rows={2} maxLength={280} value={note} onChange={event => setNote(event.target.value)} disabled={busy} />
         </div>
-        {onFullForm && <button type="button" className="link-button" onClick={onFullForm} disabled={busy}>Add your own distance and time</button>}
+        <div className="post-run-rating-actions">
+          {onFullForm && <button type="button" className="link-button" onClick={onFullForm} disabled={busy}>Add your own distance and time</button>}
+          {quickTick && !existing && (
+            <button type="button" className="link-button" disabled={busy} onClick={() => void save({ status: 'Done', effort: null, distanceUnreported: false })}>
+              Tick without rating
+            </button>
+          )}
+        </div>
       </details>
 
       {error && <p className="field-error" role="alert">{error}</p>}

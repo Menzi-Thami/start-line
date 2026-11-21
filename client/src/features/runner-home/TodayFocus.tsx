@@ -6,6 +6,7 @@ import { StravaCompletion } from '../coaching/StravaCompletion'
 import { completedViaStrava } from '../coaching/strava-completion'
 import { RunResult } from '../coaching/RunResult'
 import { CheckInCard } from '../coaching/CheckInCard'
+import { PostRunRating } from '../coaching/PostRunRating'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { recordingForToday } from './today-recording'
 import { Runner } from '../shared/Runner'
@@ -26,13 +27,15 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
 }) {
   const [logging, setLogging] = useState(false)
   const [dismissed, setDismissed] = useState(() => wasDismissed(today))
+  // Rated from this card: keep showing the answer ("Rated 4/10 · As planned") with its Edit feedback.
+  const [rated, setRated] = useState(false)
   const progress = plan ? planProgress(plan, today) : null
   const day = plan ? todayInPlan(plan, today) : null
   const session = day?.runs[0]
   const own = session ? coach?.get(session) : undefined
   // A held Strava run did today's session and the runner hasn't ticked it: offer the one tap that makes it theirs. Optional,
   // and it keeps only the runner's own Done, never Strava's figures (docs/strava-sync.md).
-  const tickPrompt = !!session && !!coach && progress?.kind !== 'race' && !own && !dismissed && completedViaStrava(session, coach)
+  const tickPrompt = !!session && !!coach && progress?.kind !== 'race' && (rated || (!own && !dismissed && completedViaStrava(session, coach)))
   const recording = progress?.kind !== 'race' && session ? recordingForToday(session, coach, runs) : null
   const open = () => progress?.kind === 'race' && onOpenRacePrep ? onOpenRacePrep() : plan && onOpenDay && progress?.kind !== 'before' ? onOpenDay(today) : onOpenPlan()
   return <section className="panel home-card home-today" aria-label="Today">
@@ -55,10 +58,10 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
     {day?.strength.map(value => <section key={value.type} className="home-today-strength" aria-label="Strength session"><p className="home-today-title">{value.title}</p><p className="field-help">{value.exercises.length} exercises · Open your plan for set tracking.</p></section>)}
     {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && <p className="field-help">{progress.daysToGo} days to {plan!.race.name}</p>}
     {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && onOpenRacePrep && <button type="button" className="link-button" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
-    {tickPrompt && session && coach && <section className="home-tick-prompt" aria-label="Tick off today’s session">
-      <p className="home-today-title">You ran today. Tick off this session?</p>
-      <StravaCompletion session={session} coach={coach} />
-      <button type="button" className="link-button" onClick={() => { dismiss(today); setDismissed(true) }}>Not now</button>
+    {tickPrompt && session && coach && <section className="home-tick-prompt" aria-label="Rate today’s run">
+      <p className="home-today-title">You ran today. Nice work.</p>
+      <StravaCompletion session={session} coach={coach} withRating />
+      <PostRunRating session={session} coach={coach} quickTick onSaved={() => setRated(true)} onDismiss={() => { dismiss(today); setDismissed(true) }} />
     </section>}
     {recording ? <button type="button" className="button button-primary" onClick={() => onOpenRun(recording.id)}>Open run details</button> : <button type="button" className="button button-primary" onClick={open}>{progress?.kind === 'race' ? 'Open race day' : plan && onOpenDay && progress?.kind !== 'before' ? "Open today's workout" : 'Open your plan'}</button>}
     {session && coach && progress?.kind !== 'race' && <div className="home-manual"><button type="button" className="link-button" aria-expanded={logging} onClick={() => setLogging(value => !value)}>{logging ? 'Close run log' : coach.get(session) ? 'Edit run log' : 'Log a run manually'}</button>{logging && <>{!tickPrompt && <StravaCompletion session={session} coach={coach} />}<CheckInCard session={session} coach={coach} runs={runs} done={!!coach.get(session) && coach.get(session)!.status !== 'Skipped'} compactActions /></>}</div>}

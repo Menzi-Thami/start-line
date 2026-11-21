@@ -56,7 +56,9 @@ describe('calendar day summaries', () => {
     expect(planned()).toHaveTextContent('5.5 km')
     expect(planned()).toHaveTextContent('No completion recorded')
     expect(recorded()).toHaveTextContent('10 km')
-    expect(within(planned()).getByRole('checkbox', { name: 'Complete' })).not.toBeChecked()
+    // The runner can still rate it themselves; nothing is saved until they do.
+    expect(within(planned()).getByRole('group', { name: 'How hard did it feel?' })).toBeInTheDocument()
+    expect(within(planned()).getByRole('button', { name: 'Save as planned' })).toBeDisabled()
   })
 
   it('shows a linked additional entry once rather than repeating its imported activity', () => {

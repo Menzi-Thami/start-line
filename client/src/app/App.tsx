@@ -1219,7 +1219,7 @@ export function App() {
                 onLoadActivity={state.kind === 'ready' ? async (id) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to view your race recording.'); return api.me.activity(token, id) } : undefined}
                 bests={state.kind === 'ready' ? synced.bests : undefined}
                 onOpenRun={state.kind === 'ready' ? (id) => showRun(id) : undefined}
-                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, synced: stravaCompletions.get, save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
+                coach={savedOnScreen && checkIns.ready ? { today, units, get: checkIns.get, synced: stravaCompletions.get, pendingFor: session => checkIns.pending.some(item => item.key === `${session.date}|${session.type}`), save: checkIns.save, remove: checkIns.remove, entries: checkIns.entries, adjustments: {
                   reviewRemaining: async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your week.'); return api.me.reviewRemainingWeek(token, savedOnScreen) },
                   applyRemaining: async (proposalToken) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your week.'); const result = await api.me.applyRemainingWeek(token, savedOnScreen, proposalToken); setPlan({ kind: 'ready', plan: result.proposed, inputs: plan.inputs }) },
                   review: async (recovery) => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to review your training.'); return api.me.reviewCoaching(token, savedOnScreen, recovery) },

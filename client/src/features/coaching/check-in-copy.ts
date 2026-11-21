@@ -1,4 +1,4 @@
-import type { BodyArea, CheckInStatus, PainLevel, SessionType } from '../../lib/types'
+import type { BodyArea, CheckIn, CheckInStatus, PainLevel, SessionType } from '../../lib/types'
 
 /** The 1–10 effort scale in words, so "6" means the same to everyone. */
 export const EFFORT_WORDS: Record<number, string> = {
@@ -73,6 +73,21 @@ export function checkInSummary(c: { status: CheckInStatus; effort: number | null
   if (c.pain !== 'None') {
     const where = c.painArea ? ` (${BODY_AREAS[c.painArea].toLowerCase()})` : ''
     parts.push(c.pain === 'Niggle' ? `a niggle${where}` : `pain${where}`)
+  }
+  return parts.join(' · ')
+}
+
+const STATUS_WORD: Record<CheckInStatus, string> = { Done: 'As planned', CutShort: 'Cut short', SwappedForEasy: 'Easy instead', Skipped: 'Skipped' }
+
+/** "Rated 4/10 · As planned", "Skipped", "Cut short · rated 7/10 · a niggle (calf)". */
+export function ratingSummary(entry: Pick<CheckIn, 'status' | 'effort' | 'pain' | 'painArea'>): string {
+  const parts: string[] = []
+  if (entry.effort != null) parts.push(`Rated ${entry.effort}/10`)
+  parts.push(STATUS_WORD[entry.status] ?? entry.status)
+  if (entry.status === 'Done' && entry.effort == null) parts[parts.length - 1] = 'Done, not rated'
+  if (entry.pain !== 'None') {
+    const where = entry.painArea ? ` (${BODY_AREAS[entry.painArea].toLowerCase()})` : ''
+    parts.push(entry.pain === 'Niggle' ? `a niggle${where}` : `pain${where}`)
   }
   return parts.join(' · ')
 }

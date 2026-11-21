@@ -2741,6 +2741,89 @@ a.menu-item {
   max-width: 10rem;
 }
 
+/* The two-tap rating after a run: the 1–10 scale and Save as planned, with everything else folded away. */
+.post-run-rating {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.post-run-rating fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.post-run-rating-title {
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+  padding: 0;
+}
+
+/* Ten equal steps on one line; five and five on a narrow phone so every number stays a comfortable tap. */
+.rating-scale {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.rating-scale .pill {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .rating-scale {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.post-run-rating-word {
+  color: var(--accent-strong);
+}
+
+.post-run-rating-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.post-run-rating-status {
+  margin-top: var(--space-3);
+}
+
+.post-run-rating-more {
+  margin-top: var(--space-3);
+}
+
+.post-run-rating.is-saved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+.post-run-rating-summary {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.post-run-rating-summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: var(--radius-md);
+}
+
 /* "Completed via Strava": a held Strava run completes the session until it lapses; "Keep this tick" makes it the runner's. */
 .strava-completion {
   margin-top: var(--space-2);

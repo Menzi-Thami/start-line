@@ -1,5 +1,7 @@
 # Taperday coach: exact run changes, AI questions and MCP
 
+> **HISTORICAL PR #294 DESIGN — SUPERSEDED for PR #295.** The product owner does not want runner-facing AI chat or an MCP-based assistant experience. The active specification is [Strava-first invisible adaptive training](claude-pr295-execution-contract.md). Do not enable chat, provider flags or MCP or implement the old rollout from this document. Do not merge/deploy without approval.
+
 Off by default everywhere. Three layers, each usable without the next:
 
 1. **Exact run changes (rules only, no AI).** A runner picks one upcoming run and asks for a **time** (the minutes they have), a

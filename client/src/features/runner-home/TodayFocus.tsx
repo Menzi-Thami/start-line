@@ -7,6 +7,7 @@ import { completedViaStrava } from '../coaching/strava-completion'
 import { RunResult } from '../coaching/RunResult'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { PostRunRating } from '../coaching/PostRunRating'
+import { dismissRating, ratingWasDismissed } from '../coaching/rating-dismissal'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { recordingForToday } from './today-recording'
 import { Runner } from '../shared/Runner'
@@ -26,19 +27,24 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
   onOpenPlan: () => void; onOpenDay?: (date: string) => void; onOpenRacePrep?: () => void; onOpenRun: (id: string) => void
 }) {
   const [logging, setLogging] = useState(false)
-  const [dismissed, setDismissed] = useState(() => wasDismissed(today))
+  const [dismissedOn, setDismissedOn] = useState<string | null>(null)
+  // A dismissal belongs to one day; crossing midnight must never suppress the next run's prompt.
+  const dismissed = dismissedOn === today || wasDismissed(today)
   // Once offered, the rating stays put for this visit: saving it shows the answer ("Rated 4/10 · As planned") in place,
   // with Edit feedback and what the coach makes of it, instead of the card disappearing the moment the answer exists.
-  const [offered, setOffered] = useState(false)
+  const [offeredFor, setOfferedFor] = useState<string | null>(null)
   const progress = plan ? planProgress(plan, today) : null
   const day = plan ? todayInPlan(plan, today) : null
   const session = day?.runs[0]
   const own = session ? coach?.get(session) : undefined
   // A held Strava run did today's session and the runner hasn't ticked it: offer the one tap that makes it theirs. Optional,
   // and it keeps only the runner's own Done, never Strava's figures (docs/strava-sync.md).
-  const eligible = !!session && !!coach && progress?.kind !== 'race' && !own && !dismissed && completedViaStrava(session, coach)
-  if (eligible && !offered) setOffered(true)
-  const tickPrompt = !!session && !!coach && progress?.kind !== 'race' && !dismissed && (eligible || offered)
+  const eligible = !!session && !!coach && progress?.kind !== 'race' && !own && !dismissed && !!plan && !ratingWasDismissed(plan, session) && completedViaStrava(session, coach)
+  // An offer belongs to this particular plan/session, not whichever plan happens to render next.
+  const offerKey = session && plan ? `${plan.race.slug ?? plan.race.name}|${plan.startDate}|${session.date}|${session.type}` : null
+  if (eligible && offerKey && offeredFor !== offerKey) setOfferedFor(offerKey)
+  const tickPrompt = !!session && !!coach && progress?.kind !== 'race' && !dismissed
+    && (eligible || (!!offerKey && offeredFor === offerKey) || (!!own && own.effort != null))
   const recording = progress?.kind !== 'race' && session ? recordingForToday(session, coach, runs) : null
   const open = () => progress?.kind === 'race' && onOpenRacePrep ? onOpenRacePrep() : plan && onOpenDay && progress?.kind !== 'before' ? onOpenDay(today) : onOpenPlan()
   return <section className="panel home-card home-today" aria-label="Today">
@@ -62,8 +68,12 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
     {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && <p className="field-help">{progress.daysToGo} days to {plan!.race.name}</p>}
     {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && onOpenRacePrep && <button type="button" className="link-button" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
     {tickPrompt && session && coach && <section className="home-tick-prompt" aria-label="Rate today’s run">
-      <p className="home-today-title">You ran today. Nice work.</p>
-      <PostRunRating session={session} coach={coach} quickTick onFullForm={() => setLogging(true)} onDismiss={() => { dismiss(today); setDismissed(true) }} />
+      {!own && <p className="home-today-title">You ran today. Nice work.</p>}
+      <PostRunRating session={session} coach={coach} quickTick onFullForm={() => setLogging(true)} onDismiss={() => {
+        dismiss(today)
+        if (plan) dismissRating(plan, session)
+        setDismissedOn(today)
+      }} />
     </section>}
     {recording ? <button type="button" className="button button-primary" onClick={() => onOpenRun(recording.id)}>Open run details</button> : <button type="button" className="button button-primary" onClick={open}>{progress?.kind === 'race' ? 'Open race day' : plan && onOpenDay && progress?.kind !== 'before' ? "Open today's workout" : 'Open your plan'}</button>}
     {/* While the rating is asking, its More details opens this log: one way in, not two. */}

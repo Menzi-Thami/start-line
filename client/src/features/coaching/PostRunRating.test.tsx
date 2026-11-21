@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { CheckIn, CheckInRequest, Session } from '../../lib/types'
@@ -104,6 +104,30 @@ describe('the two-tap rating', () => {
     await user.click(screen.getByRole('button', { name: 'Save as planned' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('That didn’t save. Try again.')
     expect(screen.getByRole('radio', { name: '3, Easy, chatty' })).toBeChecked()
+  })
+
+  it('rechecks current-week coaching advice when an already rated run is reopened after navigation', async () => {
+    const reviewRemaining = vi.fn().mockResolvedValue(null)
+    const coach: SessionCoach = {
+      today: '2026-11-24', units: 'km', get: () => saved({ effort: 8 }),
+      save: vi.fn(), remove: vi.fn(),
+      adjustments: { reviewRemaining } as unknown as NonNullable<SessionCoach['adjustments']>,
+    }
+    render(<PostRunRating session={easy} coach={coach} />)
+    expect(screen.getByText('Rated 8/10 · As planned')).toBeVisible()
+    await waitFor(() => expect(reviewRemaining).toHaveBeenCalledWith(true))
+  })
+
+  it('does not recheck an old completed week for a stale adaptation proposal', () => {
+    const reviewRemaining = vi.fn().mockResolvedValue(null)
+    const coach: SessionCoach = {
+      today: '2026-12-01', units: 'km', get: () => saved({ effort: 8 }),
+      save: vi.fn(), remove: vi.fn(),
+      adjustments: { reviewRemaining } as unknown as NonNullable<SessionCoach['adjustments']>,
+    }
+    render(<PostRunRating session={easy} coach={coach} />)
+    expect(screen.getByText('Rated 8/10 · As planned')).toBeVisible()
+    expect(reviewRemaining).not.toHaveBeenCalled()
   })
 
   it('shows nothing for a run that hasn’t happened yet', () => {

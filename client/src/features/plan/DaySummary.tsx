@@ -5,6 +5,8 @@ import type { ActivitySummary, CheckIn, Session, TrainingPlan } from '../../lib/
 import { AdditionalRun } from '../coaching/AdditionalRun'
 import { CheckInCard } from '../coaching/CheckInCard'
 import { PostRunRating } from '../coaching/PostRunRating'
+import { dismissRating, ratingWasDismissed } from '../coaching/rating-dismissal'
+import { RunResult } from '../coaching/RunResult'
 import { StravaCompletion } from '../coaching/StravaCompletion'
 import { completedViaStrava } from '../coaching/strava-completion'
 import { RunLog } from '../coaching/RunLog'
@@ -47,6 +49,8 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
   const [requestedRun, setRequestedRun] = useState<ActivitySummary>()
   // The full run log for one session (own distance and time, run type, a linked recording), opened from its rating.
   const [fullForm, setFullForm] = useState<string | null>(null)
+  const [expandedRatings, setExpandedRatings] = useState<Set<string>>(() => new Set())
+  const [dismissedRatings, setDismissedRatings] = useState<Set<string>>(() => new Set())
   const sessions = plan.weeks.flatMap(week => week.sessions).filter(session => session.date === date)
   const entries = (coach?.entries ?? sessions.flatMap(session => { const entry = coach?.get(session); return entry ? [entry] : [] }))
     .filter(entry => entry.date === date && entry.status !== 'Skipped' && entry.sessionType !== 'Strength')
@@ -138,8 +142,21 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
                 <details className="session-more" key={`${sessionKey(session)}:${complete || viaStrava || !!entry ? 'finished' : 'pending'}`} open={dedicated && !hasRecordedRun && !complete && !viaStrava && !entry ? true : undefined}><summary>{complete || viaStrava || hasRecordedRun || (entry && entry.status !== 'Skipped') ? 'Review planned workout' : 'How to run it'}</summary><p>{session.detail}</p><SessionSteps steps={session.steps} units={units} /><p className="session-why">Why: {session.purpose}</p></details>
                 {historyReady && coach && <StravaCompletion session={session} coach={coach} withRating={!future && session.type !== 'Race'} />}
                 {onMove && movable && historyReady && !entry && !complete && session.type !== 'Race' && <button type="button" className="link-button day-move" onClick={() => onMove(session.date)}>Move this run</button>}
-                {/* Rate it in two taps right here; the full run log stays one tap away for the runner's own figures. */}
-                {historyReady && coach && !future && session.type !== 'Race' && fullForm !== sessionKey(session) && <PostRunRating session={session} coach={coach} quickTick onFullForm={() => setFullForm(sessionKey(session))} onSaved={ran => onDoneChange(current => withSessionDone(current, session, ran))} />}
+                {/* Offer a two-tap rating for a recorded or confirmed run. An unlogged past workout stays quiet
+                    until the runner deliberately chooses to log it. The saved feedback appears only here. */}
+                {historyReady && coach && !future && session.type !== 'Race' && fullForm !== sessionKey(session)
+                  && !dismissedRatings.has(sessionKey(session)) && !ratingWasDismissed(plan, session)
+                  && ((complete || viaStrava || !!entry || (singlePlannedRun && hasRecordedRun) || expandedRatings.has(sessionKey(session)))
+                    ? <PostRunRating session={session} coach={coach} quickTick
+                      onFullForm={() => setFullForm(sessionKey(session))}
+                      onDismiss={() => {
+                        dismissRating(plan, session)
+                        setDismissedRatings(current => new Set(current).add(sessionKey(session)))
+                      }}
+                      onSaved={ran => onDoneChange(current => withSessionDone(current, session, ran))} />
+                    : <button type="button" className="link-button" onClick={() => setExpandedRatings(current => new Set(current).add(sessionKey(session)))}>
+                        Log how this run went
+                      </button>)}
                 {historyReady && coach && fullForm === sessionKey(session) && <CheckInCard session={session} coach={coach} runs={dayRuns} initialOpen onClose={() => setFullForm(null)} onDone={value => onDoneChange(current => withSessionDone(current, session, value))} />}
                 {historyReady && !coach && session.type !== 'Race' && !future && <label className="session-done"><input type="checkbox" checked={complete} onChange={event => onDoneChange(current => withSessionDone(current, session, event.target.checked))} /> Complete on this device</label>}
               </>}
@@ -152,9 +169,14 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
           {!historyReady && <p role="status">Saved run history is not available yet. Close this day to check loading or retry above the plan.</p>}
           {importsUnavailable && <p role="status">Imported runs have not loaded. Your saved run entries are still available. Refresh Taperday to try loading imports again.</p>}
           {future ? <p className="field-help">This date hasn’t arrived yet. Completed sessions will appear here when recorded.</p> : <>
-            {historyReady && coach && entries.map(entry => <div key={entry.id ?? `${entry.date}|${entry.sessionType}`} className="day-summary-saved">
+            {historyReady && coach && entries.filter(entry =>
+              entry.isAdditional || entry.activityId || entry.distanceKm != null || !!entry.duration || !!entry.note
+              || !sessions.some(session => session.type === entry.sessionType)
+            ).map(entry => <div key={entry.id ?? `${entry.date}|${entry.sessionType}`} className="day-summary-saved">
               {entry.isAdditional ? <AdditionalRun entry={entry} coach={coach} runs={dayRuns} onOpenRun={onOpenRun ? openRun : undefined} /> : <>
-                <CheckInCard key={entry.updatedAt} session={savedSession(entry)} coach={{ ...coach, get: () => entry }} runs={dayRuns} done onDone={value => onDoneChange(current => withSessionDone(current, savedSession(entry), value))} />
+                {sessions.some(session => session.type === entry.sessionType)
+                  ? <RunResult entry={entry} runs={dayRuns} units={units} />
+                  : <CheckInCard key={entry.updatedAt} session={savedSession(entry)} coach={{ ...coach, get: () => entry }} runs={dayRuns} done onDone={value => onDoneChange(current => withSessionDone(current, savedSession(entry), value))} />}
                 {entry.activityId && dayRuns.find(run => run.id === entry.activityId) && <p className="field-help">{compareWorkoutDistance(savedSession(entry).distanceKm, dayRuns.find(run => run.id === entry.activityId)!.distanceKm).label}</p>}
                 {onOpenRun && entry.activityId && dayRuns.some(run => run.id === entry.activityId) && <button type="button" className="link-button" onClick={() => openRun(entry.activityId!)}>View run analysis</button>}
               </>}

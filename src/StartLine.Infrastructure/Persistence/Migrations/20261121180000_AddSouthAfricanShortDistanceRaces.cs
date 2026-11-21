@@ -365,7 +365,7 @@ public sealed class AddSouthAfricanShortDistanceRaces : Migration
             INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
             VALUES (N'cape-town-peace-run-5km-2027', N'Sanlam Cape Town Peace Run 5 km', '2027-05-22', 5, N'Green Point, Cape Town, Western Cape', N'5 km Peace Run on the day before the Cape Town Marathon.', N'https://capetownmarathon.com/peace-runs/', 1, N'https://capetownmarathon.com/peace-runs/', 1, 0);
         END
-            """);
+        """);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

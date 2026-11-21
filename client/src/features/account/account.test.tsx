@@ -433,8 +433,10 @@ describe('a signed-up runner', () => {
     const user = renderWith(signedIn())
     await openTheirPlan(user)
 
-    // Tuesday's hills are the first run that's come round; later runs don't ask yet.
+    // Tuesday's hills are a past unlogged session. Keep its view uncluttered until the runner
+    // chooses to log it, then show the familiar two-tap effort rating.
     await openWeekDay('2026-10-13')
+    await user.click(screen.getByRole('button', { name: 'Log how this run went' }))
     // The two-tap rating: how hard it felt, then Save as planned.
     const askers = await screen.findAllByRole('group', { name: 'How hard did it feel?' }, { timeout: 3000 })
     expect(askers).toHaveLength(1)

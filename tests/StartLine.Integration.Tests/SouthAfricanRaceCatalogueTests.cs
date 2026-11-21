@@ -68,7 +68,7 @@ public sealed class SouthAfricanRaceCatalogueTests
 
             var results = await client.GetFromJsonAsync<JsonElement>("/api/v1/races/search?q=Example%20Coastal");
             var found = results.EnumerateArray().ToDictionary(e => e.GetProperty("slug").GetString()!, e => e);
-            found.Keys.OrderBy(x => x).ShouldBe(slugs.OrderBy(x => x));
+            found.Keys.OrderBy(x => x).ToArray().ShouldBe(slugs.OrderBy(x => x).ToArray());
             for (var i = 0; i < slugs.Length; i++)
             {
                 found[slugs[i]].GetProperty("distanceKm").GetDouble().ShouldBe(kms[i]);

@@ -4,6 +4,16 @@
 
 This document replaces every older/inconsistent PR #295 instruction in this repository. PR #294, docs/ai-coach-mcp.md and docs/invisible-adaptive-training.md are background ONLY where consistent with this contract. Read CLAUDE.md, .claude/rules/engineering-principles.md, docs/testing.md, docs/strava-sync.md, docs/flexible-training-week.md, docs/run-logging.md and docs/how-we-ship.md before editing. When source details differ from this brief, reconcile the current code with these requirements; never silently guess about implementation status.
 
+## FINAL UX ACCEPTANCE GATE — CLARITY OVER FEATURES
+
+**The owner explicitly requires that Taperday remain clean, easy and effortless. Feature-complete but cluttered is a FAIL.** Preserve existing colours, running cartoon, loading animations, dark/light, bottom navigation and all form factors. No additional AI chat, new tabs, excessive Home cards or new mandatory dialogs.
+
+**Normal journey:** auto-matched run visible without touch → View run analysis remains prominent → optionally rate effort with **2 taps** (1–10 choice then Save as planned) inline, no manual upload or hidden extra field → compact "Rated X/10 · As planned · Edit" replaces controls. Only reveal "Cut short / Easy instead / Skipped", pain, measurements or note if requested. No assumed Strava measurements in stored check-ins.
+
+**Adaptive UI:** NoChange is silent; safe small future adjustment gets a quiet summary+Undo; substantial proposal gets **one** clear before/after card with Review change / Keep plan. Never stack advice, nag after decline, jump page/focus on save or block analysis when rating skipped. Touch/keyboard/screen readers must all work at 320/390px and desktop in light/dark.
+
+**Required UX01–UX10 tests:** Home hierarchy, no-touch Strava auto-complete, exactly two rating taps, analysis-first detail, skip/no nag, concise editable saved state, restrained single adaptation card, complete navigation/focus/scroll, light/dark responsive accessibility, and lightweight failure/offline recovery. Record PASS/FAIL/NOT VERIFIED with genuine screenshots. See the precise matrix in [PR #295's owner UX comment](https://github.com/Menzi-Thami/start-line/pull/295#issuecomment-7059233299). If clutter, extra taps, lost focus, poor contrast or broken navigation remain, **fix before closing staging QA**. Staging merge is authorised after checks; production release is not.
+
 ## LATEST OWNER AUTHORISATION — MERGE TO STAGING AND EXECUTE FULL QA (21 NOVEMBER 2026)
 
 **THIS OVERRIDES EVERY EARLIER "DO NOT MERGE", "LEAVE DRAFT", AND "STOP FOR OWNER APPROVAL" IN THIS FILE, THE PR DESCRIPTION, AND PRIOR COMMENTS — BUT ONLY FOR MERGE INTO STAGING.** The owner explicitly authorised Claude to **finish implementation, merge PR #295 into `staging` when the checks are green, deploy staging using the existing pipeline, run rigorous QA across the ENTIRE Taperday application and all navigation, fix defects and retest.** Do not require the owner's separate approval for the staging merge or staging QA. **PRODUCTION (`main`, `3 - Release to production`, production config, prod DB, live services) IS NOT authorised.** No merges to `main` or prod deployment without a new explicit owner request.

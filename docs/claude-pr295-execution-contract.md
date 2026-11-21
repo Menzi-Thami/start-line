@@ -2,57 +2,47 @@
 
 **Owner-approved product direction as of 21 November 2026.** This file is the SINGLE SOURCE OF TRUTH for completing draft PR #295. It supersedes conflicting requirements in `docs/invisible-adaptive-training.md`, `docs/ai-coach-mcp.md`, PR #294 and older chat prompts. Read `CLAUDE.md`, `.claude/rules/engineering-principles.md`, `docs/testing.md` first. When an ambiguity remains, choose the safer, less intrusive, backwards-compatible behaviour below and state the choice in the PR. Do not improvise a new product direction.
 
-## Scenario decision (21 Nov 2026): STRAVA SAID NO — no exception will be granted
+## FINAL OWNER CONSTRAINT — EXISTING STRAVA API ONLY (21 NOV 2026)
 
-**Treat a definitive denial as the product baseline. Do not re-request, reframe, hide, proxy or work around Strava's restriction by relabelling API-derived data or using an LLM, third-party MCP, browser extension, scraper, exported derivatives or fake user check-ins.**
+**The owner has no access to ANY additional provider APIs and cannot obtain Garmin, Polar, Apple, HealthKit, aggregator or other new provider access. No new external API is in scope, and Strava has refused special approval for permanent coaching decisions derived from its API data. This is final for PR #295.**
 
-Product strategy is **Strava-first for zero-touch current run display, independent-source-first for long-lived performance coaching**. Both source paths can coexist, but they are distinct data-provenance channels, not two labels for the same imported activity.
+**Do not investigate, build adapters for, recommend, wait for, request, or make the product depend on any other API. Do not suggest an alternative API as the answer.** The only connected activity feed is Taperday's **already-working Strava integration**; it remains the PRIMARY experience.
 
-### Capabilities we WILL ship without Strava coaching rights
+### Exactly what to implement with existing resources
 
-- **For every connected Strava runner:** preserve automatic Strava OAuth, webhook ingestion, 7-day rolling permitted transient cache, foreground catch-up, source attribution and on-read matching to scheduled sessions; show run completed and current progress without upload, manual entry, ticking, or chatbot. No permanent coaching decision from that data.
-- **For all runners irrespective of provider:** automatically detect schedule conflicts after their own move/swap or change of availability; adjust truly safe future rest/easy spacing with reversible action, offer a clear before/after approval for hard-session changes, and apply conservative safeguards from runner-authored readiness/illness reports. Protect original race/date, training history, cutback/taper, completion and rest rules.
-- **For athletes with separately authorised independent automatic activity data:** allow future pace/volume/intensity training adaptations through the existing deterministic WeeklyCoach after evidence/provenance validation and established approval, without any paid LLM. The independent feed must come **directly from an authorised device/service integration**, not Strava's API or a proxy. No false manual logging requirement.
-- **For athletes with only Strava and no independent evidence:** show seamless present-day completion and schedule adaptation, but do **not** claim the plan has personalised future speeds or mileage using their Strava metrics. Do not ask them to upload every run or repeatedly display "insufficient training data"; simply leave pace progression unchanged unless their own allowed inputs justify it.
+1. **Zero-touch Strava CURRENT activity:** existing OAuth, webhooks, durable sync jobs, foreground catch-up, dedupe, transient activity cache and `SyncedCompletions`. Match eligible runs on the currently moved plan date. Current Home, calendar, Plan, progress and recap reflect permitted active cached activity without user upload or permanent tick. The runner uses a watch and does **nothing in Taperday** for normal completed-run display.
+2. **Always-on schedule intelligence from Taperday-owned data:** when a runner drags/swaps a workout, changes running availability, adjusts readiness, reports pain/illness or explicitly marks a session missed, evaluate future training automatically and conservatively using existing deterministic coaching logic. Preserve runner-selected dates; safely handle hard-day adjacency, extra recovery, taper, strength conflicts, race week and run/walk without a chatbot. Auto-apply only provably safe minor corrections with undo; prompt once for meaningful modifications.
+3. **Occasional human-provided signals, not daily logging:** existing account/profile inputs (race goal, current weekly volume, recent race/5K/10K performance where independently and willingly supplied), optional very short periodic readiness/effort feedback, independently authored check-ins, and pre-existing optional FIT/GPX/TCX imports can provide **independent** evidence for longer-term coach progression. Prefer **one short weekly check-in only when material**, not a form after every run. No manual data is invented, copied from Strava, inferred from its cached metrics or required to display completion. Taperday must remain useful if the runner never enters anything.
+4. **Transparent limitation:** Under the assumed Strava denial, fully automatic **persisted fitness/pace/mileage progression based solely on Strava measurements is NOT possible**. Do not falsely advertise or simulate it; do not silently write derived snapshots, use AI/MCP as a proxy, run browser scrapers, ask the user to download Strava exports every week, or launder the data into a fabricated user entry. Keep current Strava calculations transient and source-labelled as they are today. Until there is genuinely independent evidence, leave pace progression at the plan's existing prescription.
+5. **No new app:** Taperday remains the existing PWA. Never propose native companion apps, direct HealthKit PWA access, paid data brokers or second OAuth integration in this PR.
 
-### Independent automatic source contingency — separately permissioned, not a primary-provider replacement
+### In-scope adaptation examples
 
-**Prioritise Garmin Business Starter feasibility**, because many existing Strava-first runners record on Garmin:
-- Garmin Connect Developer Program **now lists Starter Business** access for startups/organisations, with Activity API JSON/.FIT, OAuth2 and **push delivery**; no historical-data backfill is listed for Starter and user capacity is limited. Request application credentials and review actual eligibility, commercial terms, scope and permission **before coding live ingestion**. Do not mistake "available program" for approved Taperday access. Relevant official pages:
-  - https://developer.garmin.com/gc-developer-program/overview/
-  - https://developer.garmin.com/gc-developer-program/enterprise/program-faq/
-  - https://developer.garmin.com/gc-developer-program/enterprise/activity-api/
-- Garmin **Personal API** is only for the individual account holder's personal use, **not** commercial/multi-athlete Taperday. Never ask all runners for personal API keys or share developer tokens as a bypass. https://developer.garmin.com/gc-developer-program/personal/personal-faq/
-- **Polar AccessLink** is a second candidate where a runner uses Polar: self-service OAuth app creation and exercise webhooks; confirm exact license/retention and per-user consent. https://www.polar.com/polar-api-v4/
-- For Apple Watch, a browser PWA cannot directly query HealthKit. An authorised **native bridge** or independent vendor feed would be a separately scoped future project, not an imaginary PWA capability. https://developer.apple.com/documentation/healthkit/setting-up-healthkit
-- Do not substitute paid intermediary API platforms or scraping services without validating that **their own vendor data rights** allow persistent coaching; aggregation services do not erase Strava restrictions. No external provider subscription should be activated without owner approval.
+- **Easy 6 km moved Wednesday → Thursday with no collision:** save move, no additional prompt or schedule rewrite.
+- **Sunday long run moved to Saturday beside a Friday tempo:** keep Saturday as chosen; warn about recovery and propose a safer *future* Friday session for explicit review. Do not silently change the tempo or move Saturday back.
+- **Runner explicitly marks illness, injury, or very hard effort:** prioritise recovery and safe rest/easy corrections using *their own report*. No aggressive catch-up mileage.
+- **Strava records 5 km vs planned 8 km:** show automatic completion with accurate shortfall in the CURRENT visible view; do NOT permanently alter next week's training based on that Strava measurement.
+- **Runner's own recent independent 5K result and repeated independently submitted feedback:** use existing WeeklyCoach conditions to make a conservative, reviewable future-pace proposal, not an automatic unbounded speed-up.
+- **No Strava activity seen yet:** do NOT infer the run was missed; the watch may sync late, be offline, or be disconnected. A missed session only becomes a durable training signal when the runner explicitly says so or independent permitted evidence establishes it.
 
-**Architecture for a future eligible feed (design/specify now, implement adapter only if approved and testable):**
-1. `ActivityOrigin` or equivalent distinguishes `StravaTransient`, `IndependentGarmin`, `IndependentPolar`, `ManualRunnerDeclaration`, `IndependentFileUpload`. Do not treat Strava-derived records as uploads. Explicit per-source eligibility for **persistent coaching** is false for Strava.
-2. Source-scoped OAuth, per-runner consent, credential encryption, webhook authenticity, original source identifier, event replay dedupe, local timezone date, deletion/revocation handling, data minimisation, separate retention lifecycle.
-3. Reuse `ActivityRecorder`, existing plan-matching, duration and pace calculations, and `CoachEvidence` for **eligible independently licensed sources only**. Do not add a parallel plan engine or combine Strava-derived metrics with other source measurements.
-4. In the UI, show **one run** to the runner if two providers report the same underlying device recording, but keep per-source data segregated. A properly independently sourced activity may contribute to durable coaching; the Strava copy remains transient and must not be used to create/confirm the derived coaching result. Do not dedupe by copying Strava metrics or storing a Strava-derived permanent fingerprint.
-5. Multiple providers should remain **optional**: Strava for current run progress, direct provider only when the runner wants fully automatic long-term performance adaptation and that vendor integration has been approved. The runner grants this second connection **once**, not for each run.
-6. Product never promises unlimited athlete support, Garmin histories, live Apple Watch HealthKit sync, or same-day data availability until the relevant provider authorises and operational testing confirms them.
+### Required acceptance tests replacing all prior external-provider tests
 
-**Explicit status:** external Garmin/Polar permissions, credentials, costs and live vendor testing are **NOT VERIFIED**. Do not claim that a feature working with synthetic fakes proves a provider-approved integration. Build only the deterministic interfaces and test doubles now if actual permissions are absent.
-
-### New acceptance cases for denial scenario (add to existing S/M/E/U/P checks)
-
-| ID | Input | Required result |
+| ID | Synthetic scenario | Expected |
 |---|---|---|
-| N01 | Strava-only runner runs 10 days consecutively, no manual logs | All eligible days show current transient completion automatically; no stored fitness/pace-derived adjustments |
-| N02 | Strava-only runner moves a long run next to intervals | Runner's move persists; Taperday-owned plan schedule produces a safe warning/review without reading Strava activity metrics |
-| N03 | Approved direct Garmin feed independently receives watch recording also visible via Strava | One current run shown; only Garmin-origin permitted metrics enter persistent coaching; no Strava metrics/IDs/derivatives retained in coaching |
-| N04 | Garmin Starter access not granted, no independent feed | No imaginary integration or forced upload; existing Strava completion and schedule-based guidance remain fully usable |
-| N05 | User disconnects Strava but retains independently approved Garmin feed | Transient Strava display removed; independent licensed source/history remains only as allowed by its own terms |
-| N06 | Separate source loses consent or provider requests deletion | Delete that source's data and associated derived state as required; do not regenerate it from Strava cache |
-| N07 | Runner uses Apple Watch with Strava but Taperday is still PWA-only | Automatic Strava display works; no claim of direct HealthKit data access |
-| N08 | Client has old `AiCoach__Enabled` or `VITE_AI_COACH_ENABLED` flags | No AI chat, no model billing, no hidden derived coaching from Strava |
-| N09 | Runner completed 5km of an 8km session via Strava | Current display shows a run, not falsely the full intensity; durable coach unchanged |
-| N10 | Source disabled/reconnected, app sleeps, late duplicate activity arrives | Durable retries/match idempotence; no cross-source or cross-runner data leakage |
+| N01 | Strava-only runner records ten runs without opening forms | All currently eligible runs show transient auto-completion; no persistent Strava-derived coaching |
+| N02 | Runner moves a long run to Saturday next to Friday tempo | Runner's date stays; schedule conflict evaluated without Strava measurements |
+| N03 | No Garmin/Polar/Apple/other API configured | Existing product, sync, coaching safety and builds still work; no new credentials, integrations or API requests |
+| N04 | Runner has Strava and no other data inputs | No manual-upload nag, no fictional pace improvement; current progress remains automatic |
+| N05 | Strava disconnects or cached record expires | Derived current completion disappears as required; no hidden permanent coaching decisions |
+| N06 | Runner volunteers own readiness/illness report | Correct safe future adjustment/review; provenance is self-report, not Strava |
+| N07 | PWA-only Apple Watch owner records a run through Strava | Automatic current display; no browser HealthKit access claim |
+| N08 | Old `AiCoach__Enabled` and `VITE_AI_COACH_ENABLED` both true in test | No chat, AI calls, MCP or hidden Strava-derived coaching |
+| N09 | Strava synced 5 km against prescribed 8 km | Participation/shortfall shown transiently; persistent training prescription unchanged |
+| N10 | App sleeps, late duplicate Strava run arrives and another device opens | Retry/dedupe/source expiry, no doubled completion or runner crossover |
+| N11 | No Strava activity yet for yesterday, possibly delayed sync | Do not auto-mark missed or automatically replan |
+| N12 | Only eligible independent check-ins/race benchmark available | Existing deterministic weekly coach can propose changes with accepted preview and clear evidence |
 
-**Action for Claude:** implement all Strava and schedule functionality not blocked; document independent-feed interfaces and vendor approval gate, without fabricating provider authorisation. Do not stall P0 improvements waiting for vendor access. **No merge/deploy.**
+**Claude instruction:** implement in-scope changes now using Taperday's existing source code, not a new API. Remove external-provider integration plans from the implementation checklist and tests. DO NOT merge, deploy or request third-party keys.
 
 ## 0. Hard execution rules
 

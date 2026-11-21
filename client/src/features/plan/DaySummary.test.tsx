@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { formatDate } from '../../lib/format'
-import type { ActivitySummary, CheckIn, CheckInRequest, Session } from '../../lib/types'
+import type { ActivitySummary, CheckIn, CheckInRequest, Session, TrainingPlan } from '../../lib/types'
 import { planFixture } from '../../test/server'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import DaySummary from './DaySummary'
@@ -16,8 +16,8 @@ const imported = (id = 'strava-1', localDate = date): ActivitySummary => ({ id, 
 const entry = (overrides: Partial<CheckIn> = {}): CheckIn => ({ date, sessionType: 'Easy', status: 'Done', effort: 3, pain: 'None', painArea: null, distanceKm: null, duration: null, note: null, updatedAt: `${today}T12:00:00Z`, id: 'saved-1', activityId: 'strava-1', distanceUnreported: true, isAdditional: true, ...overrides })
 const save = vi.fn<NonNullable<SessionCoach['saveAdditional']>>().mockResolvedValue(undefined)
 
-function View({ selected = date, runs = [], saved = [], ready = true, signedIn = true, close = noop, failedSave = false, units = 'km', pendingImports = false }: {
-  selected?: string; runs?: ActivitySummary[]; saved?: CheckIn[]; ready?: boolean; signedIn?: boolean; close?: () => void; failedSave?: boolean; units?: 'km' | 'mi'; pendingImports?: boolean
+function View({ selected = date, runs = [], saved = [], ready = true, signedIn = true, close = noop, failedSave = false, units = 'km', pendingImports = false, plan = planFixture }: {
+  selected?: string; runs?: ActivitySummary[]; saved?: CheckIn[]; ready?: boolean; signedIn?: boolean; close?: () => void; failedSave?: boolean; units?: 'km' | 'mi'; pendingImports?: boolean; plan?: TrainingPlan
 }) {
   const [done, setDone] = useState(new Set<string>())
   const [entries, setEntries] = useState(saved)
@@ -33,7 +33,7 @@ function View({ selected = date, runs = [], saved = [], ready = true, signedIn =
   }
   const effective = new Set(done)
   for (const item of entries.filter(item => !item.isAdditional && item.status !== 'Skipped')) effective.add(sessionKey({ date: item.date, type: item.sessionType }))
-  return <DaySummary id="test-day-summary" date={selected} today={today} plan={planFixture} units={units} done={effective} onDoneChange={update => setDone(current => update(current))} runs={pendingImports ? undefined : runs} coach={signedIn && ready ? coach : undefined} canCompleteRuns={ready} onClose={close} />
+  return <DaySummary id="test-day-summary" date={selected} today={today} plan={plan} units={units} done={effective} onDoneChange={update => setDone(current => update(current))} runs={pendingImports ? undefined : runs} coach={signedIn && ready ? coach : undefined} canCompleteRuns={ready} onClose={close} />
 }
 const planned = () => screen.getByRole('region', { name: 'Planned' })
 const recorded = () => screen.getByRole('region', { name: 'Recorded' })
@@ -194,6 +194,34 @@ describe('calendar day summaries', () => {
     expect(within(planned()).getByText('Rated 3/10 · As planned')).toBeVisible()
     expect(within(recorded()).getByLabelText('Completed run')).toHaveTextContent('4 km · 28:00')
     expect(within(recorded()).queryByRole('button', { name: /Edit check-in/ })).not.toBeInTheDocument()
+  })
+
+  it('does not infer a match from two sessions and two runs on the same day (R13)', () => {
+    const plan = structuredClone(planFixture)
+    const week = plan.weeks.find(w => w.sessions.some(session => session.date === '2026-10-13'))!
+    const hill = week.sessions.find(session => session.date === '2026-10-13' && session.type === 'Hills')!
+    week.sessions.push({ ...hill, type: 'Recovery', title: 'Recovery run' })
+    render(<View selected="2026-10-13" plan={plan} runs={[imported('strava-a', '2026-10-13'), imported('strava-b', '2026-10-13')]} />)
+    expect(within(planned()).getAllByRole('button', { name: 'Log how this run went' })).toHaveLength(2)
+    expect(within(planned()).queryByRole('group', { name: 'How hard did it feel?' })).not.toBeInTheDocument()
+    expect(within(recorded()).getAllByRole('article')).toHaveLength(2)
+    expect(within(planned()).queryByText('Done · from Strava')).not.toBeInTheDocument()
+  })
+
+  it('associates independent feedback with the new session date after a move, not the old date (R14)', async () => {
+    const plan = structuredClone(planFixture)
+    const week = plan.weeks.find(w => w.sessions.some(session => session.date === '2026-10-13'))!
+    const hill = week.sessions.find(session => session.date === '2026-10-13' && session.type === 'Hills')!
+    hill.date = '2026-10-14'
+    const view = render(<View selected="2026-10-14" plan={plan} />)
+    const user = userEvent.setup()
+    await user.click(within(planned()).getByRole('button', { name: 'Log how this run went' }))
+    await user.click(within(planned()).getByRole('radio', { name: '4, Comfortable' }))
+    await user.click(within(planned()).getByRole('button', { name: 'Save as planned' }))
+    expect(within(planned()).getByText('Rated 4/10 · As planned')).toBeVisible()
+    view.rerender(<View selected="2026-10-13" plan={plan} />)
+    expect(planned()).toHaveTextContent('Rest day')
+    expect(within(recorded()).queryByText('Rated 4/10 · As planned')).not.toBeInTheDocument()
   })
 
   it('keeps an unlogged past workout quiet until chosen, then allows dismissing its optional rating', async () => {

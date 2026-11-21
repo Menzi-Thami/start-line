@@ -1,301 +1,170 @@
-# PR #295 — Claude Code execution contract: Strava-first invisible adaptive training
+# PR #295 — Authoritative Claude Code implementation contract
 
-**Owner-approved product direction as of 21 November 2026.** This file is the SINGLE SOURCE OF TRUTH for completing draft PR #295. It supersedes conflicting requirements in `docs/invisible-adaptive-training.md`, `docs/ai-coach-mcp.md`, PR #294 and older chat prompts. Read `CLAUDE.md`, `.claude/rules/engineering-principles.md`, `docs/testing.md` first. When an ambiguity remains, choose the safer, less intrusive, backwards-compatible behaviour below and state the choice in the PR. Do not improvise a new product direction.
+**Decision date:** 21 November 2026. **PR base:** staging. **Working branch:** fix/adaptive-coaching-no-chat. **Owner decision:** keep draft until explicit approval. **Status:** handover, not an implementation-complete claim.
 
-## CURRENT OWNER DECISION — persistent runner-authored check-ins + perceived effort (21 NOV 2026)
+This document replaces every older/inconsistent PR #295 instruction in this repository. PR #294, docs/ai-coach-mcp.md and docs/invisible-adaptive-training.md are background ONLY where consistent with this contract. Read CLAUDE.md, .claude/rules/engineering-principles.md, docs/testing.md, docs/strava-sync.md, docs/flexible-training-week.md, docs/run-logging.md and docs/how-we-ship.md before editing. When source details differ from this brief, reconcile the current code with these requirements; never silently guess about implementation status.
 
-**This supersedes earlier instructions that put all runner feedback into an optional once-a-week form or treated run ratings as an afterthought.** The core persistent coaching input is now **what a runner personally confirms and rates for each workout**, not watch heart rate, Strava-derived pace or permanently copied Strava distance. Keep existing Strava automatic import, transient matched completions and current run analysis, but make the existing **tick/check-in flow very fast** and useful for improving future plans.
+## 0. Non-negotiable outcome
 
-**Two separate things must not be confused:**
+**Taperday should feel like this:** Connect Strava once. Record the run on a watch or phone. Taperday automatically recognises the session and shows current progress. A runner may then **voluntarily** rate *their own* completed workout in about two deliberate taps (pick effort, Save as planned). That rating, completion declaration and optional pain/alternative-session answer are Taperday-owned lasting coaching data. The app evaluates appropriate future training using existing deterministic coaching and plan-safety rules. No AI chat, no repetitive form, no daily upload, no request for Garmin/Polar/Apple or other new APIs.
 
-1. **Automatic visible completion:** `SyncedCompletions` can show a matched Strava activity as "Completed via Strava" while the permitted transient cache exists. This is not a permanent runner declaration or a stored source of coaching evidence.
-2. **Permanent runner-authored coaching evidence:** A runner deliberately confirms what *they did* and *how it felt* using Taperday's own `SessionCheckIn` / `CheckInAnswers` (and optionally reports pain, a shortened session, or genuinely independently entered measurements). Store only their selected inputs in existing Taperday tables; no `Strava` metrics copied, pre-populated or silently accepted into the record. This persists independently from the Strava cache, subject to privacy/deletion requirements, and `CoachEvidence` already permits such check-ins in `WeeklyCoach`. This must not become a misleading provider-data "ownership" conversion: if an answer is autofilled from Strava or calculated from cached Strava data it is **not** independently authored and **must not be retained**.
+**Two different truths:** A Strava-matched run is a *transient automatic display completion*, not a permanent user-declared check-in. The explicit runner-authored tick and effort response is a *durable self-report*, not a permanent copy of Strava distance, time, pace or heart rate. Store only what the runner independently selected/typed. Keep these sources separated through sync, offline storage, API, progress totals, coaching and account export.
 
-**Proposed end-to-end runner experience:**
+**Rights boundary:** This PR assumes Strava refused any special permission to use its API-derived performance measurements for durable future-plan decisions. Do NOT circumvent restrictions by hiding calculations, lengthening the cache, deriving a permanent score, prepopulating a supposedly manual form, scraping, or sending Strava data to any LLM/MCP. The existing 10-athlete Strava connection is still the primary automatic CURRENT activity feed. No other third-party API is available. Do not add a native app, ask for credentials, research replacement providers or force users to upload the same run to gain today's completion.
 
-- Runner completes workout as usual on a watch, Strava sync arrives, Taperday shows run as completed without a manual tick. **No interstitials or forms required for ordinary current display**.
-- In the workout detail or discreet post-run card, offer **"How did it feel?"** as a compact optional follow-up. One tap opens the existing quick check-in / rating UI, pre-targeted to the **Taperday plan session**, not an imported activity ID. Show expected RPE range from `ExpectedEffort.For(session.Type)`, but do **not preselect effort** or prefill actual distance/duration/pace using Strava.
-- Runner selects whether they actually completed the **prescribed workout**: **"As planned" (Done)**, **"Cut it short" (CutShort)**, **"Did an easy run instead" (SwappedForEasy)**, or **"Didn't do it" (Skipped)**. These are *their statements*, not inferred from Strava activity length, and the current source still wins when they disagree. Ask perceived effort on the **existing explicit 1–10 RPE scale** (not an arbitrary emoji/label mapping), with clear descriptions of how the choices feel. Optional pain `None/Niggle/ChangedRunning` and body area only when pain indicated. Keep optional independent distance/duration fields behind "Add details". Runner can save Done without effort if they explicitly choose to; never fabricate an RPE.
-- **The default action is a quick user confirmation and effort rating; never force it to unlock the run, view analysis, or use Taperday.** Do not nag for the same completed/declined prompt after the runner has responded. At most one subtle in-app prompt per relevant session, not a mandatory push notification or repeated weekly full-screen form. A synced run that disappears from cache must not delete the runner's separately saved independent check-in.
-- **Persistence:** use `CheckInCommand` or the actual `src/StartLine.Application/Features/CheckIns/CheckIns.cs` dispatcher, `SessionCheckIn` and `useCheckIns.ts` with existing offline outbox and concurrency. For self-authored tick+rating after a synced display, send `ActivityId = null`, `DistanceKm = null`, `Duration = null` unless the runner independently enters those values. Never put Strava IDs, speed, HR, run distance/duration, best efforts or derived data into a lasting check-in, even through a hidden form default. The saved check-in is proof of **the user's declaration**, not independent proof of the watch's exact metrics.
-- **Honest totals:** check-in Done without independently entered metrics must retain "actual distance unknown"; plan-distance-based counting is only a clearly labelled *estimate* based on the runner's explicit "As planned" declaration, not a newly recorded GPS distance. "CutShort" without known distance uses the existing conservative partial-distance convention, clearly labelled estimate. Taperday must not show a 5km Strava run as a permanent "8km actually recorded" merely because the runner chose Done. Keep the prescribed plan separate from actual running.
-- **Adaptive training, using runner-authored RPE and consistency:** reuse `WeeklyCoach` and `ExpectedEffort`. Easy runs expected RPE 2–4, tempo 6–7, intervals 7–8 and long run 3–5 as currently encoded; evaluate **RPE versus session type** over multiple confirmed sessions. Repeated above-expected effort, pain, multiple runner-declared CutShort/Skipped sessions → suggest holding or easing next workload/recovery. Multiple full weeks of genuinely independently confirmed as-planned sessions with notably lower-than-expected effort, no pain and accepted readiness → cautiously propose progression *via current rules*, never from one anomalous session. Do not automatically calculate a new race fitness time or faster exact pace from RPE alone; faster specific target times need a separate independently supplied race result, time trial, or eligible performance evidence. Do not auto-increase weekly volume, pace and intensity together.
-- **After the save:** refresh the check-in state, weekly progress and proposal eligibility. The runner's own Done/CutShort/SwappedForEasy/Skipped overrides transient Strava auto-completion. Do not double-count. Proposals are computed with Taperday-owned check-ins, source filtered, stale fingerprint protected, accepted/declined/undone safely. If the runner never rates any workouts, **don't fake readiness or performance**: continue original plan, transient Strava progress and safe schedule changes.
-- **No changes to v1/v2/v3 generator hashes** from this workflow. Avoid adding DB columns if the existing `CheckInAnswers`/EF schema suffices; use existing data types for RPE, pain and completed sessions. Check how `WeeklyCoach` handles `DistanceUnreported` to avoid treating unknown distance as actual measured kilometres.
-- No runner-facing AI. No new provider API. Respect light/dark design and running animations.
+**Change-control:** NO merge to staging/main, no staging/prod deploy, no setting changes or feature enabling, no secrets, no migration against staging/prod. Keep PR #295 DRAFT until owner approves. Do not auto-merge on passing CI.
 
-**Existing code verified for this design:** `src/StartLine.Domain/Coaching/SessionCheckIn.cs` stores `Status`, `Effort` (1–10), `Pain`, `PainArea`, optional `DistanceKm/Duration`, source activity link; `src/StartLine.Application/Features/CheckIns/CheckIns.cs` validates and persists it; `client/src/features/coaching/CheckInCard.tsx` already has a quick logging form and a "Done, as planned" action; `client/src/features/coaching/useCheckIns.ts` has offline save/sync support; `WeeklyCoach.cs` already compares RPE against `ExpectedEffort` and can hold/ease/step training. Reuse these rather than inventing new coaching tables, an LLM, extra uploads or an additional run-tracking app.
+## 1. Checked staging baseline (code and GitHub Actions; not a live browser acceptance test)
 
-### New acceptance cases R01–R12 (mandatory)
+- staging SHA inspected: 6b1ccb8c42147459a3a39c91ff1fa2feaf99486f. GitHub Actions "2 - Deploy staging" and "1 - Checks" both concluded SUCCESS for that SHA on 20 Nov 2026. The documented staging address is https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net. Interactive end-to-end behaviour on that deployed site is **NOT** verified here; staging has no real Strava/provider credentials according to docs/how-we-ship.md.
+- PR #294 has already MERGED to staging. In staging/client/src/app/App.tsx, an aiCoach prop is passed when VITE_AI_COACH_ENABLED=true; staging/client/src/features/plan/PlanView.tsx can render AiCoachPanel. The old panel includes an "Ask the coach" textbox and a "Change a run" mode. Its existence is NOT owner approval to keep any chat.
+- staging/src/StartLine.API/Controllers/AiCoachController.cs exposes GET /api/v1/me/ai/status, PUT /api/v1/me/ai/consent and POST /api/v1/me/plans/{id}/ai/ask, plus deterministic POST session-adjustment/preview and /apply. They are guarded by AiCoach:Enabled, default false. Backend remains in staging even after frontend is hidden.
+- staging/client/src/features/coaching/CheckInCard.tsx ALREADY has 1–10 effort controls, status options, pain options and a "Done, as planned" action. **Critical UX gap:** the effort controls are hidden behind a "How it felt, pain and other details" disclosure, after run source, actual type, distance and duration fields. In the primary flow, this is too much friction.
+- staging/src/StartLine.Domain/Coaching/SessionCheckIn.cs already stores Status, Effort 1–10, Pain, PainArea, optional independently entered DistanceKm/Duration, Date/SessionType, Version and PrescribedKm (NOT actual measured km). Staging/src/StartLine.Application/Features/CheckIns/CheckIns.cs persists it and validates independent metrics.
+- staging/client/src/features/coaching/useCheckIns.ts already handles authenticated, per-plan saved entries, offline outbox, retries and cross-device version conflict. Reuse it.
+- staging/src/StartLine.Domain/Coaching/WeeklyCoach.cs and src/StartLine.Application/Features/Coaching/Coaching.cs already use self-reported effort/pain/status to hold, ease, cut back or suggest training progression. Existing ExpectedEffort.For values: easy 2–4, recovery 2–3, long run 3–5, tempo 6–7 and intervals 7–8. Existing rules require sufficient evidence and protect taper.
+- staging/src/StartLine.Domain/Coaching/SyncedCompletions.cs and GET /api/v1/me/plans/{id}/strava-completions derive current matching ON READ. They do not persist a check-in. Staging/client/src/features/plan/DaySummary.tsx already renders StravaCompletion and CheckInCard, and offers run analysis before details on dedicated day page. Use this existing path rather than another tab.
+- PR #295 already removes AiCoachPanel prop and visible plan rendering in its branch and adds a basic no-chat regression test. **That is only a partial corrective slice**, not complete AI backend retirement or the new rating/adaptation UX.
 
-| ID | Setup / action | Required result |
+### Concrete code maps
+
+Front end:
+- client/src/app/App.tsx — plan props, sync, check-in hooks and invalidation.
+- client/src/features/coaching/CheckInCard.tsx — IMPLEMENT compact post-run rating; keep existing full detail form as advanced fallback.
+- client/src/features/coaching/check-in-copy.ts — reuse 1–10 effort descriptions, expected effort, statuses and pain vocabulary. Do not invent a conflicting 3-choice mapping.
+- client/src/features/coaching/useCheckIns.ts and check-in-outbox.ts — durable runner-authored save and offline recovery.
+- client/src/features/coaching/StravaCompletion.tsx and useSyncedCompletions.ts — current transient completion.
+- client/src/features/plan/DaySummary.tsx, PlanView.tsx, DayPreview.tsx — show rating at the right moment; keep analysis-first details and navigation.
+- client/src/features/coaching/PlanAdjustment.tsx and client/src/features/plan/MoveRunDialog.tsx — existing change review and move patterns.
+Back end:
+- src/StartLine.Domain/Coaching/{SessionCheckIn.cs,CoachEvidence.cs,WeeklyCoach.cs,SyncedCompletions.cs} — permitted evidence and coaching rules.
+- src/StartLine.Application/Features/{CheckIns/CheckIns.cs,Coaching/Coaching.cs,Coaching/RemainingWeek.cs,Coaching/LifeHappens.cs,AiCoach/SessionAdjustments.cs,AiCoach/TrainingEvidence.cs} — preserve behaviour, separate reusable rules from chat.
+- src/StartLine.Domain/Plans/{LifeHappens.cs,RemainingWeek.cs,SessionAdjustment.cs,SavedPlan.cs,TrainingPlanGenerator.cs} — preserve safeguards and stable generators.
+- src/StartLine.API/Controllers/{MyPlansController.cs,MyCheckInsController.cs,AiCoachController.cs} — existing API endpoints and auth boundaries.
+
+## 2. EXACT runner experience — implement this, not a new design direction
+
+### State A: Strava run matched, no saved check-in
+
+- Home/Plan/Calendar still show "Completed via Strava" without any click or stored check-in. The runner can still open run analysis immediately, and it remains the first prominent action on the dedicated day view.
+- Directly beneath the synced/completed workout context (or adjacent to the run analysis summary), show one compact prompt: **"How hard did it feel?"** and **ten numbered RPE options 1–10** with accessible word descriptions. Use five evenly sized choices per row on ~320px phones, or a horizontally scrollable, keyboard-usable set if existing responsive design warrants it. Selected number has a clear focus/selected state, not colour alone.
+- Under the scale, show "Expected for [workout type]: [range]/10" using existing EFFORT_WORDS and EXPECTED_EFFORT (or the same server rule). **No preselected RPE.**
+- Default displayed status is "**As planned**" as an EXPLICIT declaration the user confirms when saving, not an inference from Strava. The primary button, disabled until the user chooses RPE, is "**Save as planned**". The two deliberate actions are: choose one RPE number, then tap Save as planned. Provide secondary "**Did something different?**" to select "Cut short", "Easy instead", or "Skipped". The latter needs no RPE; CutShort and SwappedForEasy require it, consistent with existing domain validation.
+- Optional "**Pain or more details**" reveals No pain (default unless independently selected), Niggle, Changed how I ran, body location where relevant, optional runner-authored distance/duration and note. The default compact interaction has **no source dropdown, no distance/time/pace input, no file-upload step and no expanded disclosure**.
+- The Save request MUST use existing runner-scoped check-in API, never directly mark a Strava activity "permanent". When submitted in this compact context: ActivityId=null, DistanceKm=null, Duration=null, Note=null unless independently entered, Effort=<user selected 1–10>, Status=<user explicitly confirmed value>, Pain=<user input or None>. Never copy, infer, autopopulate or convert cached Strava measurements into stored answers.
+- A saved "As planned" with no actual distance can use the existing **estimated prescribed mileage** convention for training adherence, but the UI must never label that estimate "GPS measured", "actual 8 km", or "uploaded 8 km". The explicit runner statement "I completed the workout as planned" is training-completion evidence; not exact performance evidence. If they choose "Cut short", don't pretend they completed full planned kilometres. The runner may independently fill an actual distance for a truly measured long-term record.
+- After save, instantly replace the prompt with "**Rated 4/10 · As planned**" (using their actual answer), an accessible "**Edit feedback**" action and nonintrusive status "Saved" or "Saved on this device, syncing". No separate success dialog, no route change and no blocking spinner on run analysis. Refresh relevant self-report-aware Progress/weekly coach state. No double counted run.
+- The card must be dismissible without losing Strava's automatic completion. Do NOT persist a declined rating as fake training data. Do not push daily reminders that nag for RPE. Once saved, don't present a fresh empty prompt for the same check-in. Existing saved feedback can be edited/removed, with the same optimistic concurrency and account isolation.
+- If no Strava is connected or no confident match exists, a runner can still tick/rate a manually confirmed planned run using the same compact component and existing logging flow. If two activities are ambiguous, do not invent a match; a user can rate the plan session based on their own recollection.
+
+### State B: runner answered / edit / offline
+
+- The source of truth for long-term coaching is the runner's explicit response, not whether the Strava cache still exists. Ratings survive Strava disconnect and expiry; no imported metric survives in the saved answer. Existing offline outbox may queue answers when offline; show a truthful pending state until acknowledged. A second-device edit must never be silently overwritten by a stale queued update. Same session/day is updated in place, never duplicated.
+- A saved check-in may override the transient completion indicator. Preserve separate tracking of *what was prescribed*, *what Strava currently displays*, and *what the runner says they did*. Keep Strength and Race non-checkable as the existing domain requires. After an explicit Skipped with a synced activity, show an unintrusive conflict explanation, not an automatic correction.
+- Race result/post-race journeys are outside this feature. Do not modify archived or completed plans, past training prescriptions, run-analysis page hierarchy or the running cartoon animation.
+
+## 3. Staging AI code — exact retain / retire / relocate decision
+
+**RETAIN (deterministic, non-AI):**
+- Domain SessionAdjuster and its time/distance/pace safety constraints and tests.
+- Application SessionAdjustments preview/apply/fingerprint, plan version checks and RestoreSessions functionality; move those routes to a normal runner-scoped controller / independent AdaptiveTraining feature gate if the old AiCoach:Enabled coupling prevents them working without chat.
+- Existing LifeHappens move/swap, RemainingWeek, WeeklyCoach, WeeklyReview, Readiness, PlanBuilder, generator constraints and data-provenance-filtered check-in evidence. Reuse these instead of starting another coaching algorithm. Rename the AiCoach namespace for reusable deterministic services if helpful, but ensure full code/test/client migration.
+
+**RETIRE / KEEP DISABLED (conversational AI):**
+- Remove the plan's AiCoachPanel rendering (already done in PR branch). Remove unused client chat UI and api.me.askAiCoach/status/consent calls, and no chatbot toggle, text input or model-choice settings anywhere.
+- Retire/remove runner-facing GET /ai/status, PUT /ai/consent and POST /plans/{id}/ai/ask as supported user actions. Do not merely hide them with CSS if a backend route can still call a provider. Remove/disable the old AskCoach dispatcher and paid OpenAiCoachModel registrations if unused. Preserve existing data/history; do not drop SQL tables merely to clean code.
+- Keep AiCoach:Enabled, AiCoach:McpEnabled, keys and VITE_AI_COACH_ENABLED OFF. No model invocation in sync, rating, plan load, or adaptation. Do not expose read-only MCP endpoints in the runner experience.
+- **Regression expectation**: the previous browser test client/e2e/ai-coach.spec.ts and backend tests/StartLine.Integration.Tests/AiCoachTests.cs contain chat assertions that should be replaced with negative no-chat/security assertions plus focused deterministic session-adjustment tests. Do not simply delete test coverage to make CI pass. If existing UI/endpoint is safely retired but DB schema remains, document why.
+
+## 4. Adaptive decisions — use the runner's RPE, not watch HR
+
+**Input (persistent):** current saved plan+generator version, planned session type/date/distance, runner's explicit Done/CutShort/SwappedForEasy/Skipped, RPE 1–10 if supplied, optional pain/body area and readiness, independent actual measurements ONLY when separately supplied, previous accepted coaching decisions and runner-created schedule changes. Never include Strava-derived values as persisted evidence or in its fingerprint. If no RPE, do not fabricate one. No HR is needed.
+
+**Rules:** evaluate the runner's feedback relative to the workout's expected effort, never raw RPE in isolation:
+- Easy expected RPE 2–4; tempo 6–7; intervals 7–8; long run 3–5 (same as existing server and client). A tempo at 7 is normal; an easy run at 7 is more concerning.
+- Existing WeeklyCoach requires at least 50% known workouts to judge the week. Two runs with RPE at least 2 above expected upper bound is a strain signal. Pain that changed running takes precedence over positive training signals. Repeated missed/shortened runner-confirmed sessions trigger conservative hold/easing, never make-up kilometres.
+- Full-volume and positive response must be grounded in actual independently reported kilometres **or explicitly as-planned self-confirmation**, labelled as estimated adherence rather than GPS-measured volume. For a runner with only a transient Strava completion (no own answer), don't store a durable Done or use its metrics to increase volume. Don't infer "skipped" from no webhook.
+- Only the existing guarded WeeklyCoach/WeeklyReview thresholds can step up training. A single easy-feeling run never advances paces. Protect existing 3-strong-week checks and readiness/verified evidence gates. No faster precise race goal or fitness estimate from subjective RPE alone; require an independently entered benchmark/time trial/eligible performance input. No simultaneous volume + pace + intensity escalation. No aggressive changes in taper, race week, during illness/injury or with high pain.
+- After a self-report save/delete/edit, automatically evaluate whether a meaningful proposal exists; don't wait for the runner to navigate to the Sunday weekly review to learn about an acute recovery issue. No full-week recalculation that silently rewrites the entire training calendar on each app read. No LLM.
+- **Classification:** NoChange (silent); WarningOnly (e.g. just moved long run into recovery conflict); SafeAutomaticCorrection (ONLY proven conservative future easy/rest change, bounded and undoable); NeedsApproval (any substantial volume, pace, intensity, interval/tempo, long-run or multi-week change, with before/after and Keep plan/Review change/Undo). If automatic safety cannot be demonstrated, choose approval.
+- Preserve runner's moved dates and explicit choices; never change a past or completed workout, race day, archived plan, cutback/taper or structured run/walk silently. Do not duplicate sessions or change strength in unexpected ways.
+- Use existing source-scoped, stale-token preview/apply and plan version/concurrency mechanisms from Coaching/LifeHappens/RemainingWeek/SessionAdjustments. Every suggestion tied to a runner, plan version, eligible evidence fingerprint and runner-local date. If stale after check-in/move/midnight or second device update, reject 409 and recompute. Accept/decline/undo are idempotent and durable; declining same fingerprint does not nag again.
+- Where a new endpoint is required, prefer narrow read-only GET /api/v1/me/plans/{id}/adaptation to retrieve pending proposal summary, with POST /.../apply, /.../decline and /.../undo only if no existing safe endpoint already serves it. Define typed before/after DTO including date/type/distance/duration/steps/pace zones, reason codes and approval status. Never trust client-sent revised sessions; re-evaluate on write. No endpoint should require an AI key.
+
+## 5. Required implementation slices (complete code + tests, not just documentation)
+
+### A. Compact rating flow — highest priority
+- Introduce a reusable inline PostRunRating view or "compact" mode within CheckInCard, prefer smallest change to avoid duplicate state logic. Put it after run analysis/status in DaySummary (the main dedicated day experience) and make it reachable from the Home recent completed workout; use existing navigation rather than a new route. Keep normal manual check-in fallback and full details.
+- Use existing 1–10 scale and stable descriptive labels, responsive mobile layout, meaningful button copy, optional more-details controls. No auto-persist on selection before explicit save.
+- Use existing useCheckIns, API, authentication and offline outbox; verify no Strava fields in the durable payload or client offline queue. Existing check-in editor updates same record, not a separate rating table.
+- Delete unnecessary copy telling a synced runner they must log manually. Preserve "Completed via Strava" label and its transient data; no count twice.
+
+### B. Self-report-driven coaching — highest priority
+- Trigger a bounded evaluation after acknowledged/queued check-in changes and on next safe plan read/foreground if hosting slept, with idempotence.
+- Reuse WeeklyCoach, WeeklyReview, CoachEvidence, PlanCoach and PlanAdjustment rather than invent a second periodisation engine. Add only missing coordination/event handler and metadata for warning/proposal state if tests establish the need.
+- Show at most one contextual recommendation, not a coach chat, when enough eligible data supports it. Keep normal week untouched if not enough evidence; don't show "No change" toast. Ensure Home, Plan, Calendar/ICS, Progress, run detail and recap agree after accepted adjustments.
+
+### C. Calendar move recovery — included, not competing
+- Use the existing LifeHappens and MoveRunDialog. After a confirmed moved long run near tempo/intervals, show safe contextual recovery warning/proposal while preserving the runner's chosen target date. A simple easy-to-free-day move has no additional prompt. Never silently move a run twice.
+
+### D. Chat cleanup & deterministic session adjustment — included
+- Keep initial removal of AiCoachPanel and finish safe API/component cleanup described above; preserve independent deterministic preview/apply. No AI enabled just because staging has the code. Update old AI tests to cover current no-chat requirements.
+
+### E. QA, screenshots, handoff — required
+- Tests, actual screenshot evidence, exact CI commands and PR notes. Use only synthetic data, FakeStravaApi, FakeTimeProvider and disposable local SQL/LocalDB. Never test against real runner data, staging/prod SQL or live Strava credentials. Follow docs/testing.md.
+- Run dotnet tool restore, scripts/check.sh and all relevant React Vitest/TS/lint/build and Playwright browser projects. Zero warnings, no skipped failing tests or hidden exceptions. Note any environments that cannot be executed locally; green GitHub CI alone does not prove a real staged OAuth journey.
+- Do not change original Taperday palette, animations, bottom navigation, dark/light themes, PWA behaviour, race builder or post-race recovery. Cover 320px/390px phone, tablet/desktop, reduced-motion, keyboard, high contrast and light mode.
+
+## 6. Test matrix — every row requires PASS / FAIL / NOT VERIFIED in PR
+
+| ID | Synthetic end-to-end case | Expected |
 |---|---|---|
-| R01 | Strava syncs a confidently matched run, runner never opens app | Visible completed session when viewing app; **no** permanent check-in and no upload required |
-| R02 | Runner opens matched workout, chooses As planned and RPE 3 | Exactly one permanent, independently selected `Done + Effort=3` check-in; activity ID/metrics null; source display remains permitted |
-| R03 | The same runner later edits RPE from 3 to 6 | One updated check-in, no duplicate session/run, future coach sees new user rating |
-| R04 | Strava shows a 5 km run vs 8 km plan, runner chooses CutShort + RPE 8 | Permanent runner declaration CutShort/RPE 8, **no** copied Strava distance or 8 km measured claim |
-| R05 | Runner chooses Done but no effort | Save only a Done declaration; never assume RPE, never claim actual distance unless independently given |
-| R06 | Strava cache expires or user disconnects after check-in | Transient metrics/completion removed; independent runner declaration and rating survive, are deletable/exportable |
-| R07 | Multiple hard training sessions rated much harder than expected | Existing `WeeklyCoach` proposes conservative hold/ease/recovery, with no LLM call |
-| R08 | Three genuinely self-reported strong weeks, independently supported as-planned volume, healthy readiness | Conservative progression proposal under current safeguards; no invented measured pace or race time |
-| R09 | Runner reports pain that changed running | Recovery priority, no hard growth; preserve their own decision and explicit review flow |
-| R10 | Same app offline when rating, app reopened/another device synced | Exactly-once update or conflict-resolution, no stale overwrite/cross-account exposure |
-| R11 | Running session moved after runner rated old date, or duplicate webhook | Correct session identity, one check-in, no double counting, no loss of own entry |
-| R12 | Light/dark 320px phone and desktop, runner declines rating | Run remains visible via Strava, no nagging, no chat, no barrier to Plan/Home/analysis |
+| R01 | Strava run arrives and user never taps a control | Home/Calendar/Plan show auto-completion; no persisted check-in or new AI call |
+| R02 | Strava run arrives, user selects 3/10 then Save as planned | Exactly one durable runner-authored Done/Effort=3, null ActivityId and no Strava-sourced distance/time |
+| R03 | Runner edits 3/10 to 8/10 | Same check-in updated, no duplication, coach evaluates new rating |
+| R04 | Synced 5 km vs planned 8 km, runner picks Cut short and RPE 8 | Stored CutShort/8, no actual 5 km copied, honest transient 5/8 comparison |
+| R05 | Runner chooses Done without RPE via existing quick tick | Saved Done only, RPE remains null; no invented effort |
+| R06 | Strava cache expires / connection revoked after own rating | Transient Strava data disappears; user-authored check-in/RPE survives |
+| R07 | Two genuine easy runs rated 7–8 out of 10 | Conservative hold/ease proposal through WeeklyCoach where thresholds met |
+| R08 | Three genuinely self-confirmed as-planned weeks with appropriate readiness and low effort | Only rules-supported gradual progression for review, never exact new race pace from RPE alone |
+| R09 | Runner indicates pain changed running, body area optional | Safety/recovery priority, no harder plan recommended |
+| R10 | User skips rating, dismisses rating UI, reloads | Still sees Strava-completed activity; no repetitive full-screen prompt or blocked analysis |
+| R11 | Runner rates while offline, then syncs on same/second device | Pending shown; idempotent save; stale edit conflicts do not overwrite newer answer |
+| R12 | Runner reports Skipped despite Strava match | Runner declaration wins, conflict clearly identified, no false auto-correction |
+| R13 | Two runs or two sessions on same local day | No invented match; rating remains independently recordable if user chooses the right plan session |
+| R14 | Runner moves workout to another day then rates | Correct date/session association; one record; old moved date not duplicated |
+| R15 | One fast or one difficult run, not enough other evidence | No drastic automatic volume/pace change |
+| R16 | One missed easy day with delayed Strava upload | No automatic missed-workout assumption or make-up kilometres |
+| R17 | Long run moved next to tempo/interval session | Keeps runner's moved date; safe review/warning; no silent second move |
+| R18 | Accept/decline/change/undo future adaptation across two devices | Before/after consistent Home/Plan/Calendar/ICS; stale proposal 409; no repeated nag |
+| R19 | 320/390px phone, tablet/desktop, light/dark/reduced motion | RPE choices accessible, visible without complex form, no overflow, no chat |
+| R20 | Logged-in runner A and runner B, archived/current/anonymous plans | Auth isolation, no leakage, no changes to history or anonymous builder |
+| R21 | Existing staging chat feature env accidentally toggled on | No runner-facing Ask/consent, no live model/MCP invocation |
+| R22 | Tests with current Strava-only activity and no user input | No permanent pace/fitness/volume decision; no prohibited derivative or data laundering |
+| R23 | Runner checks Done as planned without measured distance | Long-term display labels planned kilometres as estimate, never GPS actual |
+| R24 | Race week, cutback, return-from-injury, beginner timed run/walk, ultra | All generator safety and completion semantics preserved |
 
-**Execution order for Claude:** use existing `CheckInCard` and `useCheckIns` to build the fast, optional rating-after-sync interaction; verify the saved record's provenance and metrics; trigger currently available `WeeklyCoach` with enough independently reported evidence; implement new safe adaptation proposals where existing commands require manual opening; test R01–R12 with synthetic `FakeStravaApi` + disposable SQL + Playwright. This is now a top-priority core feature, not a future suggestion.
+Use these existing test entry points: tests/StartLine.Domain.Tests/Coaching/{WeeklyCoachTests.cs,SyncedCompletionsTests.cs}, tests/StartLine.Integration.Tests/{CheckInTests.cs,CoachTests.cs,StravaCompletionTests.cs,AdaptiveTrainingTests.cs,AiCoachTests.cs,LifeHappensTests.cs}, client/src/features/coaching/{CheckInCard.test.tsx,useCheckIns.test.tsx,RunVisibility.test.tsx}, client/e2e/{strava-completion.spec.ts,run-history.spec.ts,offline-check-ins.spec.ts,life-happens.spec.ts,ai-coach.spec.ts}. Add client/e2e/post-run-rating.spec.ts with fake API where needed; adapt/remove chat assertions rather than skipping them.
 
-## FINAL OWNER CONSTRAINT — EXISTING STRAVA API ONLY (21 NOV 2026)
+## 7. No reinterpretation, no hidden rollout
 
-**The owner has no access to ANY additional provider APIs and cannot obtain Garmin, Polar, Apple, HealthKit, aggregator or other new provider access. No new external API is in scope, and Strava has refused special approval for permanent coaching decisions derived from its API data. This is final for PR #295.**
+- Do NOT tell the runner they must talk to AI. Do NOT make a 10-field logging form mandatory. Do NOT make rating mandatory, but make a voluntary rating the easiest way to create lasting coaching evidence.
+- Do NOT assume watch HR is accurate enough to personalise training. Do NOT require it.
+- Do NOT misrepresent a recorded Strava session as a self-confirmed prescribed tempo/interval session. Do NOT store derived Strava distance/pace in self-reported check-ins.
+- Do NOT silently auto-increase speed/distance after RPE=2 once. Do NOT change historic workouts, archived plans or v1/v2/v3 generator snapshots.
+- Do NOT create a new database for ratings, external API adapters, native app, new theme or paid model.
+- Do NOT merge to staging, main or production or change feature flags without explicit owner approval. This remains a DRAFT PR.
 
-**Do not investigate, build adapters for, recommend, wait for, request, or make the product depend on any other API. Do not suggest an alternative API as the answer.** The only connected activity feed is Taperday's **already-working Strava integration**; it remains the PRIMARY experience.
+### What to post back to PR #295 upon completion
 
-### Exactly what to implement with existing resources
+1. Final commit SHA + changed files; no unreviewed external code.
+2. Detailed flow of synced completion → selected RPE → check-in payload and storage → coaching evidence → proposed/apply/decline/undo.
+3. Tests/commands with exact pass/fail/skip counts. Each R01–R24 labelled PASS/FAIL/NOT VERIFIED with test links/line numbers.
+4. Actual phone and desktop screenshots in dark and light themes, including selected effort and edited rating. No invented screenshot URLs.
+5. Evidence of no model calls and no Strava API-derived permanent coaching; privacy, cache expiry and account deletion review.
+6. Relevant migrations or explicit "no migration"; rollback feature flag plan, source provenance, mobile usability limitations.
+7. Remaining issues and readiness for **OWNER REVIEW**. **Stop at draft.** Do not deploy.
 
-1. **Zero-touch Strava CURRENT activity:** existing OAuth, webhooks, durable sync jobs, foreground catch-up, dedupe, transient activity cache and `SyncedCompletions`. Match eligible runs on the currently moved plan date. Current Home, calendar, Plan, progress and recap reflect permitted active cached activity without user upload or permanent tick. The runner uses a watch and does **nothing in Taperday** for normal completed-run display.
-2. **Always-on schedule intelligence from Taperday-owned data:** when a runner drags/swaps a workout, changes running availability, adjusts readiness, reports pain/illness or explicitly marks a session missed, evaluate future training automatically and conservatively using existing deterministic coaching logic. Preserve runner-selected dates; safely handle hard-day adjacency, extra recovery, taper, strength conflicts, race week and run/walk without a chatbot. Auto-apply only provably safe minor corrections with undo; prompt once for meaningful modifications.
-3. **Occasional human-provided signals, not daily logging:** existing account/profile inputs (race goal, current weekly volume, recent race/5K/10K performance where independently and willingly supplied), optional very short periodic readiness/effort feedback, independently authored check-ins, and pre-existing optional FIT/GPX/TCX imports can provide **independent** evidence for longer-term coach progression. Prefer an **optional, single-screen post-run tick and 1–10 effort rating** when a runner wants a lasting coaching record. A separate weekly check-in is not required to make normal Strava progress work. Never force a form after every run. No manual data is invented, copied from Strava, inferred from its cached metrics or required to display completion. Taperday must remain useful if the runner never enters anything.
-4. **Transparent limitation:** Under the assumed Strava denial, fully automatic **persisted fitness/pace/mileage progression based solely on Strava measurements is NOT possible**. Do not falsely advertise or simulate it; do not silently write derived snapshots, use AI/MCP as a proxy, run browser scrapers, ask the user to download Strava exports every week, or launder the data into a fabricated user entry. Keep current Strava calculations transient and source-labelled as they are today. Until there is genuinely independent evidence, leave pace progression at the plan's existing prescription.
-5. **No new app:** Taperday remains the existing PWA. Never propose native companion apps, direct HealthKit PWA access, paid data brokers or second OAuth integration in this PR.
+## 8. Exact Claude Code instruction (paste this prompt)
 
-### In-scope adaptation examples
-
-- **Easy 6 km moved Wednesday → Thursday with no collision:** save move, no additional prompt or schedule rewrite.
-- **Sunday long run moved to Saturday beside a Friday tempo:** keep Saturday as chosen; warn about recovery and propose a safer *future* Friday session for explicit review. Do not silently change the tempo or move Saturday back.
-- **Runner explicitly marks illness, injury, or very hard effort:** prioritise recovery and safe rest/easy corrections using *their own report*. No aggressive catch-up mileage.
-- **Strava records 5 km vs planned 8 km:** show automatic completion with accurate shortfall in the CURRENT visible view; do NOT permanently alter next week's training based on that Strava measurement.
-- **Runner's own recent independent 5K result and repeated independently submitted feedback:** use existing WeeklyCoach conditions to make a conservative, reviewable future-pace proposal, not an automatic unbounded speed-up.
-- **No Strava activity seen yet:** do NOT infer the run was missed; the watch may sync late, be offline, or be disconnected. A missed session only becomes a durable training signal when the runner explicitly says so or independent permitted evidence establishes it.
-
-### Required acceptance tests replacing all prior external-provider tests
-
-| ID | Synthetic scenario | Expected |
-|---|---|---|
-| N01 | Strava-only runner records ten runs without opening forms | All currently eligible runs show transient auto-completion; no persistent Strava-derived coaching |
-| N02 | Runner moves a long run to Saturday next to Friday tempo | Runner's date stays; schedule conflict evaluated without Strava measurements |
-| N03 | No Garmin/Polar/Apple/other API configured | Existing product, sync, coaching safety and builds still work; no new credentials, integrations or API requests |
-| N04 | Runner has Strava and no other data inputs | No manual-upload nag, no fictional pace improvement; current progress remains automatic |
-| N05 | Strava disconnects or cached record expires | Derived current completion disappears as required; no hidden permanent coaching decisions |
-| N06 | Runner volunteers own readiness/illness report | Correct safe future adjustment/review; provenance is self-report, not Strava |
-| N07 | PWA-only Apple Watch owner records a run through Strava | Automatic current display; no browser HealthKit access claim |
-| N08 | Old `AiCoach__Enabled` and `VITE_AI_COACH_ENABLED` both true in test | No chat, AI calls, MCP or hidden Strava-derived coaching |
-| N09 | Strava synced 5 km against prescribed 8 km | Participation/shortfall shown transiently; persistent training prescription unchanged |
-| N10 | App sleeps, late duplicate Strava run arrives and another device opens | Retry/dedupe/source expiry, no doubled completion or runner crossover |
-| N11 | No Strava activity yet for yesterday, possibly delayed sync | Do not auto-mark missed or automatically replan |
-| N12 | Only eligible independent check-ins/race benchmark available | Existing deterministic weekly coach can propose changes with accepted preview and clear evidence |
-
-**Claude instruction:** implement in-scope changes now using Taperday's existing source code, not a new API. Remove external-provider integration plans from the implementation checklist and tests. DO NOT merge, deploy or request third-party keys.
-
-## TECHNICAL CAPABILITY DIRECTIVE — build the real adaptation algorithm, test with synthetic recordings
-
-**User direction (21 Nov 2026): offer the maximum functionality technically possible from the current integration, instead of stopping at calendar-only features.** This is a specific engineering directive: **implement and verify** the algorithm, its UI and its safety properties. Existing Strava API policy constraints still apply to actual use: the synthetic engineering path must NOT feed real Strava API measurements into persistent coaching or activate a prohibited live workflow. The product owner must separately decide whether that risk/rights issue is resolved before any rollout.
-
-**The algorithm is NOT a chatbot.** A deterministic rules engine receives a normalised `RecordedRun`-shaped input; that data source may be a **synthetic Strava-shaped test fixture** for development, or independently permitted runner-provided evidence in a real running environment. Keep provenance explicit, prevent a live Strava-only record from becoming persistent adapted training in this PR.
-
-### Build the end-to-end engine
-
-1. **Data contract:** `RecordedRun` fields: `source`, `planId`, `sessionId` or date association, runner-local `date`, `distanceKm?`, `movingSeconds?`, `elapsedSeconds?`, `meanPaceSecPerKm?`, `splits?`, `meanHeartRate?`, `maxHeartRate?`, `perceivedEffort?`, `pain?`, `confidence`, `cachedUntil?`. Unknown metrics are genuinely null, not imputed. `source` must distinguish `SyntheticFixture`, `IndependentRunnerEntry`, `IndependentFileUpload`, `StravaTransient`. Do not persist a second copy of Strava-derived measurements.
-2. **Association:** match to currently effective moved session using source-local date and available time; only auto-match when unique (one meaningful run/one planned session); otherwise request a short resolution. No claiming timed intervals/tempo success from a single mean pace or distance. Don't double count same watch recording.
-3. **Per-run comparison:** compare prescribed distance/duration against actual with existing `SessionPrescription`/synced feedback semantics. For synthetic or eligible evidence, assess structured interval adherence only where step/segment evidence actually supports it; if unassessable, show `NotEvaluated`. Optional HR only when independently consented, otherwise omit.
-4. **Training-trend evaluator:** bounded last 3–4 full weeks; calculate independently attributable weekly volume, adherence, number of quality sessions, long-run completion and reliable effort trend. Guard against missing uploads, bad timezone, treadmill sessions without distance, paused watches, mixed race types, abnormal races, and low evidence sample count. No simple "you ran fast once → faster plan".
-5. **Proposals:** `NoChange` / `ReviewRecovery` / `ReduceNextHardSession` / `HoldVolume` / `ReduceVolume` / `ReviewPaceProgression`. Use the existing `WeeklyCoach`, `RemainingWeek`, `SessionAdjuster`, `LifeHappens`, `Replan` and generator caps as actual executors; do NOT duplicate their periodisation math. `SafeAutoCorrection` is restricted to proven conservative changes on eligible future easy/rest sessions and is reversible; pacing/volume/hard-work changes need explicit approval.
-6. **Thresholds:** use existing training-volume caps (<=10% where existing generator permits), existing three-strong-week pace progression requirement, no volume+pace+difficulty increases in same week, one missed easy run does not trigger make-up mileage, no increase during race taper/pain/illness. If evidence doesn't meet pre-existing thresholds, answer `NoChange` or `Hold` rather than invent a new sports-science threshold. Any new cutoff must be a named constant with a boundary test.
-7. **Output:** `AdaptationProposal` includes only runner-owned synthetic/eligible evidence, before/after complete session prescriptions (date, type, km, duration, pace, steps), weekly km changes, reason codes and proof of safety constraints. Apply a signed version-bound fingerprint; repeat preview is side-effect free, old token after run/move/midnight gives 409, decline suppression, undo, owner isolation and cross-device consistency.
-8. **Frontend:** beside the completed run show concise `Run recorded · 5 km of your planned 8 km`; if a safe future-plan change is generated from ELIGIBLE evidence show `Your training has been adjusted` with undo; material suggestions `Review change`/`Keep plan`. Under Strava-only data, show accurate current run feedback but no fake claim that future prescribed training has automatically adapted from it. No AI chat, new modal for every run, provider search, upload nags or redesign.
-
-### Concrete synthetic fixtures and expected outcomes
-
-| Test | Synthetic recorded run(s) | Output |
-|---|---|---|
-| T01 | Scheduled 8 km easy, independently sourced run 5 km | Actual shown 5/8, completion recorded appropriately, future unchanged from single short run |
-| T02 | Planned 50-min run/walk, track has 50-min motion and no reliable distance | Completed by duration, no made-up kilometres |
-| T03 | Three complete strong independent training weeks, runner reports Ready, no pain, outside taper | Existing WeeklyCoach may offer a bounded pace progression *for future weeks* for review |
-| T04 | One very fast independent 5 km | No automatic faster paces |
-| T05 | Multiple independently confirmed missed hard sessions or prolonged break | Conservative resumption/replan review, no added make-up mileage |
-| T06 | Hard long run moved beside intervals, no recorded run at all | Warn/evaluate neighbouring schedule from plan state, preserve user move |
-| T07 | Synthetic duplicate run from watch/Strava-like fixture | Single run association, no double count |
-| T08 | StravaTransient run 12 km against planned 10 km | Display short-lived 12/10 and comparison, **no** permanent coaching proposal or derived training record |
-| T09 | Independent eligible run and Strava transient copy appear same day | No double count; keep independent eligible evidence separate and validate independently of Strava |
-| T10 | Repeated sync events, 2 devices, stale proposal | Deterministic results, no phantom revised sessions, old apply 409 |
-| T11 | One run with missing pace/HR/splits | No invented zone compliance, effort, recovery or interval success |
-| T12 | Injury/pain, beginner, ultra run/walk, taper/race week | Safe hold/recovery, no aggressive upgrade |
-
-**Implementation order:** (a) introduce the pure evaluator + synthetic input fixtures and safety tests; (b) wire it to the already permitted Taperday-owned schedule and independent evidence events; (c) extend run-analysis display using the existing transient Strava-completion pipeline; (d) add small proposal/review/undo UI and API; (e) demonstrate synthetic end-to-end scenario in Playwright; (f) leave live Strava performance-driven persistent adaptation DISABLED with an explicit documented contract blocker. This is a real code deliverable, **not another architecture-only handover**. A fake passing test is never described as evidence of live provider permission.
-
-## 0. Hard execution rules
-
-1. **DO NOT MERGE PR #295. DO NOT DEPLOY. DO NOT PUSH TO STAGING OR MAIN.** Work only on `fix/adaptive-coaching-no-chat`, which targets `staging`. A green CI pipeline is NOT approval. The owner expressly objected when PR #294 was merged without asking. Stop with a **draft PR ready for owner review**, not a deployment.
-2. **Do not ask runners questions of an AI.** No chatbot, natural-language textbox, "Ask the coach", chat bubble, AI tab, AI consent screen, or external assistant connections in normal UX. No model call during sync, opening plan, moving a workout, or checking the week's progress. **A paid LLM is not required for this feature.**
-3. **Strava is the PRIMARY connected run feed.** Runners use Garmin, Apple Watch or their phone as usual; Taperday syncs from their connected Strava account. Automatic ingestion, auto-completion and current progress must not require a manual FIT/GPX/TCX upload or a manual tick. Do not replace Strava with speculative Garmin/Apple API integrations.
-4. **Strava policy permanently excludes one category under this scenario, not automation overall.** Under the Strava API Policy effective 1 June 2026, §§5.3–5.5, 5.16, 6.2, third-party AI/MCP use, analytics and durable derived data are restricted. **Do not send Strava API data or data derived from it to an LLM, AI/MCP agent, embedding store or external training service. Do not persist changed pace, volume, fitness estimates, training decisions, or runner declarations derived from Strava data absent written permission.** Do not infer permission from the athlete's OAuth consent. Use the existing transient `SyncedCompletions` read/display approach and existing cache limits only; do not expand sensitive processing by assumption. Full performance-driven permanent coaching *from Strava alone* is **OUT OF SCOPE under the assumed definitive Strava denial**. Document it as such rather than quietly implement a prohibited workaround. A request draft exists in `docs/invisible-adaptive-training.md`; **do not send it** without owner approval.
-5. **Keep the original Taperday product.** Preserve Night Run dark/light design, cartoon runner and intro animation, bottom navigation, PWA support, mobile/tablet/desktop responsiveness, non-account plan builder, run/walk/Couch-to-5K and marathon/ultra support, race/recovery/post-race navigation, existing weekly recaps and calendar links.
-6. **Synthetic tests only.** Never run migrations/Respawn against staging or production SQL. Never test with real runner accounts, tokens, Strava credentials, or paid API keys. Never commit secrets. Follow `docs/testing.md`. No co-authored-by or AI attribution in commits, PR body or code.
-7. Work incrementally and keep PR #295's code, tests, docs and acceptance notes together. Do not open competing PRs; do not silently rebase away other peoples' changes. Inspect `staging` and `main` before changes and reconcile safely.
-
-## 1. Definitive product: "Connect Strava once. Run. We handle the rest."
-
-**Expected runner journey:**
-
-- New signed-in runner sees an unobtrusive, clear, skippable `Connect with Strava` action near onboarding; OAuth completes, the existing six-week backfill queues, connection status is visible. Existing users should not see repeated connection prompts when connected.
-- Runner records a workout on a watch or phone. Existing Strava webhook and durable `SyncJobs` ingest it, with retry, rate limit, late-upload handling and app-foreground catch-up; no manual operation required.
-- When the run is a confident match, Today/Home, Plan, calendar day, weekly progress and the weekly recap show it as **Completed via Strava** immediately on refresh/foreground, *without writing a permanent check-in*. Its distance/time comparison may be shown transiently according to existing rules. Do not mark completion as prescribed tempo/interval success when only distance/time is known.
-- If two runs, two planned sessions, a linked manual entry, upload on the same day, skipped session, timezone mismatch, or missing Strava metric makes the match ambiguous, **do not guess or double-count**. Show one small actionable resolution only where necessary.
-- Moving/swapping workouts remains simple drag/drop or `Move run` on mobile. After the move, the **plan's own schedule** is evaluated for conflicts and safe recovery spacing without needing any LLM or an activity upload. A safe move with no conflict should result in no extra modal.
-- Material future-plan edits (pace, weekly mileage, workout intensity, a key long-run replacement) require a single **Review change / Keep plan** decision with **Undo**, not chatbot interaction. The runner should not need to initiate a weekly conversation. No repeated proposal for an unchanged fingerprint after `Keep plan`.
-- If data is insufficient, synced late or unsupported by provider rights, behave gracefully: keep original plan, don't invent a missed run or ask for a manual upload just to count today's displayed progress.
-
-### Non-goals for this PR
-
-- No replacement Strava provider, native Garmin or Apple app, HealthKit-in-a-browser claim, multi-provider integration platform, paid model, chat, external AI assistant onboarding, or redesign.
-- No coaching recommendations derived from cached Strava speed/HR/distance/time that are saved for good, under this denial scenario.
-- No feature that auto-creates a runner-authored check-in, auto-logs exercise metrics persistently from Strava, or bypasses 7-day source retention.
-
-## 2. Existing code — re-use rather than rebuild
-
-- `CLAUDE.md`: Clean Architecture, `.NET 10`, `Domain → Application → Infrastructure → API`, own CQRS dispatcher (not MediatR), `TimeProvider`, versioned plans, safety constraints and brand rules.
-- `docs/strava-sync.md`: current Strava webhook, `SyncJobs`, 1/5/30/120-minute retry then longer retry, six-week backfill, throttled catch-up, seven-day transient cache, `RunCelebrator`, source attribution, reconnect flow.
-- `src/StartLine.Application/Features/Sync/{StravaSyncRunner.cs,StravaWebhook.cs,StravaConnect.cs,StravaRecording.cs}`, `src/StartLine.Domain/Sync/`, `src/StartLine.Domain/Coaching/SyncedCompletions.cs`: actual sync and display model. Use `FakeStravaApi` in tests.
-- `GET /api/v1/me/plans/{id}/strava-completions` and `client/src/features/coaching/useSyncedCompletions.ts`: transient matching/read display. `client/e2e/strava-completion.spec.ts` and `tests/StartLine.Integration.Tests/StravaCompletionTests.cs` are base regression harnesses.
-- `client/src/features/plan/{MoveRunDialog.tsx,RescheduleDrag.tsx,PlanView.tsx}`, `src/StartLine.Domain/Plans/LifeHappens.cs`, `src/StartLine.Application/Features/Coaching/LifeHappens.cs`: move/swap/restore, existing preview token and original run identity. `client/e2e/move-run-dialog.spec.ts` and `LifeHappensTests.cs` already cover essential moves.
-- `src/StartLine.Domain/Plans/{SessionAdjustment.cs,RemainingWeek.cs,SavedPlan.cs,TrainingPlanGenerator.cs,PlanProfile.cs,SessionSteps.cs}`, `src/StartLine.Application/Features/Coaching/{Coaching.cs,RemainingWeek.cs,Readiness.cs}`, `src/StartLine.Application/Features/AiCoach/{SessionAdjustments.cs,TrainingEvidence.cs}`: reuse safety caps, current week coaching, date/version fingerprints and permitted independent evidence.
-- `src/StartLine.API/Controllers/{MyPlansController.cs,AiCoachController.cs,MyCheckInsController.cs,MySyncController.cs}`: existing runner-scoped API patterns; check actual routes before coding.
-- `docs/flexible-training-week.md`, `docs/automatic-running-totals.md`, `docs/run-logging.md`, `docs/testing.md`: separate actual runs from original prescription, expiry, account boundaries, stale-token rules. Existing v1/v2 generator outputs MUST remain backwards compatible. **Do not change generator v1/v2 or snapshot hashes**; a new generated shape requires new generator version.
-
-## 3. Required code slices (implement sequentially, not all-or-nothing)
-
-### Slice A — Remove chat functionality completely from ordinary runner journey
-
-**Already committed in PR #295:** remove `AiCoachPanel` rendering and `App.tsx` wiring; a regression test asserts chat controls aren't shown. Verify the code really has no new chat surfaces, even with prior `VITE_AI_COACH_ENABLED=true`.
-
-**Complete:**
-- Retire/disable the conversational `POST /api/v1/me/plans/{id}/ai/ask` endpoint and the old AI consent/status API if no other supported feature uses them. Prefer removing the route and unused client call paths; adjust integration tests that asserted conversational behaviour. Do not leave a reachable provider route simply by hiding the UI.
-- Remove unused `AiCoachPanel` component, chat-specific styles/API types, question reader, provider calls and budgets only when references are confirmed and their deletion is safe. **Do not delete/migrate legacy DB tables or reversible runner history in this PR unless tests prove migration safety**; separate tidy-up if necessary. Preserve reusable `SessionAdjuster` deterministic safety and preview/apply services.
-- Keep `AiCoach__Enabled` / MCP feature flags off in staging and prod. If deterministic `session-adjustment/preview` depends on the old flag, decouple it behind a dedicated `AdaptiveTraining:Enabled` flag (default false) or keep dormant until the new feature is tested. No unauthenticated new route, no paid model dependency.
-- Remove `client/e2e/ai-coach.spec.ts` or replace it with invisible-adaptation acceptance tests; do not simply skip failing old AI tests. Verify no AI disclosure or opt-in appears when there is no AI processing.
-
-### Slice B — Strava-first zero-touch reliability and status
-
-**No new data provider.** Harden the existing Strava pipeline, do not duplicate it. Required:
-- Check connection/OAuth success and skippable onboarding for runners with/without current plans; do not loop users through sign-in or Strava consent every app load.
-- Webhook loss, cold-start/App Service F1 sleep, 15-minute/day rate limiting, late Strava upload or retroactive activity edit, deleted activity, token revoked, repeat webhook, duplicate fetch and synthetic two-device foreground requests: durable queue/backoff, bounded idempotent fetch and correct user-visible status. Preserve the established six-week backfill and ten-minute catch-up throttle unless tests demonstrate a justified change.
-- After a successful import, ensure existing `useSyncedRuns`, `useSyncedCompletions`, Home/Plan/date detail/Calendar/Progress eventually refetch **without manual page reload or Check for runs**. Use existing foreground/visibility/store or invalidation facilities; avoid excessive polling and background work on every render.
-- Preserve `SyncedCompletions.Of` match invariants: match by runner-local run date to the CURRENT moved-date plan, exactly one meaningful running activity and one checkable planned run, not on strength/rest/race, no conflicting manual status and no independently uploaded duplicate. A runner's Done/Skipped choice wins, conflicts are explained, no invented completion.
-- Current display should make source and uncertainty clear; absent/expired/revoked runs disappear as existing policy requires and are not copied into a permanent summary. A normal matched run is not labelled "needs manual log"; reserve one-tap resolve for genuine ambiguity.
-- Dedup identity across Strava sync, independently uploaded originals and separate manually declared entries. Do not silently convert a Strava activity into upload provenance.
-- Measure `connection success`, `import success/failure`, `match rate`, `time to visible match`, `ambiguous-match count`, `stale-cache/reconnect` events. **Telemetry must not log athlete identifiers, activity routes, private activity details or imported distance/time.** Product target: **at least 95% zero-touch appearance of eligible runs**; this is a goal, **not an existing measured SLA**. CI can check algorithmic conditions, not claim population-wide target achieved.
-
-### Slice C — Invisible schedule evaluation after runner-owned events
-
-**Only owner-controlled inputs in persisted decisions:** original saved plan, user-requested move/swap/rest day, accepted prior revisions/weekly calls, local date, explicitly supplied readiness/illness/pain, and independently entered check-ins/uploads with clearly verified provenance. **The existence/absence/content of a Strava API activity is NOT an admissible source for a persisted adaptation decision.**
-
-Introduce a small `AdaptivePlanEvaluator` (suggested name; follow architecture) with a pure-domain evaluator and an Application handler. It should run on:
-1. Accepted `LifeHappens` move/swap/restore or chosen run-day change.
-2. Independently logged check-in create/update/delete, independently uploaded recording add/delete, readiness update.
-3. A new training week (lazily on authenticated plan read with bounded once-per-fingerprint evaluation if the F1 host slept). **Do not treat no Strava run as proof that the workout was missed.**
-
-Compute a fingerprint containing `runnerId`, `planId`, saved plan rowversion, generator version/inputs, original requested move and existing `SessionRevision`, accepted `CoachWeek`, permitted evidence identifiers+version, readiness, runner-local date. Never use an imported Strava ID or metrics in this fingerprint for long-term stored decisions. Use `CoachCalls.LocalToday(runner, time)`, inject `TimeProvider`.
-
-Classification contract:
-- `NoChange`: no UI, no write.
-- `WarningOnly`: existing moved session accepted, but quality/rest conflict cannot be safely corrected without approval; show an unobtrusive inline message, don't alter run dates or contents.
-- `SafeAutoCorrection`: **ONLY** shifting an untouched rest/easy placement or easing/resting a future *easy/recovery* session to protect recovery; **never** new km, faster pace, extra day, changed strength/day of race, more hard intensity, a changed runner-selected moved workout, a logged day or changes to a hard workout. Ensure restoration is deterministic, clear and possible. If you cannot prove all those invariants, downgrade to `NeedsApproval`.
-- `NeedsApproval`: replacing a key session, changing a tempo/interval workout, reducing a long run materially, adjusting pace zones/weekly progression, rebuilding future weeks or changing training load. No write until `Review change` + Apply on a current token. On `Keep plan`, do not show the same suggestion again until its fingerprint changes.
-
-**Scope bounds:** affected days in the current week and at most the next 14 local days for immediate conflict corrections; longer future-week adaptations go through existing `WeeklyCoach` / `Replan` APIs and their safety rules and acceptance, not a second competing periodisation engine. Never touch the past, a completed/logged workout, archived/concluded plan, race or workout instructions that don't fit the adjusted prescription. Keep `SessionSteps`, run/walk/interval warm-ups, long-run limits, cutbacks, taper, strength/rest spacing and ≤10% supported progression. Do not "make up" missed kilometres.
-
-**Move conflicts:** preserve exactly the date and session the user selected. A Sunday long run moved to Saturday adjacent to Friday tempo must result in a collision warning or a correctly gated conservative alternative for Friday—not another silent move of the Saturday long run. A Wednesday easy moved to Thursday with no conflict must cause **no** extra approval card, notification or replan.
-
-**Concurrency, idempotency, history:** run the evaluator after successful event commit or use an event/outbox with replay-safe processing, not before; enforce unique evaluation key or equivalent durable dedupe (don't rely solely on in-process state); compare current version and recompute before Apply; return 409 on stale proposals. Two devices/offline replay/midnight/move-undo-move again must not create phantom/doubled workouts. Persist accepted or declined material decisions with no raw Strava data. Revision/undo must be auditable and not erase completed runs. Keep account export and deletion behaviour consistent with new records.
-
-### Slice D — Minimal user-facing training updates, no assistant panel
-
-**Location:** a quiet card near the current week or affected run, and a one-line Home status **only when a real plan change is auto-applied or pending review**.
-
-Example exact copy (localised units and dates):
-- Auto-safe: **"Your week has been adjusted."** "After moving your long run to Saturday, Friday is now a recovery day." Actions: **"See changes"**, **"Undo"**.
-- Needs approval: **"A safer week is suggested."** "Your long run is now Saturday, next to Friday's tempo. Review an easier Friday." Actions: **"Review change"**, **"Keep plan"**. The compare view shows before/after date, type, km, estimated minutes, pace range, steps and weekly km.
-- Sync: **"Run synced from Strava"** as appropriate; current UI may show "Completed via Strava." Do not display a "Please upload to personalise" banner for normal synced activities.
-- Insufficient eligible evidence for faster pace: **no nag and no popup**. Keep pace unchanged; show a clear reason only if runner opens an existing training guidance detail.
-- Two ambiguous runs: one contextual **"Choose which run matches"** action. No multiple forms.
-
-Accessibility: keyboard, screen reader status without unsolicited focus jumps, mobile 320px/390px, tablet, desktop, reduced-motion, both dark/light. Reuse current fonts/colours/runner animation; preserve bottom navigation. No stacked cards on every home load.
-
-**Consistency:** API plan DTO, current week, calendar day, personal calendar feed/ICS, Home next workout, Progress, weekly recap, workout detail and exported workout must reflect the same *accepted* revisions after refresh and across devices. A pending suggestion never changes those views. Historical prescriptions and actual running remain separate.
-
-### Slice E — Clean API contracts and feature flags
-
-Use existing `/api/v1/me/plans/{id}/life-happens/preview|apply`, `.../coach/proposal|apply|decline`, `.../remaining-week/proposal|apply` where they suffice. If one read-only adaptation endpoint is needed, use:
-- `GET /api/v1/me/plans/{id}/adaptation` → `{ state: "none"|"warning"|"autoApplied"|"needsApproval", source: "schedule"|"independentRun"|"readiness"|"weeklyReview", reasonCode, message, affectedDates, before, after, weeklyKmBefore, weeklyKmAfter, token?, version }`. This response must have **no raw Strava metrics**. Ensure stable DTO field types and document in OpenAPI / generated client.
-- `POST /api/v1/me/plans/{id}/adaptation/apply` → `{ token }`, runner-scoped, recompute and reject stale token with 409; no body-supplied arbitrary sessions.
-- `POST /api/v1/me/plans/{id}/adaptation/decline` → `{ token }`, suppress same version/fingerprint, record no sensitive imported run data.
-- `POST /api/v1/me/plans/{id}/adaptation/undo` → `{ decisionId }` or re-use `/adjustments/restore` when original date/type can be unambiguously restored. Undo must be idempotent and not revert a newer runner move or later completed run. Use 409 when unsafe.
-
-Do not introduce these endpoints merely to duplicate existing working contracts: first check if `LifeHappens` and `ReviewCoachingCommand` can serve them. Whatever contract is chosen, write response examples, status codes (401/403/404/409/429) and generated TypeScript client updates. Do not leave stale client routes.
-
-`AdaptiveTraining:Enabled` defaults **false** until owner authorises rollout. It may gate newly persisted automatic corrections separately from current trusted Strava completion, which must remain operational even with the adaptive flag off. Old `VITE_AI_COACH_ENABLED`, `AiCoach:ApiKey`, `AiCoach:McpEnabled` must not activate a chat panel or model calls. Keep the external MCP port disabled; do not offer it to runners.
-
-## 4. Verification matrix — no shortcuts
-
-A **pass** means the expected persisted state, visible UI and source/ownership boundaries match; asserting a request was sent is not enough. Extend existing domain, application, integration and E2E suites rather than building only mock screenshots.
-
-| ID | Setup/action | Expected |
-|---|---|---|
-| S01 | New runner connects Strava and gets a normal single watch run | No manual upload/tick; one matched completion in Home, Plan, Calendar, Progress |
-| S02 | PWA sleeping, late watch upload, missed webhook | Catch-up discovers run after foreground, no manual `Check for runs` |
-| S03 | Duplicate webhook, concurrent catch-up, same activity refreshed | One run, one completion, no double counted distance |
-| S04 | Token expired/revoked, rate limited, API temporarily down | Durable retry/status, reconnect only when required, no spurious missed day |
-| S05 | Imported run 4.5km vs 6km prescribed | Shows participation and shortfall, never claims full prescribed quality |
-| S06 | Timed beginner run/walk recording | Time-based completion matching; do not infer missing GPS distance |
-| S07 | Two runs / two planned sessions in one local day | No automatic false match; one-tap disambiguation if applicable |
-| S08 | Runner explicitly marked Skipped, later Strava run appears | Runner's mark wins; conflict displayed; no overwritten check-in |
-| S09 | User independently uploaded same file / linked own log | No Strava provenance laundering, no double count |
-| S10 | Cached Strava activity expires, is deleted or user disconnects | Remove transient completion; no stored Strava-derived weekly decision |
-| M01 | Move Wednesday easy → free Thursday without conflicts | Move saved; no extra popup, notification or mileage change |
-| M02 | Move Sunday long run → Saturday next to Friday tempo | Saturday stays; warning/valid conservative Friday proposal; no silent shift |
-| M03 | Two devices move same session, stale token | 409 and fresh preview, no double move |
-| M04 | Move, undo, repeat move, offline replays arrive | Deterministic final calendar; no ghost session or duplicate revision |
-| M05 | Move near race/strength/completed past day | Existing hard constraints reject without damaging plan |
-| E01 | One ordinary easy session not logged; Strava not yet synced | Do not presume missed; don't "make up" kilometres |
-| E02 | Independent manual check-in or upload indicates pain/overload | Ease/hold through validated proposal, never speed up |
-| E03 | Multiple valid independently sourced runs over weeks | Existing weekly coach may propose faster future paces only under current thresholds and approval |
-| E04 | Strava-only athlete has many strong runs | Automatic current progress works; **no stored pace/volume progression from Strava** without written permission |
-| E05 | Future week review/decline then repeat unchanged evidence | Once-only offer or no offer; preserve declined plan |
-| E06 | Apply genuine future change then refresh, open another device | Same changed plan in Home/Plan/Calendar/Progress/ICS; Undo restores safely |
-| E07 | Stale preview after new check-in/plan version or local midnight | 409, no accidental apply |
-| U01 | 320px phone + 390px phone + tablet + desktop, light/dark | All controls legible and operable, no chat UI, accessible keyboard |
-| U02 | Anonymous builder, signed-out user, second account's plan ID | Anonymous plan still works; forbidden reads/writes rejected |
-| U03 | Older generator v1/v2 saved plan and historical race | Snapshots unchanged, archival and past workouts immutable |
-| P01 | Inspect outbound HTTP to any model/MCP; Strava data seeded | **Zero** Strava data and **zero model calls in ordinary adaptivity** |
-| P02 | Cross source + deletion of uploaded/manual evidence | Relevant pending proposal invalidated, no retained prohibited data |
-| P03 | F1 idle, repeated app opens | Bounded work, no duplicate actions, no background model costs |
-
-Also run all existing `StravaSyncTests`, `StravaCompletionTests`, `AdaptiveTrainingTests`, `LifeHappensTests`, `CoachTests`, `AiCoachTests` (replace retired chat assertions), `client/e2e/strava-completion.spec.ts`, `move-run-dialog.spec.ts`, `life-happens.spec.ts`, and new `adaptive-training.spec.ts`.
-
-**Test infrastructure:** `FakeStravaApi`, `FakeTimeProvider`, `WebApplicationFactory`, disposable local SQL or GitHub CI SQL; do not call live Strava/Entra/AI in automated tests. Include a test for Africa/Johannesburg day boundary (UTC 22:30 is local next day), catch-up on a moved workout date, deletion after cache expiry, and explicit proof no restricted data enters any model payload.
-
-## 5. Execution checklist for Claude — follow in this order
-
-- [ ] **Preflight:** read this document, `CLAUDE.md`, `.claude/rules/engineering-principles.md`, `docs/testing.md`, `docs/strava-sync.md`, `docs/flexible-training-week.md`. Inspect current branch, files, open PRs and staging/main differences. Record baseline HEAD and check statuses. No cross-PR merges without owner permission.
-- [ ] **Audit existing sync and runner journey:** trace real webhook→queue→import→cache→`SyncedCompletions`→Home/Plan/Calendar/Progress/recap; identify actual edge-case gaps, don't write a duplicate integration. Capture evidence in PR.
-- [ ] **Finish chat retirement** and preserve independent deterministic coaching endpoints. Feature flags off and no UI even if old flags true.
-- [ ] **Improve zero-touch Strava matching/refresh reliability** and handle ambiguous/conflicting dates, replays and outages. Add synthetic API and browser tests.
-- [ ] **Implement adaptive schedule evaluator** from Taperday-owned move/readiness/eligible independent events with categorised safe correction/approval and optimistic concurrency, using current rules.
-- [ ] **Add quiet update/review/undo UI** and ensure all plan representations stay consistent across reloads/devices.
-- [ ] **Verify strict provenance/security:** no Strava-derived lasting coaching, no AI calls, no unsafe transformations, no account crossover, no race/past edits.
-- [ ] **Update all docs**: this contract and `docs/invisible-adaptive-training.md` should agree; move old AI instructions under a clearly marked retired section or remove them from active handovers. Ensure latest Taperday privacy notice remains accurate; do not claim AI service use if not calling AI.
-- [ ] **Run checks:** `dotnet tool restore`, `scripts/check.sh`, all backend and browser suites, 0 warning build, strict format, lint, typecheck, Playwright screenshot evidence. Disposable SQL only. If blocked by unavailable environment, state exact unrun checks; CI is supplemental, not proof of live E2E.
-- [ ] **Document handoff evidence in PR #295**: exact commits, design choices, before/after mobile/desktop screenshots both themes, API before/after, migrations and backwards compatibility, test matrix S01–P03 with pass/fail/unverified, privacy/Strava remaining contractual blocker, rollout flags and how to revert.
-- [ ] **STOP at draft PR.** Do NOT merge, promote to staging, run a production workflow, change App Service secrets or enable any flags. Ask owner for **explicit approval** after implementation and QA.
-
-## 6. Specific rollback / rollout contract
-
-Only after owner approval:
-- Roll out to staging first; exercise a **synthetic** connected-run simulation (not real Strava account) and real PWA view on desktop and phone. Keep adaptive auto-write flag off until verified.
-- Use current GitHub staging deployment conventions; do not introduce a second production server or new paid model usage.
-- Rollback by disabling `AdaptiveTraining:Enabled` (if introduced) and redeploying the PWA, retaining saved runner moves and accepted training plans; **never** delete plan history or remove independently reported check-ins as part of rollback.
-- Promote to production only on separate explicit owner instruction and documented smoke results.
-
-### Exact agent instruction to paste (also in PR body)
-
-> Work **only** in draft PR #295 (`fix/adaptive-coaching-no-chat` -> `staging`). Read `docs/claude-pr295-execution-contract.md` entirely. Build **Strava-first invisible adaptive training**, not an AI chatbot. Preserve automatic Strava ingest, catch-up, matching and transient completion; improve reliability and make manual uploads strictly fallback. Build deterministic automatic evaluation after runner-initiated calendar moves, readiness changes, and independently sourced run evidence; safe low-impact corrections may auto-apply, material pace/intensity/volume changes require review/decline/undo. **Never** persist coaching derived from Strava API metrics or send them to AI/MCP; mark this performance-adaptation dependency BLOCKED unavailable under the assumed Strava denial, and do not substitute manual uploads as the normal experience. Reuse Taperday's existing training rules, preview tokens, generator versions, auth and UI brand. Add source/isolation/concurrency/expired-cache tests, responsive dark/light browser screenshots and full CI evidence. Update this PR comprehensively. **DO NOT MERGE, DEPLOY, ENABLE PROVIDER SECRETS OR CHANGE PRODUCTION.**
+> Work only in draft PR #295 on branch fix/adaptive-coaching-no-chat targeting staging. First read docs/claude-pr295-execution-contract.md from top to bottom, then CLAUDE.md and docs/testing.md. The user wants invisible, adaptive running plans built from runners' **own saved tick + 1–10 RPE + pain/readiness**, not watch HR, not an AI chatbot. Keep the already working Strava sync as an automatic transient completion feed; never require upload or tick merely to display a run. Inspect PR #294's AI code already merged into staging: RETAIN its deterministic SessionAdjuster/preview/apply and existing WeeklyCoach/LifeHappens, but REMOVE the old Ask the coach UI, live ask/consent backend and model calls safely. Make a two-tap, inline "How hard did it feel?" RPE flow on the completed workout with accessible 1–10 choices and "Save as planned"; place imported-run source/distance/time and extra fields behind the normal run analysis/optional details, never copy Strava measurements into saved check-in payloads. Reuse existing SessionCheckIn/useCheckIns offline saves, trigger safe coaching proposals after independently runner-authored feedback, preserve schedule/plan/race/taper history and do not nag. Implement full domain/API/React/Playwright tests R01–R24, test on synthetic isolated SQL, add dark/light phone/desktop screenshots and report results in this same PR. **Do not merge, deploy, enable AI/provider keys or change production. Keep the PR draft for owner approval.**

@@ -1,18 +1,23 @@
-name: Ops - Wake API for weekly emails
+name: Ops - Keep production API awake
 
-# The free (F1) API may sleep after idle time. Keep it awake through the 07:00–08:00
-# send windows across runner time zones (UTC+14 through UTC-12): Monday morning for the
-# weekly recap, Thursday morning for the coaching tip (docs/coaching-tips.md).
-# The workers check every 15 minutes, and the delivery claims prevent duplicates.
+# The free (F1) production API unloads after about 20 minutes without a request, and the next runner then waits
+# 30 to 40 seconds for it to start. This pings it every 10 minutes, all day, which also keeps the weekly recap and
+# coaching tip workers running through their 07:00–08:00 send windows (docs/runner-weekly-recap.md).
+#
+# Costs nothing: the repository is public, so GitHub Actions minutes are free, and /health/live runs no checks and
+# never touches the database (Program.cs). Never point it at /health/ready, and never at staging: staging's free
+# serverless database must be left to pause, or it uses up its monthly allowance (docs/deploy.md).
+# Scheduled workflows only run from main, so this takes effect with the next release.
 on:
   schedule:
-    - cron: '*/15 16-23 * * 0'
-    - cron: '*/15 0-20 * * 1'
-    - cron: '*/15 16-23 * * 3'
-    - cron: '*/15 0-20 * * 4'
+    - cron: '3-59/10 * * * *'
   workflow_dispatch:
 
 permissions: {}
+
+concurrency:
+  group: keep-production-awake
+  cancel-in-progress: true
 
 jobs:
   ping:

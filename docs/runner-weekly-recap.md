@@ -16,7 +16,7 @@ Figures only, with no claims the numbers don't support. Built with `EmailLayout`
 ## When and how often
 
 - **Between 07:00 and 08:00 on each runner's own Monday** (`Runner.TimeZone`; an unknown zone counts as UTC), recapping the previous Monday–Sunday and previewing the new week. Runs entered before the send but dated within the previous week are included if visible to Taperday.
-- **The API must be awake to send.** On the free F1 plan timers pause when the app sleeps; `.github/workflows/recap-wake.yml` pings `/health/live` every 15 minutes from Sunday 16:00 through Monday 20:59 UTC, covering Monday 07:00 in UTC+14 through UTC−12.
+- **The API must be awake to send.** On the free F1 plan timers pause when the app sleeps; `.github/workflows/recap-wake.yml` pings `/health/live` every 10 minutes, all day, which covers Monday 07:00 in every time zone.
 - `RunnerWeeklyRecapWorker` checks every 15 minutes, and `WeeklyRecapSender` sends what's due.
 - **Once per runner and week:** a `WeeklyRecapDeliveries` row (unique on runner and week) is claimed before sending. Restarts, retries and a second app instance can't send twice.
 - **A failed send** (Brevo down, say) is tried again on the next check, up to 3 attempts in all. A claim left mid-send by a crash is never resent, because the email may have gone.

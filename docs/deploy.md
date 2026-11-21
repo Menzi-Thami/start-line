@@ -295,18 +295,22 @@ environment. The sleep and allowance guidance below applies to that option, not 
 
 ## Keeping the free API awake
 
-On F1, Azure unloads the API after about 20 minutes without a request, and F1 has no Always On. Until launch, an
-outside uptime monitor keeps it loaded for free:
+On F1, Azure unloads the API after about 20 minutes without a request, and F1 has no Always On. **Production** is kept
+loaded for free by "Ops - Keep production API awake" (`.github/workflows/recap-wake.yml`), which pings it every 10
+minutes. Staging is deliberately left to sleep (below), so its first request after idle takes 30 to 40 seconds.
 
-- Point it at `<apiUrl>/health/live` every 5 minutes, for example on UptimeRobot's free plan (check its terms).
+- The ping goes to `<apiUrl>/health/live`.
 - **`/health/live`, never `/health/ready`.** `live` runs no checks and never touches the database (`Program.cs`),
   so the pings cost almost no CPU: a second or two a day of F1's 60 CPU minutes. `ready` queries the database, and
   keeping the database awake would use up the free offer's 100,000 vCore-seconds in two or three days, after which it
   stays paused until the next month.
 - The ping must come from outside Azure. A timer inside the API can't wake it: once F1 unloads the API, nothing in
   it runs.
-- **Not from a scheduled GitHub Action.** Every run bills at least a minute, so a ping every 5 minutes is about 8,600
-  minutes a month, well over a private repo's 2,000 free ones.
+- **A scheduled GitHub Action is free only while the repository is public.** Every run bills at least a minute, so
+  pinging every 10 minutes is about 4,300 minutes a month, over a private repository's 2,000 free ones. If the
+  repository goes private, delete the schedule and use an outside monitor (for example UptimeRobot's free plan).
+- **Never staging.** Staging still uses the free serverless database, and the race calendar sync in a loaded API can
+  wake it; kept awake, it would use up the month's allowance and pause.
 
 **Production SQL Basic does not auto-pause.** The earlier 47 s wake measurement (23 Oct 2026) was from the
 previous free serverless database, not the upgraded production tier. Staging still uses the free serverless option.

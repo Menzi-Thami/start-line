@@ -1,3 +1,5 @@
+> **Superseded 21 November 2026.** The AI chat coach and MCP were retired in PR #295; see [post-run rating](post-run-rating.md) and [the contract](claude-pr295-execution-contract.md). Kept for history only.
+
 # Taperday AI Coach + MCP — complete agent handover (PR #294)
 
 > **Status, 20 November 2026 (second pass):** the design now lives in [ai-coach-mcp.md](ai-coach-mcp.md), which is current. Built:

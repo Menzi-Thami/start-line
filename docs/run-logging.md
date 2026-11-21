@@ -2,7 +2,10 @@
 
 A planned session remains identified by its original date and type. A check-in may additionally record the actual run type, distance, duration, effort and pain. This does not change generator inputs or replace the original workout.
 
-Complete opens quick logging. The runner may enter distance and time, time alone, link an imported activity, or explicitly complete without details. Time alone sets `DistanceUnreported`; do not substitute planned kilometres. Complete without details has no recorded time and may use the planned distance as an explicitly labelled estimate.
+After a run (matched by Strava or not), the day view and Home offer the [two-tap rating](post-run-rating.md): how hard it felt
+(1–10), then Save as planned. It stores only the runner's own status, effort, pain and note; never imported measurements.
+
+The full run log is one tap away from the rating ("Add your own distance and time"). The runner may enter distance and time, time alone, link an imported activity, or explicitly complete without details. Time alone sets `DistanceUnreported`; do not substitute planned kilometres. Complete without details has no recorded time and may use the planned distance as an explicitly labelled estimate.
 
 Additional runs have independent, client-generated entry IDs and `IsAdditional=true`. The original date/type uniqueness constraint applies only to planned-session check-ins. Additional entries cannot complete a planned workout, suppress its notification, or become evidence that its prescribed hard work was done. Repeating a save with the same additional entry ID updates it rather than adding another run.
 

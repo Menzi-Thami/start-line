@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { ApiError } from '../../lib/api-client'
 import { exactDistance, formatDate } from '../../lib/format'
 import type { CheckIn, RemainingWeekProposal, SessionRevision } from '../../lib/types'
@@ -33,16 +33,20 @@ export function AdaptationPrompt({ entry, coach }: { entry: CheckIn; coach: Sess
   const [attempt, setAttempt] = useState(0)
   const working = useRef(false)
 
+  // One check per save (and per "check again"): the actions object is rebuilt on every render of its screen, and a re-run
+  // would both repeat the request and wipe an Applied / Undo state.
+  const review = useEffectEvent(() => actions?.reviewRemaining?.(true))
   useEffect(() => {
-    if (!actions?.reviewRemaining) return
+    const request = review()
+    if (!request) return
     let live = true
-    actions.reviewRemaining(true).then(
-      proposal => { if (live) setState(proposal.changes.length > 0 && !wasDeclined(proposal.token) ? { kind: 'proposal', proposal } : { kind: 'quiet' }) },
+    request.then(
+      proposal => { if (live) setState((proposal?.changes?.length ?? 0) > 0 && !wasDeclined(proposal.token) ? { kind: 'proposal', proposal } : { kind: 'quiet' }) },
       // The check is a help, not a gate: if it can't run (offline, signed out), the rating still stands.
       () => { if (live) setState({ kind: 'quiet' }) },
     )
     return () => { live = false }
-  }, [actions, attempt])
+  }, [attempt])
 
   if (!actions?.reviewRemaining) return null
 

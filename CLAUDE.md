@@ -1,8 +1,11 @@
 # Taperday
 
-## Active PR #295 handover (only on fix/adaptive-coaching-no-chat)
+## Post-run rating and adaptive training (PR #295)
 
-When continuing PR #295, **read [docs/claude-pr295-execution-contract.md](docs/claude-pr295-execution-contract.md) in full** before coding. It is the definitive specification: Strava-first automatic run sync and matching; no runner-facing AI chat; safe, event-driven schedule adaptation with strict Strava-data boundaries. Manual uploads are fallback. **Do not merge to staging/main or deploy without the owner's explicit approval.** Keep this draft PR open after completing implementation and tests.
+No runner-facing AI chat, AI provider or MCP: retired in PR #295. Runners rate a run in two taps
+([docs/post-run-rating.md](docs/post-run-rating.md)); only their own answers are stored, and the rules-only coach uses them.
+Specification and acceptance matrix: [docs/claude-pr295-execution-contract.md](docs/claude-pr295-execution-contract.md).
+Releasing to production (`main`) needs the owner's explicit approval.
 
 Product name **Taperday** (domain taperday.run). Code and project names stay `StartLine.*` on purpose.
 

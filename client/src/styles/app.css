@@ -2877,6 +2877,40 @@ a.menu-item {
   border-color: var(--warn-line);
 }
 
+/* The rating on the same card: dark text on a light wash in both themes, and a dark chosen number (the card is volt in
+   dark mode, so the usual accent pill would disappear into it). */
+.panel.home-card.home-today .post-run-rating,
+.panel.home-card.home-today .adaptation-prompt {
+  background: rgb(255 255 255 / 0.4);
+  border-color: rgb(17 17 17 / 0.16);
+  color: var(--on-sage);
+}
+
+.panel.home-card.home-today .adaptation-prompt {
+  border-color: var(--warn-line);
+}
+
+.panel.home-card.home-today .post-run-rating .pill {
+  background: rgb(255 255 255 / 0.5);
+  border-color: rgb(17 17 17 / 0.24);
+  color: var(--on-sage);
+}
+
+.panel.home-card.home-today .post-run-rating .pill:has(input:checked) {
+  background: var(--on-sage);
+  border-color: var(--on-sage);
+  color: #ffffff;
+}
+
+.panel.home-card.home-today .post-run-rating .link-button,
+.panel.home-card.home-today .post-run-rating summary,
+.panel.home-card.home-today .post-run-rating .post-run-rating-word,
+.panel.home-card.home-today .adaptation-prompt .link-button,
+.panel.home-card.home-today .adaptation-prompt-result,
+.panel.home-card.home-today .adaptation-prompt-result .link-button {
+  color: var(--on-sage);
+}
+
 .strava-completion-label,
 .strava-completion-figures {
   margin: 0 0 var(--space-2);

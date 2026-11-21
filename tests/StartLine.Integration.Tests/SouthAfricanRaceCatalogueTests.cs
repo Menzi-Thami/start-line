@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using Microsoft.Extensions.DependencyInjection;
+using StartLine.Application.Features.Races;
 using StartLine.Infrastructure.Persistence;
 using StartLine.Infrastructure.Persistence.Migrations;
 using StartLine.Infrastructure.Races;

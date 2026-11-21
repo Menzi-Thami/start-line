@@ -179,9 +179,9 @@ public static class LifeHappens
     /// </summary>
     private static List<DateOnly> SafeDays(TrainingPlan plan, IReadOnlyList<PlannedSession> runs, DateOnly today, PlannedSession session, DateOnly? ignore)
     {
-        var end = WeekStart(plan, today).AddDays(6);
+        var (first, end) = MoveWindow(plan, today);
         bool HardOn(DateOnly day) => runs.Any(r => r.Date == day && r.Date != ignore && IsHard(r.Type));
-        return [.. Enumerable.Range(0, end.DayNumber - today.DayNumber + 1).Select(today.AddDays)
+        return [.. Enumerable.Range(0, end.DayNumber - first.DayNumber + 1).Select(first.AddDays)
             .Where(day => day != ignore && day != session.Date && !runs.Any(r => r.Date == day))
             .Where(day => !HardOn(day.AddDays(-1)) && !HardOn(day.AddDays(1)) && day.AddDays(1) != plan.RaceDate && day < plan.RaceDate)];
     }
@@ -189,13 +189,25 @@ public static class LifeHappens
     /// <summary>Free days left this week, from today: no run planned, before the race and not the day before it.</summary>
     private static List<DateOnly> FreeDays(TrainingPlan plan, IReadOnlyList<PlannedSession> runs, DateOnly today, PlannedSession session)
     {
-        var end = WeekStart(plan, today).AddDays(6);
-        return [.. Enumerable.Range(0, end.DayNumber - today.DayNumber + 1).Select(today.AddDays)
+        var (first, end) = MoveWindow(plan, today);
+        return [.. Enumerable.Range(0, end.DayNumber - first.DayNumber + 1).Select(first.AddDays)
             // A gentle shakeout can move to the day before a race, but no hard session can.
             .Where(day => day != session.Date && !runs.Any(r => r.Date == day) && day < plan.RaceDate
                 && (day.AddDays(1) != plan.RaceDate || !IsHard(session.Type)))];
     }
 
+    /// <summary>
+    /// The week Life happens works on: the plan's week that holds today, or, before the plan starts, its first week (the week
+    /// the runner is about to run, so a run in it can be moved ahead of time). Otherwise the calendar week of today.
+    /// </summary>
     private static DateOnly WeekStart(TrainingPlan plan, DateOnly today) =>
-        plan.Weeks.FirstOrDefault(w => w.StartDate <= today && today < w.StartDate.AddDays(7))?.StartDate ?? today.AddDays(-(((int)today.DayOfWeek + 6) % 7));
+        plan.Weeks.FirstOrDefault(w => w.StartDate <= today && today < w.StartDate.AddDays(7))?.StartDate
+        ?? (plan.Weeks.Count > 0 && today < plan.Weeks[0].StartDate ? plan.Weeks[0].StartDate : today.AddDays(-(((int)today.DayOfWeek + 6) % 7)));
+
+    /// <summary>The days a run can move to: from today (or the week's first day, before the plan starts) to the week's Sunday.</summary>
+    private static (DateOnly First, DateOnly Last) MoveWindow(TrainingPlan plan, DateOnly today)
+    {
+        var start = WeekStart(plan, today);
+        return (today > start ? today : start, start.AddDays(6));
+    }
 }

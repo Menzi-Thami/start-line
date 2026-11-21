@@ -39,6 +39,7 @@ import { OutlookCard } from './OutlookCard'
 import { ProgressInsights } from './ProgressInsights'
 import { PlanCalendar } from './PlanCalendar'
 import { WeekGlance } from './WeekGlance'
+import { canMoveFrom, canMoveTo } from './move-window'
 
 const DaySummary = lazy(() => import('./DaySummary'))
 
@@ -556,7 +557,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
               {weekOffset !== 0 && <button type="button" className="link-button week-return-current" onClick={() => { setWeekOffset(0); setSelectedDay(null) }}>
                 {currentShown?.when === 'soon' ? 'Back to your first week' : currentShown?.when === 'past' ? 'Back to race week' : 'Back to this week'}
               </button>}
-              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={previewDate} daySummaryId={daySummaryId} renderSelectedDay={() => preview(previewDate)} statusFor={statusOn} onRequestMove={moveEnabled ? requestMove : undefined} />
+              <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={previewDate} daySummaryId={daySummaryId} renderSelectedDay={() => preview(previewDate)} statusFor={statusOn} onRequestMove={moveEnabled ? requestMove : undefined} canMoveFrom={date => canMoveFrom(plan, today, date)} canMoveTo={date => canMoveTo(plan, today, date)} />
             </>
           )}
           <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts" open={!!shown?.week.sessions.some(session => session.type === 'Strength')}><summary>Strength workouts</summary><StrengthTab readOnly={trainingEnded} plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={trainingEnded ? undefined : onEditStrength} /></details>
@@ -564,7 +565,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
 
         <div {...panel('all')}>
           <div className="calendar-split">
-          <PlanCalendar weeks={plan.weeks} planStart={plan.startDate} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} historyDates={entries.map(entry => entry.date)} statusFor={statusOn} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} onRequestMove={moveEnabled ? requestMove : undefined} />
+          <PlanCalendar weeks={plan.weeks} planStart={plan.startDate} raceDate={plan.race.date} today={today} done={effectiveDone} additionalDates={additionalDates} activityDates={activityDates} historyDates={entries.map(entry => entry.date)} statusFor={statusOn} onSelectDate={selectDate} selectedDate={selectedDay?.tab === 'all' ? selectedDate : null} daySummaryId={daySummaryId} onRequestMove={moveEnabled ? requestMove : undefined} canMoveFrom={date => canMoveFrom(plan, today, date)} canMoveTo={date => canMoveTo(plan, today, date)} />
           {selectedDay?.tab === 'all' && selectedDate ? preview(selectedDate) : tab === 'all' && <div className="calendar-default-day"><DayPreview id={`${daySummaryId}-calendar`} date={calendarDefault} sessions={sessionsOn(calendarDefault)} status={statusOn(calendarDefault)} units={units} paces={plan.paces} onOpen={() => openDay(calendarDefault)} /></div>}
           </div>
           {!coach && <p className="tab-intro">Open a day to tick it off. Ticks are saved on this device only.</p>}

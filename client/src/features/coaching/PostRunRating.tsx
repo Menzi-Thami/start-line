@@ -169,7 +169,8 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
       )}
 
       <div className="post-run-rating-actions">
-        <button type="submit" className="button button-primary" disabled={busy || !ready}>{busy ? 'Saving…' : SAVE_LABEL[status]}</button>
+        {/* Not the screen's primary button: on Home and the day view that stays Open run details / View run analysis. */}
+        <button type="submit" className="button" disabled={busy || !ready}>{busy ? 'Saving…' : SAVE_LABEL[status]}</button>
         {!different && <button type="button" className="link-button" onClick={() => setDifferent(true)} disabled={busy}>Did something different?</button>}
         {existing && <button type="button" className="link-button" onClick={() => { setEditing(false); setFocusTarget('summary') }} disabled={busy}>Cancel</button>}
         {!existing && onDismiss && <button type="button" className="link-button" onClick={onDismiss} disabled={busy}>Not now</button>}

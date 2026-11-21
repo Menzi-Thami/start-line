@@ -126,7 +126,9 @@ test('a replacement retains its original prescription beside the actual run @pho
   const recorded = day.getByRole('region', { name: 'Recorded', exact: true })
   await expect(planned).toContainText('Hill repeats')
   await expect(planned).toContainText('5.5 km')
-  await expect(planned.getByRole('checkbox', { name: 'Complete', exact: true })).not.toBeChecked()
+  // Nothing is completed until the runner says so: the rating asks, and Save stays disabled until they choose.
+  await expect(planned.getByRole('group', { name: 'How hard did it feel?' })).toBeVisible()
+  await expect(planned.getByRole('button', { name: 'Save as planned', exact: true })).toBeDisabled()
   await recorded.getByRole('button', { name: 'Log this run', exact: true }).click()
   await day.getByLabel('How does this fit your plan?').selectOption('Hills')
   await day.getByLabel('What did you run?').selectOption('Easy')

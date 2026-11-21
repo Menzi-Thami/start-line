@@ -95,7 +95,7 @@ export function AdaptationPrompt({ entry, coach }: { entry: CheckIn; coach: Sess
         </>}
         <div className="post-run-rating-actions">
           {reviewing
-            ? <button type="button" className="button button-primary" disabled={busy}
+            ? <button type="button" className="button" disabled={busy}
               onClick={() => void run(async () => {
                 await actions.applyRemaining!(proposal.token, true)
                 setState({ kind: 'applied', dates: proposal.changes.map(c => c.date) })

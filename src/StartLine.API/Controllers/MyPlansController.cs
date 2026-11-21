@@ -164,17 +164,19 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
         return Ok(await dispatcher.Send(new AdjustSessionCommand(id, request.Request, request.Token), cancellationToken));
     }
 
+    /// <param name="reported">Only what the runner reported counts: days without a check-in aren't treated as missed.</param>
     [HttpGet("{id:guid}/remaining-week/proposal")]
     [ProducesResponseType<RemainingWeekProposalDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ReviewRemainingWeek(Guid id, CancellationToken cancellationToken) =>
-        Ok(await dispatcher.Send(new ReviewRemainingWeekCommand(id), cancellationToken));
+    public async Task<IActionResult> ReviewRemainingWeek(Guid id, [FromQuery] bool reported = false, CancellationToken cancellationToken = default) =>
+        Ok(await dispatcher.Send(new ReviewRemainingWeekCommand(id, ReportedOnly: reported), cancellationToken));
 
     [HttpPost("{id:guid}/remaining-week/apply")]
     [ProducesResponseType<RemainingWeekProposalDto>(StatusCodes.Status200OK)]
-    public async Task<IActionResult> ApplyRemainingWeek(Guid id, [FromBody] ApplyCoachingRequest request, CancellationToken cancellationToken)
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ApplyRemainingWeek(Guid id, [FromBody] ApplyRemainingWeekRequest request, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return Ok(await dispatcher.Send(new ReviewRemainingWeekCommand(id, request.Token), cancellationToken));
+        return Ok(await dispatcher.Send(new ReviewRemainingWeekCommand(id, request.Token, request.Reported), cancellationToken));
     }
 
     /// <summary>Makes a past plan the current one again. The plan that was current becomes a past plan.</summary>
@@ -221,6 +223,9 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
 public sealed record ReplanRequest(DateOnly ReplanFrom, Setback Setback, double? RecentWeeklyKm);
 
 public sealed record ApplyCoachingRequest([Required, StringLength(64, MinimumLength = 64)] string Token, RecoveryReadiness Recovery = RecoveryReadiness.NotReported);
+
+/// <param name="Reported">The same mode as the preview the runner saw.</param>
+public sealed record ApplyRemainingWeekRequest([Required, StringLength(64, MinimumLength = 64)] string Token, bool Reported = false);
 
 public sealed record ApplyLifeChangeRequest([Required] LifeChange Change, [Required, StringLength(64, MinimumLength = 64)] string Token);
 

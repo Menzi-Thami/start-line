@@ -260,8 +260,9 @@ export const api = {
     logReadiness: (token: string, date: string, body: { feeling: Feeling; sleep?: SleepQuality | null; soreness?: Soreness | null; note?: string | null }) => request<Readiness>(`/api/v1/me/readiness/${encodeURIComponent(date)}`, { method: 'PUT', body: JSON.stringify(body) }, token),
     /** Clears a day's check-in. */
     clearReadiness: (token: string, date: string) => request<void>(`/api/v1/me/readiness/${encodeURIComponent(date)}`, { method: 'DELETE' }, token),
-    reviewRemainingWeek: (token: string, id: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal`, {}, token),
-    applyRemainingWeek: (token: string, id: string, proposalToken: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
+    /** With `reported`, only what the runner reported counts: days without a check-in aren't treated as missed. */
+    reviewRemainingWeek: (token: string, id: string, reported = false) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal${reported ? '?reported=true' : ''}`, { cache: 'no-store' }, token),
+    applyRemainingWeek: (token: string, id: string, proposalToken: string, reported = false) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken, reported }) }, token),
     /** Previews what a situation (missed run, short day, travel, illness, moving the long run) would change. */
     previewLifeChange: (token: string, id: string, change: LifeChange) => request<LifeProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/life-happens/preview`, { method: 'POST', body: JSON.stringify(change) }, token),
     /** Applies exactly the previewed change. */

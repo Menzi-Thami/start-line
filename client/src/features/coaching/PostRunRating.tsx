@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { ApiError } from '../../lib/api-client'
 import type { BodyArea, CheckIn, CheckInRequest, CheckInStatus, PainLevel, Session } from '../../lib/types'
 import { BODY_AREAS, EFFORT_WORDS, EXPECTED_EFFORT, PAIN, ratingSummary, STATUSES } from './check-in-copy'
+import { AdaptationPrompt } from './AdaptationPrompt'
 import type { SessionCoach } from './useCheckIns'
 
 interface Props {
@@ -53,6 +54,8 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
   const summaryRef = useRef<HTMLParagraphElement>(null)
   const legendRef = useRef<HTMLLegendElement>(null)
   const [focusTarget, setFocusTarget] = useState<'summary' | 'scale' | null>(null)
+  // Each save asks the coach once what it makes of the answer (silent unless the rules suggest a change).
+  const [checks, setChecks] = useState(0)
 
   // After saving, the runner lands on their answer; after "Edit feedback", on the scale. Never on anything far away.
   useEffect(() => {
@@ -77,6 +80,7 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
       setEditing(false)
       setDetailsOpen(false)
       setFocusTarget('summary')
+      setChecks(n => n + 1)
       onSaved?.(answers.status !== 'Skipped')
     } catch (failure) {
       setError(messageOf(failure))
@@ -125,6 +129,7 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
           <span className="field-help" role="status">{pending ? 'Saved on this device, syncing' : 'Saved'}</span>
         </p>
         <button type="button" className="link-button" onClick={edit} aria-label={`Edit feedback for ${session.title}`}>Edit feedback</button>
+        {checks > 0 && <AdaptationPrompt key={checks} entry={existing} coach={coach} />}
       </div>
     )
   }

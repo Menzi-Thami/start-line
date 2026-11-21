@@ -23,6 +23,15 @@ export function formatDistance(km: number, units: Units): string {
   return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)} ${units}`
 }
 
+/**
+ * A distance exactly as the training rules set it, for previews of plan changes: they step in quarter kilometres, so a
+ * 14.25 km limit reads "14.25 km", never "14.3 km" (past the limit). Miles keep one decimal, as everywhere else.
+ */
+export function exactDistance(km: number, units: Units): string {
+  if (units === 'mi') return formatDistance(km, units)
+  return `${Math.round(km * 100) / 100} km`
+}
+
 export function toKilometres(value: number, units: Units): number {
   return units === 'mi' ? value * KM_PER_MILE : value
 }

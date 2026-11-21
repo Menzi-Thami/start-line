@@ -91,3 +91,11 @@ export function ratingSummary(entry: Pick<CheckIn, 'status' | 'effort' | 'pain' 
   }
   return parts.join(' · ')
 }
+
+/** One run that felt at least two above the top of what its kind of run should feel: the coach's own threshold. */
+export function feltMuchHarder(entry: Pick<CheckIn, 'status' | 'effort' | 'sessionType' | 'actualSessionType'>): boolean {
+  if (entry.status === 'Skipped' || entry.effort == null) return false
+  const range = EXPECTED_EFFORT[entry.actualSessionType ?? entry.sessionType]
+  const high = range ? Number(range.split('–').at(-1)) : NaN
+  return Number.isFinite(high) && entry.effort >= high + 2
+}

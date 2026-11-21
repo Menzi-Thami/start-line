@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, localToday, parseTimeSpan, toKilometres, toTimeSpan } from './format'
+import { addDays, exactDistance, formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, localToday, parseTimeSpan, toKilometres, toTimeSpan } from './format'
 
 describe('formatPace', () => {
   it('formats seconds per km as minutes and seconds', () => {
@@ -73,5 +73,19 @@ describe('dates', () => {
   it('converts miles to kilometres', () => {
     expect(toKilometres(26.2, 'mi')).toBeCloseTo(42.165, 2)
     expect(toKilometres(10, 'km')).toBe(10)
+  })
+})
+
+// Q296-02: plan-change previews show quarter-km limits exactly; "14.3 km" would name a distance past a 14.25 km limit.
+describe('exactDistance', () => {
+  it('keeps quarter kilometres exact', () => {
+    expect(exactDistance(14.25, 'km')).toBe('14.25 km')
+    expect(exactDistance(4.5, 'km')).toBe('4.5 km')
+    expect(exactDistance(12, 'km')).toBe('12 km')
+    expect(exactDistance(8.75, 'km')).toBe('8.75 km')
+  })
+
+  it('keeps the usual one decimal in miles', () => {
+    expect(exactDistance(14.25, 'mi')).toBe('8.9 mi')
   })
 })

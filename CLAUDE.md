@@ -1,5 +1,9 @@
 # Taperday
 
+## Active PR #295 handover (only on fix/adaptive-coaching-no-chat)
+
+When continuing PR #295, **read [docs/claude-pr295-execution-contract.md](docs/claude-pr295-execution-contract.md) in full** before coding. It is the definitive specification: Strava-first automatic run sync and matching; no runner-facing AI chat; safe, event-driven schedule adaptation with strict Strava-data boundaries. Manual uploads are fallback. **Do not merge to staging/main or deploy without the owner's explicit approval.** Keep this draft PR open after completing implementation and tests.
+
 Product name **Taperday** (domain taperday.run). Code and project names stay `StartLine.*` on purpose.
 
 A free running-plan builder. Pick a race (from the catalogue or any distance and date), a goal time,

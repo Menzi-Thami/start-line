@@ -365,6 +365,78 @@ public sealed class AddSouthAfricanShortDistanceRaces : Migration
             INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
             VALUES (N'cape-town-peace-run-5km-2027', N'Sanlam Cape Town Peace Run 5 km', '2027-05-22', 5, N'Green Point, Cape Town, Western Cape', N'5 km Peace Run on the day before the Cape Town Marathon.', N'https://capetownmarathon.com/peace-runs/', 1, N'https://capetownmarathon.com/peace-runs/', 1, 0);
         END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'mielie-marathon-5km-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'mielie-marathon-5km-2027', N'Mielie Marathon 5 km', '2027-01-16', 5, N'Welkom, Free State', N'Road-running festival from Welkom Rugby Club with a half marathon and shorter options.', N'https://enter.chiptimer.co.za/', 1, N'https://enter.chiptimer.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'mielie-marathon-10km-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'mielie-marathon-10km-2027', N'Mielie Marathon 10 km', '2027-01-16', 10, N'Welkom, Free State', N'Road-running festival from Welkom Rugby Club with a half marathon and shorter options.', N'https://enter.chiptimer.co.za/', 1, N'https://enter.chiptimer.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'mielie-marathon-half-marathon-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'mielie-marathon-half-marathon-2027', N'Mielie Marathon Half Marathon', '2027-01-16', 21.0975, N'Welkom, Free State', N'Road-running festival from Welkom Rugby Club with a half marathon and shorter options.', N'https://enter.chiptimer.co.za/', 1, N'https://enter.chiptimer.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'pamoja-athletics-marathon-10km-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'pamoja-athletics-marathon-10km-2027', N'Pamoja Athletics Club Marathon 10 km', '2027-01-23', 10, N'Bloemfontein, Free State', N'Road races at Tempe Military Base in Bloemfontein.', N'https://enter.chiptimer.co.za/', 1, N'https://enter.chiptimer.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'pamoja-athletics-marathon-half-marathon-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'pamoja-athletics-marathon-half-marathon-2027', N'Pamoja Athletics Club Marathon Half Marathon', '2027-01-23', 21.0975, N'Bloemfontein, Free State', N'Road races at Tempe Military Base in Bloemfontein.', N'https://enter.chiptimer.co.za/', 1, N'https://enter.chiptimer.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'meerkat-marathon-10km-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'meerkat-marathon-10km-2027', N'Meerkat Marathon 10 km', '2027-02-06', 10, N'Kimberley, Northern Cape', N'Road races based at Hoerskool Diamantveld in Kimberley.', N'https://www.peaktiming.co.za/', 1, N'https://www.peaktiming.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'meerkat-marathon-half-marathon-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'meerkat-marathon-half-marathon-2027', N'Meerkat Marathon Half Marathon', '2027-02-06', 21.0975, N'Kimberley, Northern Cape', N'Road races based at Hoerskool Diamantveld in Kimberley.', N'https://www.peaktiming.co.za/', 1, N'https://www.peaktiming.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'randburg-harriers-valentines-5km-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'randburg-harriers-valentines-5km-2027', N'Randburg Harriers Valentines Race 5 km', '2027-02-12', 5, N'Randburg, Gauteng', N'Valentine''s road races from Randburg Sports Complex.', N'https://www.peaktiming.co.za/', 1, N'https://www.peaktiming.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'randburg-harriers-valentines-10km-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'randburg-harriers-valentines-10km-2027', N'Randburg Harriers Valentines Race 10 km', '2027-02-12', 10, N'Randburg, Gauteng', N'Valentine''s road races from Randburg Sports Complex.', N'https://www.peaktiming.co.za/', 1, N'https://www.peaktiming.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'bieliemielie-marathon-5km-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'bieliemielie-marathon-5km-2027', N'Bieliemielie Marathon 5 km', '2027-02-27', 5, N'Reitz, Free State', N'Road races from Reitz Bowls Club in the Free State.', N'https://www.peaktiming.co.za/', 1, N'https://www.peaktiming.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'bieliemielie-marathon-10km-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'bieliemielie-marathon-10km-2027', N'Bieliemielie Marathon 10 km', '2027-02-27', 10, N'Reitz, Free State', N'Road races from Reitz Bowls Club in the Free State.', N'https://www.peaktiming.co.za/', 1, N'https://www.peaktiming.co.za/', 1, 0);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM [dbo].[CatalogueRaces] WHERE [Slug] = N'bieliemielie-marathon-half-marathon-2027')
+        BEGIN
+            INSERT INTO [dbo].[CatalogueRaces] ([Slug], [Name], [Date], [DistanceKm], [Location], [Summary], [Website], [DateConfirmed], [DateSource], [DistanceConfirmed], [Major])
+            VALUES (N'bieliemielie-marathon-half-marathon-2027', N'Bieliemielie Marathon Half Marathon', '2027-02-27', 21.0975, N'Reitz, Free State', N'Road races from Reitz Bowls Club in the Free State.', N'https://www.peaktiming.co.za/', 1, N'https://www.peaktiming.co.za/', 1, 0);
+        END
         """);
     }
 
@@ -430,7 +502,19 @@ public sealed class AddSouthAfricanShortDistanceRaces : Migration
                 N'loskop-marathon-series-10km-2027',
                 N'n12-ultra-10km-2027',
                 N'durban-international-10km-2027',
-                N'cape-town-peace-run-5km-2027'
+                N'cape-town-peace-run-5km-2027',
+                N'mielie-marathon-5km-2027',
+                N'mielie-marathon-10km-2027',
+                N'mielie-marathon-half-marathon-2027',
+                N'pamoja-athletics-marathon-10km-2027',
+                N'pamoja-athletics-marathon-half-marathon-2027',
+                N'meerkat-marathon-10km-2027',
+                N'meerkat-marathon-half-marathon-2027',
+                N'randburg-harriers-valentines-5km-2027',
+                N'randburg-harriers-valentines-10km-2027',
+                N'bieliemielie-marathon-5km-2027',
+                N'bieliemielie-marathon-10km-2027',
+                N'bieliemielie-marathon-half-marathon-2027'
             );
             """);
     }

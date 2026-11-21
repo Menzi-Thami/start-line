@@ -444,8 +444,9 @@ describe('a signed-up runner', () => {
     await user.click(screen.getByRole('button', { name: 'Save as planned' }))
     expect(await screen.findByText('Rated 7/10 · As planned')).toBeInTheDocument()
 
-    // Shown on This week and in All weeks alike.
-    expect((await screen.findAllByText('Done · felt 7/10, hard')).length).toBeGreaterThan(0)
+    // One editable rating in the day detail, no duplicate feedback card under Recorded.
+    // Saving it still records the runner's answer on the correct session.
+    expect(screen.getByText('Rated 7/10 · As planned')).toBeInTheDocument()
     expect(db.checkIns).toEqual([{ path: 'plan-1/2026-10-13/Hills', body: expect.objectContaining({ status: 'Done', effort: 7 }) }])
     await closePlanDay()
     // Only the hills, of this week's runs, are ticked off.

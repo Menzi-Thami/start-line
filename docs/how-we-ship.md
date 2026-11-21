@@ -55,7 +55,7 @@ The numbered ones are the pipeline. The rest keep the service running and never 
 | Ops - Redeploy production | `deploy.yml` | By hand | Deploys `main` again, as it is |
 | Ops - Release email | `announce.yml` | After a release | Switches on the queued "what's new" email, once ([email.md](email.md)) |
 | Ops - Dependency doctor | `deps-doctor.yml` | Daily | Pins vulnerable packages and refreshes Dependabot's pull requests |
-| Ops - Wake API for weekly emails | `recap-wake.yml` | Sunday evening to Monday, Wednesday evening to Thursday | Keeps the API awake so the weekly recap and coaching tip send |
+| Ops - Keep production API awake | `recap-wake.yml` | Every 10 minutes | Keeps the free production API loaded, so runners don't wait for it to start and the weekly emails send |
 | Ops - Two-hour PWA push test | `push-test.yml` | By hand | Sets up a test notification for one account |
 | Shared - Deploy one environment | `deploy-environment.yml` | Never by itself | The deploy recipe that steps 2 and 3 and the redeploy all call |
 

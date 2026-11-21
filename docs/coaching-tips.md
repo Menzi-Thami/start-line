@@ -21,8 +21,8 @@ One short, evidence-based running tip a week, by email, on each runner's own Thu
   no separate preference.
 - `CoachingTipWorker` checks every 15 minutes and `CoachingTipSender` sends what's due.
 - **A missed hour is skipped,** never sent late, as with the recap. On the free F1 plan the API sleeps when idle, so
-  `.github/workflows/recap-wake.yml` now also pings `/health/live` every 15 minutes from Wednesday 16:00 through
-  Thursday 20:59 UTC, covering Thursday 07:00 in UTC+14 through UTC−12.
+  `.github/workflows/recap-wake.yml` pings `/health/live` every 10 minutes, all day, which covers Thursday 07:00 in
+  every time zone.
 
 ## Which tip
 

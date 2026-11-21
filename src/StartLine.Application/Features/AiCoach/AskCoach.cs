@@ -112,7 +112,7 @@ internal sealed partial class AskCoachHandler(
             }
         }
 
-        intent ??= RulesIntentReader.Read(question, today);
+        intent ??= RulesIntentReader.Read(question, today, day => upcoming.Any(s => s.Date == day && s.Type is not SessionType.Race));
         return intent.Kind switch
         {
             CoachIntentKind.AdjustSession => await AdjustAsync(saved.Id, intent, today, upcoming, evidence, source, notice, cancellationToken),

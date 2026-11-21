@@ -118,6 +118,25 @@ from an external client.
   (OpenAI) to understand it; nothing is kept by them or us, and Strava data is never sent." Decide whether this needs a new notice
   version (all runners re-accept) under POPIA.
 
+## Staging QA (21 November 2026, rules only, no AI key)
+
+Signed in on staging with a test runner and a saved Cape Town Marathon plan (starts Monday 23 November):
+
+| Check | Result |
+|---|---|
+| "I only have 35 minutes on Tuesday" | Suggested: 7.5 km easy → 4.5 km (fits at 7:24/km), week 34.5 → 31.5 km. Applied, then undone: week back to 34.5 km |
+| Sunday long run 12 → 20 km | Not recommended, safe limit 14.25 km; "Try 14.25 km instead" proposed it, applied as a **long run** (type kept), undone |
+| Tuesday easy at 7:40/km | Suggested 7:30–7:50/km, same distance; "Keep my plan" left it unchanged |
+| "run my easy on Tuesday at 5:30/km" | Not recommended: faster paces come from evidence via the weekly coach |
+| "How should next week change?" | Sends to the weekly review; its button appears once the plan has a current week (not before it starts) |
+| Consent toggle | Hidden: no AI key, so `modelAvailable` is false |
+| Evidence line | "You haven't logged or uploaded a run in the last 4 weeks. Strava runs aren't used." |
+| Dark mode, 375 px phone width | Night Run colours, no sideways scroll |
+
+Fixed after this pass: Apply and Undo jumped to the top of the page (and took focus off the result) because the plan view refocused
+its title on every in-place plan change; the coach showed 14.25 km as "14.3 km"; and "make Sunday 20 km" asked on a Saturday before
+the plan starts picked tomorrow's rest day instead of the long run a week on.
+
 ## Rollout
 
 1. Staging with synthetic runners only, `AiCoach__Enabled=true`, no key: the rules layer end to end.

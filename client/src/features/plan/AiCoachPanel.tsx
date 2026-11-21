@@ -12,7 +12,7 @@ import type {
 } from '../../lib/types'
 import { ApiError } from '../../lib/api-client'
 import { Runner } from '../shared/Runner'
-import { aboutTime, evidenceLine, toAdjustmentRequest } from './ai-coach-model'
+import { aboutTime, evidenceLine, exactDistance, toAdjustmentRequest } from './ai-coach-model'
 
 /** Everything the coach can do, bound to the runner's own plan by the app. */
 export interface AiCoachActions {
@@ -59,7 +59,7 @@ function SessionSide({ label, session, rest, units }: { label: string; session: 
           <p className="ai-coach-side-title">{session.title}</p>
           <ul className="ai-coach-side-facts">
             <li>{formatDate(session.date)}</li>
-            <li>{formatDistance(session.distanceKm, units)}</li>
+            <li>{exactDistance(session.distanceKm, units)}</li>
             <li>{aboutTime(session.estimatedMinutes)}</li>
             {session.fastestSecondsPerKm != null && session.slowestSecondsPerKm != null && (
               <li>{formatPaceRange(session.fastestSecondsPerKm, session.slowestSecondsPerKm, units)}</li>
@@ -352,7 +352,7 @@ export function AiCoachPanel({ plan, today, units, actions, onOpenWeeklyReview }
                         <SessionSide label="After" session={adjustment.after} rest={adjustment.becomesRest} units={units} />
                       </div>
                       <p className="ai-coach-week">
-                        Week total: {formatDistance(adjustment.weekKmBefore, units)} → {formatDistance(adjustment.weekKmAfter, units)}
+                        Week total: {exactDistance(adjustment.weekKmBefore, units)} → {exactDistance(adjustment.weekKmAfter, units)}
                       </p>
                     </>
                   )}
@@ -364,7 +364,7 @@ export function AiCoachPanel({ plan, today, units, actions, onOpenWeeklyReview }
                     )}
                     {safeLimit !== null && (
                       <button type="button" className="button" disabled={busy} onClick={() => preview({ date: adjustment.request.date, kind: 'Distance', km: safeLimit })}>
-                        Try {formatDistance(safeLimit, units)} instead
+                        Try {exactDistance(safeLimit, units)} instead
                       </button>
                     )}
                     <button type="button" className="button button-quiet" disabled={busy} onClick={keep}>Keep my plan</button>

@@ -117,4 +117,18 @@ describe('the plan’s tab row on a narrow screen', () => {
     expect(tabs.at(-1)).toHaveFocus()
     expect(tabs.at(-1)).toHaveAttribute('aria-selected', 'true')
   })
+
+  it('focuses the title when a plan opens, then leaves focus alone when the same plan changes in place', () => {
+    const { rerender } = view()
+    const title = screen.getByRole('heading', { level: 2, name: planFixture.race.name })
+    expect(title).toHaveFocus()
+
+    // A coach change or an undo: same race and start, a different session. Focus stays on the control the runner used.
+    const share = screen.getByRole('button', { name: /Next week/ })
+    share.focus()
+    expect(share).toHaveFocus()
+    const changed = { ...planFixture, weeks: planFixture.weeks.map((week, i) => i === 0 ? { ...week, sessions: week.sessions.map(s => ({ ...s })) } : week) }
+    rerender(<PlanView plan={changed} units="km" shareUrl="https://taperday.run/x" today="2026-10-01" />)
+    expect(share).toHaveFocus()
+  })
 })

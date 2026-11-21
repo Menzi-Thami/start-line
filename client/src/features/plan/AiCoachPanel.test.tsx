@@ -152,15 +152,16 @@ describe('the coach on the plan', () => {
 
   it('explains a refused change and offers the safe distance in one tap', async () => {
     const asked: SessionAdjustmentRequest = { date: '2026-10-25', kind: 'Distance', km: 12 }
-    const refused = proposal(asked, { token: null, outcome: 'NotRecommended', reason: 'That’s a big jump from your recent long runs.', after: null, safeLimitKm: 8 })
+    // Quarter-km limits show exactly: "8.3" would name a distance past the limit.
+    const refused = proposal(asked, { token: null, outcome: 'NotRecommended', reason: 'That’s a big jump from your recent long runs.', after: null, safeLimitKm: 8.25 })
     const { actions, user } = setup({ ask: vi.fn(async () => answer({ adjustment: refused })) })
     await openAndAsk(user, 'Make my long run 12 km')
 
     const card = await screen.findByRole('article', { name: 'Not recommended' })
     expect(within(card).getByText('That’s a big jump from your recent long runs.')).toBeInTheDocument()
     expect(within(card).queryByRole('button', { name: 'Apply this change' })).not.toBeInTheDocument()
-    await user.click(within(card).getByRole('button', { name: 'Try 8 km instead' }))
-    expect(actions.preview).toHaveBeenCalledWith({ date: '2026-10-25', kind: 'Distance', km: 8 })
+    await user.click(within(card).getByRole('button', { name: 'Try 8.25 km instead' }))
+    expect(actions.preview).toHaveBeenCalledWith({ date: '2026-10-25', kind: 'Distance', km: 8.25 })
     expect(await screen.findByRole('article', { name: 'Suggested change' })).toBeInTheDocument()
     expect(screen.getByText('Checked by Taperday’s training rules.')).toBeInTheDocument()
   })

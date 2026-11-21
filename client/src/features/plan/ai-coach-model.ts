@@ -45,6 +45,15 @@ export function evidenceLine(evidence: CoachEvidence): string {
   return `${runs} ${strava}`
 }
 
+/**
+ * The coach's distances exactly as the rules set them: they step in quarter kilometres, so "14.25 km" stays 14.25 rather than
+ * rounding up past the safe limit it names. Miles keep the app's usual one decimal.
+ */
+export function exactDistance(km: number, units: Units): string {
+  if (units === 'mi') return `${(Math.round((km / KM_PER_MILE) * 10) / 10).toString()} mi`
+  return `${(Math.round(km * 100) / 100).toString()} km`
+}
+
 export function aboutTime(minutes: number): string {
   if (minutes < 60) return `about ${minutes} min`
   const rest = minutes % 60

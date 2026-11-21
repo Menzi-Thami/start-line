@@ -77,4 +77,21 @@ public sealed class RulesIntentReaderTests
         RulesIntentReader.DateIn("thursday", Today).ShouldBe(Today.AddDays(6));
         RulesIntentReader.DateIn("no day here", Today).ShouldBeNull();
     }
+
+    [Fact]
+    public void A_weekday_without_a_run_means_the_same_day_next_week_when_that_one_has_a_run()
+    {
+        // Friday 20 November; the plan starts later, so Sunday 22 has no run and Sunday 29 has the long run.
+        var sunday = Today.AddDays(2);
+        bool HasRun(DateOnly day) => day == sunday.AddDays(7);
+        RulesIntentReader.DateIn("make sunday 18 km", Today, HasRun).ShouldBe(sunday.AddDays(7));
+        RulesIntentReader.Read("make sunday 18 km", Today, HasRun).Date.ShouldBe(sunday.AddDays(7));
+        // Today and tomorrow mean exactly that, run or not.
+        RulesIntentReader.DateIn("tomorrow", Today, HasRun).ShouldBe(Today.AddDays(1));
+        RulesIntentReader.DateIn("today", Today, HasRun).ShouldBe(Today);
+        // No run either week: the nearest one, and the rules say why it can't change.
+        RulesIntentReader.DateIn("saturday", Today, _ => false).ShouldBe(Today.AddDays(1));
+        // A run on the nearest one: that one.
+        RulesIntentReader.DateIn("sunday", Today, _ => true).ShouldBe(sunday);
+    }
 }

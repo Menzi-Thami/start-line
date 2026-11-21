@@ -27,11 +27,12 @@ public static partial class RulesIntentReader
 {
     public const double KmPerMile = 1.609344;
 
-    public static CoachIntent Read(string question, DateOnly today)
+    /// <param name="hasRun">Whether a day has a run the coach can change; lets a named weekday mean the one with a run.</param>
+    public static CoachIntent Read(string question, DateOnly today, Func<DateOnly, bool>? hasRun = null)
     {
         ArgumentNullException.ThrowIfNull(question);
         var text = question.ToLowerInvariant();
-        var date = DateIn(text, today);
+        var date = DateIn(text, today, hasRun);
 
         var pace = PaceIn(text);
         var minutes = MinutesIn(text);
@@ -49,8 +50,12 @@ public static partial class RulesIntentReader
         return new(CoachIntentKind.Answer);
     }
 
-    /// <summary>"today", "tonight", "tomorrow" or a weekday (the next one from today, today included). Null when none is named.</summary>
-    public static DateOnly? DateIn(string text, DateOnly today)
+    /// <summary>
+    /// "today", "tonight", "tomorrow" or a weekday. A weekday is the next one from today (today included), or the one a week
+    /// later when only that one has a run: asked on a Saturday before the plan starts, "make Sunday 18 km" means the long run
+    /// a week on, not tomorrow's rest day. Null when no day is named.
+    /// </summary>
+    public static DateOnly? DateIn(string text, DateOnly today, Func<DateOnly, bool>? hasRun = null)
     {
         ArgumentNullException.ThrowIfNull(text);
         if (TodayWords().IsMatch(text)) return today;
@@ -58,7 +63,8 @@ public static partial class RulesIntentReader
         var day = Weekday().Match(text);
         if (!day.Success) return null;
         var wanted = Enum.Parse<DayOfWeek>(day.Groups[1].Value, ignoreCase: true);
-        return today.AddDays(((int)wanted - (int)today.DayOfWeek + 7) % 7);
+        var next = today.AddDays(((int)wanted - (int)today.DayOfWeek + 7) % 7);
+        return hasRun is not null && !hasRun(next) && hasRun(next.AddDays(7)) ? next.AddDays(7) : next;
     }
 
     /// <summary>A pace with its unit: "6:15/km", "6.15 per km", "9:30 min/mile". Per-mile paces become per-km. Null without a unit.</summary>

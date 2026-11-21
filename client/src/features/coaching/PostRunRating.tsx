@@ -22,6 +22,13 @@ const SCALE = Array.from({ length: 10 }, (_, i) => i + 1)
 const DIFFERENT: readonly CheckInStatus[] = ['CutShort', 'SwappedForEasy', 'Skipped']
 const SAVE_LABEL: Record<CheckInStatus, string> = { Done: 'Save as planned', CutShort: 'Save as cut short', SwappedForEasy: 'Save as easy instead', Skipped: 'Save as skipped' }
 
+/** Current runner-local week: an unsaved recovery proposal can be found again by revisiting a rated run. */
+const weekStart = (today: string) => {
+  const day = new Date(`${today}T12:00:00Z`)
+  day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7))
+  return day.toISOString().slice(0, 10)
+}
+
 function messageOf(error: unknown): string {
   if (error instanceof ApiError) return Object.values(error.fieldErrors).flat()[0] ?? error.message
   return error instanceof Error ? error.message : 'That didn’t save. Try again.'
@@ -69,6 +76,10 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
   const expected = EXPECTED_EFFORT[status === 'SwappedForEasy' ? 'Easy' : session.type]
   const ready = skipped || effort !== null
   const pending = coach.pendingFor?.(session) ?? false
+  // An in-week self-report is durable; meaningful advice must not vanish on refresh or navigation.
+  // Don't ask the server while the independently authored response is still queued offline.
+  const reviewable = !pending && (checks > 0 || (!!existing && existing.date >= weekStart(coach.today)
+    && existing.date <= coach.today && (existing.effort != null || existing.pain !== 'None' || existing.status !== 'Done')))
 
   const save = async (answers: CheckInRequest) => {
     if (saving.current) return
@@ -129,7 +140,7 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
           <span className="field-help" role="status">{pending ? 'Saved on this device, syncing' : 'Saved'}</span>
         </p>
         <button type="button" className="link-button" onClick={edit} aria-label={`Edit feedback for ${session.title}`}>Edit</button>
-        {checks > 0 && <AdaptationPrompt key={checks} entry={existing} coach={coach} />}
+        {reviewable && <AdaptationPrompt key={`${existing.updatedAt ?? ''}|${checks}`} entry={existing} coach={coach} />}
       </div>
     )
   }

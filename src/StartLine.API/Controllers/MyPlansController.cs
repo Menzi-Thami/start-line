@@ -138,6 +138,32 @@ public sealed class MyPlansController(IDispatcher dispatcher) : ControllerBase
         return Ok(await dispatcher.Send(new RestoreSessionsCommand(id, request.Dates), cancellationToken));
     }
 
+    /// <summary>
+    /// Previews an exact change to one upcoming run (a time, a distance or a pace), checked by Taperday's training rules. Nothing
+    /// is saved. Rules only: no AI and no feature flag (docs/flexible-training-week.md).
+    /// </summary>
+    [HttpPost("{id:guid}/session-adjustment/preview")]
+    [ProducesResponseType<SessionAdjustmentDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PreviewSessionAdjustment(Guid id, [FromBody] SessionAdjustmentRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Ok(await dispatcher.Send(new AdjustSessionCommand(id, request), cancellationToken));
+    }
+
+    /// <summary>Applies exactly the previewed change; 409 when the plan, the runner's check-ins or the day changed since.</summary>
+    [HttpPost("{id:guid}/session-adjustment/apply")]
+    [ProducesResponseType<SessionAdjustmentDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ApplySessionAdjustment(Guid id, [FromBody] ApplySessionAdjustmentRequest request, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Ok(await dispatcher.Send(new AdjustSessionCommand(id, request.Request, request.Token), cancellationToken));
+    }
+
     [HttpGet("{id:guid}/remaining-week/proposal")]
     [ProducesResponseType<RemainingWeekProposalDto>(StatusCodes.Status200OK)]
     public async Task<IActionResult> ReviewRemainingWeek(Guid id, CancellationToken cancellationToken) =>
@@ -199,3 +225,5 @@ public sealed record ApplyCoachingRequest([Required, StringLength(64, MinimumLen
 public sealed record ApplyLifeChangeRequest([Required] LifeChange Change, [Required, StringLength(64, MinimumLength = 64)] string Token);
 
 public sealed record RestoreSessionsRequest([Required] IReadOnlyList<DateOnly> Dates);
+
+public sealed record ApplySessionAdjustmentRequest([Required] SessionAdjustmentRequest Request, [Required, StringLength(64, MinimumLength = 64)] string Token);

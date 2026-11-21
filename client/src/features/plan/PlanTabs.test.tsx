@@ -129,4 +129,17 @@ describe('the plan’s tab row on a narrow screen', () => {
     expect(tabs.at(-1)).toHaveFocus()
     expect(tabs.at(-1)).toHaveAttribute('aria-selected', 'true')
   })
+
+  // Q296-01: a different plan focuses its title; an in-place change to the same plan leaves focus (and scroll) alone.
+  it('focuses the title when a plan opens, then leaves focus alone when the same plan changes in place', () => {
+    const { rerender } = view()
+    expect(screen.getByRole('heading', { level: 2, name: planFixture.race.name })).toHaveFocus()
+
+    const control = screen.getByRole('button', { name: /Next week/ })
+    control.focus()
+    expect(control).toHaveFocus()
+    const changed = { ...planFixture, weeks: planFixture.weeks.map((week, i) => i === 0 ? { ...week, sessions: week.sessions.map(s => ({ ...s })) } : week) }
+    rerender(<PlanView plan={changed} units="km" shareUrl="https://taperday.run/x" today="2026-10-01" />)
+    expect(control).toHaveFocus()
+  })
 })

@@ -256,7 +256,9 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
       racePrepRef.current.scrollIntoView?.({ block: 'start' })
       racePrepRef.current.focus({ preventScroll: true })
     } else if (!reviewLink) headingRef.current?.focus()
-  }, [plan, preparationMode, reviewLink])
+    // A different plan, not an in-place change to this one (a rating, a plan change or its undo, a weekly adjustment): those
+    // keep the runner where they are and let the control they used put focus on its own result.
+  }, [planKey, preparationMode, reviewLink])
 
   // The review link waits for the saved plan's check-ins, then brings the weekly review into view once.
   const reviewReady = !trainingEnded && !!coach && currentWeek !== null

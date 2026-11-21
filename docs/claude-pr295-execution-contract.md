@@ -44,6 +44,42 @@
 
 **Claude instruction:** implement in-scope changes now using Taperday's existing source code, not a new API. Remove external-provider integration plans from the implementation checklist and tests. DO NOT merge, deploy or request third-party keys.
 
+## TECHNICAL CAPABILITY DIRECTIVE — build the real adaptation algorithm, test with synthetic recordings
+
+**User direction (21 Nov 2026): offer the maximum functionality technically possible from the current integration, instead of stopping at calendar-only features.** This is a specific engineering directive: **implement and verify** the algorithm, its UI and its safety properties. Existing Strava API policy constraints still apply to actual use: the synthetic engineering path must NOT feed real Strava API measurements into persistent coaching or activate a prohibited live workflow. The product owner must separately decide whether that risk/rights issue is resolved before any rollout.
+
+**The algorithm is NOT a chatbot.** A deterministic rules engine receives a normalised `RecordedRun`-shaped input; that data source may be a **synthetic Strava-shaped test fixture** for development, or independently permitted runner-provided evidence in a real running environment. Keep provenance explicit, prevent a live Strava-only record from becoming persistent adapted training in this PR.
+
+### Build the end-to-end engine
+
+1. **Data contract:** `RecordedRun` fields: `source`, `planId`, `sessionId` or date association, runner-local `date`, `distanceKm?`, `movingSeconds?`, `elapsedSeconds?`, `meanPaceSecPerKm?`, `splits?`, `meanHeartRate?`, `maxHeartRate?`, `perceivedEffort?`, `pain?`, `confidence`, `cachedUntil?`. Unknown metrics are genuinely null, not imputed. `source` must distinguish `SyntheticFixture`, `IndependentRunnerEntry`, `IndependentFileUpload`, `StravaTransient`. Do not persist a second copy of Strava-derived measurements.
+2. **Association:** match to currently effective moved session using source-local date and available time; only auto-match when unique (one meaningful run/one planned session); otherwise request a short resolution. No claiming timed intervals/tempo success from a single mean pace or distance. Don't double count same watch recording.
+3. **Per-run comparison:** compare prescribed distance/duration against actual with existing `SessionPrescription`/synced feedback semantics. For synthetic or eligible evidence, assess structured interval adherence only where step/segment evidence actually supports it; if unassessable, show `NotEvaluated`. Optional HR only when independently consented, otherwise omit.
+4. **Training-trend evaluator:** bounded last 3–4 full weeks; calculate independently attributable weekly volume, adherence, number of quality sessions, long-run completion and reliable effort trend. Guard against missing uploads, bad timezone, treadmill sessions without distance, paused watches, mixed race types, abnormal races, and low evidence sample count. No simple "you ran fast once → faster plan".
+5. **Proposals:** `NoChange` / `ReviewRecovery` / `ReduceNextHardSession` / `HoldVolume` / `ReduceVolume` / `ReviewPaceProgression`. Use the existing `WeeklyCoach`, `RemainingWeek`, `SessionAdjuster`, `LifeHappens`, `Replan` and generator caps as actual executors; do NOT duplicate their periodisation math. `SafeAutoCorrection` is restricted to proven conservative changes on eligible future easy/rest sessions and is reversible; pacing/volume/hard-work changes need explicit approval.
+6. **Thresholds:** use existing training-volume caps (<=10% where existing generator permits), existing three-strong-week pace progression requirement, no volume+pace+difficulty increases in same week, one missed easy run does not trigger make-up mileage, no increase during race taper/pain/illness. If evidence doesn't meet pre-existing thresholds, answer `NoChange` or `Hold` rather than invent a new sports-science threshold. Any new cutoff must be a named constant with a boundary test.
+7. **Output:** `AdaptationProposal` includes only runner-owned synthetic/eligible evidence, before/after complete session prescriptions (date, type, km, duration, pace, steps), weekly km changes, reason codes and proof of safety constraints. Apply a signed version-bound fingerprint; repeat preview is side-effect free, old token after run/move/midnight gives 409, decline suppression, undo, owner isolation and cross-device consistency.
+8. **Frontend:** beside the completed run show concise `Run recorded · 5 km of your planned 8 km`; if a safe future-plan change is generated from ELIGIBLE evidence show `Your training has been adjusted` with undo; material suggestions `Review change`/`Keep plan`. Under Strava-only data, show accurate current run feedback but no fake claim that future prescribed training has automatically adapted from it. No AI chat, new modal for every run, provider search, upload nags or redesign.
+
+### Concrete synthetic fixtures and expected outcomes
+
+| Test | Synthetic recorded run(s) | Output |
+|---|---|---|
+| T01 | Scheduled 8 km easy, independently sourced run 5 km | Actual shown 5/8, completion recorded appropriately, future unchanged from single short run |
+| T02 | Planned 50-min run/walk, track has 50-min motion and no reliable distance | Completed by duration, no made-up kilometres |
+| T03 | Three complete strong independent training weeks, runner reports Ready, no pain, outside taper | Existing WeeklyCoach may offer a bounded pace progression *for future weeks* for review |
+| T04 | One very fast independent 5 km | No automatic faster paces |
+| T05 | Multiple independently confirmed missed hard sessions or prolonged break | Conservative resumption/replan review, no added make-up mileage |
+| T06 | Hard long run moved beside intervals, no recorded run at all | Warn/evaluate neighbouring schedule from plan state, preserve user move |
+| T07 | Synthetic duplicate run from watch/Strava-like fixture | Single run association, no double count |
+| T08 | StravaTransient run 12 km against planned 10 km | Display short-lived 12/10 and comparison, **no** permanent coaching proposal or derived training record |
+| T09 | Independent eligible run and Strava transient copy appear same day | No double count; keep independent eligible evidence separate and validate independently of Strava |
+| T10 | Repeated sync events, 2 devices, stale proposal | Deterministic results, no phantom revised sessions, old apply 409 |
+| T11 | One run with missing pace/HR/splits | No invented zone compliance, effort, recovery or interval success |
+| T12 | Injury/pain, beginner, ultra run/walk, taper/race week | Safe hold/recovery, no aggressive upgrade |
+
+**Implementation order:** (a) introduce the pure evaluator + synthetic input fixtures and safety tests; (b) wire it to the already permitted Taperday-owned schedule and independent evidence events; (c) extend run-analysis display using the existing transient Strava-completion pipeline; (d) add small proposal/review/undo UI and API; (e) demonstrate synthetic end-to-end scenario in Playwright; (f) leave live Strava performance-driven persistent adaptation DISABLED with an explicit documented contract blocker. This is a real code deliverable, **not another architecture-only handover**. A fake passing test is never described as evidence of live provider permission.
+
 ## 0. Hard execution rules
 
 1. **DO NOT MERGE PR #295. DO NOT DEPLOY. DO NOT PUSH TO STAGING OR MAIN.** Work only on `fix/adaptive-coaching-no-chat`, which targets `staging`. A green CI pipeline is NOT approval. The owner expressly objected when PR #294 was merged without asking. Stop with a **draft PR ready for owner review**, not a deployment.

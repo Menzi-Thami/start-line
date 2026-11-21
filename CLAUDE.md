@@ -1,5 +1,12 @@
 # Taperday
 
+## Post-run rating and adaptive training (PR #295)
+
+No runner-facing AI chat, AI provider or MCP: retired in PR #295. Runners rate a run in two taps
+([docs/post-run-rating.md](docs/post-run-rating.md)); only their own answers are stored, and the rules-only coach uses them.
+Specification and acceptance matrix: [docs/claude-pr295-execution-contract.md](docs/claude-pr295-execution-contract.md).
+Releasing to production (`main`) needs the owner's explicit approval.
+
 Product name **Taperday** (domain taperday.run). Code and project names stay `StartLine.*` on purpose.
 
 A free running-plan builder. Pick a race (from the catalogue or any distance and date), a goal time,

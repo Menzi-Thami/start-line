@@ -435,12 +435,12 @@ describe('a signed-up runner', () => {
 
     // Tuesday's hills are the first run that's come round; later runs don't ask yet.
     await openWeekDay('2026-10-13')
-    const askers = await screen.findAllByRole('button', { name: 'Log this workout' }, { timeout: 3000 })
+    // The two-tap rating: how hard it felt, then Save as planned.
+    const askers = await screen.findAllByRole('group', { name: 'How hard did it feel?' }, { timeout: 3000 })
     expect(askers).toHaveLength(1)
-    await user.click(askers[0]!)
-    await openDisclosure('How it felt, pain and other details')
-    await user.click(screen.getByRole('radio', { name: '7, Hard' }))
-    await user.click(screen.getByRole('button', { name: 'Save check-in' }))
+    await user.click(within(askers[0]!).getByRole('radio', { name: '7, Hard' }))
+    await user.click(screen.getByRole('button', { name: 'Save as planned' }))
+    expect(await screen.findByText('Rated 7/10 · As planned')).toBeInTheDocument()
 
     // Shown on This week and in All weeks alike.
     expect((await screen.findAllByText('Done · felt 7/10, hard')).length).toBeGreaterThan(0)

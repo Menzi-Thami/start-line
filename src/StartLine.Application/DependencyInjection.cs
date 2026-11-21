@@ -33,12 +33,8 @@ public static class DependencyInjection
         services.AddSingleton<RaceCalendarSync>();
         services.AddScoped<PlanBuilder>();
         services.AddScoped<PlanCoach>();
-        services.AddScoped<Features.AiCoach.SessionAdjustments>();
-        services.AddScoped<Features.AiCoach.TrainingEvidence>();
-        services.AddScoped<Features.AiCoach.AiBudget>();
+        services.AddScoped<Features.Coaching.SessionAdjustments>();
         // Off, with no model, unless Infrastructure registers the configured ones.
-        services.TryAddSingleton(new Features.AiCoach.AiCoachSettings());
-        services.TryAddTransient<Features.AiCoach.ICoachLanguageModel, Features.AiCoach.NoCoachLanguageModel>();
         services.AddScoped<CurrentRunner>();
         services.AddScoped<HeartRateData>();
         services.AddScoped<PersonalBests>();

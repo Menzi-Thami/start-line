@@ -84,4 +84,22 @@ describe('Move Run confirmation dialog', () => {
     expect(dialog.closest('.plan')).toBeNull()
     expect(dialog.parentElement?.parentElement).toBe(document.body)
   })
+
+  // R17: a long run moved next to a hard session keeps the runner's chosen day, with a warning, and nothing moves twice.
+  it('warns about back-to-back hard sessions but keeps the day the runner chose', async () => {
+    const base = planFixture.weeks[0]!.sessions.find(s => s.type !== 'Race' && s.type !== 'Strength')!
+    const dayBefore = new Date(Date.parse(target + 'T12:00:00Z') - 86400000).toISOString().slice(0, 10)
+    const longRun = { ...base, type: 'LongRun', title: 'Long run', distanceKm: 14, date: target } as typeof base
+    const tempo = { ...base, type: 'Tempo', title: 'Tempo run', distanceKm: 8, date: dayBefore } as typeof base
+    const proposedPlan = { ...planFixture, weeks: [{ ...planFixture.weeks[0]!, sessions: [tempo, longRun] }] }
+    const changes = [{ appliedOn: from, date: target, movedFrom: from, originalType: 'LongRun', originalTitle: 'Long run', originalKm: 14, easyKm: 14 }] as LifeProposal['changes']
+    const preview = vi.fn(async () => ({ token: 'A'.repeat(64), changes, moveTargets: [], proposed: proposedPlan }) as LifeProposal)
+    const apply = vi.fn(async () => {})
+    render(<MoveRunDialog from={from} to={target} plan={planFixture} units="km" actions={{ preview, apply, restore: async () => {} }} onClose={() => {}} />)
+
+    expect(await screen.findByRole('note')).toHaveTextContent('This creates back-to-back hard sessions.')
+    fireEvent.click(screen.getByRole('button', { name: 'Move run' }))
+    await waitFor(() => expect(apply).toHaveBeenCalledWith({ situation: 'MoveRun', date: from, moveTo: target, canRun: true }, 'A'.repeat(64)))
+    expect(apply).toHaveBeenCalledTimes(1)
+  })
 })

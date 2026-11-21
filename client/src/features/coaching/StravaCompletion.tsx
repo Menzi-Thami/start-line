@@ -11,6 +11,8 @@ interface Props {
   coach: SessionCoach
   /** After the runner's own tick is saved. */
   onTicked?: () => void
+  /** The two-tap rating sits right below and saves the runner's own answer, so no separate tick button here. */
+  withRating?: boolean
 }
 
 /**
@@ -19,7 +21,7 @@ interface Props {
  * own tap, a plain Done check-in, which lasts after the Strava copy goes. When the runner said they skipped it, their
  * word stands and the run is shown beside it, with one tap to change their answer.
  */
-export function StravaCompletion({ session, coach, onTicked }: Props) {
+export function StravaCompletion({ session, coach, onTicked, withRating = false }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const completion = syncedFor(session, coach)
@@ -67,10 +69,14 @@ export function StravaCompletion({ session, coach, onTicked }: Props) {
         </p>
       )}
       <p className="strava-completion-line">{completionFeedback(completion, coach.units)}</p>
-      <p className="field-help">Strava runs stay in Taperday for 7 days. Keep the tick and it stays on your plan for good.</p>
-      <button type="button" className="button strava-completion-button" onClick={() => void keep()} disabled={busy}>
-        {busy ? 'Saving…' : 'Keep this tick'}
-      </button>
+      {withRating
+        ? <p className="field-help">Strava runs stay in Taperday for 7 days. Rate it below and your answer stays on your plan for good.</p>
+        : <>
+          <p className="field-help">Strava runs stay in Taperday for 7 days. Keep the tick and it stays on your plan for good.</p>
+          <button type="button" className="button strava-completion-button" onClick={() => void keep()} disabled={busy}>
+            {busy ? 'Saving…' : 'Keep this tick'}
+          </button>
+        </>}
       {failed}
     </div>
   )

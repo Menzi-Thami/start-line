@@ -1,11 +1,12 @@
 import { useId, useRef, useState } from 'react'
-import { formatDate, formatDistance, type Units } from '../../lib/format'
+import { exactDistance, formatDate, formatDistance, type Units } from '../../lib/format'
 import type { RemainingWeekProposal, SessionRevision, TrainingPlan } from '../../lib/types'
 import { runTypeName } from './run-types'
 
 export interface RemainingWeekActions {
-  reviewRemaining: () => Promise<RemainingWeekProposal>
-  applyRemaining: (token: string) => Promise<void>
+  /** With `reported`, only the runner's own reports count (the coach's check after a rating). */
+  reviewRemaining: (reported?: boolean) => Promise<RemainingWeekProposal>
+  applyRemaining: (token: string, reported?: boolean) => Promise<void>
 }
 export function RemainingWeekAdjustment({
   current,
@@ -42,8 +43,8 @@ export function RemainingWeekAdjustment({
   // A run that keeps its type (a long run stays a long run) says so; otherwise it becomes an easy run or a rest day.
   const describe = (c: SessionRevision) =>
     c.easyKm == null ? 'Rest day'
-      : c.type ? `${c.type === c.originalType ? c.originalTitle : runTypeName(c.type)} · ${formatDistance(c.easyKm, units)}`
-        : `Easy run · ${formatDistance(c.easyKm, units)}`
+      : c.type ? `${c.type === c.originalType ? c.originalTitle : runTypeName(c.type)} · ${exactDistance(c.easyKm, units)}`
+        : `Easy run · ${exactDistance(c.easyKm, units)}`
   return (
     <section className="section" aria-labelledby={id}>
       <h3 id={id}>Ease the rest of this week</h3>
@@ -77,7 +78,7 @@ export function RemainingWeekAdjustment({
           <ul>
             {proposal.changes.map((c) => (
               <li key={c.date}>
-                {formatDate(c.date)}: {c.originalTitle} · {formatDistance(c.originalKm, units)} → {describe(c)}
+                {formatDate(c.date)}: {c.originalTitle} · {exactDistance(c.originalKm, units)} → {describe(c)}
               </li>
             ))}
           </ul>

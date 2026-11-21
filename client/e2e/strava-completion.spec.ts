@@ -49,14 +49,11 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   const today = page.getByRole('region', { name: 'Today', exact: true })
   await expect(today.getByText('Imported from Strava', { exact: true })).toBeVisible()
   await expect(today.getByRole('button', { name: 'Open run details', exact: true })).toBeVisible()
-  // Home offers the optional one-tap tick straight away; nothing is saved until the runner keeps it.
-  const prompt = today.getByRole('region', { name: 'Tick off today’s session', exact: true })
-  await expect(prompt.getByText('You ran today. Tick off this session?', { exact: true })).toBeVisible()
-  await expect(prompt.getByRole('button', { name: 'Keep this tick', exact: true })).toHaveCount(1)
-  await expect(today.getByText('Completed via Strava', { exact: true })).toBeVisible()
+  // Home offers the optional two-tap rating (and a plain tick) straight away; nothing is saved until the runner answers.
+  const prompt = today.getByRole('region', { name: 'Rate today’s run', exact: true })
+  await expect(prompt.getByText('You ran today. Nice work.', { exact: true })).toBeVisible()
+  await expect(prompt.getByRole('group', { name: 'How hard did it feel?' })).toBeVisible()
   await expect(today.locator('.home-done-chip')).toHaveCount(0)
-  await expect(today.locator('.strava-completion-figures')).toHaveText('Planned 6 km · Ran 4.1 km')
-  await expect(today.getByText(/You got out there — that counts\. You ran 4\.1 km of your planned 6 km today\./)).toBeVisible()
   expect(state.writes).toEqual([])
 
   for (const width of [320, 390, 1440]) {
@@ -83,7 +80,7 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   // The copy lapses: the session is no longer done, and nothing was ever written.
   state.held = false
   await page.getByRole('button', { name: 'Expire imported details', exact: true }).click()
-  await expect(today.getByText('Completed via Strava', { exact: true })).toHaveCount(0)
+  await expect(today.getByText('Imported from Strava', { exact: true })).toHaveCount(0)
   await expect(today.locator('.home-done-chip')).toHaveCount(0)
   expect(state.writes).toEqual([])
 
@@ -91,10 +88,9 @@ test('a held Strava run completes today’s session, fits small phones, lapses, 
   state.held = true
   await page.reload()
   await expect(today.getByText('Imported from Strava', { exact: true })).toBeVisible()
-  await today.getByRole('button', { name: 'Log a run manually', exact: true }).click()
-  await expect(today.getByText('Completed via Strava', { exact: true })).toBeVisible()
-  await today.getByRole('button', { name: 'Keep this tick', exact: true }).click()
-  await expect(today.getByRole('button', { name: 'Change how Long run went', exact: true })).toBeVisible()
+  await today.getByText('More details', { exact: true }).click()
+  await today.getByRole('button', { name: 'Tick without rating', exact: true }).click()
+  await expect(today.getByText('Done, not rated', { exact: true })).toBeVisible()
   expect(state.writes).toEqual([{ status: 'Done', effort: null, distanceUnreported: false }])
   state.held = false
   await page.reload()

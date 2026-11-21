@@ -15,7 +15,8 @@ using StartLine.Domain.Plans;
 namespace StartLine.Application.Features.Coaching;
 
 public sealed record RemainingWeekProposalDto(string Token, string Summary, IReadOnlyList<SessionRevision> Changes, TrainingPlanDto Proposed);
-public sealed record ReviewRemainingWeekCommand(Guid Id, string? AcceptToken = null) : IRequest<RemainingWeekProposalDto>;
+/// <param name="ReportedOnly">Only what the runner reported counts (see <see cref="Domain.Plans.RemainingWeek.Preview"/>): the coach's own check after a rating.</param>
+public sealed record ReviewRemainingWeekCommand(Guid Id, string? AcceptToken = null, bool ReportedOnly = false) : IRequest<RemainingWeekProposalDto>;
 internal sealed class ReviewRemainingWeekHandler(IApplicationDbContext db, CurrentRunner current, PlanBuilder builder, TimeProvider time)
     : IRequestHandler<ReviewRemainingWeekCommand, RemainingWeekProposalDto>
 {
@@ -33,10 +34,11 @@ internal sealed class ReviewRemainingWeekHandler(IApplicationDbContext db, Curre
         var from = week?.StartDate ?? today;
         var entries = await db.SessionCheckIns.AsNoTracking().Where(c => c.SavedPlanId == saved.Id && c.Date >= from && c.Date < from.AddDays(7)).OrderBy(c => c.Id).ToListAsync(cancellationToken);
         var uploads = await db.Activities.AsNoTracking().Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.LocalDate >= from && a.LocalDate <= today).OrderBy(a => a.Id).ToListAsync(cancellationToken);
-        var changes = Domain.Plans.RemainingWeek.Preview(plan, entries, uploads, today, week?.PlannedKm);
+        var changes = Domain.Plans.RemainingWeek.Preview(plan, entries, uploads, today, week?.PlannedKm, request.ReportedOnly);
         var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
         {
             today,
+            request.ReportedOnly,
             saved.Version,
             saved.Inputs,
             saved.Adjustments,
@@ -50,7 +52,10 @@ internal sealed class ReviewRemainingWeekHandler(IApplicationDbContext db, Curre
         if (request.AcceptToken is not null) db.SavedPlans.Attach(saved);
         saved.AdjustRemainingWeek(changes, today);
         if (request.AcceptToken is not null) await db.SaveChangesAsync(cancellationToken);
-        var summary = changes.Count > 0
+        var summary = changes.Count > 0 && Domain.Plans.RemainingWeek.FeltHarderTwice(entries.Where(c => !c.IsAdditional))
+                && !entries.Any(c => c.Pain == Domain.Coaching.PainLevel.ChangedRunning)
+            ? "Two runs this week felt harder than they should. Want an easier rest of the week? Hard sessions become easy runs; nothing is made up."
+            : changes.Count > 0
             ? "Ease the remaining runs without adding days or making up kilometres. Rest replaces running if you reported pain that changed your running or have already covered the week's distance."
             : week?.Phase == TrainingPhase.RaceWeek ? "Race week stays as written. Do not make up missed sessions; choose rest if unwell or in pain."
             : "No further changes suggested. Log any missing runs first. Replan from here can rebuild future weeks after a longer break.";

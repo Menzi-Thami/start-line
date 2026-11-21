@@ -21,8 +21,22 @@ public static class RemainingWeek
     public const double ResetRunLimitKm = 8;
     public const double MinimumRunKm = 1;
 
+    /// <summary>
+    /// Whether at least two of these runs felt harder than their kind of run should (the weekly coach's own rule: the effort
+    /// the runner gave is at least <see cref="WeeklyCoach.FeltHarderBy"/> above the top of the expected range for what they ran).
+    /// </summary>
+    public static bool FeltHarderTwice(IEnumerable<SessionCheckIn> checkIns) =>
+        checkIns.Count(c => c.Status != CheckInStatus.Skipped && c.Effort is { } effort
+            && ExpectedEffort.For(c.ActualSessionType ?? c.SessionType) is { } expected && effort >= expected.High + WeeklyCoach.FeltHarderBy)
+        >= WeeklyCoach.HardRunsToStruggle;
+
+    /// <param name="reportedOnly">
+    /// Only what the runner reported counts: their skips, short or swapped runs, pain and effort. A day without a check-in is
+    /// not treated as missed, so a Strava run the runner hasn't rated yet never looks like a missed session. Used when the
+    /// coach checks the week by itself after a rating; the runner's own "Ease the rest of this week" counts unlogged days.
+    /// </param>
     public static IReadOnlyList<SessionRevision> Preview(TrainingPlan plan, IReadOnlyList<SessionCheckIn> checkIns,
-        IReadOnlyList<Activity> activities, DateOnly today, double? originalWeeklyKm = null)
+        IReadOnlyList<Activity> activities, DateOnly today, double? originalWeeklyKm = null, bool reportedOnly = false)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(checkIns);
@@ -34,13 +48,15 @@ public static class RemainingWeek
         var missed = week.Sessions.Where(s => s.Date < today && SessionCheckIn.IsCheckable(s.Type)).Any(s =>
         {
             var entry = entries.FirstOrDefault(c => !c.IsAdditional && c.Date == s.Date && c.SessionType == s.Type);
-            return entry?.Status == CheckInStatus.Skipped || entry is null && !uploads.Any(a => a.LocalDate == s.Date);
+            return entry?.Status == CheckInStatus.Skipped || !reportedOnly && entry is null && !uploads.Any(a => a.LocalDate == s.Date);
         });
         var changed = entries.Any(c => c.IsAdditional || c.Status is CheckInStatus.Skipped or CheckInStatus.CutShort or CheckInStatus.SwappedForEasy
             || c.ActualSessionType is { } actual && actual != c.SessionType
             || c.DistanceKm is { } km && week.Sessions.Any(s => s.Date == c.Date && s.Type == c.SessionType && Math.Abs(s.DistanceKm - km) >= 0.5));
         var pain = entries.Any(c => c.Pain == PainLevel.ChangedRunning);
-        if (!missed && !changed && !pain) return [];
+        // Two runs that felt much harder than they should: the rest of the week eases (hard sessions become easy runs).
+        var strained = FeltHarderTwice(entries.Where(c => !c.IsAdditional));
+        if (!missed && !changed && !pain && !strained) return [];
         var future = week.Sessions.Where(s => s.Date > today && SessionCheckIn.IsCheckable(s.Type)).OrderBy(s => s.Date).ToList();
         // Persisted decisions use only manual entries and uploads, never cached Strava metrics.
         var ran = uploads.Sum(a => a.DistanceKm) + entries.Where(c => c.Status != CheckInStatus.Skipped && c.DistanceKm.HasValue

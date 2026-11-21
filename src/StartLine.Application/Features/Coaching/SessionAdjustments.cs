@@ -7,13 +7,12 @@ using StartLine.Application.Common.Dispatcher;
 using StartLine.Application.Common.Exceptions;
 using StartLine.Application.Features.Account;
 using StartLine.Application.Features.CheckIns;
-using StartLine.Application.Features.Coaching;
 using StartLine.Application.Features.MyPlans;
 using StartLine.Application.Features.Plans;
 using StartLine.Domain.Plans;
 using StartLine.Domain.Running;
 
-namespace StartLine.Application.Features.AiCoach;
+namespace StartLine.Application.Features.Coaching;
 
 /// <summary>
 /// One side of a before/after comparison: the run, its pace for its main zone, and about how long it takes at the middle of

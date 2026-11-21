@@ -20,6 +20,8 @@ export interface SessionCoach {
   removeAdditional?: (id: string) => Promise<void>
   /** A held Strava run that completes the session, worked out by the API on each read and never stored. */
   synced?: (session: Pick<Session, 'date' | 'type'>) => SyncedCompletion | undefined
+  /** Whether this session's answer is saved on this device and still waiting to reach the account. */
+  pendingFor?: (session: Pick<Session, 'date' | 'type'>) => boolean
 }
 
 const key = (date: string, type: string) => `${date}|${type}`

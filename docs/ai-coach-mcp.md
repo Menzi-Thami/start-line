@@ -1,4 +1,15 @@
-# Taperday coach: exact run changes, AI questions and MCP
+# Taperday coach (#294): retired AI chat and MCP, kept exact run changes
+
+> **Retired 21 November 2026 (PR #295).** The owner doesn't want a chat coach, an AI provider or an MCP server. Removed: the
+> `ai/status`, `ai/consent` and `ai/ask` endpoints, the question reader, the AI budget, the OpenAI client and its settings, the MCP
+> server and its metadata, the coach panel and `VITE_AI_COACH_ENABLED`. Those routes now answer 404 even with the old
+> `AiCoach__*` settings present. Kept: the rules-only exact run changes below (`SessionAdjuster`), now on `MyPlansController`
+> with no flag and no screen, and the data already saved (`Runner.AiCoachConsent`, `AiUsageDays`, both in the account export and
+> deleted with the account; no destructive migration). What replaced the coach: [post-run rating](post-run-rating.md).
+> The rules section is current; the rest of this page is history.
+
+
+> **HISTORICAL PR #294 DESIGN — SUPERSEDED for PR #295.** The product owner does not want runner-facing AI chat or an MCP-based assistant experience. The active specification is [Strava-first invisible adaptive training](claude-pr295-execution-contract.md). Do not enable chat, provider flags or MCP or implement the old rollout from this document. Do not merge/deploy without approval.
 
 Off by default everywhere. Three layers, each usable without the next:
 

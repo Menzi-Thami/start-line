@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { useAuth } from '../../app/auth-context'
+import { api } from '../../lib/api-client'
 import { formatDate, type Units } from '../../lib/format'
 import type { ActivitySummary, PersonalBest, Runner, StravaStatus } from '../../lib/types'
 import { Avatar } from '../account/Avatar'
@@ -46,8 +48,24 @@ export function Home(props: HomeProps) {
   const { plan, failed, retry } = useHomePlan(afterTraining ? null : current, initialPlan, onPlanLoaded)
   const checkIns = useCheckIns(afterTraining ? null : current?.id ?? null)
   const synced = useSyncedCompletions(afterTraining ? null : current?.id ?? null, completionsKey(checkIns.entries, available))
+  const auth = useAuth()
+  const planId = afterTraining ? null : current?.id ?? null
+  const signedIn = async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your week.'); return token }
+  // What the coach makes of a rating made here: the same rules-only check of the week as on the plan, and its Undo.
+  const adjustments: SessionCoach['adjustments'] = planId ? {
+    review: async recovery => api.me.reviewCoaching(await signedIn(), planId, recovery),
+    apply: async (token, recovery) => { await api.me.applyCoaching(await signedIn(), planId, token, recovery); retry() },
+    reviewRemaining: async reported => api.me.reviewRemainingWeek(await signedIn(), planId, reported),
+    applyRemaining: async (token, reported) => { await api.me.applyRemainingWeek(await signedIn(), planId, token, reported); retry() },
+    life: {
+      preview: async change => api.me.previewLifeChange(await signedIn(), planId, change),
+      apply: async (change, token) => { await api.me.applyLifeChange(await signedIn(), planId, change, token); retry() },
+      restore: async dates => { await api.me.restoreSessions(await signedIn(), planId, dates); retry() },
+    },
+  } : undefined
   const coach: SessionCoach | undefined = checkIns.ready ? {
-    today, units, get: checkIns.get, synced: synced.get, entries: checkIns.entries,
+    today, units, get: checkIns.get, synced: synced.get, entries: checkIns.entries, adjustments,
+    pendingFor: session => checkIns.pending.some(item => item.key === `${session.date}|${session.type}`),
     save: checkIns.save, remove: checkIns.remove, saveAdditional: checkIns.saveAdditional, removeAdditional: checkIns.removeAdditional,
   } : undefined
   const week = plan?.weeks.find(value => value.startDate <= today && today <= weekEnd(value))

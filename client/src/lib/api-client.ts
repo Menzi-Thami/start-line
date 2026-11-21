@@ -1,10 +1,6 @@
 import { toTimeSpan } from './format'
 import type {
   AcceptPrivacyRequest,
-  AiCoachStatus,
-  CoachAnswer,
-  SessionAdjustment,
-  SessionAdjustmentRequest,
   Activity,
   ActivitySummary,
   BulkImport,
@@ -256,23 +252,6 @@ export const api = {
     applyCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
     /** Declines the reviewed suggestion: nothing changes, and the answer goes into the coaching history. */
     declineCoaching: (token: string, id: string, proposalToken: string, recovery: RecoveryReadiness = 'NotReported') => request<CoachingProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/coach/decline`, { method: 'POST', body: JSON.stringify({ token: proposalToken, recovery }) }, token),
-    /** Whether the coach is on, whether its AI part is available and agreed to, and the AI questions left today. */
-    aiStatus: (token: string) => request<AiCoachStatus>('/api/v1/me/ai/status', { cache: 'no-store' }, token),
-    /** Gives or withdraws agreement to questions, the plan and the runner's own logged runs going to the AI provider. */
-    setAiConsent: (token: string, consent: boolean) =>
-      request<AiCoachStatus>('/api/v1/me/ai/consent', { method: 'PUT', body: JSON.stringify({ consent }) }, token),
-    /** Asks the coach about the current plan. Never changes it: a suggested change comes back as a preview. */
-    askAiCoach: (token: string, id: string, question: string) =>
-      request<CoachAnswer>(`/api/v1/me/plans/${encodeURIComponent(id)}/ai/ask`,
-        { method: 'POST', body: JSON.stringify({ question }) }, token),
-    /** Previews an exact change to one upcoming run (a time, a distance or a pace), checked by the training rules. */
-    previewSessionAdjustment: (token: string, id: string, change: SessionAdjustmentRequest) =>
-      request<SessionAdjustment>(`/api/v1/me/plans/${encodeURIComponent(id)}/session-adjustment/preview`,
-        { method: 'POST', body: JSON.stringify(change) }, token),
-    /** Applies exactly the previewed change; 409 session_adjustment_changed when the plan changed since. */
-    applySessionAdjustment: (token: string, id: string, change: SessionAdjustmentRequest, previewToken: string) =>
-      request<SessionAdjustment>(`/api/v1/me/plans/${encodeURIComponent(id)}/session-adjustment/apply`,
-        { method: 'POST', body: JSON.stringify({ request: change, token: previewToken }) }, token),
     /** Planned sessions a held Strava run completes, worked out on each read and never stored. */
     stravaCompletions: (token: string, id: string) => request<SyncedCompletion[]>(`/api/v1/me/plans/${encodeURIComponent(id)}/strava-completions`, { cache: 'no-store' }, token),
     /** The runner's daily readiness check-ins, newest first (today and up to 13 days before). */
@@ -281,8 +260,9 @@ export const api = {
     logReadiness: (token: string, date: string, body: { feeling: Feeling; sleep?: SleepQuality | null; soreness?: Soreness | null; note?: string | null }) => request<Readiness>(`/api/v1/me/readiness/${encodeURIComponent(date)}`, { method: 'PUT', body: JSON.stringify(body) }, token),
     /** Clears a day's check-in. */
     clearReadiness: (token: string, date: string) => request<void>(`/api/v1/me/readiness/${encodeURIComponent(date)}`, { method: 'DELETE' }, token),
-    reviewRemainingWeek: (token: string, id: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal`, {}, token),
-    applyRemainingWeek: (token: string, id: string, proposalToken: string) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken }) }, token),
+    /** With `reported`, only what the runner reported counts: days without a check-in aren't treated as missed. */
+    reviewRemainingWeek: (token: string, id: string, reported = false) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/proposal${reported ? '?reported=true' : ''}`, { cache: 'no-store' }, token),
+    applyRemainingWeek: (token: string, id: string, proposalToken: string, reported = false) => request<RemainingWeekProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/remaining-week/apply`, { method: 'POST', body: JSON.stringify({ token: proposalToken, reported }) }, token),
     /** Previews what a situation (missed run, short day, travel, illness, moving the long run) would change. */
     previewLifeChange: (token: string, id: string, change: LifeChange) => request<LifeProposal>(`/api/v1/me/plans/${encodeURIComponent(id)}/life-happens/preview`, { method: 'POST', body: JSON.stringify(change) }, token),
     /** Applies exactly the previewed change. */

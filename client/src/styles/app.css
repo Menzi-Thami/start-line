@@ -2741,6 +2741,116 @@ a.menu-item {
   max-width: 10rem;
 }
 
+/* The two-tap rating after a run: the 1–10 scale and Save as planned, with everything else folded away. */
+.post-run-rating {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  min-width: 0;
+}
+
+.post-run-rating fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.post-run-rating-title {
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+  padding: 0;
+}
+
+/* Ten equal steps on one line; five and five on a narrow phone so every number stays a comfortable tap. */
+.rating-scale {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: var(--space-1);
+}
+
+.rating-scale .pill {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+
+@media (max-width: 480px) {
+  .rating-scale {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.post-run-rating-word {
+  color: var(--accent-strong);
+}
+
+.post-run-rating-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.post-run-rating-status {
+  margin-top: var(--space-3);
+}
+
+.post-run-rating-more {
+  margin-top: var(--space-3);
+}
+
+.post-run-rating.is-saved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+.post-run-rating-summary {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+/* What the coach makes of a rating: silent unless the rules suggest easing the week. */
+.adaptation-prompt {
+  flex-basis: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--warn-line);
+  background: var(--warn-bg);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.adaptation-prompt h4 {
+  margin: 0 0 var(--space-2);
+}
+
+.adaptation-prompt ul {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-4);
+}
+
+.adaptation-prompt-result,
+.adaptation-note {
+  flex-basis: 100%;
+  margin: var(--space-2) 0 0;
+}
+
+.post-run-rating-summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+  border-radius: var(--radius-md);
+}
+
 /* "Completed via Strava": a held Strava run completes the session until it lapses; "Keep this tick" makes it the runner's. */
 .strava-completion {
   margin-top: var(--space-2);
@@ -2765,6 +2875,40 @@ a.menu-item {
 
 .panel.home-card.home-today .strava-completion.is-conflict {
   border-color: var(--warn-line);
+}
+
+/* The rating on the same card: dark text on a light wash in both themes, and a dark chosen number (the card is volt in
+   dark mode, so the usual accent pill would disappear into it). */
+.panel.home-card.home-today .post-run-rating,
+.panel.home-card.home-today .adaptation-prompt {
+  background: rgb(255 255 255 / 0.4);
+  border-color: rgb(17 17 17 / 0.16);
+  color: var(--on-sage);
+}
+
+.panel.home-card.home-today .adaptation-prompt {
+  border-color: var(--warn-line);
+}
+
+.panel.home-card.home-today .post-run-rating .pill {
+  background: rgb(255 255 255 / 0.5);
+  border-color: rgb(17 17 17 / 0.24);
+  color: var(--on-sage);
+}
+
+.panel.home-card.home-today .post-run-rating .pill:has(input:checked) {
+  background: var(--on-sage);
+  border-color: var(--on-sage);
+  color: #ffffff;
+}
+
+.panel.home-card.home-today .post-run-rating .link-button,
+.panel.home-card.home-today .post-run-rating summary,
+.panel.home-card.home-today .post-run-rating .post-run-rating-word,
+.panel.home-card.home-today .adaptation-prompt .link-button,
+.panel.home-card.home-today .adaptation-prompt-result,
+.panel.home-card.home-today .adaptation-prompt-result .link-button {
+  color: var(--on-sage);
 }
 
 .strava-completion-label,

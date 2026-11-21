@@ -27,7 +27,9 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
   onOpenPlan: () => void; onOpenDay?: (date: string) => void; onOpenRacePrep?: () => void; onOpenRun: (id: string) => void
 }) {
   const [logging, setLogging] = useState(false)
-  const [dismissed, setDismissed] = useState(() => wasDismissed(today))
+  const [dismissedOn, setDismissedOn] = useState<string | null>(null)
+  // A dismissal belongs to one day; crossing midnight must never suppress the next run's prompt.
+  const dismissed = dismissedOn === today || wasDismissed(today)
   // Once offered, the rating stays put for this visit: saving it shows the answer ("Rated 4/10 · As planned") in place,
   // with Edit feedback and what the coach makes of it, instead of the card disappearing the moment the answer exists.
   const [offered, setOffered] = useState(false)
@@ -68,7 +70,7 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
       <PostRunRating session={session} coach={coach} quickTick onFullForm={() => setLogging(true)} onDismiss={() => {
         dismiss(today)
         if (plan) dismissRating(plan, session)
-        setDismissed(true)
+        setDismissedOn(today)
       }} />
     </section>}
     {recording ? <button type="button" className="button button-primary" onClick={() => onOpenRun(recording.id)}>Open run details</button> : <button type="button" className="button button-primary" onClick={open}>{progress?.kind === 'race' ? 'Open race day' : plan && onOpenDay && progress?.kind !== 'before' ? "Open today's workout" : 'Open your plan'}</button>}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { LifeChange, LifeProposal, TrainingPlan } from '../../lib/types'
@@ -65,13 +65,14 @@ export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props
   // Dropped on a day that has a run: that's a swap. Otherwise a move.
   const occupied = !!to && !!runOn(to)
 
-  useEffect(() => {
-    let cancelled = false
+  // Loads the choices once per run and day. Not again when the plan reloads after a save: by then the run has moved, so
+  // asking about its old day would only show an error next to "Saved!" (owner's staging QA, 21 Nov 2026).
+  const loadChoices = useEffectEvent((cancelled: () => boolean) => {
     const initial = occupied ? makeSwap(from, to) : makeMove(from, to)
     void (async () => {
       try {
         const result = await preview(initial)
-        if (!cancelled) setProposal({ change: initial, result })
+        if (!cancelled()) setProposal({ change: initial, result })
       } catch (reason) {
         // A drop can land on a day the domain cannot use (past, race-adjacent, or a run that can't swap).
         // Ask the server for the free days and the runs this one can trade with.
@@ -80,21 +81,26 @@ export function MoveRunDialog({ from, to, plan, units, actions, onClose }: Props
             preview(makeMove(from)),
             preview(makeSwap(from)).catch(() => null),
           ])
-          if (cancelled) return
+          if (cancelled()) return
           setProposal({ change: makeMove(from), result: offered })
           setSwapTargets(swaps?.moveTargets ?? [])
           setError(offered.moveTargets.length || swaps?.moveTargets.length
             ? `${to ? formatDate(to) : 'That day'} is not available. Choose another day below.`
             : 'No free days or runs to swap with remain this week. Your run has not changed.')
         } catch {
-          if (!cancelled) setError(reason instanceof Error ? reason.message : 'Could not load available dates.')
+          if (!cancelled()) setError(reason instanceof Error ? reason.message : 'Could not load available dates.')
         }
       } finally {
-        if (!cancelled) setBusy(false)
+        if (!cancelled()) setBusy(false)
       }
     })()
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    loadChoices(() => cancelled)
     return () => { cancelled = true }
-  }, [from, to, occupied, preview])
+  }, [from, to])
 
   const choose = async (date: string, swap = false) => {
     setBusy(true)

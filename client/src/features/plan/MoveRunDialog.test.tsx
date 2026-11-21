@@ -29,6 +29,25 @@ describe('Move Run confirmation dialog', () => {
     await waitFor(() => expect(restore).toHaveBeenCalledWith([target]))
   })
 
+  // Staging QA, 21 Nov 2026: after a move the plan reloads with the run on its new day and new actions. The dialog asked
+  // about the old, now empty day again and showed the server's refusal next to "Saved!".
+  it('does not ask about the old day again when the plan reloads after a move', async () => {
+    const preview = vi.fn(async (_change: LifeChange) => proposed(moved))
+    const apply = vi.fn(async () => {})
+    const props = { from, units: 'km' as const, onClose: () => {} }
+    const { rerender } = render(<MoveRunDialog {...props} plan={planFixture} actions={{ preview, apply, restore: async () => {} }} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Move run' }))
+    expect(await screen.findByText('Saved! Your training calendar has been updated.')).toBeVisible()
+
+    const reloaded = { ...planFixture, weeks: planFixture.weeks.map(w => ({ ...w, sessions: w.sessions.map(s => s.date === from ? { ...s, date: target } : s) })) }
+    const refused = vi.fn(async (_change: LifeChange): Promise<LifeProposal> => { throw new Error("Choose a run from today to the end of this week that isn't done yet.") })
+    rerender(<MoveRunDialog {...props} plan={reloaded} actions={{ preview: refused, apply, restore: async () => {} }} />)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(refused).not.toHaveBeenCalled()
+    expect(screen.queryByText(/Choose a run from today/)).not.toBeInTheDocument()
+    expect(screen.getByText('Saved! Your training calendar has been updated.')).toBeVisible()
+  })
+
   it('offers eligible days in the same pop-up when a drop is invalid', async () => {
     const preview = vi.fn(async (change: LifeChange) => {
       if (change.moveTo) throw new Error('Choose one of the days offered.')

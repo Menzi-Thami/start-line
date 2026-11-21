@@ -22,7 +22,7 @@ public sealed class SouthAfricanRaceCatalogueTests
         var sql = migration.UpOperations.OfType<SqlOperation>().ShouldHaveSingleItem().Sql;
 
         // SQL guards each slug, so an event manually added earlier doesn't break an environment's deployment.
-        Regex.Matches(sql, "IF NOT EXISTS", RegexOptions.CultureInvariant).Count.ShouldBe(70);
+        Regex.Count(sql, "IF NOT EXISTS", RegexOptions.CultureInvariant).ShouldBe(70);
         sql.ShouldContain("WHERE [Slug]");
         sql.ShouldContain("'hoka-half-runfest-5km-2027'");
         sql.ShouldContain("'hoka-half-runfest-10km-2027'");

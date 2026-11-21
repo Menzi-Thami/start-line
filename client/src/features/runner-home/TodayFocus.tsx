@@ -32,7 +32,7 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
   const dismissed = dismissedOn === today || wasDismissed(today)
   // Once offered, the rating stays put for this visit: saving it shows the answer ("Rated 4/10 · As planned") in place,
   // with Edit feedback and what the coach makes of it, instead of the card disappearing the moment the answer exists.
-  const [offered, setOffered] = useState(false)
+  const [offeredFor, setOfferedFor] = useState<string | null>(null)
   const progress = plan ? planProgress(plan, today) : null
   const day = plan ? todayInPlan(plan, today) : null
   const session = day?.runs[0]
@@ -40,9 +40,11 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
   // A held Strava run did today's session and the runner hasn't ticked it: offer the one tap that makes it theirs. Optional,
   // and it keeps only the runner's own Done, never Strava's figures (docs/strava-sync.md).
   const eligible = !!session && !!coach && progress?.kind !== 'race' && !own && !dismissed && !!plan && !ratingWasDismissed(plan, session) && completedViaStrava(session, coach)
-  if (eligible && !offered) setOffered(true)
+  // An offer belongs to this particular plan/session, not whichever plan happens to render next.
+  const offerKey = session && plan ? `${plan.race.slug ?? plan.race.name}|${plan.startDate}|${session.date}|${session.type}` : null
+  if (eligible && offerKey && offeredFor !== offerKey) setOfferedFor(offerKey)
   const tickPrompt = !!session && !!coach && progress?.kind !== 'race' && !dismissed
-    && (eligible || offered || (!!own && own.effort != null))
+    && (eligible || (!!offerKey && offeredFor === offerKey) || (!!own && own.effort != null))
   const recording = progress?.kind !== 'race' && session ? recordingForToday(session, coach, runs) : null
   const open = () => progress?.kind === 'race' && onOpenRacePrep ? onOpenRacePrep() : plan && onOpenDay && progress?.kind !== 'before' ? onOpenDay(today) : onOpenPlan()
   return <section className="panel home-card home-today" aria-label="Today">

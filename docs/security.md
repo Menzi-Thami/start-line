@@ -30,7 +30,9 @@ arrive. What's left is abuse: scraping, flooding and malformed input.
 3. **`Cors:AllowedOrigins`** to the frontend's origin, if it's served from a different host.
 4. **A WAF or edge rate limiting** (Azure Front Door, Cloudflare). The in-app limiter is per instance
    and isn't DDoS protection.
-5. **`OTEL_EXPORTER_OTLP_ENDPOINT`** if you want traces exported. Use the platform's managed identity
+5. **Telemetry export.** In Azure, traces, metrics and logs go to Application Insights through
+   `APPLICATIONINSIGHTS_CONNECTION_STRING` (set by `infra/main.bicep`). Set **`OTEL_EXPORTER_OTLP_ENDPOINT`**
+   instead to send them to another collector. Use the platform's managed identity
    or secret store for any exporter credentials, never appsettings.
 
 ## Not applicable yet, and when it will be

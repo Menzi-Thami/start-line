@@ -88,7 +88,7 @@ test('all sticker layouts export real PNGs, preserve actual metrics and keep the
 })
 
 test('Story and square overlays preserve transparent margins, use real extra metrics and composite local photos @phone', async ({ page }) => {
-  const asset = readdirSync(fileURLToPath(new URL('../dist/assets/', import.meta.url))).find((name) => /^run-sticker-.*\\.js$/.test(name))
+  const asset = readdirSync(fileURLToPath(new URL('../dist/assets/', import.meta.url))).find((name) => /^run-sticker-.*\.js$/.test(name))
   expect(asset).toBeTruthy()
   await page.goto('/')
   const results = await page.evaluate(async (modulePath) => {

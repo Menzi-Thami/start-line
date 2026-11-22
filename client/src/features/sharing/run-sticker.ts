@@ -71,18 +71,18 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
   rounded(64, 64, 952, 1152, 64)
   ctx.fillStyle = '#111111f5'
   ctx.fill()
-  ctx.strokeStyle = '#b4c7a855'
+  ctx.strokeStyle = lime + '55'
   ctx.lineWidth = 3
   ctx.stroke()
   ctx.save()
   rounded(64, 64, 952, 1152, 64)
   ctx.clip()
   const glow = ctx.createRadialGradient(880, 120, 10, 880, 120, 630)
-  glow.addColorStop(0, '#b4c7a828')
-  glow.addColorStop(1, '#b4c7a800')
+  glow.addColorStop(0, lime + '28')
+  glow.addColorStop(1, lime + '00')
   ctx.fillStyle = glow
   ctx.fillRect(64, 64, 952, 1152)
-  ctx.strokeStyle = '#b4c7a820'
+  ctx.strokeStyle = lime + '20'
   ctx.lineWidth = 2
   for (let i = 0; i < 9; i++) {
     ctx.beginPath()
@@ -163,17 +163,17 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
     ctx.roundRect(48, 48, 1504, 804, 56)
     ctx.fillStyle = '#111111f5'
     ctx.fill()
-    ctx.strokeStyle = '#b4c7a855'
+    ctx.strokeStyle = lime + '55'
     ctx.lineWidth = 3
     ctx.stroke()
     ctx.save()
     ctx.clip()
     const glow = ctx.createRadialGradient(1420, 100, 10, 1420, 100, 1000)
-    glow.addColorStop(0, '#b4c7a828')
-    glow.addColorStop(1, '#b4c7a800')
+    glow.addColorStop(0, lime + '28')
+    glow.addColorStop(1, lime + '00')
     ctx.fillStyle = glow
     ctx.fillRect(48, 48, 1504, 804)
-    ctx.strokeStyle = '#b4c7a820'
+    ctx.strokeStyle = lime + '20'
     ctx.lineWidth = 2
     for (let i = 0; i < 10; i++) {
       ctx.beginPath()

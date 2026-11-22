@@ -185,7 +185,8 @@ describe('signing up comes first', () => {
 
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('Your sign-in timed out before it finished.')
-    expect(alert).toHaveTextContent('Error code AADSTS50132')
+    // Microsoft's diagnostic code is for administrators, not runners.
+    expect(alert).not.toHaveTextContent('AADSTS50132')
     await user.click(within(alert).getByRole('button', { name: 'Try again' }))
     expect(auth.signIn).toHaveBeenCalled()
   })

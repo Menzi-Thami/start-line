@@ -484,9 +484,13 @@ describe('signing in while the server wakes', () => {
 
     renderApp(signedIn())
 
-    expect((await screen.findAllByText(/We couldn’t load your account/, {}, { timeout: 5000 })).length).toBeGreaterThan(0)
+    expect(await screen.findByRole('heading', { name: 'A small connection hiccup' }, { timeout: 5000 })).toBeInTheDocument()
+    expect(screen.getByText(/Taperday is having trouble connecting right now/)).toBeInTheDocument()
     // Each try is the API client's read plus its own one retry.
     expect(reads).toBe(2 * WAKE_TRIES)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    await waitFor(() => expect(reads).toBeGreaterThan(2 * WAKE_TRIES))
   })
 
   it('still gives up on an answer that isn’t about waking', async () => {
@@ -500,7 +504,10 @@ describe('signing in while the server wakes', () => {
 
     renderApp(signedIn())
 
-    expect((await screen.findAllByText(/Forbidden/)).length).toBeGreaterThan(0)
+    // The runner gets plain words and a retry, never the server's own text.
+    expect(await screen.findByText(/We couldn’t load your training right now/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByText(/Forbidden/)).not.toBeInTheDocument()
     expect(reads).toBe(1)
   })
 })

@@ -798,9 +798,11 @@ export function App() {
   const builderInitial = plan.kind === 'ready' || plan.kind === 'error' ? plan.inputs : initial
   // On an automatic return visit, don't show step 2 of the race builder before checking whether
   // this runner already has a saved plan. An explicit builder action or shared link is unaffected.
+  // A runner whose account has loaded and who has no current plan gets the builder straight away.
   const awaitingSavedTraining = view === 'build' && !editing && !initial && !landed && !justSignedUp
     && auth.enabled && (auth.loading || (auth.account !== null
-      && (state.kind === 'loading' || state.kind === 'ready' || state.kind === 'error')))
+      && (state.kind === 'loading' || state.kind === 'error'
+        || (state.kind === 'ready' && currentPlan.current !== null && !currentPlan.failed))))
   const showBuilder = view === 'build' && (editing || plan.kind === 'idle') && !awaitingSavedTraining
   // A plan is for a runner's own account: anyone not signed in (or not finished signing up) sees which plan it is and is
   // asked to sign in, never its sessions or calendar. Accounts off (local development) shows plans as before.
@@ -922,7 +924,9 @@ export function App() {
         <OfflineRunDrafts activePlanId={view === 'home' ? ownPlan?.id : showPlan ? savedOnScreen : null} />
         <ScreenRecovery>
         <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
-        {auth.error && state.kind !== 'error' && (
+        {/* While the account is still loading, wait: a load that fails shows its own recovery with the same action,
+            so this notice would only flash and take its button with it. */}
+        {auth.error && state.kind !== 'error' && state.kind !== 'loading' && (
           <div className="callout" role="alert">
             <p>
               {auth.error.message}{' '}

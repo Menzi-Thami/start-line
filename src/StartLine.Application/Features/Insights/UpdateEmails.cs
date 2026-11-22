@@ -15,7 +15,6 @@ public static class UpdateEmails
         ("Long tempos as reps", "Late in the plan, a long tempo becomes reps with short jogs between, so you hold the pace instead of fading."),
         ("Two hard days, not three", "On four runs a week or fewer, a long run with goal-pace work counts as a hard day, so the week keeps to two."),
         ("An easier start for new runners", "Your first two weeks are easy running and strides, before any hard session."),
-        ("Strength where it helps", "Strength moves off hard days and the day before your long run, so your legs are fresh when it counts."),
     ];
 
     private static readonly (string Title, string Detail)[] RedesignChanges =

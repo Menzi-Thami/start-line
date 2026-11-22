@@ -50,10 +50,7 @@ public class ExperienceAndStrengthTests
             .SelectMany(w => w.Sessions).Where(s => s.Type == SessionType.Strength).ToList();
         strength.Count.ShouldBe(2 * (plan.Weeks.Count - 1));
         strength.ShouldAllBe(s => s.DistanceKm == 0 && s.Zone == null);
-        if (Version < TrainingPlanGenerator.LatestVersion)
-        {
-            strength.ShouldAllBe(s => s.Date.DayOfWeek == DayOfWeek.Monday || s.Date.DayOfWeek == DayOfWeek.Thursday);
-        }
+        strength.ShouldAllBe(s => s.Date.DayOfWeek == DayOfWeek.Monday || s.Date.DayOfWeek == DayOfWeek.Thursday);
     }
 
     [Fact]
@@ -61,34 +58,52 @@ public class ExperienceAndStrengthTests
     {
         var plan = Half(strengthDays: [DayOfWeek.Thursday]);
 
-        // Whichever day it lands on (from version 3 it may move off a hard day), it comes after that day's run.
         var day = plan.Weeks[1].Sessions.Single(s => s.Type == SessionType.Strength).Date;
+        day.DayOfWeek.ShouldBe(DayOfWeek.Thursday);
         var sessions = plan.Weeks[1].Sessions.Where(s => s.Date == day).ToList();
+        sessions.Count.ShouldBe(2);
         sessions[^1].Type.ShouldBe(SessionType.Strength);
     }
 
+    // Regression: an early version 3 moved strength off hard days and the eve of the long run, trying the next day first,
+    // so a runner who picked Tuesday saw it on Wednesday ("coming up" on the day they meant to do it). It stays put now.
     [Fact]
-    public void From_version_3_strength_stays_off_hard_days_and_the_eve_of_the_long_run()
+    public void Strength_stays_on_the_chosen_day_even_beside_a_hard_run_or_on_the_eve_of_the_long_run()
     {
-        if (Version < TrainingPlanGenerator.LatestVersion)
-        {
-            return;
-        }
-
         var plan = Half(strengthDays: [DayOfWeek.Tuesday, DayOfWeek.Thursday, DayOfWeek.Saturday]);
-        var hardTypes = new[] { SessionType.Hills, SessionType.Fartlek, SessionType.Intervals, SessionType.Tempo, SessionType.CruiseIntervals, SessionType.ProgressionRun, SessionType.RacePace };
+
         foreach (var week in plan.Weeks.Where(w => w.Phase != TrainingPhase.RaceWeek))
         {
-            var longDay = week.Sessions.Where(s => s.Type is SessionType.LongRun or SessionType.LongRunFastFinish or SessionType.LongRunRacePace).Select(s => s.Date).FirstOrDefault();
-            foreach (var strength in week.Sessions.Where(s => s.Type == SessionType.Strength))
-            {
-                week.Sessions.ShouldNotContain(s => s.Date == strength.Date && hardTypes.Contains(s.Type));
-                if (longDay != default)
-                {
-                    strength.Date.ShouldNotBe(longDay.AddDays(-1));
-                }
-            }
+            week.Sessions.Where(s => s.Type == SessionType.Strength).Select(s => s.Date.DayOfWeek)
+                .ShouldBe([DayOfWeek.Tuesday, DayOfWeek.Thursday, DayOfWeek.Saturday]);
         }
+    }
+
+    [Fact]
+    public void A_hard_run_and_strength_on_the_same_day_share_it_with_the_run_first()
+    {
+        var plan = Half(strengthDays: [DayOfWeek.Tuesday]);
+        var hardTypes = new[] { SessionType.Hills, SessionType.Fartlek, SessionType.Intervals, SessionType.Tempo, SessionType.CruiseIntervals, SessionType.ProgressionRun, SessionType.RacePace };
+
+        var shared = plan.Weeks.Where(w => w.Phase != TrainingPhase.RaceWeek)
+            .Select(w => w.Sessions.Where(s => s.Date.DayOfWeek == DayOfWeek.Tuesday).ToList())
+            .Where(day => day.Any(s => hardTypes.Contains(s.Type))).ToList();
+        shared.ShouldNotBeEmpty();
+        shared.ShouldAllBe(day => day.Count == 2 && day[1].Type == SessionType.Strength);
+    }
+
+    [Fact]
+    public void A_replanned_plan_keeps_strength_on_the_chosen_day()
+    {
+        var plan = Generate(new PlanParameters(
+            Distance.HalfMarathon, TimeSpan.FromHours(2), new DateOnly(2027, 1, 24), Today,
+            FourDays, DayOfWeek.Sunday, null, Experience.Regular, [DayOfWeek.Tuesday, DayOfWeek.Saturday],
+            Replan: new PlanReplan(new DateOnly(2026, 11, 19), Setback.MissedTraining)));
+
+        var strength = plan.Weeks.Where(w => w.Phase != TrainingPhase.RaceWeek).SelectMany(w => w.Sessions)
+            .Where(s => s.Type == SessionType.Strength).ToList();
+        strength.ShouldNotBeEmpty();
+        strength.ShouldAllBe(s => s.Date.DayOfWeek == DayOfWeek.Tuesday || s.Date.DayOfWeek == DayOfWeek.Saturday);
     }
 
     [Fact]

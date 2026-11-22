@@ -211,10 +211,8 @@ public static partial class TrainingPlanGenerator
 
                 // Foundation weeks are real training weeks: include chosen
                 // strength and mobility days, even before the race block.
-                var foundationContext = new WeekContext(weekStart, baselineKm, TrainingPhase.Base,
-                    index, 0, IsCutback: false, IsFirstWeek: index == 0);
                 var longDay = layout.Days.Single(day => day.Role == DayRole.Long).DayIndex;
-                sessions.AddRange(StrengthDays(parameters, foundationContext, longDay, [])
+                sessions.AddRange(StrengthDays(parameters, longDay)
                     .Select(day => WorkoutBuilder.Strength(weekStart.AddDays(day), TrainingPhase.Base, false))
                     .Where(session => session.Date >= chosenStart));
                 sessions = [.. sessions.OrderBy(session => session.Date).ThenBy(session => session.Type == SessionType.Strength)];
@@ -541,9 +539,9 @@ public static partial class TrainingPlanGenerator
                 Math.Max(MinRunKm, Math.Min(MaxEasyRunKm, longKm * 0.75))));
         sessions.AddRange(easyDays.Select(d => workouts.Easy(d.Date, d.Type, easyKm)));
 
-        // Strength goes on any chosen day except the long run's: that day is long enough already. From version 3 it also
-        // stays off hard days and the eve of the long run, moving to the nearest easier day when it can.
-        foreach (var day in StrengthDays(p, week, longDay, hardSessions.Select(h => h.Session.Date)))
+        // Strength goes on the days the runner chose, except the long run's: that day is long enough already. It never
+        // moves to another day: a runner who picks Tuesday does it on Tuesday, after that day's run.
+        foreach (var day in StrengthDays(p, longDay))
         {
             sessions.Add(WorkoutBuilder.Strength(week.Start.AddDays(day), week.Phase, week.IsEasier));
         }
@@ -572,29 +570,12 @@ public static partial class TrainingPlanGenerator
         return session;
     }
 
-    /// <summary>The days strength goes on this week: the chosen ones, off the long run (and, from version 3, off hard days and its eve).</summary>
-    private static List<int> StrengthDays(PlanParameters p, WeekContext week, int longDay, IEnumerable<DateOnly> hardDates)
-    {
-        var chosen = (p.StrengthDays ?? []).Select(WeekLayout.MondayIndex).Distinct().Where(d => d != longDay).ToList();
-        if (!IsV3(p))
-        {
-            return chosen;
-        }
-
-        var hard = hardDates.Select(d => d.DayNumber - week.Start.DayNumber).ToHashSet();
-        var eve = (longDay + 6) % 7;
-        bool Fine(int d) => d != longDay && d != eve && !hard.Contains(d);
-        var placed = new List<int>();
-        foreach (var day in chosen)
-        {
-            // The chosen day if it suits, else the nearest one either side that does and isn't taken, else the chosen day.
-            var pick = Enumerable.Range(0, 7).SelectMany(n => new[] { day + n, day - n }).Where(d => d is >= 0 and < 7)
-                .Where(d => Fine(d) && !placed.Contains(d)).DefaultIfEmpty(day).First();
-            placed.Add(pick);
-        }
-
-        return [.. placed.Distinct()];
-    }
+    /// <summary>
+    /// The days strength goes on each week: the chosen ones, off the long run. Every version keeps them on the chosen day
+    /// (an early version 3 moved them off hard days and the eve of the long run, which put them a day after the one picked).
+    /// </summary>
+    private static List<int> StrengthDays(PlanParameters p, int longDay) =>
+        [.. (p.StrengthDays ?? []).Select(WeekLayout.MondayIndex).Distinct().Where(d => d != longDay)];
 
     /// <summary>
     /// The week's hard sessions. They rotate so the same day isn't the same workout every week:

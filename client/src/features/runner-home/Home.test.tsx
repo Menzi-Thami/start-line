@@ -11,7 +11,7 @@ import { Home } from './Home'
 import { journeyOf } from '../journey/journey-fixtures'
 import type { JourneyActions } from '../journey/useJourney'
 
-afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers() })
+afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); localStorage.clear() })
 
 const thandi = { id: 'runner-1', displayName: 'Thandi', maxHeartRate: 190 } as Runner
 

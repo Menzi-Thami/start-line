@@ -141,7 +141,10 @@ test('a replacement retains its original prescription beside the actual run @pho
   expect(stored.entries()).toHaveLength(1)
   expect(stored.entries()[0]?.isAdditional).toBe(false)
   await day.screenshot({ path: info.outputPath('calendar-day-replacement.png') })
-  await day.getByRole('button', { name: 'Change how Hill repeats went', exact: true }).click()
+  // Recorded shows the result only; the run's own figures are changed from its single rating editor under Planned.
+  await expect(recorded.getByRole('button', { name: 'Change how Hill repeats went', exact: true })).toHaveCount(0)
+  await planned.getByText('More details', { exact: true }).click()
+  await planned.getByRole('button', { name: 'Add your own distance and time', exact: true }).click()
   await day.getByLabel('Run details').selectOption('')
   await day.getByLabel('Distance (km)', { exact: true }).fill('9')
   await day.getByRole('button', { name: 'Save check-in', exact: true }).click()

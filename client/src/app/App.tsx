@@ -12,6 +12,7 @@ import { useRunner } from '../features/account/useRunner'
 import { PrivacyPolicy, PrivacyUpdate } from '../features/privacy/Privacy'
 import { FeedbackBox } from '../features/account/FeedbackBox'
 import { FindingPlan } from '../features/account/FindingPlan'
+import { AccountRecovery } from '../features/account/AccountRecovery'
 import { Unsubscribe } from '../features/account/Unsubscribe'
 import { Wordmark } from './Wordmark'
 import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
@@ -795,7 +796,12 @@ export function App() {
     race: ownPlan?.inputs.distanceKm && goalSeconds ? { distanceKm: ownPlan.inputs.distanceKm, goalSeconds } : null,
   }
   const builderInitial = plan.kind === 'ready' || plan.kind === 'error' ? plan.inputs : initial
-  const showBuilder = view === 'build' && (editing || plan.kind === 'idle')
+  // On an automatic return visit, don't show step 2 of the race builder before checking whether
+  // this runner already has a saved plan. An explicit builder action or shared link is unaffected.
+  const awaitingSavedTraining = view === 'build' && !editing && !initial && !landed && !justSignedUp
+    && auth.enabled && (auth.loading || (auth.account !== null
+      && (state.kind === 'loading' || state.kind === 'ready' || state.kind === 'error')))
+  const showBuilder = view === 'build' && (editing || plan.kind === 'idle') && !awaitingSavedTraining
   // A plan is for a runner's own account: anyone not signed in (or not finished signing up) sees which plan it is and is
   // asked to sign in, never its sessions or calendar. Accounts off (local development) shows plans as before.
   const planLocked = view === 'build' && plan.kind === 'ready' && !editing && (state.kind === 'signed-out' || state.kind === 'needs-sign-up')
@@ -803,7 +809,6 @@ export function App() {
   const planPending = view === 'build' && plan.kind === 'ready' && !editing && state.kind === 'loading' && !auth.account
   const showPlan = view === 'build' && plan.kind === 'ready' && !editing && !planLocked && !planPending
   // Signed in, on the builder with nothing open: wait to learn whether there's a plan to open instead.
-  const opening = showBuilder && !editing && !initial && !landed && !justSignedUp && state.kind === 'ready' && currentPlan.current !== null
 
   // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
   // Strength is part of Plan, so training always has one navigation destination.
@@ -917,7 +922,7 @@ export function App() {
         <OfflineRunDrafts activePlanId={view === 'home' ? ownPlan?.id : showPlan ? savedOnScreen : null} />
         <ScreenRecovery>
         <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
-        {auth.error && (
+        {auth.error && state.kind !== 'error' && (
           <div className="callout" role="alert">
             <p>
               {auth.error.message}{' '}
@@ -925,7 +930,6 @@ export function App() {
                 {auth.account ? 'Continue securely' : 'Try again'}
               </button>
             </p>
-            {auth.error.code && <p className="field-help">Error code {auth.error.code}, if you contact us.</p>}
           </div>
         )}
 
@@ -954,17 +958,14 @@ export function App() {
             </p>
           </div>
         )}
-        {state.kind === 'error' && !showBuilder && (
-          <div className="callout" role="alert">
-            <p>
-              {state.needsSignIn ? state.message : `We couldn’t load your account. ${state.message}`}{' '}
-              {state.needsSignIn ? (
-                <button type="button" className="link-button" onClick={auth.resumeSession ?? auth.signIn}>Continue securely</button>
-              ) : (
-                <button type="button" className="link-button" onClick={() => runner.refresh()}>Try again</button>
-              )}
-            </p>
-          </div>
+        {state.kind === 'error' && !showBuilder && view !== 'sign-in' && (
+          <AccountRecovery
+            message={state.message}
+            needsSignIn={state.needsSignIn}
+            offline={!navigator.onLine}
+            onRetry={runner.refresh}
+            onContinue={auth.resumeSession ?? auth.signIn}
+          />
         )}
 
         {view === 'sign-up' && state.kind === 'needs-sign-up' && (
@@ -1096,7 +1097,10 @@ export function App() {
               the runner's plan opens by itself once it's found. The builder runs ungated meanwhile, so the sign-up screen
               never flashes past a returning runner.
             */}
-            {showBuilder && auth.account && (state.kind === 'loading' || opening) && (
+            {awaitingSavedTraining && auth.loading && (
+              <p className="loading-line" role="status">Checking your session…</p>
+            )}
+            {awaitingSavedTraining && !auth.loading && auth.account && state.kind !== 'error' && (
               <FindingPlan name={auth.account.name || null} onRetry={runner.refresh} onSignOut={auth.signOut} />
             )}
 

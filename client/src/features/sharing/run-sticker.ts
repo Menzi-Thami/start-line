@@ -190,11 +190,11 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
       ctx.font = `${weight} ${size}px ${family}`
     }
     if (transparent) {
-      ctx.shadowColor = '#000000b0'
-      ctx.shadowBlur = 10
+      ctx.shadowColor = '#000000f0'
+      ctx.shadowBlur = 16
       ctx.shadowOffsetY = 3
-      ctx.lineWidth = 2
-      ctx.strokeStyle = '#00000080'
+      ctx.lineWidth = 5
+      ctx.strokeStyle = '#000000e8'
       ctx.strokeText(value, x, y, width)
     }
     ctx.fillStyle = color
@@ -210,6 +210,7 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
       ctx.fill()
     }
     for (const x of [94, 590, 1084]) plate(x, 294, 418, 180)
+    if (stickerExtraLines(run, options).length) plate(96, 480, 790, 48)
     plate(96, 530, 760, 55)
     plate(980, 567, 510, 92)
   }

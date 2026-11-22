@@ -42,7 +42,8 @@ jobs:
     outputs:
       code: ${{ steps.diff.outputs.code }}
     steps:
-      - id: diff
+      - name: List the changed files
+        id: diff
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT: ${{ github.event_name }}

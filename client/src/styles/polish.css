@@ -565,3 +565,25 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .life-happens-changed { margin-block-start: var(--space-4); display: grid; gap: var(--space-2); }
 .life-happens-changed li { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }
 .life-happens-changed .link-button { min-height: var(--tap); }
+
+
+/* Share Studio: readable export previews and compact controls in the existing Frame/Night Run theme. */
+.sticker-metrics { display: flex; gap: var(--space-3); flex-wrap: wrap; margin-block: var(--space-3); min-width: 0; }
+.sticker-metrics legend { margin-bottom: var(--space-2); }
+.sticker-metrics label { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--tap); }
+.sticker-metrics input { accent-color: var(--accent); }
+.sticker-photo { display: grid; gap: var(--space-2); margin-block: var(--space-3); }
+.sticker-photo input[type='file'] { max-width: 100%; }
+.sticker-photo .link-button { justify-self: start; }
+.sticker-preview-controls { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.sticker-preview-controls .button[aria-pressed='true'] { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; }
+.sticker-preview-story { max-width: 19rem; }
+.sticker-preview-square { max-width: 23rem; }
+.sticker-preview.sticker-scene-bright { background: linear-gradient(135deg, #edf7ff 0%, #85c9f5 45%, #fef3ce 100%); }
+.sticker-preview.sticker-scene-dark { background: linear-gradient(145deg, #10131c 0%, #394152 55%, #0a0b0d 100%); }
+.sticker-preview img { object-fit: contain; }
+@media (max-width: 38rem) {
+  .sticker-panel .submit-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sticker-panel .submit-row > * { min-width: 0; white-space: normal; text-align: center; }
+  .sticker-preview-horizontal, .sticker-preview-transparent { max-width: 100%; }
+}

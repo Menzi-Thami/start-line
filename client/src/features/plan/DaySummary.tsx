@@ -20,6 +20,7 @@ import { SessionItem } from './SessionItem'
 import { RunWalkChip } from './RunWalkChip'
 import { canMoveFrom } from './move-window'
 import { Runner } from '../shared/Runner'
+import { isStrength } from '../../lib/strength'
 
 interface Props {
   dedicated?: boolean
@@ -129,7 +130,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
             const complete = done.has(sessionKey(session))
             const viaStrava = completedViaStrava(session, coach)
             const pace = plan.paces.find(pace => pace.zone === session.zone)
-            return <article key={sessionKey(session)} className="day-summary-card" aria-label={`Planned: ${session.title}`}>
+            const card = <article key={sessionKey(session)} className="day-summary-card" aria-label={`Planned: ${session.title}`}>
               {session.type === 'Strength' ? future ? <><h5>{session.title}</h5><p>{session.exercises.length} exercises · Upcoming</p><p>{session.detail}</p>{dedicated && <ExerciseList session={session} done={done} onDoneChange={onDoneChange} readOnly />}</>  : dedicated ? <><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : `${setsDone(done, session).done} of ${setsDone(done, session).total} sets recorded on this device`}</p><SessionItem expanded session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></> : <><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : 'No completion recorded'}</p><details className="session-more"><summary>View exercises and completion</summary><SessionItem session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></details></> : <>
                 {historyReady && (complete || viaStrava || (entry && entry.status !== 'Skipped')) && <p className="day-done" role="status">
                   <Runner pose="victory" size={34} className="day-done-runner" />
@@ -161,6 +162,8 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
                 {historyReady && !coach && session.type !== 'Race' && !future && <label className="session-done"><input type="checkbox" checked={complete} onChange={event => onDoneChange(current => withSessionDone(current, session, event.target.checked))} /> Complete on this device</label>}
               </>}
             </article>
+            // Strength is its own labelled block under the day's run, never read as part of it.
+            return isStrength(session) ? <div key={sessionKey(session)} className="day-summary-strength"><p className="plan-kicker">Strength{sessions.some(other => !isStrength(other)) ? ' · after your run' : ''}</p>{card}</div> : card
           })}
         </section>
 

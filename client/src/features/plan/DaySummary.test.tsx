@@ -127,6 +127,9 @@ describe('calendar day summaries', () => {
   it('keeps strength completion independent of an imported running activity', async () => {
     render(<View selected="2026-10-12" runs={[imported('strava-1', '2026-10-12')]} />)
     expect(planned()).toHaveTextContent('Strength & mobility')
+    // Its own labelled block: a strength-only day has no run for it to come after.
+    const block = within(planned()).getByLabelText('Planned: Strength & mobility').closest('.day-summary-strength')!
+    expect(block.querySelector('.plan-kicker')).toHaveTextContent(/^Strength$/)
     await userEvent.setup().click(within(planned()).getByText('View exercises and completion'))
     const complete = within(planned()).getByRole('checkbox', { name: 'Done' })
     expect(complete).not.toBeChecked()

@@ -12,6 +12,7 @@ import type { SessionCoach } from '../coaching/useCheckIns'
 import { recordingForToday } from './today-recording'
 import { Runner } from '../shared/Runner'
 import { todayInPlan } from './home-math'
+import { strengthSummary } from '../../lib/strength'
 
 // "Not now" on the tick prompt lasts for the day it was said, on this device only.
 const dismissedKey = (date: string) => `taperday.tick-prompt.dismissed.${date}`
@@ -47,7 +48,9 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
     && (eligible || (!!offerKey && offeredFor === offerKey) || (!!own && own.effort != null))
   const recording = progress?.kind !== 'race' && session ? recordingForToday(session, coach, runs) : null
   const open = () => progress?.kind === 'race' && onOpenRacePrep ? onOpenRacePrep() : plan && onOpenDay && progress?.kind !== 'before' ? onOpenDay(today) : onOpenPlan()
-  return <section className="panel home-card home-today" aria-label="Today">
+  // Strength is its own card after Today, never part of the run: Today is about running (or the rest from it).
+  const strength = plan && progress?.kind !== 'before' && progress?.kind !== 'race' ? day?.strength ?? [] : []
+  return <><section className="panel home-card home-today" aria-label="Today">
     <Runner pose={recording ? 'victory' : day?.runs.length ? 'crouch' : 'sleep'} size={54} className="home-today-runner" />
     <p className="plan-kicker">Today</p>
     {session && coach?.get(session)?.status === 'Done' && <span className="chip home-done-chip">Done</span>}
@@ -62,9 +65,8 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
         const own = coach?.get(value)
         return <div key={`${value.date}|${value.type}`}><p className="home-today-title">{index > 0 && value.title}{own && <span className={own.status === 'Done' ? 'chip home-done-chip' : 'chip home-status-chip'}>{own.status === 'Done' ? 'Done' : own.status === 'Skipped' ? 'Skipped' : 'Logged'}</span>}</p>
           <dl className="home-workout-facts">{value.distanceKm > 0 && <div><dt>Distance</dt><dd className="mono">{formatDistance(value.distanceKm, units)}</dd></div>}{pace && <div><dt>Target pace</dt><dd className="mono">{formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}</dd></div>}</dl><p className="field-help">{value.detail}</p></div>
-      }) : <><p>{day?.strength.length ? 'Your running takes a break. Your strength session is below.' : 'Legs up. Rest is when the training turns into fitness.'}</p>{day?.next && <p className="field-help">Next: {day.next.title}, {formatDate(day.next.date)}</p>}</>}
+      }) : <><p>{day?.strength.length ? 'Your running takes a break today. Your strength session is below.' : 'Legs up. Rest is when the training turns into fitness.'}</p>{day?.next && <p className="field-help">Next: {day.next.title}, {formatDate(day.next.date)}</p>}</>}
     {session && (recording || own && own.status !== 'Skipped') && <p className="field-help">Planned: {session.title}{session.distanceKm > 0 ? ` · ${formatDistance(session.distanceKm, units)}` : ''}</p>}
-    {day?.strength.map(value => <section key={value.type} className="home-today-strength" aria-label="Strength session"><p className="home-today-title">{value.title}</p><p className="field-help">{value.exercises.length} exercises · Open your plan for set tracking.</p></section>)}
     {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && <p className="field-help">{progress.daysToGo} days to {plan!.race.name}</p>}
     {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && onOpenRacePrep && <button type="button" className="link-button" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
     {tickPrompt && session && coach && <section className="home-tick-prompt" aria-label="Rate today’s run">
@@ -79,4 +81,11 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
     {/* While the rating is asking, its More details opens this log: one way in, not two. */}
     {session && coach && progress?.kind !== 'race' && (!tickPrompt || own || logging) && <div className="home-manual"><button type="button" className="link-button" aria-expanded={logging} onClick={() => setLogging(value => !value)}>{logging ? 'Close run log' : coach.get(session) ? 'Edit run log' : 'Log a run manually'}</button>{logging && <>{!tickPrompt && <StravaCompletion session={session} coach={coach} />}<CheckInCard session={session} coach={coach} runs={runs} done={!!coach.get(session) && coach.get(session)!.status !== 'Skipped'} compactActions /></>}</div>}
   </section>
+  {strength.map(value => <section key={`${value.date}|${value.type}`} className="panel home-card home-strength" aria-label="Strength today">
+    <p className="plan-kicker">Strength today{day?.runs.length ? ' · after your run' : ''}</p>
+    <h2 className="home-strength-title">{value.title}</h2>
+    <p className="field-help">{strengthSummary(value)}</p>
+    <button type="button" className="button button-quiet" onClick={() => onOpenDay ? onOpenDay(today) : onOpenPlan()}>Open strength workout</button>
+  </section>)}
+  </>
 }

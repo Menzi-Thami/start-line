@@ -212,7 +212,7 @@ button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(
 /* Daily focus: work first, supporting context quieter and closer together. */
 .wizard-title, .plan-title, .week > summary { scroll-margin-top: calc(var(--masthead-h) + var(--space-4)); }
 
-.session-strength, .home-today-strength {
+.session-strength {
   margin-top: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--line);
@@ -220,7 +220,6 @@ button.plan-calendar-day.is-today:hover { background: var(--accent); color: var(
   background: var(--surface-sunk);
 }
 .session-strength .session-head { flex-wrap: wrap; }
-.home-today-strength { display: grid; gap: var(--space-2); }
 
 /* The runner's film belongs to plan creation; tips stay put until the reader asks for the next one. */
 .plan-theatre {
@@ -367,8 +366,10 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .home-focus .home-today-title { font-size: clamp(1.5rem, 3vw, 2rem); }
 .home-focus .home-today-more { margin-block: var(--space-1); }
 .home-focus .home-plan-link { margin-top: 0; font-size: var(--text-sm); }
-.home-focus .home-today-strength { padding: var(--space-2) 0; border: 0; border-top: 1px solid var(--line); background: none; }
-.home-focus .home-today-strength .home-today-title { font-size: var(--text-md); }
+/* Strength has its own card after Today, so it never reads as part of the run. */
+.home-focus .home-strength { display: grid; justify-items: start; gap: var(--space-2); }
+.home-focus .home-strength .plan-kicker { margin: 0; }
+.home-focus .home-strength-title { margin: 0; font-family: var(--font-body); font-size: var(--text-lg); font-weight: 600; color: var(--ink); }
 .home-race-brief { display: flex; justify-content: space-between; align-items: center; gap: var(--space-4); width: 100%; padding: var(--space-4) 0; border: 0; border-block: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
 .home-race-brief > span:first-child { min-width: 0; }
 .home-race-brief strong { display: block; font-size: var(--text-lg); }
@@ -418,6 +419,11 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .week-agenda .week-day-workout { min-width: 0; display: grid; gap: 2px; }
 .week-agenda .week-day-workout strong { font-size: var(--text-md); font-weight: 600; overflow-wrap: anywhere; }
 .week-agenda .week-day-workout .field-help { font-size: .75rem; }
+.week-agenda .week-day-strength { justify-self: start; align-self: flex-start; }
+/* Strength in a day preview or the day page: its own block, set apart from the run above it. */
+.day-preview-strength, .day-summary-strength { display: grid; gap: var(--space-1); margin-top: var(--space-3); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-sunk); }
+.day-preview-strength > p, .day-summary-strength > .plan-kicker { margin: 0; }
+.day-summary-strength > .day-summary-card { margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
 .week-day-chevron { color: var(--muted); text-align: right; }
 .week-agenda .week-day.has-activity .week-day-button::after { display: none; }
 .day-summary { max-width: 32rem; max-height: min(22rem, 55dvh); padding: 0 var(--space-3) var(--space-3); border-color: var(--line); background: var(--surface-sunk); box-shadow: none; }

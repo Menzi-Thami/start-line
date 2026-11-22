@@ -86,3 +86,70 @@ test('all sticker layouts export real PNGs, preserve actual metrics and keep the
   expect(results.timedText.filter((t) => t === 'Not recorded')).toHaveLength(2)
   expect(results.timedText.some((t) => t.includes('/km'))).toBe(false)
 })
+
+test('Story and square overlays preserve transparent margins, use real extra metrics and composite local photos @phone', async ({ page }) => {
+  const asset = readdirSync(fileURLToPath(new URL('../dist/assets/', import.meta.url))).find((name) => /^run-sticker-.*\\.js$/.test(name))
+  expect(asset).toBeTruthy()
+  await page.goto('/')
+  const results = await page.evaluate(async (modulePath) => {
+    const renderer = await import(modulePath) as {
+      renderRunSticker: (run: object, units: string, layout: string, options?: object) => Promise<Blob>
+    }
+    const run = { date: '2026-11-21', title: '5K run', source: 'Strava', distanceKm: 5, seconds: 1495,
+      elevationGainMetres: 42, averageHeartRate: 151, calories: 302 }
+    const observed: string[] = []
+    const original = CanvasRenderingContext2D.prototype.fillText
+    CanvasRenderingContext2D.prototype.fillText = function (text, x, y, maxWidth) {
+      observed.push(text)
+      if (maxWidth === undefined) original.call(this, text, x, y)
+      else original.call(this, text, x, y, maxWidth)
+    }
+    try {
+      const formats = []
+      for (const layout of ['story', 'square']) {
+        observed.length = 0
+        const blob = await renderer.renderRunSticker(run, 'km', layout, { showElevation: true })
+        const bitmap = await createImageBitmap(blob)
+        const canvas = document.createElement('canvas')
+        canvas.width = bitmap.width; canvas.height = bitmap.height
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(bitmap, 0, 0)
+        const corner = ctx.getImageData(0, 0, 1, 1).data[3]
+        const panel = ctx.getImageData(125, layout === 'story' ? 320 : 160, 1, 1).data[3]
+        formats.push({ layout, width: bitmap.width, height: bitmap.height, corner, panel, lines: [...observed] })
+        bitmap.close()
+      }
+      const photoCanvas = document.createElement('canvas')
+      photoCanvas.width = 64; photoCanvas.height = 64
+      const photoContext = photoCanvas.getContext('2d')!
+      photoContext.fillStyle = '#ffffff'
+      photoContext.fillRect(0, 0, 64, 64)
+      const photo = await new Promise<Blob>((resolve, reject) =>
+        photoCanvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Photo failed')), 'image/png'))
+      observed.length = 0
+      const composite = await renderer.renderRunSticker(run, 'km', 'story', {
+        showElevation: true, showHeartRate: true, showCalories: true, photo,
+      })
+      const image = await createImageBitmap(composite)
+      const canvas = document.createElement('canvas')
+      canvas.width = image.width; canvas.height = image.height
+      const context = canvas.getContext('2d')!
+      context.drawImage(image, 0, 0)
+      const corner = [...context.getImageData(0, 0, 1, 1).data]
+      image.close()
+      return { formats, photoCorner: corner, compositeText: [...observed] }
+    } finally { CanvasRenderingContext2D.prototype.fillText = original }
+  }, '/assets/' + asset)
+  expect(results.formats.map(({ width, height }) => [width, height])).toEqual([[1080, 1920], [1080, 1080]])
+  for (const format of results.formats) {
+    expect(format.corner).toBe(0)
+    expect(format.panel).toBeGreaterThan(200)
+    expect(format.lines).toContain('ELEVATION 42 m')
+    expect(format.lines).not.toContain('AVG HR 151 bpm')
+    expect(format.lines).not.toContain('CALORIES 302 kcal')
+    expect(format.lines).toContain('taperday.run')
+  }
+  expect(results.photoCorner).toEqual([255, 255, 255, 255])
+  expect(results.compositeText.some(line => line.includes('AVG HR 151 bpm'))).toBe(true)
+  expect(results.compositeText.some(line => line.includes('CALORIES 302 kcal'))).toBe(true)
+})

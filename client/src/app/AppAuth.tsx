@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react'
 import { accountsOff, AuthContext, type AuthConfig } from './auth-context'
+import { ConnectingAccount } from './ConnectingAccount'
 import { ScreenRecovery } from './ScreenRecovery'
 
 const AuthProvider = lazy(() => import('./AuthProvider').then((module) => ({ default: module.AuthProvider })))
@@ -9,7 +10,7 @@ export function AppAuth({ config, children }: { config: AuthConfig | null; child
   if (!config) return <AuthContext.Provider value={accountsOff}>{children}</AuthContext.Provider>
   return (
     <ScreenRecovery>
-      <Suspense fallback={<div className="page loading-line" role="status">Connecting your account…</div>}>
+      <Suspense fallback={<ConnectingAccount />}>
         <AuthProvider config={config}>{children}</AuthProvider>
       </Suspense>
     </ScreenRecovery>

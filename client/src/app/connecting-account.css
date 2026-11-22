@@ -1,0 +1,39 @@
+/* The same runner and track as the slow-connection warm-up (account-warmup.css), shown for the short wait while the
+   sign-in code loads. Centred in the screen so it reads as a deliberate pause, not a stray line of text. */
+.connecting-account {
+  min-height: 60vh;
+  min-height: 60dvh;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  color: var(--ink-2);
+  text-align: center;
+}
+.connecting-account-visual {
+  position: relative;
+  width: min(220px, 70vw);
+  height: 84px;
+  display: grid;
+  place-items: end center;
+  overflow: hidden;
+  color: var(--accent);
+}
+.connecting-account-visual .runner { position: relative; margin-bottom: 8px; }
+.connecting-account-track {
+  position: absolute;
+  inset: auto 0 6px;
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 12px, transparent 12px 28px);
+  background-size: 28px 100%;
+  opacity: .45;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 20%, #000 80%, transparent);
+  animation: connecting-account-track 1s linear infinite;
+}
+.connecting-account-label { margin: 0; font-size: var(--text-sm); font-weight: 700; }
+@keyframes connecting-account-track { to { background-position: -28px 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .connecting-account *, .connecting-account *::before, .connecting-account *::after { animation: none; }
+}

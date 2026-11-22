@@ -134,4 +134,31 @@ describe('the two-tap rating', () => {
     const { container } = render(<PostRunRating session={easy} coach={{ today: '2026-11-23', units: 'km', get: () => undefined, save: vi.fn(), remove: vi.fn() }} />)
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('shows a run logged elsewhere on the day as saved, not an open editor with Cancel', () => {
+    let entry: CheckIn | undefined
+    const coach = (): SessionCoach => ({ today: '2026-11-24', units: 'km', get: () => entry, save: vi.fn(), remove: vi.fn() })
+    const { rerender } = render(<PostRunRating session={easy} coach={coach()} quickTick onDismiss={vi.fn()} />)
+    expect(screen.getByRole('button', { name: 'Not now' })).toBeInTheDocument()
+
+    entry = saved({ distanceKm: 7.4 })
+    rerender(<PostRunRating session={easy} coach={coach()} quickTick onDismiss={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'How hard did it feel?' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Edit feedback/ })).toBeInTheDocument()
+  })
+
+  it('keeps the editor open when the runner had already picked a score', async () => {
+    let entry: CheckIn | undefined
+    const coach = (): SessionCoach => ({ today: '2026-11-24', units: 'km', get: () => entry, save: vi.fn(), remove: vi.fn() })
+    const user = userEvent.setup()
+    const { rerender } = render(<PostRunRating session={easy} coach={coach()} quickTick onDismiss={vi.fn()} />)
+    await user.click(screen.getByRole('radio', { name: '3, Easy, chatty' }))
+
+    entry = saved({ distanceKm: 7.4 })
+    rerender(<PostRunRating session={easy} coach={coach()} quickTick onDismiss={vi.fn()} />)
+
+    expect(screen.getByRole('radio', { name: '3, Easy, chatty' })).toBeChecked()
+  })
 })

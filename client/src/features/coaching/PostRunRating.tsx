@@ -70,6 +70,15 @@ export function PostRunRating({ session, coach, onFullForm, onDismiss, quickTick
     if (focusTarget === 'scale') legendRef.current?.parentElement?.querySelector<HTMLInputElement>('input:checked, input')?.focus({ preventScroll: true })
   }, [focusTarget, editing])
 
+  // A run logged elsewhere on this day (Recorded's "Log this run") saves the check-in while this editor is open.
+  // Show that saved answer instead of leaving an untouched editor behind with a Cancel button. A runner who has
+  // already picked a score keeps their editor; our own save handles its own switch.
+  const hadExisting = useRef(!!existing)
+  useEffect(() => {
+    if (existing && !hadExisting.current && !saving.current && effort === null) setEditing(false)
+    hadExisting.current = !!existing
+  }, [existing, effort])
+
   if (session.date > coach.today || session.type === 'Race' || session.type === 'Strength') return null
 
   const skipped = status === 'Skipped'

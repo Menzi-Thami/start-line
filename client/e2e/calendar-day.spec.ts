@@ -141,10 +141,12 @@ test('a replacement retains its original prescription beside the actual run @pho
   expect(stored.entries()).toHaveLength(1)
   expect(stored.entries()[0]?.isAdditional).toBe(false)
   await day.screenshot({ path: info.outputPath('calendar-day-replacement.png') })
-  // Recorded shows the result only; the run's own figures are changed from its single rating editor under Planned.
+  // Recorded shows the result only; the run's own figures are changed from its single rating under Planned.
   await expect(recorded.getByRole('button', { name: 'Change how Hill repeats went', exact: true })).toHaveCount(0)
-  await planned.getByText('More details', { exact: true }).click()
-  await planned.getByRole('button', { name: 'Add your own distance and time', exact: true }).click()
+  // Logging the run saved the check-in, so the rating that was open closes to the saved answer, with no Cancel left behind.
+  await expect(planned.getByRole('group', { name: 'How hard did it feel?' })).toHaveCount(0)
+  await expect(planned.getByRole('button', { name: 'Cancel', exact: true })).toHaveCount(0)
+  await planned.getByRole('button', { name: 'Edit feedback for Hill repeats', exact: true }).click()
   await day.getByLabel('Run details').selectOption('')
   await day.getByLabel('Distance (km)', { exact: true }).fill('9')
   await day.getByRole('button', { name: 'Save check-in', exact: true }).click()

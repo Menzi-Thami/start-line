@@ -1,4 +1,4 @@
-export type StickerLayout = 'portrait' | 'horizontal' | 'transparent'
+export type StickerLayout = 'portrait' | 'horizontal' | 'transparent' | 'story' | 'square'
 
 export const STICKER_LAYOUTS: readonly { id: StickerLayout; label: string; description: string; width: number; height: number }[] = [
   { id: 'portrait', label: 'Portrait', description: 'The original dark card, made for a Story.', width: 1080, height: 1280 },
@@ -9,6 +9,8 @@ export const STICKER_LAYOUTS: readonly { id: StickerLayout; label: string; descr
     width: 1600,
     height: 900,
   },
+  { id: 'story', label: 'Story overlay', description: '9:16 transparent overlay for videos, or add a photo to export a ready-to-post Story.', width: 1080, height: 1920 },
+  { id: 'square', label: 'Square photo', description: '1:1 transparent sticker or a photo-backed feed post.', width: 1080, height: 1080 },
   {
     id: 'transparent',
     label: 'Horizontal transparent',

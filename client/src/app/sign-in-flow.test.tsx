@@ -1,3 +1,4 @@
+import { AuthError } from '@azure/msal-browser'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { delay, http, HttpResponse } from 'msw'
@@ -225,7 +226,7 @@ describe('Home from the copy kept on this device', () => {
     expect(screen.queryByText(/Checking your account/)).not.toBeInTheDocument()
   })
 
-  it('shows a runner this device hasn’t seen the page at once, finding their plan meanwhile', async () => {
+  it('keeps the race builder hidden while checking a returning runner on a new device', async () => {
     server.use(
       http.get('*/api/v1/me', async () => {
         await delay('infinite')
@@ -236,9 +237,9 @@ describe('Home from the copy kept on this device', () => {
 
     renderApp(signedIn())
 
-    // No waiting screen: one line says their plan is on its way, and the page under it works.
+    // The app must not mistake a temporarily unavailable account for a brand-new runner.
     expect(await screen.findByText(/Opening your training/)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Which race?' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Welcome back, Thandi' })).not.toBeInTheDocument()
   })
 })
@@ -396,7 +397,7 @@ describe('their plan from the copy kept on this device', () => {
     expect(screen.getByRole('main')).toHaveClass('view-enter')
   })
 
-  it('opens their plan by itself once the account answers, keeping the page usable until then', async () => {
+  it('opens their plan once the account answers, without flashing the race builder', async () => {
     let answer: (() => void) | undefined
     server.use(
       http.get('*/api/v1/me', async () => {
@@ -412,7 +413,7 @@ describe('their plan from the copy kept on this device', () => {
     renderApp(signedIn())
 
     expect(await screen.findByText(/Opening your training/)).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Which race?' })).not.toBeInTheDocument()
 
     await waitFor(() => expect(answer).toBeDefined())
     answer!()
@@ -556,6 +557,19 @@ describe('dead ends', () => {
   })
 })
 
+
+describe('account connection recovery UI', () => {
+  it('shows a branded recovery instead of the wizard or a raw Microsoft timeout URL', async () => {
+    window.history.replaceState(null, '', '/')
+    renderApp(signedIn({
+      getToken: () => Promise.reject(new AuthError('timed_out', 'See https://aka.ms/msal.js.errors#timed_out for details')),
+    }))
+    expect(await screen.findByRole('heading', { name: 'A small connection hiccup' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    expect(screen.queryByText(/aka.ms/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Which race?' })).not.toBeInTheDocument()
+  })
+})
 
 describe('restoring an expired remembered session', () => {
 

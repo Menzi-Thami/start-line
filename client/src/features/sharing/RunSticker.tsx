@@ -15,12 +15,13 @@ export function RunSticker({ run, units, prominent = false }: { run: StickerRun;
   const [showCalories, setShowCalories] = useState(false)
   const [photo, setPhoto] = useState<File | null>(null)
   const [previewSurface, setPreviewSurface] = useState<'bright' | 'dark'>('bright')
+  const [position, setPosition] = useState<'top' | 'middle' | 'bottom'>('top')
   const [prepared, setPrepared] = useState<{ key: string; file: File; url: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const size = STICKER_LAYOUTS.find((option) => option.id === layout)!
   const canUsePhoto = layout === 'story' || layout === 'square'
-  const key = JSON.stringify([run, units, layout, showElevation, showHeartRate, showCalories,
+  const key = JSON.stringify([run, units, layout, position, showElevation, showHeartRate, showCalories,
     canUsePhoto && photo ? [photo.name, photo.size, photo.lastModified] : null])
   const current = prepared?.key === key ? prepared : null
   useEffect(() => {
@@ -33,7 +34,7 @@ export function RunSticker({ run, units, prominent = false }: { run: StickerRun;
     const details = JSON.parse(key)[0] as StickerRun
     import('./run-sticker')
       .then(({ renderRunSticker }) => renderRunSticker(details, units, layout, {
-        showElevation, showHeartRate, showCalories, photo: canUsePhoto ? photo : null,
+        showElevation, showHeartRate, showCalories, photo: canUsePhoto ? photo : null, position,
       }))
       .then((blob) => {
         if (flags.cancelled) return
@@ -47,7 +48,7 @@ export function RunSticker({ run, units, prominent = false }: { run: StickerRun;
       flags.cancelled = true
       if (url) URL.revokeObjectURL(url)
     }
-  }, [open, key, units, layout, showElevation, showHeartRate, showCalories, photo, canUsePhoto])
+  }, [open, key, units, layout, position, showElevation, showHeartRate, showCalories, photo, canUsePhoto])
   const close = () => {
     setOpen(false)
     setPrepared(null)
@@ -153,6 +154,19 @@ export function RunSticker({ run, units, prominent = false }: { run: StickerRun;
               {run.calories != null && Number.isFinite(run.calories) && run.calories > 0 && (
                 <label><input type="checkbox" checked={showCalories} onChange={(e) => setShowCalories(e.target.checked)} /> Calories</label>
               )}
+            </fieldset>
+          )}
+          {layout === 'story' && (
+            <fieldset className="field sticker-position">
+              <legend className="field-label">Position stats over your Story</legend>
+              <div className="pills">
+                {(['top', 'middle', 'bottom'] as const).map((place) => (
+                  <label className="pill" key={place}>
+                    <input type="radio" name={titleId + '-position'} checked={position === place} onChange={() => setPosition(place)} />
+                    {place === 'top' ? 'Top' : place === 'middle' ? 'Centre' : 'Bottom'}
+                  </label>
+                ))}
+              </div>
             </fieldset>
           )}
           {canUsePhoto && (

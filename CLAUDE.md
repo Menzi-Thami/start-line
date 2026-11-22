@@ -20,7 +20,7 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
 - **Backend** (`src/`): .NET 10, Clean Architecture (`Domain → Application → Infrastructure → API`), own
   CQRS dispatcher (`Application/Common/Dispatcher`, **not MediatR**), FluentValidation in a pipeline
   behaviour, typed exceptions → ProblemDetails, API versioning (`/api/v1`), OpenAPI + Scalar (dev),
-  rate limiting (per IP), health checks, OpenTelemetry (OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set).
+  rate limiting (per IP), health checks, OpenTelemetry (OTLP when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, otherwise Application Insights when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set).
 - **Accounts**: EF Core on SQL Server, Microsoft Entra External ID with email one-time codes. Anonymous plan generation remains stateless; local accounts stay off until configured.
 - **Race calendar** syncs itself: every `IRaceSource` is fetched at startup and every `RaceCalendar:SyncInterval`,
   reconciled by `RaceReconciler` (highest priority wins; organiser or agreeing sources = confirmed date) and published

@@ -1,8 +1,9 @@
 import type { dayStatus } from './training-status'
-import { useRef, type ReactNode, type TouchEvent } from 'react'
+import type { ReactNode } from 'react'
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { RunsByDate } from '../../lib/plan-runs'
 import type { PlanWeek } from '../../lib/types'
+import { useMoveDrag } from './useMoveDrag'
 import { calendarDayState, moveCalendarFocus } from './calendar-day'
 
 interface Props {
@@ -36,19 +37,7 @@ const addDays = (iso: string, n: number) => {
  * and the runner's own ticks and runs, never made up.
  */
 export function WeekGlance({ week, done, runs, additionalDates = [], activityDates = [], today, units, onSelectDate, selectedDate, daySummaryId, renderSelectedDay, statusFor, onRequestMove, canMoveFrom = (date: string) => date >= today, canMoveTo = (date: string) => date >= today }: Props) {
-  const touchDrag = useRef<{ date: string; x: number; y: number; at: number } | null>(null)
-  const startTouch = (event: TouchEvent, date: string) => {
-    const touch = event.touches[0]
-    if (touch) touchDrag.current = { date, x: touch.clientX, y: touch.clientY, at: event.timeStamp }
-  }
-  const finishTouch = (event: TouchEvent) => {
-    const source = touchDrag.current
-    touchDrag.current = null
-    const touch = event.changedTouches[0]
-    if (!source || !touch || event.timeStamp - source.at < 450 || Math.hypot(touch.clientX - source.x, touch.clientY - source.y) < 24) return
-    const target = document.elementFromPoint(touch.clientX, touch.clientY)?.closest<HTMLElement>('[data-date]')?.dataset.date
-    if (target && target !== source.date && canMoveTo(target)) { event.stopPropagation(); onRequestMove?.(source.date, target) }
-  }
+  const drag = useMoveDrag(date => !!onRequestMove && canMoveTo(date), onRequestMove)
   const runSessions = week.sessions.filter((s) => s.type !== 'Strength')
   const days = Array.from({ length: 7 }, (_, i) => addDays(week.startDate, i))
   return (
@@ -74,9 +63,9 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
           const status = statusFor?.(date)
           return (
             <li key={date} className={`week-day is-${status?.kind === 'complete' ? 'done' : status?.kind === 'partial' ? 'partial' : status && state === 'done' ? 'ahead' : state}${date === today ? ' is-today' : ''}${recorded ? ' has-activity' : ''}`}>
-              <button type="button" className="week-day-button" data-date={date} draggable={!!onRequestMove && canMoveFrom(date) && sessions.some(s => s.type !== 'Strength' && s.type !== 'Race')} onDragStart={event => { event.dataTransfer.setData('text/plain', date); event.dataTransfer.effectAllowed = 'move' }} onDragOver={event => { if (onRequestMove && canMoveTo(date)) event.preventDefault() }} onDrop={event => { event.preventDefault(); const from = event.dataTransfer.getData('text/plain'); if (from && from !== date && canMoveTo(date)) onRequestMove?.(from, date) }} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} data-selected={date === selectedDate} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
+              <button type="button" className="week-day-button" data-date={date} draggable={!!onRequestMove && canMoveFrom(date) && sessions.some(s => s.type !== 'Strength' && s.type !== 'Race')} {...drag.day(date)} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} data-selected={date === selectedDate} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
                 <span className="visually-hidden">{formatDate(date, 'long')}: </span>
-                {onRequestMove && canMoveFrom(date) && sessions.some(s => s.type !== 'Strength' && s.type !== 'Race') && <span className="schedule-drag-handle" aria-hidden="true" onTouchStart={event => startTouch(event, date)} onTouchEnd={finishTouch} onTouchCancel={() => { touchDrag.current = null }}>⠿</span>}
+                {onRequestMove && canMoveFrom(date) && sessions.some(s => s.type !== 'Strength' && s.type !== 'Race') && <span className="schedule-drag-handle" aria-hidden="true" {...drag.handle(date)}>⠿</span>}
                 <span className="week-day-name">{formatDate(date, 'weekday').slice(0, 3)}</span>
                 <span className="week-day-dot mono">{Number(date.slice(8))}</span>
                 <span className="week-day-workout"><strong>{sessions.length ? sessions.map(session => session.title).join(' + ') : status?.kind === 'outside' ? 'Outside this plan' : 'Rest day'}</strong><span className="field-help">{sessions.filter(session => session.distanceKm > 0).map(session => formatDistance(session.distanceKm, units)).join(' + ')}{recorded ? ' · Activity recorded' : state === 'done' ? ' · Complete' : state === 'missed' ? ' · Not logged' : ''}</span></span>

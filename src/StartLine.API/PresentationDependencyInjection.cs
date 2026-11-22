@@ -4,6 +4,7 @@ using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using Asp.Versioning;
+using Azure.Monitor.OpenTelemetry.Exporter;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -173,14 +174,39 @@ internal static class PresentationDependencyInjection
         services.AddHealthChecks()
             .AddCheck<RaceCatalogueHealthCheck>("race-catalogue", tags: ["ready"]);
 
+        // Telemetry goes to an OTLP collector when one is configured, otherwise to Application Insights in Azure.
+        // With neither (local runs, tests) nothing leaves the process.
+        var useOtlp = !string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+        var appInsights = configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+        var useAzureMonitor = !useOtlp && !string.IsNullOrWhiteSpace(appInsights);
+
         var otel = services.AddOpenTelemetry()
             .ConfigureResource(r => r.AddService(environment.ApplicationName))
-            .WithTracing(t => t
-                .AddAspNetCoreInstrumentation(o => o.EnrichWithHttpRequest = SecretPaths.Redact)
-                .AddHttpClientInstrumentation(o => o.EnrichWithHttpRequestMessage = PushTraces.Redact))
-            .WithMetrics(m => m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation())
-            .WithLogging();
-        if (!string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
+            .WithTracing(t =>
+            {
+                t.AddAspNetCoreInstrumentation(o => o.EnrichWithHttpRequest = SecretPaths.Redact)
+                    .AddHttpClientInstrumentation(o => o.EnrichWithHttpRequestMessage = PushTraces.Redact);
+                if (useAzureMonitor)
+                {
+                    t.AddAzureMonitorTraceExporter(o => o.ConnectionString = appInsights);
+                }
+            })
+            .WithMetrics(m =>
+            {
+                m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation();
+                if (useAzureMonitor)
+                {
+                    m.AddAzureMonitorMetricExporter(o => o.ConnectionString = appInsights);
+                }
+            })
+            .WithLogging(configureBuilder: null, configureOptions: o =>
+            {
+                if (useAzureMonitor)
+                {
+                    o.AddAzureMonitorLogExporter(e => e.ConnectionString = appInsights);
+                }
+            });
+        if (useOtlp)
         {
             otel.UseOtlpExporter();
         }

@@ -50,3 +50,14 @@ Microsoft gives this app a sign-in that lasts 24 hours, fixed for single-page ap
 The sign-in screen says: "When Microsoft asks, tap **Yes** to stay signed in, so you won't need a code next time."
 
 Manual check on a real phone: sign in and tap Yes. Leave the app closed for more than 24 hours, then open it. You should see a brief reload, then your plan, with no code.
+
+## Stay signed in without the prompt (22 November 2026)
+
+Runners weren't being shown Microsoft's "Stay signed in?" prompt, so Microsoft's session ended with the browser and the
+quiet renewal above came back empty: a code every time. The tenant now has a Conditional Access policy that makes the
+browser session **always persistent** ([accounts-setup.md](../accounts-setup.md), section 6), so there's no prompt and no
+choice to get wrong.
+
+- The sign-in screen's hint ("tap **Yes** to stay signed in") is now out of date and should be removed.
+- Manual check on a real phone: sign out, sign in again inside the installed app, leave it closed for more than 24 hours,
+  then open it. Expect a brief reload and your plan, with no code.

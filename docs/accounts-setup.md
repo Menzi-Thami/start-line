@@ -125,6 +125,55 @@ forgets the device's remembered account first, so Microsoft's page never locks i
 > `endpoints_resolution_error` in the console and no visible error. The API's `AzureAd:Instance` stays the bare
 > `https://<subdomain>.ciamlogin.com/`: Microsoft.Identity.Web adds the tenant ID itself.
 
+## 6. Keep runners signed in, and protect the admins (Conditional Access)
+
+A new external tenant comes with **security defaults** switched on. They can't be tuned, and no Conditional Access
+policy can be switched on while they are, so Taperday replaces them with two policies (Entra ID → Conditional Access →
+Policies). External ID includes Conditional Access free for the first 50,000 monthly users.
+
+| Policy | Applies to | Does |
+|---|---|---|
+| Taperday: keep runners signed in | All users, except the Global Administrator and Organizational Branding Administrator roles | All resources. Session → Persistent browser session → **Always persistent**. |
+| Taperday: require MFA for admins | The Global Administrator and Organizational Branding Administrator roles, except the emergency access account (section 7) | All resources. Grant → **Require multifactor authentication**. |
+
+Why the first one: the app's own sign-in lasts 24 hours, which Microsoft fixes for single-page apps. After that the app
+renews quietly with Microsoft (`client/src/app/AuthProvider.tsx`), and that only works if Microsoft's session cookie
+outlived the browser. Microsoft's "Stay signed in?" prompt was meant to set that cookie, but runners weren't being shown
+it, so they were asked for a code again. **Always persistent** sets the cookie for everyone and hides the prompt.
+
+Order matters:
+
+1. Create both policies with **Enable policy: Off**.
+2. Turn off security defaults: Entra ID → Overview → Properties → Manage security defaults → Disabled → Save.
+3. Turn the MFA policy **On** first, then the session policy, and **Save** each one.
+4. Keep that admin tab open and check you can still sign in from a private window before closing it. If you can't,
+   turn the MFA policy off from the open tab.
+
+Security defaults also blocked legacy protocols such as IMAP and POP. Taperday uses none of them, and external tenants
+can't target them in Conditional Access, so nothing replaces that part.
+
+## 7. Emergency access (break-glass) account
+
+A second Global Administrator, so a lost personal account or a broken policy can't lock you out of the tenant.
+
+- **A cloud-only account created in the tenant** (`<name>@<subdomain>.onmicrosoft.com`), not a personal Microsoft
+  account. Its exact name lives in your password manager, not in this public repo.
+- **Global Administrator, used for nothing else.** It's excluded from "Taperday: require MFA for admins" and from
+  nothing else, so a mistake in that policy can't lock out both admins. Microsoft still requires MFA to sign in to its
+  admin portals, so it needs a passkey.
+- **Setting it up:** Users → the account → **Reset password**. The temporary password shows only on your screen. Sign in
+  to entra.microsoft.com in a private window, change it to a long random password from your password manager, and
+  register a passkey (a security key, or a passkey saved in your password manager). Note in the password manager where
+  the passkey is.
+- **Use it only when your normal admin account can't get in.** Check its sign-ins now and then (Entra ID → Monitoring →
+  Sign-in logs, filtered to the account). Alerts on its sign-ins would need Log Analytics, which costs money, so there
+  are none.
+- **Test it twice a year:** sign in, confirm the passkey works, sign out.
+
+The personal Microsoft account behind your normal admin also owns the Azure subscription that hosts Taperday, in its own
+tenant. Keep that account's recovery phone, alternate email and recovery code current. An extra Owner on the
+subscription, created the same way in that tenant, would cover the hosting side too.
+
 ## Database
 
 Locally the API uses LocalDB and migrates itself on start in Development. In Azure, use the configured Azure SQL Basic

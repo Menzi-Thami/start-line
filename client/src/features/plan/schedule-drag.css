@@ -5,3 +5,9 @@
 .plan-calendar-day .schedule-drag-handle { position: absolute; inset-inline-end: 1px; inset-block-end: 1px; font-size: .7rem; }
 .week-day-button[draggable="true"]:focus-visible, .plan-calendar-day[draggable="true"]:focus-visible { outline: 2px solid var(--volt, #c6ff3e); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .schedule-drag-handle { transition: none; } }
+/* A bigger target for the small handle: a finger lands on it without having to aim. */
+.week-day-button .schedule-drag-handle { position: relative; }
+.schedule-drag-handle::after { content: ""; position: absolute; inset: -.6rem; }
+/* While a run is dragged: it dims, and the day it would land on is marked before the runner lets go. */
+.week-day-button[data-dragging], .plan-calendar-day[data-dragging] { opacity: .55; }
+.week-day-button[data-drop-target], .plan-calendar-day[data-drop-target] { outline: 3px dashed var(--accent); outline-offset: 2px; }

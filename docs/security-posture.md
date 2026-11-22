@@ -48,7 +48,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 | 25 | Refresh tokens | Covered | Handled by MSAL on the client; Strava refresh tokens rotate and are re-encrypted on use. |
 | 26–27 | OAuth 2.0 / OpenID Connect | Covered | Entra External ID (auth code + PKCE) for sign-in; Strava OAuth for sync. |
 | 28 | Session fixation | Covered | No server session. MSAL caches tokens in `localStorage` so the installed app stays signed in; they persist past the browser session only when the runner chose "Stay signed in?", and are otherwise encrypted with a key in a session cookie (`msal.cache.encryption`). Sign-out clears them. |
-| 29 | MFA | Partial | Available in the Entra External ID tenant; enabling it is a tenant setting, not code. |
+| 29 | MFA | Covered | Admins: a Conditional Access policy requires MFA, replacing security defaults, with an emergency access account excluded ([accounts-setup.md](accounts-setup.md), sections 6 and 7). Runners sign in with an emailed code, so there's no password for a second factor to protect. |
 | 30–31 | Brute force / account enumeration | Partial | Sign-in (email code) is handled by Entra, which has its own protections. The API's own rate limiter adds a per-IP cap. |
 | 32 | Timing attacks | Covered | The webhook secret and verify token are compared in constant time (`CryptographicOperations.FixedTimeEquals`). |
 | 37 | Encryption at rest | Covered | Azure SQL is encrypted at rest; Strava tokens and push endpoints and keys are additionally app-encrypted with a Key Vault-wrapped key. |
@@ -111,7 +111,7 @@ Small, specific follow-ups, none urgent:
 2. **Rehearse a database restore** from Azure SQL's point-in-time backup, and check the free offer's retention is enough (raise the tier if not).
 3. **Add an audit log** of security-relevant events (sign-up, account delete, Strava connect/disconnect), write-only, for incident response.
 4. **A required-review branch rule** on `main`, and a billing budget alert on the resource group, for belt and braces.
-5. **Confirm MFA** is on (or deliberately off) in the Entra External ID tenant.
+5. ~~**Confirm MFA**~~ Done (22 November 2026): MFA is required for admins through Conditional Access, with an emergency access account ([accounts-setup.md](accounts-setup.md), sections 6 and 7).
 
 ## Verified by
 

@@ -18,6 +18,7 @@ export interface StickerOptions {
   showCalories?: boolean
   /** A local photo, never uploaded. Used only on Story and Square. */
   photo?: Blob | null
+  position?: 'top' | 'middle' | 'bottom'
 }
 
 /** Only real, finite readings that the runner chose to reveal. */
@@ -285,7 +286,9 @@ async function paintSocial(
     } finally { bitmap.close() }
   }
   const left = 60
-  const top = layout === 'story' ? 245 : 85
+  const top = layout === 'story'
+    ? options.position === 'bottom' ? 1000 : options.position === 'middle' ? 610 : 245
+    : 85
   const cardHeight = layout === 'story' ? 690 : 720
   ctx.beginPath()
   ctx.roundRect(left, top, width - left * 2, cardHeight, 42)

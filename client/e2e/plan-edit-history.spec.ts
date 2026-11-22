@@ -62,6 +62,8 @@ for (const mode of ['manual', 'time-only', 'tick', 'strava']) {
     await dayButton().click()
     await page.getByRole('button', { name: /Open day details/ }).click()
     const day = page.getByRole('region', { name: 'Wednesday 28 October 2026', exact: true })
+    // A past run with no recording stays quiet until the runner chooses to log it; a held recording offers the rating.
+    if (mode !== 'strava') await day.getByRole('button', { name: 'Log how this run went', exact: true }).click()
     await day.getByText('More details', { exact: true }).click()
     await day.getByRole('button', { name: 'Add your own distance and time', exact: true }).click()
     if (mode === 'strava') await day.getByLabel('Run details').selectOption('source-run')

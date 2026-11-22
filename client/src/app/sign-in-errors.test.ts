@@ -12,6 +12,12 @@ describe('describeSignInError', () => {
     expect(problem).toEqual({ message: 'Your sign-in timed out before it finished. Please try again.', code: 'AADSTS50132' })
   })
 
+  it('never renders a Microsoft timeout link as user-facing copy', () => {
+    const problem = describeSignInError(new AuthError('timed_out', 'See https://aka.ms/msal.js.errors#timed_out for details'))
+    expect(problem.message).toBe('Your sign-in timed out before it finished. Please try again.')
+    expect(problem.message).not.toContain('aka.ms')
+  })
+
   it('says plainly when a social account couldn’t be set up', () => {
     const problem = describeSignInError(fromServer('AADSTS50020', "User account 'x@gmail.com' from identity provider 'google.com' does not exist."))
 

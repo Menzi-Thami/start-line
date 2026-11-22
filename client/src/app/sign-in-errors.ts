@@ -10,7 +10,7 @@ export interface SignInProblem {
 // Grouped by what the runner should do next, not by Microsoft's reasons, which are written for administrators.
 const KNOWN: { codes: readonly string[]; message: string }[] = [
   {
-    codes: ['AADSTS50132', 'AADSTS50133', 'AADSTS50058', 'AADSTS16000', 'AADSTS700082', 'no_token_request_cache_error', 'state_mismatch', 'interaction_in_progress'],
+    codes: ['AADSTS50132', 'AADSTS50133', 'AADSTS50058', 'AADSTS16000', 'AADSTS700082', 'no_token_request_cache_error', 'state_mismatch', 'interaction_in_progress', 'timed_out', 'timeout'],
     message: 'Your sign-in timed out before it finished. Please try again.',
   },
   {

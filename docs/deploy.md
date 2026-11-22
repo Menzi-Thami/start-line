@@ -96,8 +96,12 @@ How it signs in, with no password stored anywhere:
   environment only accepts runs from `main`.
 - It holds **Website Contributor on the API app only**, plus **firewall rules on the SQL server only**: it can't
   change the database server's settings, the resource group or anything else in the subscription.
-- The firewall rights exist because GitHub's runners aren't all in Azure, so "Allow Azure services" doesn't always let
-  the migration in (error 40615, first seen 13 Nov 2026 from an AWS address). Each deploy opens a rule for its own
+- The SQL firewall lets in only the API's outbound addresses (`infra/sql-firewall.bicep`, one `api-outbound-*` rule
+  per address), not "Allow Azure services". Staging's API shares the plan, so the same rules cover it. Removing a rule
+  from Bicep doesn't delete it from Azure, so after a plan change (new tier or region) redeploy `infra/main.bicep` and
+  delete any `api-outbound-*` rule for an address the plan no longer lists.
+- The firewall rights exist because GitHub's runners don't use the API's addresses (error 40615, first seen
+  13 Nov 2026 from an AWS address), so nothing would let the migration in. Each deploy opens a rule for its own
   runner's address and removes it straight after migrating. The role is `infra/sql-firewall-deploy-role.json`; set it
   up once (one identity serves staging and production):
   ```bash

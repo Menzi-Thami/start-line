@@ -1,10 +1,11 @@
+import { AuthError } from '@azure/msal-browser'
 import { act, renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { accountsOff, AuthContext, type Auth } from '../../app/auth-context'
 import { api, ApiError } from '../../lib/api-client'
 import type { Runner } from '../../lib/types'
-import { ACCOUNT_TIMEOUT_MESSAGE, useRunner, WAKE_PATIENCE_MS } from './useRunner'
+import { ACCOUNT_TIMEOUT_MESSAGE, accountLoadFailure, useRunner, WAKE_PATIENCE_MS } from './useRunner'
 
 const runner = { id: 'connection-runner', displayName: 'Naledi' } as Runner
 const identity = (token = 'test-token'): Auth => ({ ...accountsOff, enabled: true,
@@ -90,6 +91,38 @@ describe('bounded account loading', () => {
   })
 })
 
+
+describe('friendly account recovery', () => {
+  it('does not expose the provider URL when a silent token request times out', async () => {
+    const auth = { ...identity(), getToken: () => Promise.reject(new AuthError('timed_out', 'See https://aka.ms/msal.js.errors#timed_out for details')) }
+    const view = mount(auth)
+    await flush()
+    expect(view.result.current.state).toEqual({
+      kind: 'error',
+      message: 'The connection took longer than expected. Try again to open your training.',
+    })
+    expect(JSON.stringify(view.result.current.state)).not.toContain('aka.ms')
+    view.unmount()
+  })
+
+  it('offers deliberate renewal for Microsoft interaction-required errors', () => {
+    expect(accountLoadFailure(new AuthError('login_required', 'Use https://aka.ms/ to learn more'), true)).toMatchObject({
+      kind: 'error', needsSignIn: true,
+    })
+  })
+
+  it('distinguishes an offline connection from a server outage without showing raw details', () => {
+    const offline = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    expect(accountLoadFailure(new ApiError('SQL raw message', 503), true)).toEqual({
+      kind: 'error',
+      message: 'You’re offline. Reconnect to the internet, then try loading your training again.',
+    })
+    offline.mockRestore()
+    const unavailable = accountLoadFailure(new ApiError('SQL raw message', 503), true)
+    expect(unavailable).toMatchObject({ kind: 'error' })
+    expect(JSON.stringify(unavailable)).not.toContain('SQL raw message')
+  })
+})
 
 describe('remembered session recovery', () => {
   it('does not mistake a remembered runner with an expired token for a signed-out visitor', async () => {

@@ -73,3 +73,4 @@ More detail on accounts, settings and Azure: [deploy.md](deploy.md). Tests: [tes
 
 The read-only **Ops - Staging integration readiness** workflow reports provider configuration gaps and checks staging callbacks/test-preview isolation. It does not configure or deploy anything or establish actual provider delivery. Dedicated test identities and physical-device results belong to [the integration validation matrix](integration-validation.md); PR browser-engine results remain separate evidence.
 
+

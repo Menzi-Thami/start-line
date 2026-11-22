@@ -12,8 +12,78 @@ on:
 permissions:
   contents: read
 
+# A newer push to a pull request cancels that pull request's older run, which can no longer be merged as it is.
+# Only pull requests share a group: a push to staging or main, or a run by hand, gets a group of its own (its run id),
+# so those runs always finish in full and are never cancelled.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('checks-pr-{0}', github.ref) || format('checks-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Microsoft's current install script, not actions/setup-dotnet: the copy bundled in setup-dotnet@v6 downloads from
+  # a storage account that began refusing public access on 25 Oct 2026 (409 PublicAccessNotPermitted). The current
+  # script downloads from builds.dotnet.microsoft.com, but only for an exact version: asked for a channel, it still
+  # tries an aka.ms link that leads to the blocked account. So each job looks up the latest 10.0 SDK first (global.json's
+  # rollForward allows any 10.0 feature band from its own up), and caches it under that exact version.
+  DOTNET_INSTALL_SCRIPT: https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh
+  DOTNET_RELEASES: https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json
+
 jobs:
+  # Decides whether a pull request changes only words: Markdown files anywhere and anything under docs/. Then the
+  # backend, end-to-end and connection suites have nothing to test and are skipped. Anything else (code, workflows,
+  # config, client/public, lock files) runs everything. Pushes to staging and main, and runs by hand, always run
+  # everything without looking. If this job fails or can't tell, everything runs.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+          CHANGED: ${{ github.event.pull_request.changed_files }}
+        run: |
+          # Written once, on the way out, whatever happens: true unless every check below says only words changed.
+          code=true
+          trap 'echo "code=$code" >> "$GITHUB_OUTPUT"' EXIT
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "A $EVENT run: everything runs."
+            exit 0
+          fi
+          # One line per file: its path, then its old path if it was renamed, so moving code into docs/ still counts
+          # as changing code.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files?per_page=100" \
+            --jq '.[] | [.filename, (.previous_filename // "")] | @tsv' > "$RUNNER_TEMP/files.tsv" || exit 0
+          listed=$(wc -l < "$RUNNER_TEMP/files.tsv")
+          tr '\t' '\n' < "$RUNNER_TEMP/files.tsv" | sed '/^$/d' > "$RUNNER_TEMP/changed.txt"
+          echo "Files changed by #$PR:"
+          cat "$RUNNER_TEMP/changed.txt"
+          # GitHub lists at most 3000 files; if the list falls short of the pull request's own count, don't guess.
+          if [ "$listed" -eq 0 ] || [ "$listed" -ne "$CHANGED" ]; then
+            echo "Listed $listed of $CHANGED changed files: everything runs."
+            exit 0
+          fi
+          # grep exits 1 only when every path is on the allowlist; a match (0) or an error (2) runs everything.
+          status=0
+          grep -Ev '\.md$|^docs/' "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/code.txt" || status=$?
+          if [ "$status" -eq 1 ]; then
+            code=false
+            echo "Only Markdown and docs/ changed: backend, end-to-end and connections are skipped."
+          else
+            echo "More than words changed, so everything runs:"
+            cat "$RUNNER_TEMP/code.txt"
+          fi
+
   backend:
+    needs: changes
+    # !cancelled(): still runs if the changes job failed, so a broken check can only ever run more, never less.
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -32,16 +102,25 @@ jobs:
             sleep 3
           done
           echo "SQL Server did not start in time" && docker logs sql && exit 1
-      # Microsoft's current install script, not actions/setup-dotnet: the copy bundled in setup-dotnet@v6 downloads from
-      # a storage account that began refusing public access on 25 Oct 2026 (409 PublicAccessNotPermitted). The current
-      # script downloads from builds.dotnet.microsoft.com, but only for an exact version: asked for a channel, it still
-      # tries an aka.ms link that leads to the blocked account. So look up the latest 10.0 SDK first (global.json's
-      # rollForward allows any 10.0 feature band from its own up).
-      - name: Install .NET
+      - name: Find the latest .NET 10 SDK
+        id: dotnet
         run: |
-          curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
-          version=$(curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json | jq -r '."latest-sdk"')
-          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$version" --install-dir "$HOME/.dotnet"
+          version=$(curl -fsSL --retry 3 "$DOTNET_RELEASES" | jq -er '."latest-sdk"')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      # The SDK under its exact version and the NuGet packages under the project files that name them. Restore still
+      # runs and checks every package; a stale or missing cache only means downloading as before.
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.dotnet
+            ~/.nuget/packages
+          key: dotnet-solution-${{ runner.os }}-${{ runner.arch }}-${{ steps.dotnet.outputs.version }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj', 'dotnet-tools.json') }}
+      - name: Install .NET
+        env:
+          VERSION: ${{ steps.dotnet.outputs.version }}
+        run: |
+          curl -fsSL --retry 3 "$DOTNET_INSTALL_SCRIPT" -o "$RUNNER_TEMP/dotnet-install.sh"
+          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$VERSION" --install-dir "$HOME/.dotnet"
           echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
           echo "$HOME/.dotnet" >> "$GITHUB_PATH"
           "$HOME/.dotnet/dotnet" --version
@@ -77,6 +156,10 @@ jobs:
 
   e2e:
     name: end-to-end (Playwright ${{ matrix.shard }}/4)
+    needs: changes
+    # These four are required checks on staging. A skipped matrix job may not report under these names, so the job
+    # always runs (still after a failed changes job) and only its steps are skipped when the pull request is docs-only.
+    if: ${{ !cancelled() }}
     # Split four ways, run side by side: the suite takes about a quarter of the time. Runners are free on a public repo.
     strategy:
       fail-fast: false
@@ -85,34 +168,82 @@ jobs:
     runs-on: ubuntu-latest
     # Fails cleanly with its log kept, rather than letting a runaway starve the runner.
     timeout-minutes: 20
+    env:
+      RUN_TESTS: ${{ needs.changes.outputs.code != 'false' }}
     defaults:
       run:
         working-directory: client
     steps:
+      - name: Only Markdown and docs/ changed, so there is nothing to test
+        if: env.RUN_TESTS != 'true'
+        working-directory: .
+        run: echo "Skipped by the changes job. Pushes to staging and main always run this suite."
       - uses: actions/checkout@v7
-      # Microsoft's current install script, not actions/setup-dotnet: the copy bundled in setup-dotnet@v6 downloads from
-      # a storage account that began refusing public access on 25 Oct 2026 (409 PublicAccessNotPermitted). The current
-      # script downloads from builds.dotnet.microsoft.com, but only for an exact version: asked for a channel, it still
-      # tries an aka.ms link that leads to the blocked account. So look up the latest 10.0 SDK first (global.json's
-      # rollForward allows any 10.0 feature band from its own up).
-      - name: Install .NET
+        if: env.RUN_TESTS == 'true'
+      - name: Find the latest .NET 10 SDK
+        if: env.RUN_TESTS == 'true'
+        id: dotnet
         run: |
-          curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
-          version=$(curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json | jq -r '."latest-sdk"')
-          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$version" --install-dir "$HOME/.dotnet"
+          version=$(curl -fsSL --retry 3 "$DOTNET_RELEASES" | jq -er '."latest-sdk"')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        if: env.RUN_TESTS == 'true'
+        with:
+          path: |
+            ~/.dotnet
+            ~/.nuget/packages
+          key: dotnet-api-${{ runner.os }}-${{ runner.arch }}-${{ steps.dotnet.outputs.version }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+      - name: Install .NET
+        if: env.RUN_TESTS == 'true'
+        env:
+          VERSION: ${{ steps.dotnet.outputs.version }}
+        run: |
+          curl -fsSL --retry 3 "$DOTNET_INSTALL_SCRIPT" -o "$RUNNER_TEMP/dotnet-install.sh"
+          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$VERSION" --install-dir "$HOME/.dotnet"
           echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
           echo "$HOME/.dotnet" >> "$GITHUB_PATH"
           "$HOME/.dotnet/dotnet" --version
+      # The same Release build Playwright's webServer asks for (dotnet run -c Release -p:UseAppHost=false), started now
+      # so it compiles while Node and the browser install. The webServer's dotnet run then finds it up to date.
+      - name: Build the API in the background
+        if: env.RUN_TESTS == 'true'
+        working-directory: .
+        run: |
+          setsid nohup bash -c 'dotnet build src/StartLine.API -c Release -p:UseAppHost=false > "$RUNNER_TEMP/api-build.log" 2>&1; echo $? > "$RUNNER_TEMP/api-build.exit"' < /dev/null > /dev/null 2>&1 &
       - uses: actions/setup-node@v7
+        if: env.RUN_TESTS == 'true'
         with:
           node-version-file: client/.nvmrc
           cache: npm
           cache-dependency-path: client/package-lock.json
       - run: npm ci
+        if: env.RUN_TESTS == 'true'
+      # Browsers cached under the exact @playwright/test version in package-lock.json. The install below still runs:
+      # it adds the system libraries and fetches the browser itself if the cached copy isn't the right one.
+      - name: Find the Playwright version
+        if: env.RUN_TESTS == 'true'
+        id: playwright
+        run: |
+          version=$(jq -er '.packages["node_modules/@playwright/test"].version' package-lock.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        if: env.RUN_TESTS == 'true'
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium
       # The real API (no database needed: plans are stateless and accounts stay off) and a
       # production build of the client, driven through Chromium.
       - run: npx playwright install --with-deps chromium
+        if: env.RUN_TESTS == 'true'
+      - name: Wait for the API build
+        if: env.RUN_TESTS == 'true'
+        run: |
+          for second in $(seq 1 300); do [ -f "$RUNNER_TEMP/api-build.exit" ] && break; sleep 1; done
+          cat "$RUNNER_TEMP/api-build.log" || true
+          [ -f "$RUNNER_TEMP/api-build.exit" ] || { echo "::error::The API build did not finish in 5 minutes"; exit 1; }
+          exit "$(cat "$RUNNER_TEMP/api-build.exit")"
       - name: npx playwright test
+        if: env.RUN_TESTS == 'true'
         run: |
           # Memory and CPU every 20 s, so a runaway process is visible in the log.
           (while true; do echo "--- resources $(date +%T)"; free -m | sed -n 2p; ps -eo pid,rss,pcpu,comm --sort=-rss | head -6; sleep 20; done) &
@@ -121,31 +252,33 @@ jobs:
           CI: true
           DEBUG: pw:webserver
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && env.RUN_TESTS == 'true'
         with:
           name: run-responsive-visual-qa-${{ matrix.shard }}
           path: client/test-results/**/*-run-*.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && env.RUN_TESTS == 'true'
         with:
           name: account-responsive-visual-qa-${{ matrix.shard }}
           path: client/test-results/**/*-account-*.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v7
-        if: always()
+        if: always() && env.RUN_TESTS == 'true'
         with:
           name: race-week-visual-qa-${{ matrix.shard }}
           path: client/test-results/**/race-week-*.png
           if-no-files-found: ignore
       - uses: actions/upload-artifact@v7
-        if: failure()
+        if: failure() && env.RUN_TESTS == 'true'
         with:
           name: playwright-report-${{ matrix.shard }}
           path: client/playwright-report
 
   connections:
     name: connections (${{ matrix.project }})
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     strategy:
       fail-fast: false
       matrix:
@@ -165,21 +298,53 @@ jobs:
         working-directory: client
     steps:
       - uses: actions/checkout@v7
-      - name: Install .NET
+      - name: Find the latest .NET 10 SDK
+        id: dotnet
         run: |
-          curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/scripts/v1/dotnet-install.sh -o "$RUNNER_TEMP/dotnet-install.sh"
-          version=$(curl -fsSL --retry 3 https://builds.dotnet.microsoft.com/dotnet/release-metadata/10.0/releases.json | jq -r '."latest-sdk"')
-          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$version" --install-dir "$HOME/.dotnet"
+          version=$(curl -fsSL --retry 3 "$DOTNET_RELEASES" | jq -er '."latest-sdk"')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.dotnet
+            ~/.nuget/packages
+          key: dotnet-api-${{ runner.os }}-${{ runner.arch }}-${{ steps.dotnet.outputs.version }}-${{ hashFiles('global.json', 'Directory.Packages.props', 'Directory.Build.props', '**/*.csproj') }}
+      - name: Install .NET
+        env:
+          VERSION: ${{ steps.dotnet.outputs.version }}
+        run: |
+          curl -fsSL --retry 3 "$DOTNET_INSTALL_SCRIPT" -o "$RUNNER_TEMP/dotnet-install.sh"
+          bash "$RUNNER_TEMP/dotnet-install.sh" --version "$VERSION" --install-dir "$HOME/.dotnet"
           echo "DOTNET_ROOT=$HOME/.dotnet" >> "$GITHUB_ENV"
           echo "$HOME/.dotnet" >> "$GITHUB_PATH"
           "$HOME/.dotnet/dotnet" --version
+      # As in the end-to-end job: the webServer's own Release build, started early so it overlaps the installs.
+      - name: Build the API in the background
+        working-directory: .
+        run: |
+          setsid nohup bash -c 'dotnet build src/StartLine.API -c Release -p:UseAppHost=false > "$RUNNER_TEMP/api-build.log" 2>&1; echo $? > "$RUNNER_TEMP/api-build.exit"' < /dev/null > /dev/null 2>&1 &
       - uses: actions/setup-node@v7
         with:
           node-version-file: client/.nvmrc
           cache: npm
           cache-dependency-path: client/package-lock.json
       - run: npm ci
+      - name: Find the Playwright version
+        id: playwright
+        run: |
+          version=$(jq -er '.packages["node_modules/@playwright/test"].version' package-lock.json)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-${{ matrix.engine }}
       - run: npx playwright install --with-deps ${{ matrix.engine }}
+      - name: Wait for the API build
+        run: |
+          for second in $(seq 1 300); do [ -f "$RUNNER_TEMP/api-build.exit" ] && break; sleep 1; done
+          cat "$RUNNER_TEMP/api-build.log" || true
+          [ -f "$RUNNER_TEMP/api-build.exit" ] || { echo "::error::The API build did not finish in 5 minutes"; exit 1; }
+          exit "$(cat "$RUNNER_TEMP/api-build.exit")"
       - run: npm run e2e:connections -- --project=${{ matrix.project }}
         env:
           CI: true

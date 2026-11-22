@@ -159,7 +159,7 @@ export function ActivityPage({ id, initial, units, onBack, backLabel, onDeleted,
       </>}
       {run.bestEfforts.length > 0 && <BestEfforts efforts={run.bestEfforts} units={units} />}
       <ShoePicker run={run} />
-      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} /></div>
+      <div className="activity-share-action"><RunSticker units={units} run={{ date: run.localDate, title: KIND_LABEL[run.kind], distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind, averageHeartRate: run.averageHeartRate, elevationGainMetres: run.elevationGainMetres, calories: run.calories }} /></div>
       {run.source.kind === 'Strava' ? (
         <section className="section">
           <h3>Removing this run</h3>

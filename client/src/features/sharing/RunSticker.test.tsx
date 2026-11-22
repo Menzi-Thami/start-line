@@ -33,7 +33,7 @@ it('exports the selected horizontal layout and keeps keyboard focus on its selec
   expect(horizontal).toHaveFocus()
   expect(screen.getByRole('img')).toHaveAttribute('width', '1600')
   expect(screen.getByRole('img')).toHaveAttribute('height', '900')
-  expect(renderRunSticker).toHaveBeenLastCalledWith(run, 'km', 'horizontal')
+  expect(renderRunSticker).toHaveBeenLastCalledWith(run, 'km', 'horizontal', expect.objectContaining({ showHeartRate: false, showElevation: true, showCalories: false, photo: null }))
   await user.keyboard('{ArrowRight}')
   await waitFor(() => expect(screen.getByRole('radio', { name: 'Horizontal transparent' })).toBeChecked())
   expect(await screen.findByRole('link', { name: 'Save PNG' })).toHaveAttribute('download', 'taperday-run-2026-10-28-transparent.png')
@@ -55,4 +55,29 @@ it('does not offer an old image while a newly selected layout is rendering', asy
   await act(async () => { finish(new Blob(['old'], { type: 'image/png' })) })
   expect(screen.getByRole('link', { name: 'Save PNG' })).toHaveAttribute('download', 'taperday-run-2026-10-28-transparent.png')
   expect(URL.createObjectURL).toHaveBeenCalledTimes(1)
+})
+
+it('only shares optional heart rate when selected, and prepares 9:16 photo format', async () => {
+  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:story')
+  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+  const user = userEvent.setup()
+  const run = { date: '2026-11-21', title: '5K run', source: 'Strava' as const, distanceKm: 5, seconds: 1495,
+    averageHeartRate: 158, elevationGainMetres: 23 }
+  render(<RunSticker units="km" run={run} />)
+  await user.click(screen.getByRole('button', { name: 'Share run sticker' }))
+  await screen.findByRole('link', { name: 'Save PNG' })
+  expect(renderRunSticker).toHaveBeenLastCalledWith(run, 'km', 'portrait', expect.objectContaining({ showHeartRate: false }))
+  await user.click(screen.getByRole('checkbox', { name: /Average heart rate/ }))
+  await waitFor(() => expect(renderRunSticker).toHaveBeenLastCalledWith(run, 'km', 'portrait', expect.objectContaining({ showHeartRate: true })))
+  await user.click(screen.getByRole('radio', { name: 'Story overlay' }))
+  const input = screen.getByLabelText('Your photo (optional)')
+  const photo = new File(['picture'], 'my-run.jpg', { type: 'image/jpeg' })
+  await user.upload(input, photo)
+  await waitFor(() => expect(renderRunSticker).toHaveBeenLastCalledWith(run, 'km', 'story',
+    expect.objectContaining({ showHeartRate: true, photo })))
+  expect(await screen.findByRole('link', { name: 'Save PNG' })).toHaveAttribute('download', 'taperday-run-2026-11-21-story.png')
+  expect(screen.getByRole('img')).toHaveAttribute('height', '1920')
+  await user.click(screen.getByRole('button', { name: 'Remove photo' }))
+  await waitFor(() => expect(renderRunSticker).toHaveBeenLastCalledWith(run, 'km', 'story',
+    expect.objectContaining({ photo: null })))
 })

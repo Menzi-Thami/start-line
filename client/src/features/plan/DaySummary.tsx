@@ -170,7 +170,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
                 {onOpenRun && <button type="button" className="link-button" onClick={() => openRun(run.id)}>View run analysis</button>}
                 {historyReady && coach?.saveAdditional && inPlan && <button type="button" className="link-button" onClick={() => logRun(run)}>Log this run</button>}
               </div>
-              <RunSticker units={units} run={{ date, title: 'Run completed', distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind }} />
+              <RunSticker units={units} run={{ date, title: 'Run completed', distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind, averageHeartRate: run.averageHeartRate }} />
             </article>)}
             {historyReady && deviceRuns.map(session => <div key={sessionKey(session)} className="day-summary-card"><h5>{session.title} completed</h5><p className="field-help">Completed on this device. Actual distance and time were not recorded.</p></div>)}
             {completedStrength.map(session => <div key={sessionKey(session)} className="day-summary-card"><h5>{session.title} completed</h5><p className="field-help">Strength completion is saved on this device.</p></div>)}

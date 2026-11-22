@@ -7,6 +7,33 @@ export interface StickerRun {
   distanceKm?: number | null
   seconds?: number | null
   source: 'Manual' | 'Strava' | 'Upload'
+  averageHeartRate?: number | null
+  elevationGainMetres?: number | null
+  calories?: number | null
+}
+
+export interface StickerOptions {
+  showHeartRate?: boolean
+  showElevation?: boolean
+  showCalories?: boolean
+  /** A local photo, never uploaded. Used only on Story and Square. */
+  photo?: Blob | null
+}
+
+/** Only real, finite readings that the runner chose to reveal. */
+export function stickerExtraLines(run: StickerRun, options: StickerOptions = {}): string[] {
+  const lines: string[] = []
+  if (options.showElevation && run.elevationGainMetres != null && Number.isFinite(run.elevationGainMetres) && run.elevationGainMetres >= 0)
+    lines.push('ELEVATION ' + Math.round(run.elevationGainMetres) + ' m')
+  if (options.showHeartRate && run.averageHeartRate != null && Number.isFinite(run.averageHeartRate) && run.averageHeartRate > 0)
+    lines.push('AVG HR ' + Math.round(run.averageHeartRate) + ' bpm')
+  if (options.showCalories && run.calories != null && Number.isFinite(run.calories) && run.calories > 0)
+    lines.push('CALORIES ' + Math.round(run.calories) + ' kcal')
+  return lines
+}
+
+function stickerAccent(): string {
+  return getComputedStyle(document.documentElement).getPropertyValue('--sage').trim() || '#b4c7a8'
 }
 
 export function stickerLines(run: StickerRun, units: Units) {
@@ -16,7 +43,7 @@ export function stickerLines(run: StickerRun, units: Units) {
 }
 
 /** Transparent margins let runners put their sticker over a photo in Stories. All metrics are actual, never targets. */
-export async function renderRunSticker(run: StickerRun, units: Units, layout: StickerLayout = 'portrait'): Promise<Blob> {
+export async function renderRunSticker(run: StickerRun, units: Units, layout: StickerLayout = 'portrait', options: StickerOptions = {}): Promise<Blob> {
   await document.fonts?.ready
   const canvas = document.createElement('canvas')
   const size = STICKER_LAYOUTS.find((option) => option.id === layout)!
@@ -24,14 +51,18 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
   canvas.height = size.height
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Your browser could not create the sticker. Try saving it in another browser.')
+  if (layout === 'story' || layout === 'square') {
+    await paintSocial(ctx, run, units, layout, options)
+    return pngOf(canvas)
+  }
   if (layout !== 'portrait') {
-    paintHorizontal(ctx, run, units, layout === 'transparent')
+    paintHorizontal(ctx, run, units, layout === 'transparent', options)
     return pngOf(canvas)
   }
   const { distance, time, pace } = stickerLines(run, units)
   const ink = '#ffffff',
     muted = '#b8b8b8',
-    lime = '#b4c7a8'
+    lime = stickerAccent()
   const rounded = (x: number, y: number, w: number, h: number, radius: number) => {
     ctx.beginPath()
     ctx.roundRect(x, y, w, h, radius)
@@ -78,6 +109,8 @@ export async function renderRunSticker(run: StickerRun, units: Units, layout: St
   const title = run.title.length > 38 ? `${run.title.slice(0, 35)}…` : run.title
   text(title, 128, 280, 42)
   text(formatDate(run.date, 'long').replace(/^\w+,? /, ''), 128, 333, 26, muted)
+  const extras = stickerExtraLines(run, options).slice(0, 2)
+  if (extras.length) text(extras.join('   •   '), 128, 414, 26, ink)
   text(distance ? 'DISTANCE' : 'RUN TIME', 128, 500, 25, muted)
   const hero = distance ? distance.split(' ')[0]! : (time ?? 'COMPLETED')
   let heroSize = 176
@@ -117,10 +150,10 @@ function pngOf(canvas: HTMLCanvasElement): Promise<Blob> {
 }
 
 /** A wide composition, with a genuinely transparent alternative for layering over a runner's own photo. */
-function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: Units, transparent: boolean) {
+function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: Units, transparent: boolean, options: StickerOptions) {
   const { distance, time, pace } = stickerLines(run, units)
   const ink = '#ffffff',
-    lime = '#b4c7a8',
+    lime = stickerAccent(),
     muted = transparent ? '#ffffff' : '#b8b8b8'
   const display = '"Instrument Serif", serif'
   const body = '"Instrument Sans Variable", sans-serif'
@@ -168,6 +201,18 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
     ctx.fillText(value, x, y, width)
     ctx.restore()
   }
+  if (transparent) {
+    // Dark translucent plates keep metrics readable on bright skies and moving footage.
+    const plate = (x: number, y: number, w: number, h: number) => {
+      ctx.beginPath()
+      ctx.roundRect(x, y, w, h, 24)
+      ctx.fillStyle = '#090b0de8'
+      ctx.fill()
+    }
+    for (const x of [94, 590, 1084]) plate(x, 294, 418, 180)
+    plate(96, 530, 760, 55)
+    plate(980, 567, 510, 92)
+  }
   const left = 112,
     right = 1488
   text('TAPER', left, 148, 54, 500, ink, display, 800)
@@ -187,6 +232,8 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
     text(metric.label, metric.x, labelY, 26, 384, muted)
     text(metric.value ?? 'Not recorded', metric.x - 4, valueY, metric.value ? metric.size : 42, 396, metric.color, display, 800)
   }
+  const extras = stickerExtraLines(run, options).slice(0, 2)
+  if (extras.length) text(extras.join('   •   '), left, transparent ? 516 : 608, 27, 1040, ink)
   const dateY = transparent ? 560 : 700
   const footerY = transparent ? 626 : 790
   if (!transparent) {
@@ -218,4 +265,68 @@ function paintHorizontal(ctx: CanvasRenderingContext2D, run: StickerRun, units: 
     ctx.lineTo(left - 10 + i * 30, footerY + 2)
     ctx.fill()
   }
+}
+
+/** 9:16 and 1:1 exports. Outside the panel stays transparent if no photo was provided. */
+async function paintSocial(
+  ctx: CanvasRenderingContext2D, run: StickerRun, units: Units,
+  layout: 'story' | 'square', options: StickerOptions,
+) {
+  const width = ctx.canvas.width
+  const height = ctx.canvas.height
+  if (options.photo) {
+    const bitmap = await createImageBitmap(options.photo)
+    try {
+      const scale = Math.max(width / bitmap.width, height / bitmap.height)
+      const drawnWidth = bitmap.width * scale
+      const drawnHeight = bitmap.height * scale
+      ctx.drawImage(bitmap, (width - drawnWidth) / 2, (height - drawnHeight) / 2, drawnWidth, drawnHeight)
+    } finally { bitmap.close() }
+  }
+  const left = 60
+  const top = layout === 'story' ? 245 : 85
+  const cardHeight = layout === 'story' ? 690 : 720
+  ctx.beginPath()
+  ctx.roundRect(left, top, width - left * 2, cardHeight, 42)
+  ctx.fillStyle = '#0b0e12eb'
+  ctx.fill()
+  ctx.lineWidth = 2
+  ctx.strokeStyle = '#ffffff33'
+  ctx.stroke()
+  const accent = stickerAccent()
+  const body = '"Instrument Sans Variable", sans-serif'
+  const display = '"Instrument Serif", serif'
+  const write = (value: string, x: number, y: number, maxWidth: number, fontSize: number, color: string, family = body) => {
+    ctx.save()
+    let size = fontSize
+    ctx.font = '600 ' + size + 'px ' + family
+    while (ctx.measureText(value).width > maxWidth && size > 18) {
+      size -= 2
+      ctx.font = '600 ' + size + 'px ' + family
+    }
+    ctx.fillStyle = color
+    ctx.fillText(value, x, y)
+    ctx.restore()
+  }
+  write('TAPERDAY', left + 48, top + 91, 720, 60, '#ffffff', display)
+  write(run.title, left + 48, top + 159, 845, 40, '#ffffff')
+  write(formatDate(run.date, 'long'), left + 48, top + 206, 800, 27, '#d6d8da')
+  const metrics = stickerLines(run, units)
+  const values = [
+    { title: 'DISTANCE', value: metrics.distance },
+    { title: 'TIME', value: metrics.time },
+    { title: 'AVG PACE', value: metrics.pace },
+  ]
+  for (let i = 0; i < values.length; i++) {
+    const x = left + 48 + i * 291
+    write(values[i]!.title, x, top + 308, 260, 25, '#d6d8da')
+    write(values[i]!.value ?? '—', x, top + 409, 265, 72, i === 0 ? accent : '#ffffff', display)
+  }
+  const extras = stickerExtraLines(run, options).slice(0, 3)
+  if (extras.length) write(extras.join('   •   '), left + 48, top + 499, 845, 25, '#ffffff')
+  ctx.fillStyle = '#ffffff30'
+  ctx.fillRect(left + 48, top + 548, 864, 2)
+  write('taperday.run', left + 48, top + 621, 575, 46, '#ffffff')
+  const source = run.source === 'Strava' ? 'Powered by Strava' : run.source === 'Manual' ? 'Manually logged' : 'Recorded run'
+  write(source, left + 48, top + 656, 830, 24, '#d6d8da')
 }

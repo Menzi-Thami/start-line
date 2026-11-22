@@ -47,6 +47,7 @@ export function RunResult({ entry, runs = [], units, compact = false }: { entry:
             distanceKm: km,
             seconds,
             source: ownMetrics ? 'Manual' : imported?.source.kind ?? 'Manual',
+            averageHeartRate: ownMetrics ? null : imported?.averageHeartRate,
           }}
         />
       )}

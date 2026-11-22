@@ -87,15 +87,7 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   }
 }
 
-// Lets Azure services (the API) reach the server. The free App Service tier has no private networking.
-resource allowAzure 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  parent: sqlServer
-  name: 'AllowAllWindowsAzureIps'
-  properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
-  }
-}
+// Firewall rules for the API's outbound addresses are added by the apiCanReachSql module, once the API exists.
 
 resource database 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
@@ -229,6 +221,17 @@ resource api 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'DataProtection__KeyVaultKeyUri', value: tokenKey.properties.keyUri }
       ])
     }
+  }
+}
+
+// Only the API's outbound addresses reach the database, not every Azure service (the old AllowAllWindowsAzureIps rule).
+// Staging's API shares this plan, so these addresses cover it too. On the free tier the addresses are shared with
+// other sites on the same servers, so Entra-only sign-in stays the real lock; private networking needs a paid tier.
+module apiCanReachSql 'sql-firewall.bicep' = {
+  name: 'sql-firewall-api'
+  params: {
+    sqlServerName: sqlServer.name
+    apiOutboundIps: split(api.properties.possibleOutboundIpAddresses, ',')
   }
 }
 

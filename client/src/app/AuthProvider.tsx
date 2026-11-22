@@ -2,6 +2,7 @@ import { CacheLookupPolicy, InteractionRequiredAuthError, PublicClientApplicatio
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { clearSnapshot } from '../lib/home-snapshot'
 import { activateCheckInOwner, clearCheckInCopies, readCheckInCopies } from '../features/coaching/check-in-storage'
+import { activateRatingOwner, clearRatingDismissals } from '../features/coaching/rating-dismissal'
 import { AuthContext, accountsOff, type Auth, type AuthConfig } from './auth-context'
 import { describeSignInError, type SignInProblem } from './sign-in-errors'
 import { signInRequest, type SignInKind } from './sign-in-requests'
@@ -97,6 +98,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         }
         if (cancelled) return
         activateCheckInOwner(account ? toAccount(account).id : null)
+        activateRatingOwner(account ? toAccount(account).id : null)
         setInfo(account)
       })
       .catch((failure: unknown) => {
@@ -110,6 +112,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
           const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null
           if (account) msal.setActiveAccount(account)
           activateCheckInOwner(account ? toAccount(account).id : null)
+          activateRatingOwner(account ? toAccount(account).id : null)
           setInfo(account)
           return
         }
@@ -169,6 +172,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         if (drafts && !window.confirm('You have unsynced run drafts on this device. Sign out and discard these drafts?')) return
         clearSnapshot()
         clearCheckInCopies()
+        clearRatingDismissals()
         void (async () => {
           await msal.clearCache().catch(() => undefined)
           await msal.logoutRedirect({ account: info ?? undefined })

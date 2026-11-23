@@ -128,7 +128,7 @@ describe('calendar day summaries', () => {
     render(<View selected="2026-10-12" runs={[imported('strava-1', '2026-10-12')]} />)
     expect(planned()).toHaveTextContent('No run scheduled')
     expect(within(planned()).queryByRole('checkbox')).not.toBeInTheDocument()
-    const strength = screen.getByRole('region', { name: 'Strength', exact: true })
+    const strength = screen.getByRole('region', { name: 'Strength' })
     expect(strength).toHaveTextContent('Strength & mobility')
     expect(strength).toHaveTextContent('Exercises and sets are kept in the Strength tab')
     expect(within(strength).queryByRole('checkbox')).not.toBeInTheDocument()

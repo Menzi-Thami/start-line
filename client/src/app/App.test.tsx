@@ -586,7 +586,7 @@ describe('a shared plan', () => {
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
     const tabs = screen.getByRole('tablist', { name: 'Your plan' })
-    expect(within(tabs).getAllByRole('tab').map((t) => t.textContent)).toEqual(['This week', 'Calendar', 'Progress'])
+    expect(within(tabs).getAllByRole('tab').map((t) => t.textContent)).toEqual(['This week', 'Calendar', 'Strength', 'Progress'])
     expect(within(tabs).getByRole('tab', { name: 'This week' })).toHaveAttribute('aria-selected', 'true')
     // The plan starts on Monday 12 October, after "today", so This week shows the first week.
     expect(screen.getByRole('heading', { name: 'Your first week' })).toBeInTheDocument()
@@ -598,6 +598,8 @@ describe('a shared plan', () => {
 
     await user.click(within(tabs).getByRole('tab', { name: 'Calendar' }))
     await user.keyboard('{ArrowRight}')
+    expect(within(tabs).getByRole('tab', { name: 'Strength' })).toHaveFocus()
+    await user.keyboard('{ArrowRight}')
     expect(within(tabs).getByRole('tab', { name: 'Progress' })).toHaveFocus()
     expect(screen.getByRole('heading', { name: 'Weekly distance' })).toBeInTheDocument()
   })
@@ -608,7 +610,7 @@ describe('a shared plan', () => {
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
     await openStrengthWorkouts()
-    const panel = screen.getByRole('group', { name: 'Strength workouts' })
+    const panel = screen.getByRole('tabpanel', { name: 'Strength' })
     await user.click(panel.querySelector('.strength-session > summary')!)
     expect(within(panel).getByRole('heading', { name: /Strength & mobility/ })).toBeInTheDocument()
     expect(within(panel).getByText('Romanian deadlift')).toBeInTheDocument()
@@ -625,32 +627,23 @@ describe('a shared plan', () => {
     expect(screen.getAllByRole('checkbox', { name: 'Squat, set 1 of 3: 10', hidden: true })[0]).toBeChecked()
   })
 
-  it('ticks every set when a strength session is ticked done, and the session when every set is', async () => {
+  it('tracks strength sets in the Strength tab without adding run controls to strength days', async () => {
     vi.setSystemTime(new Date(2026, 9, 18, 9))
     window.history.replaceState(null, '', `/${link}`)
     const { user } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
-    const openMonday = async () => {
-      const day = await openWeekDay('2026-10-12')
-        return day
-    }
-    let day = await openMonday()
-    await user.click(within(day).getByRole('checkbox', { name: 'Done' }))
-    await user.click(within(day).getByRole('button', { name: 'Close day' }))
-    await openStrengthWorkouts()
-    const panel = screen.getByRole('group', { name: 'Strength workouts' })
+    const day = await openWeekDay('2026-10-12')
+    expect(within(day).getByText('No run scheduled')).toBeInTheDocument()
+    expect(within(day).queryByRole('checkbox')).not.toBeInTheDocument()
+    await user.click(within(day).getByRole('button', { name: 'Open strength workouts' }))
+    const panel = screen.getByRole('tabpanel', { name: 'Strength' })
     await user.click(panel.querySelector('.strength-session > summary')!)
+    for (const checkbox of within(panel).getAllByRole('checkbox')) await user.click(checkbox)
     expect(within(panel).getByText('All sets done. Nice work.')).toBeInTheDocument()
-
     await user.click(within(panel).getByRole('checkbox', { name: 'Plank, set 3 of 3: 30 s' }))
     expect(within(panel).getByText('17 of 18 sets done')).toBeInTheDocument()
-    day = await openMonday()
-    expect(within(day).getByRole('checkbox', { name: 'Done' })).not.toBeChecked()
-    await user.click(within(day).getByRole('button', { name: 'Close day' }))
-
     await user.click(within(panel).getByRole('checkbox', { name: 'Plank, set 3 of 3: 30 s' }))
-    day = await openMonday()
-    expect(within(day).getByRole('checkbox', { name: 'Done' })).toBeChecked()
+    expect(within(panel).getByText('All sets done. Nice work.')).toBeInTheDocument()
   })
 
   it('keeps the plan tools in one row: share and calendar (export needs structured steps), with no print or text export', async () => {

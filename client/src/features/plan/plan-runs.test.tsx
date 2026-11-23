@@ -75,8 +75,9 @@ describe('the plan beside what was run', () => {
     expect(within(day).getByRole('region', { name: 'Planned' })).toHaveTextContent('Rest day')
     day = await openWeekDay('2026-10-12')
     expect(within(day).getByRole('article', { name: 'Recorded run: 3 km' })).toBeVisible()
-    expect(within(day).getByRole('region', { name: 'Planned' })).toHaveTextContent('0 of 18 sets recorded on this device')
-    expect(within(day).getByRole('checkbox', { name: 'Done' })).not.toBeChecked()
+    expect(within(day).getByRole('region', { name: 'Planned' })).toHaveTextContent('No run scheduled')
+    expect(within(day).getByRole('region', { name: 'Strength' })).toHaveTextContent('6 exercises')
+    expect(within(day).queryByRole('checkbox', { name: 'Done' })).not.toBeInTheDocument()
   })
 
   it('shows recorded measurements in the runner’s units without an unavailable open action', async () => {

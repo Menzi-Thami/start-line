@@ -48,7 +48,13 @@ for (const [kind, date] of [['rest', '2026-10-14'], ['strength', '2026-10-12'], 
     await expect(day.getByText(/Unplanned run/)).toHaveCount(0)
     if (kind === 'rest') await expect(day.getByRole('region', { name: 'Planned', exact: true })).toContainText('Rest day')
     else {
-      await expect(day.getByRole('region', { name: 'Planned', exact: true })).toContainText(kind === 'strength' ? 'Strength & mobility' : 'Hill repeats')
+      // A strength-only day must keep its run log independent of gym completion.
+      if (kind === 'strength') {
+        await expect(day.getByRole('region', { name: 'Planned', exact: true })).toContainText('No run scheduled')
+        await expect(day.getByRole('region', { name: 'Strength', exact: true })).toContainText('Strength & mobility')
+      } else {
+        await expect(day.getByRole('region', { name: 'Planned', exact: true })).toContainText('Hill repeats')
+      }
       for (const checkbox of await day.getByRole('checkbox').all()) expect(await checkbox.isChecked()).toBe(false)
     }
     for (const width of [375, 820, 1440, 2560]) {

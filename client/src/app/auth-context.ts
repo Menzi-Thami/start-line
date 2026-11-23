@@ -14,7 +14,7 @@ export interface Auth {
   /** True until a returning sign-in redirect has been processed. */
   loading: boolean
   /** A usable access token has been verified for this session; a remembered account alone is not enough. */
-  sessionReady: boolean
+  sessionReady?: boolean
   account: Account | null
   /** Why the last sign-in didn't finish, or null. Shown so failures are never silent. */
   error: SignInProblem | null

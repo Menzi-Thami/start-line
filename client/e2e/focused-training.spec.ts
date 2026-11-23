@@ -70,7 +70,7 @@ test('training stays focused while all detail remains reachable @phone', async (
   await expect(page.getByRole('region', { name: 'Calculators', exact: true })).toBeVisible()
   await tools.click()
   await navigation.getByRole('button', { name: 'Plan', exact: true }).click()
-  await expect(page.getByRole('tablist', { name: 'Your plan', exact: true }).getByRole('tab')).toHaveText(['This week', 'Calendar', 'Progress'])
+  await expect(page.getByRole('tablist', { name: 'Your plan', exact: true }).getByRole('tab')).toHaveText(['This week', 'Calendar', 'Strength', 'Progress'])
   await expect(page.locator('#plan-panel-week .days')).toHaveCount(0)
   const sunday = page.getByRole('button', { name: /^Sunday 18 October 2026:/ })
   await sunday.click()
@@ -103,14 +103,9 @@ test('training stays focused while all detail remains reachable @phone', async (
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await page.screenshot({ path: info.outputPath(`focused-plan-${width}.png`) })
   }
-  const strength = page.locator('summary').filter({ hasText: /^Strength workouts$/ })
-  // Weeks with strength now open automatically. Do not toggle them closed.
-  if (!await strength.evaluate(node => (node.closest('details') as HTMLDetailsElement).open)) {
-    await strength.focus()
-    await page.keyboard.press('Enter')
-  }
+  await page.getByRole('tab', { name: 'Strength', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Change strength days', exact: true })).toBeVisible()
-  await strength.click()
+  await page.getByRole('tab', { name: 'This week', exact: true }).click()
   await navigation.getByRole('button', { name: 'Runs', exact: true }).click()
   await expect(page.getByRole('button', { name: /Run analysis/ })).toBeVisible()
   await expect(page.getByText('Upload runs', { exact: true })).not.toBeVisible()

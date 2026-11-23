@@ -56,6 +56,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
   )
   const [info, setInfo] = useState<AccountInfo | null>(null)
   const [loading, setLoading] = useState(msal !== null)
+  const [sessionReady, setSessionReady] = useState(false)
   const [error, setError] = useState<SignInProblem | null>(null)
 
   // Finish any sign-in that just redirected back here, then pick up an existing session.
@@ -83,22 +84,30 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         // runner starts anything: a top-level visit with prompt=none, which never shows a page. With Microsoft's session
         // still alive ("Stay signed in?" answered Yes) it's just a reload and they stay signed in; otherwise it comes
         // straight back and "Continue securely" is offered as before. Once per launch, never mid-task, never offline.
-        if (account && !result && config && !quietRenewalTried() && navigator.onLine) {
+        // A cached MSAL account is NOT proof of a usable session. Never reveal plans or cached
+        // workouts until the identity provider supplies an access token for this API.
+        let verified = Boolean(result?.accessToken)
+        if (account && config && !verified) {
           try {
-            await msal.acquireTokenSilent({ scopes: [config.scope], account, cacheLookupPolicy: CacheLookupPolicy.AccessTokenAndRefreshToken })
+            const token = await msal.acquireTokenSilent({
+              scopes: [config.scope], account, cacheLookupPolicy: CacheLookupPolicy.AccessTokenAndRefreshToken,
+            })
+            verified = Boolean(token.accessToken)
           } catch (failure) {
-            if (!cancelled && !isNetworkFailure(failure)) {
+            if (!cancelled && !result && !quietRenewalTried() && navigator.onLine && !isNetworkFailure(failure)) {
               markQuietRenewal('pending')
               redirecting = true
               leaving = true
               await msal.acquireTokenRedirect({ scopes: [config.scope], account, prompt: 'none', redirectStartPage: window.location.href })
               return
             }
+            if (!cancelled) setError(describeSignInError(failure))
           }
         }
         if (cancelled) return
         activateCheckInOwner(account ? toAccount(account).id : null)
         activateRatingOwner(account ? toAccount(account).id : null)
+        setSessionReady(Boolean(account && verified))
         setInfo(account)
       })
       .catch((failure: unknown) => {
@@ -113,10 +122,12 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
           if (account) msal.setActiveAccount(account)
           activateCheckInOwner(account ? toAccount(account).id : null)
           activateRatingOwner(account ? toAccount(account).id : null)
+          setSessionReady(false)
           setInfo(account)
           return
         }
         // The runner stays signed out, but is told why rather than left guessing.
+        setSessionReady(false)
         setError(describeSignInError(failure))
       })
       .finally(() => {
@@ -133,14 +144,21 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
     // this device remembers is forgotten as active (it stays cached, and comes back if they turn round), so its email
     // isn't locked into Microsoft's page.
     const start = (kind: SignInKind) => {
+      if (redirecting) return
       const drafts = Object.values(readCheckInCopies(info ? toAccount(info).id : null)).reduce((sum, copy) => sum + copy.pending.length, 0)
       if (drafts && !window.confirm('You have unsynced run drafts on this device. Choosing a different account removes them. Continue to sign in?')) return
       msal.setActiveAccount(null)
-      void msal.loginRedirect(signInRequest(kind, config.scope, window.location.href))
+      setError(null)
+      redirecting = true
+      void msal.loginRedirect(signInRequest(kind, config.scope, window.location.href)).catch((failure: unknown) => {
+        redirecting = false
+        setError(describeSignInError(failure))
+      })
     }
     return {
       enabled: true,
       loading,
+      sessionReady,
       account: info ? toAccount(info) : null,
       error,
       signIn: () => start('sign-in'),
@@ -170,6 +188,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       signOut: () => {
         const drafts = Object.values(readCheckInCopies(info ? toAccount(info).id : null)).reduce((sum, copy) => sum + copy.pending.length, 0)
         if (drafts && !window.confirm('You have unsynced run drafts on this device. Sign out and discard these drafts?')) return
+        setSessionReady(false)
         clearSnapshot()
         clearCheckInCopies()
         clearRatingDismissals()
@@ -181,17 +200,22 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       getToken: async () => {
         if (!info) return null
         try {
-          return (await msal.acquireTokenSilent({ scopes: [config.scope], account: info })).accessToken
+          const token = (await msal.acquireTokenSilent({ scopes: [config.scope], account: info })).accessToken
+          setSessionReady(true)
+          return token
         } catch (error) {
           // A silent attempt can fail after a PWA has been closed for days, or because Safari blocks
           // identity-provider cookies. Never navigate automatically from a background API call.
           // The account stays remembered; the UI offers a deliberate "Continue securely" action.
-          if (error instanceof InteractionRequiredAuthError) return null
+          if (error instanceof InteractionRequiredAuthError) {
+            setSessionReady(false)
+            return null
+          }
           throw error
         }
       },
     }
-  }, [msal, config, info, loading, error])
+  }, [msal, config, info, loading, sessionReady, error])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

@@ -15,7 +15,7 @@ function SessionGate({ children }: { children: ReactNode }) {
   const auth = useAuth()
   const [slow, setSlow] = useState(false)
   useEffect(() => {
-    if (!auth.loading) { setSlow(false); return }
+    if (!auth.loading) return
     const timeout = window.setTimeout(() => setSlow(true), 12_000)
     return () => window.clearTimeout(timeout)
   }, [auth.loading])

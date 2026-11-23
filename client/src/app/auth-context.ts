@@ -13,6 +13,8 @@ export interface Auth {
   enabled: boolean
   /** True until a returning sign-in redirect has been processed. */
   loading: boolean
+  /** A usable access token has been verified for this session; a remembered account alone is not enough. */
+  sessionReady: boolean
   account: Account | null
   /** Why the last sign-in didn't finish, or null. Shown so failures are never silent. */
   error: SignInProblem | null
@@ -31,6 +33,7 @@ export interface Auth {
 export const accountsOff: Auth = {
   enabled: false,
   loading: false,
+  sessionReady: false,
   account: null,
   error: null,
   signIn: () => undefined,

@@ -40,6 +40,8 @@ az deployment group create -g rg-taperday -f infra/main.bicep \
      sqlAdminObjectId="$(az ad signed-in-user show --query id -o tsv)"
 ```
 
+Add `alertEmail=<your email>` to get production alerts by email (see [monitoring.md](monitoring.md)).
+
 Add the External ID values once sign-in is set up (see `docs/accounts-setup.md`):
 `externalIdInstance=https://<subdomain>.ciamlogin.com/ externalIdTenantId=<id> externalIdApiClientId=<id>`.
 

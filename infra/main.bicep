@@ -35,6 +35,12 @@ param externalIdInstance string = ''
 param externalIdTenantId string = ''
 param externalIdApiClientId string = ''
 
+@description('Email for production alerts (infra/alerts.bicep). Kept out of the repository; empty skips the alerts.')
+param alertEmail string = ''
+
+@description('Azure mobile app account for push alerts. Empty for email only.')
+param alertAppAccount string = ''
+
 var suffix = take(uniqueString(resourceGroup().id), 6)
 var names = {
   logs: 'log-${appName}-${suffix}'
@@ -66,6 +72,17 @@ resource insights 'Microsoft.Insights/components@2020-02-02' = {
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logs.id
+  }
+}
+
+// Free alerting: an email/push action group and the Failure Anomalies smart detection rule. See docs/monitoring.md.
+module alerts 'alerts.bicep' = if (!empty(alertEmail)) {
+  name: 'alerts'
+  params: {
+    insightsName: insights.name
+    alertEmail: alertEmail
+    alertAppAccount: alertAppAccount
+    appName: appName
   }
 }
 

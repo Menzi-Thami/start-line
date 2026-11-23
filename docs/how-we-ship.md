@@ -22,6 +22,8 @@ flowchart LR
 - **Staging site:** `https://icy-grass-0c32e680f-staging.eastus2.1.azurestaticapps.net`. It has its own empty database and no email, Strava or push settings, so nothing you do there reaches a real runner.
 - **The release button:** Actions → **3 - Release to production** → Run workflow, on `main`. It refuses if staging hasn't passed its deploy and smoke check for that exact commit.
 - **Several changes can wait on staging together.** One release ships all of them.
+- **A newer push to a pull request cancels its older checks run**, which could no longer be merged anyway. Pushes to `staging` and `main` are never cancelled.
+- **A pull request that changes only Markdown files or `docs/`** skips the backend, end-to-end and connection suites; the end-to-end checks still report green so it can be merged. Any other file runs everything, and every push to `staging` and `main` runs everything.
 
 ## Rules
 

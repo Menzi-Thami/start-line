@@ -14,7 +14,7 @@ const layOut = (list: HTMLElement) => {
   vi.spyOn(list, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 360, width: 360 } as DOMRect)
   tabs.forEach((tab, i) => vi.spyOn(tab, 'getBoundingClientRect').mockReturnValue({ left: i * 200, right: i * 200 + 90, width: 90 } as DOMRect))
   Object.defineProperty(list, 'clientWidth', { configurable: true, value: 360 })
-  Object.defineProperty(list, 'scrollWidth', { configurable: true, value: 500 })
+  Object.defineProperty(list, 'scrollWidth', { configurable: true, value: 900 })
 }
 
 afterEach(() => {
@@ -85,8 +85,8 @@ describe('the plan’s tab row on a narrow screen', () => {
 
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Progress' }))
 
-    // The last tab spans 400-490 in a 360px row, so it needs 490 - (360 - 28) = 158px more, and no animation under test.
-    expect(scrollBy).toHaveBeenLastCalledWith({ left: 158, behavior: 'auto' })
+    // With the dedicated Strength tab, Progress spans 600–690: 690 - (360 - 28) = 358px, and no animation under test.
+    expect(scrollBy).toHaveBeenLastCalledWith({ left: 358, behavior: 'auto' })
   })
 
   it('leaves the row alone when the chosen tab is already in view', async () => {
@@ -114,7 +114,7 @@ describe('the plan’s tab row on a narrow screen', () => {
     fireEvent.scroll(list)
     expect(list).toHaveAttribute('data-fade', 'both')
 
-    list.scrollLeft = 140
+    list.scrollLeft = 540
     fireEvent.scroll(list)
     expect(list).toHaveAttribute('data-fade', 'start')
   })

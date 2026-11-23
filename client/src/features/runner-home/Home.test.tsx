@@ -60,11 +60,29 @@ describe('Home', () => {
     const today = screen.getByRole('region', { name: 'Today' })
     expect(within(today).getByText('No run today')).toBeInTheDocument()
     expect(within(today).queryByText('Rest day')).toBeNull()
-    const strength = within(today).getByRole('region', { name: 'Strength session' })
+    // Strength is its own card after Today, not part of it, and it's today's session, not "Next".
+    expect(within(today).queryByText('Strength & mobility')).toBeNull()
+    const strength = screen.getByRole('region', { name: 'Strength today' })
     expect(strength).toHaveTextContent('Strength & mobility')
+    expect(strength).toHaveTextContent(/\d+ exercises/)
+    expect(strength).not.toHaveTextContent('after your run')
+    expect(within(strength).getByRole('button', { name: 'Open strength workout' })).toBeInTheDocument()
     expect(within(strength).queryByText('Target pace')).toBeNull()
     expect(within(strength).queryByText('Distance')).toBeNull()
     expect(within(strength).queryByText('Done')).toBeNull()
+  })
+
+  it('puts strength on a run day in its own card after the run, as today and not coming up', () => {
+    const source = plan5k as unknown as TrainingPlan
+    const lift = source.weeks.flatMap(week => week.sessions).find(session => session.type === 'Strength')!
+    const plan = { ...source, weeks: source.weeks.map(week => ({ ...week, sessions: week.sessions.flatMap(session => session.date === '2026-10-20' ? [session, { ...lift, date: '2026-10-20' }] : session.type === 'Strength' ? [] : [session]) })) }
+    renderHome({ current, initialPlan: { id: 'plan-1', plan }, today: '2026-10-20' })
+    const today = screen.getByRole('region', { name: 'Today' })
+    expect(within(today).getByText('Fartlek')).toBeInTheDocument()
+    expect(within(today).queryByText(lift.title)).toBeNull()
+    const strength = screen.getByRole('region', { name: 'Strength today' })
+    expect(strength).toHaveTextContent('Strength today · after your run')
+    expect(strength).toHaveTextContent('6 exercises · about 30 min')
   })
 
   it('recovers a failed plan request without keeping a loading skeleton on screen', async () => {

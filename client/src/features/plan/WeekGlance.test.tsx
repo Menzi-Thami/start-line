@@ -5,6 +5,7 @@ import type { ActivitySummary } from '../../lib/types'
 import { WeekGlance } from './WeekGlance'
 import { SessionItem } from './SessionItem'
 import { sessionKey } from './plan-math'
+import { DayPreview } from './DayPreview'
 
 const week = planFixture.weeks[0]!
 const strength = week.sessions.find((s) => s.type === 'Strength')!
@@ -12,6 +13,19 @@ const uploaded = { id: 'extra-run', localDate: strength.date, kind: 'Run', dista
 const dayState = () => screen.getByText(/, Strength & mobility/).closest('li')!
 
 describe('strength stays separate from running', () => {
+  it('titles a run-and-strength day by its run, with strength as its own tag and its own block', () => {
+    const run = week.sessions.find((s) => s.type !== 'Strength' && s.distanceKm > 0)!
+    const lift = { ...strength, date: run.date }
+    const shared = { ...week, sessions: week.sessions.flatMap(s => s === run ? [s, lift] : s === strength ? [] : [s]) }
+    const { container } = render(<WeekGlance week={shared} onSelectDate={vi.fn()} done={new Set()} today="2026-10-11" units="km" />)
+    const day = container.querySelector(`[data-date="${run.date}"]`)!
+    expect(day.querySelector('strong')).toHaveTextContent(new RegExp(`^${run.title}$`))
+    expect(day).toHaveTextContent('+ Strength')
+    render(<DayPreview id="preview" date={run.date} sessions={[run, lift]} status={{ kind: 'planned', label: 'Scheduled', icon: '•' } as never} units="km" onOpen={vi.fn()} />)
+    const preview = screen.getByRole('region', { name: 'Selected day preview' })
+    expect(preview.querySelector('h3')).toHaveTextContent(new RegExp(`^${run.title}$`))
+    expect(screen.getByLabelText(`Strength: ${lift.title}`)).toHaveTextContent('Strength · after your run')
+  })
   it('moves down one agenda day and leaves opened-day controls alone', () => {
     render(<WeekGlance week={week} onSelectDate={vi.fn()} done={new Set()} today="2026-10-18" units="km" selectedDate="2026-10-12" renderSelectedDay={() => <button>Log this workout</button>} />)
     const dates = screen.getAllByRole('button').filter(button => button.classList.contains('week-day-button'))

@@ -5,6 +5,7 @@ import type { RunsByDate } from '../../lib/plan-runs'
 import type { PlanWeek } from '../../lib/types'
 import { useMoveDrag } from './useMoveDrag'
 import { calendarDayState, moveCalendarFocus } from './calendar-day'
+import { isStrength } from '../../lib/strength'
 
 interface Props {
   statusFor?: (date: string) => ReturnType<typeof dayStatus>
@@ -56,6 +57,8 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
       <ol className="week-strip week-agenda" onKeyDown={moveCalendarFocus}>
         {days.map((date) => {
           const sessions = week.sessions.filter((s) => s.date === date)
+          // The day's title is its run; strength on the same day is its own tag, never joined into the run's name.
+          const dayRuns = sessions.filter(session => !isStrength(session))
           const ran = runs?.get(date)?.some((r) => r.kind !== 'Other') ?? false
           const additional = additionalDates.includes(date)
           const recorded = ran || additional || activityDates.includes(date)
@@ -68,7 +71,7 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
                 {onRequestMove && canMoveFrom(date) && sessions.some(s => s.type !== 'Strength' && s.type !== 'Race') && <span className="schedule-drag-handle" aria-hidden="true" {...drag.handle(date)}>⠿</span>}
                 <span className="week-day-name">{formatDate(date, 'weekday').slice(0, 3)}</span>
                 <span className="week-day-dot mono">{Number(date.slice(8))}</span>
-                <span className="week-day-workout"><strong>{sessions.length ? sessions.map(session => session.title).join(' + ') : status?.kind === 'outside' ? 'Outside this plan' : 'Rest day'}</strong><span className="field-help">{sessions.filter(session => session.distanceKm > 0).map(session => formatDistance(session.distanceKm, units)).join(' + ')}{recorded ? ' · Activity recorded' : state === 'done' ? ' · Complete' : state === 'missed' ? ' · Not logged' : ''}</span></span>
+                <span className="week-day-workout"><strong>{dayRuns.length ? dayRuns.map(session => session.title).join(' + ') : sessions.length ? sessions.map(session => session.title).join(' + ') : status?.kind === 'outside' ? 'Outside this plan' : 'Rest day'}</strong>{dayRuns.length > 0 && dayRuns.length < sessions.length && <span className="chip chip-good week-day-strength">+ Strength</span>}<span className="field-help">{sessions.filter(session => session.distanceKm > 0).map(session => formatDistance(session.distanceKm, units)).join(' + ')}{recorded ? ' · Activity recorded' : state === 'done' ? ' · Complete' : state === 'missed' ? ' · Not logged' : ''}</span></span>
                 <span className={`training-status is-${status?.kind ?? 'planned'}`} aria-label={status?.label}>{status?.icon ?? '•'}<span className="week-status-label"> {status?.label ?? 'Scheduled'}</span></span>
                 <span className="visually-hidden">
                   {sessions.length === 0 ? (status?.kind === 'outside' ? ', outside this plan' : ', rest') : `, ${sessions.map((s) => s.title).join(', ')}`}

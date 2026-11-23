@@ -57,7 +57,9 @@ function SessionGate({ children }: { children: ReactNode }) {
 /** Production must fail closed if identity configuration is omitted from a deployment. */
 export function AppAuth({ config, children }: { config: AuthConfig | null; children: ReactNode }) {
   if (!config) {
-    if (import.meta.env.PROD) return <div className="page"><section className="empty" role="alert"><h1>Sign-in temporarily unavailable</h1><p>Taperday cannot start securely. Please contact support at hello@taperday.run.</p></section></div>
+    // Only the explicit CI test bundle may run the legacy synthetic anonymous E2E journeys.
+    // The deployed production bundle always uses MODE=production and fails closed.
+    if (import.meta.env.PROD && import.meta.env.MODE !== 'e2e') return <div className="page"><section className="empty" role="alert"><h1>Sign-in temporarily unavailable</h1><p>Taperday cannot start securely. Please contact support at hello@taperday.run.</p></section></div>
     return <AuthContext.Provider value={accountsOff}>{children}</AuthContext.Provider>
   }
   return <ScreenRecovery><Suspense fallback={<ConnectingAccount />}>

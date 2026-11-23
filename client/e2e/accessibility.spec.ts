@@ -76,11 +76,8 @@ for (const scheme of ['dark', 'light'] as const) for (const width of [320, 1440]
       expect(result.violations, name).toEqual([])
     }
     await scan('App navigation')
-    const strengthPanel = page.locator('#strength-workouts')
-    if (!await strengthPanel.evaluate(node => (node as HTMLDetailsElement).open)) {
-      await strengthPanel.locator('summary').click()
-    }
-    await page.locator('.strength-session > summary').first().click()
+    await page.getByRole('tab', { name: 'Strength', exact: true }).click()
+    await page.locator('#plan-panel-strength .strength-session > summary').first().click()
     await expect(page.getByRole('checkbox').first()).toBeVisible()
     await scan('Expanded strength')
   })

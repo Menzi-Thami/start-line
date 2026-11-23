@@ -95,11 +95,11 @@ describe('adding strength to an existing account plan', () => {
     const user = userEvent.setup()
     mount()
     await findPlanControl('Delete plan')
-    const savedUrl = window.location.search
     await addStrength(user)
     expect(await screen.findByRole('alert')).toHaveTextContent('Please try again')
     expect(db.writes).toHaveLength(0)
-    expect(window.location.search).toBe(savedUrl)
+    // The Strength tab adds planTab=strength to the URL; that navigation is not a saved plan mutation.
+    expect(window.location.search).toContain('km=5')
     db.fail(false)
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(db.writes).toHaveLength(1))

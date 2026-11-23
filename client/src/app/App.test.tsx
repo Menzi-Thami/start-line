@@ -543,25 +543,28 @@ describe('a shared plan', () => {
     expect(screen.queryByRole('radiogroup', { name: 'Units' })).not.toBeInTheDocument()
   })
 
-  it('remembers ticked-off sessions on this device', async () => {
+  it('remembers strength sets separately from running sessions on this device', async () => {
     vi.setSystemTime(new Date(2026, 9, 18, 9))
     window.history.replaceState(null, '', `/${link}`)
     const { user, unmount } = setup()
     await screen.findByRole('heading', { name: 'Parkrun PB' })
 
-    await openWeekDay('2026-10-12')
-    const firstDone = screen.getAllByRole('checkbox', { name: 'Done' })[0]!
-    await user.click(firstDone)
-    expect(firstDone).toBeChecked()
-    // Ticking throws a little confetti...
-    expect(document.querySelector('.sparks')).not.toBeNull()
+    const day = await openWeekDay('2026-10-12')
+    expect(within(day).queryByRole('checkbox', { name: 'Done' })).not.toBeInTheDocument()
+    await user.click(within(day).getByRole('button', { name: 'Open strength workouts' }))
+    const panel = screen.getByRole('tabpanel', { name: 'Strength' })
+    await user.click(panel.querySelector('.strength-session > summary')!)
+    const firstSet = within(panel).getByRole('checkbox', { name: /Squat, set 1 of/ })
+    await user.click(firstSet)
+    expect(firstSet).toBeChecked()
     unmount()
 
     setup()
-    await screen.findByRole('region', { name: 'Monday 12 October 2026' }, { timeout: 10000 })
-    await waitFor(() => expect(screen.getAllByRole('checkbox', { name: 'Done' })[0]).toBeChecked())
-    // ...but a session that was already done doesn't celebrate again on every visit.
-    expect(document.querySelector('.sparks')).toBeNull()
+    await screen.findByRole('heading', { name: 'Parkrun PB' })
+    await openStrengthWorkouts()
+    const restored = screen.getByRole('tabpanel', { name: 'Strength' })
+    await user.click(restored.querySelector('.strength-session > summary')!)
+    await waitFor(() => expect(within(restored).getByRole('checkbox', { name: /Squat, set 1 of/ })).toBeChecked())
   })
 
   it('opens straight onto the page it loads on, without fading it in', async () => {

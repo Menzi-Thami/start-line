@@ -58,6 +58,23 @@ jobs:
           cache: npm
           cache-dependency-path: client/package-lock.json
 
+      # Authentication is mandatory in staging and production. Never publish a PWA with no login config.
+      - name: Verify identity configuration before deployment
+        env:
+          VITE_AUTH_CLIENT_ID: ${{ vars.VITE_AUTH_CLIENT_ID }}
+          VITE_AUTH_AUTHORITY: ${{ vars.VITE_AUTH_AUTHORITY }}
+          VITE_AUTH_SCOPE: ${{ vars.VITE_AUTH_SCOPE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in VITE_AUTH_CLIENT_ID VITE_AUTH_AUTHORITY VITE_AUTH_SCOPE; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is missing for the ${{ inputs.environment }} deployment. Authentication is required."
+              exit 1
+            fi
+          done
+          echo "Required client identity configuration is present."
+
       # Build everything before touching production, so a broken build can't leave it half-deployed.
       - name: Build API
         run: |

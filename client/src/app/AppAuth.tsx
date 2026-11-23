@@ -6,6 +6,7 @@ import { SignInLanding } from '../features/home/SignInLanding'
 import { Wordmark } from './Wordmark'
 import { ThemeToggle } from './ThemeToggle'
 import { PrivacyPolicy } from '../features/privacy/Privacy'
+import { Unsubscribe } from '../features/account/Unsubscribe'
 
 const AuthProvider = lazy(() => import('./AuthProvider').then((module) => ({ default: module.AuthProvider })))
 
@@ -20,8 +21,15 @@ function SessionGate({ children }: { children: ReactNode }) {
   }, [auth.loading])
 
   // A privacy policy must stay available to anyone, including before sign-up.
-  if (new URLSearchParams(window.location.search).get('view') === 'privacy') {
+  const publicRoute = new URLSearchParams(window.location.search)
+  if (publicRoute.get('view') === 'privacy') {
     return <div className="page"><main id="main-content"><PrivacyPolicy /></main></div>
+  }
+  // Email unsubscribe links must work without sign-in.
+  if (publicRoute.get('view') === 'unsubscribe') {
+    return <div className="page"><main id="main-content">
+      <Unsubscribe token={publicRoute.get('t')} weekly={publicRoute.get('list') === 'weekly'} onOpenAccount={() => window.location.assign('/?view=sign-in')} />
+    </main></div>
   }
 
   if (auth.loading) {

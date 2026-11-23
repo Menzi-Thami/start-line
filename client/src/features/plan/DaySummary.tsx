@@ -171,6 +171,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
         {strengthSessions.length > 0 && <section aria-labelledby={`${id}-strength`} className="day-summary-section day-summary-strength">
           <h4 id={`${id}-strength`}>Strength</h4>
           <p className="day-summary-status">{strengthSessions.map(session => session.title).join(', ')} · {strengthSessions.reduce((sum, session) => sum + session.exercises.length, 0)} exercises</p>
+          {completedStrength.length > 0 && <p className="day-summary-status">Strength completed on this device.</p>}
           <p className="field-help">Exercises and sets are kept in the Strength tab, separate from your run and run analysis.</p>
           {onOpenStrength && <button type="button" className="button button-quiet" onClick={onOpenStrength}>Open strength workouts</button>}
         </section>}
@@ -205,8 +206,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
               <RunSticker units={units} run={{ date, title: 'Run completed', distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind, averageHeartRate: run.averageHeartRate }} />
             </article>)}
             {historyReady && deviceRuns.map(session => <div key={sessionKey(session)} className="day-summary-card"><h5>{session.title} completed</h5><p className="field-help">Completed on this device. Actual distance and time were not recorded.</p></div>)}
-            {completedStrength.map(session => <div key={sessionKey(session)} className="day-summary-card"><h5>{session.title} completed</h5><p className="field-help">Strength completion is saved on this device.</p></div>)}
-            {historyReady && !importsUnavailable && entries.length === 0 && unlinked.length === 0 && deviceRuns.length === 0 && completedStrength.length === 0 && <div className="day-summary-empty"><p>No activity recorded for this date.</p></div>}
+            {historyReady && !importsUnavailable && entries.length === 0 && unlinked.length === 0 && deviceRuns.length === 0 && <div className="day-summary-empty"><p>No activity recorded for this date.</p></div>}
           </>}
           {historyReady && coach && inPlan && !future && <div ref={logRef}><RunLog key={requestedRun?.id ?? 'manual'} plan={plan} coach={coach} runs={dayRuns} fixedDate={date} initialRun={requestedRun} onClose={() => { setRequestedRun(undefined); headingRef.current?.focus({ preventScroll: true }) }} showEntries={false} /></div>}
           {!coach && historyReady && <p className="field-help">{runs?.length ? 'Open your own saved plan to log or edit runs.' : 'On a shared plan, completion ticks stay on this device. Sign in and save your own plan to keep a run log.'}</p>}

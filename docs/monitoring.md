@@ -57,7 +57,7 @@ az monitor action-group test-notifications create -g rg-taperday --action-group 
 
 ## Daily triage
 
-A scheduled Claude task (**TaperDay production triage**, in the Claude desktop app → Scheduled) runs every morning at
+A scheduled Claude task (**TaperDay production triage**, in the Claude desktop app → Scheduled) runs every morning at about
 07:30 South Africa time while the app is open (a missed run starts the next time it opens). It only reads Azure: it
 runs the queries below for the last 24 hours, compares them with the 7 days before, and then:
 

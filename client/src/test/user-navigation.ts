@@ -27,8 +27,8 @@ export async function openRebuild() {
 
 export async function openStrengthWorkouts() {
   await closePlanDay()
-  await userEvent.setup().click(screen.getByRole('tab', { name: 'This week' }))
-  return openDisclosure('Strength workouts')
+  await userEvent.setup().click(screen.getByRole('tab', { name: 'Strength' }))
+  return screen.getByRole('tabpanel', { name: 'Strength' })
 }
 
 export async function openTrainingGuide(label: 'Training paces' | 'Running insights') {

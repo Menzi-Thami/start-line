@@ -1,5 +1,5 @@
 import { CacheLookupPolicy, InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { clearSnapshot } from '../lib/home-snapshot'
 import { activateCheckInOwner, clearCheckInCopies, readCheckInCopies } from '../features/coaching/check-in-storage'
 import { activateRatingOwner, clearRatingDismissals } from '../features/coaching/rating-dismissal'
@@ -8,9 +8,6 @@ import { describeSignInError, type SignInProblem } from './sign-in-errors'
 import { signInRequest, type SignInKind } from './sign-in-requests'
 
 const toAccount = (info: AccountInfo) => ({ id: `${info.tenantId}:${info.localAccountId}`, name: info.name || info.username, email: info.username || null })
-
-// Interactive renewal is user initiated; guard repeat taps until the redirect completes.
-let redirecting = false
 
 // Marks a quiet renewal (prompt=none) for this app launch, so a failed one is never retried in a loop. sessionStorage
 // survives the round trip to Microsoft in the same tab, and is fresh again the next time the app opens.
@@ -57,6 +54,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
   const [info, setInfo] = useState<AccountInfo | null>(null)
   const [loading, setLoading] = useState(msal !== null)
   const [sessionReady, setSessionReady] = useState(false)
+  // Guard duplicate redirects per mount, not across PWA reloads, account changes or tests.
+  const redirecting = useRef(false)
   const [error, setError] = useState<SignInProblem | null>(null)
 
   // Finish any sign-in that just redirected back here, then pick up an existing session.
@@ -87,7 +86,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         // A cached MSAL account is NOT proof of a usable session. Never reveal plans or cached
         // workouts until the identity provider supplies an access token for this API.
         let verified = Boolean(result?.accessToken)
-        if (account && config && !verified) {
+        if (account && config && !verified && !result && !quietRenewalTried()) {
           try {
             const token = await msal.acquireTokenSilent({
               scopes: [config.scope], account, cacheLookupPolicy: CacheLookupPolicy.AccessTokenAndRefreshToken,
@@ -96,7 +95,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
           } catch (failure) {
             if (!cancelled && !result && !quietRenewalTried() && navigator.onLine && !isNetworkFailure(failure)) {
               markQuietRenewal('pending')
-              redirecting = true
+              redirecting.current = true
               leaving = true
               await msal.acquireTokenRedirect({ scopes: [config.scope], account, prompt: 'none', redirectStartPage: window.location.href })
               return
@@ -116,7 +115,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         // keep them signed in here and let "Continue securely" ask for the code when it's needed.
         if (quietRenewalPending()) {
           markQuietRenewal('tried')
-          redirecting = false
+          redirecting.current = false
           leaving = false
           const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null
           if (account) msal.setActiveAccount(account)
@@ -135,6 +134,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       })
     return () => {
       cancelled = true
+      redirecting.current = false
     }
   }, [msal, config])
 
@@ -144,14 +144,14 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
     // this device remembers is forgotten as active (it stays cached, and comes back if they turn round), so its email
     // isn't locked into Microsoft's page.
     const start = (kind: SignInKind) => {
-      if (redirecting) return
+      if (redirecting.current) return
       const drafts = Object.values(readCheckInCopies(info ? toAccount(info).id : null)).reduce((sum, copy) => sum + copy.pending.length, 0)
       if (drafts && !window.confirm('You have unsynced run drafts on this device. Choosing a different account removes them. Continue to sign in?')) return
       msal.setActiveAccount(null)
       setError(null)
-      redirecting = true
+      redirecting.current = true
       void msal.loginRedirect(signInRequest(kind, config.scope, window.location.href)).catch((failure: unknown) => {
-        redirecting = false
+        redirecting.current = false
         setError(describeSignInError(failure))
       })
     }
@@ -165,14 +165,14 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       signUp: () => start('sign-up'),
       signInWithGoogle: config.google ? () => start('google') : undefined,
       resumeSession: () => {
-        if (!info || redirecting) return
+        if (!info || redirecting.current) return
         if (!navigator.onLine) {
           setError({ message: 'You’re offline. Reconnect to the internet, then continue securely.', code: null })
           return
         }
         // Keep the same remembered identity and its local run drafts. Unlike signIn, this must not reset
         // the active account or open an account chooser.
-        redirecting = true
+        redirecting.current = true
         void msal.acquireTokenRedirect({
           scopes: [config.scope],
           account: info,
@@ -180,7 +180,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         }).catch((failure: unknown) => {
           setError(describeSignInError(failure))
         }).finally(() => {
-          redirecting = false
+          redirecting.current = false
         })
       },
       // Signing out leaves nothing of anyone's on this device: every remembered account (MSAL's logout only removes the one

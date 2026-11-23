@@ -133,7 +133,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
             const viaStrava = completedViaStrava(session, coach)
             const pace = plan.paces.find(pace => pace.zone === session.zone)
             const card = <article key={sessionKey(session)} className="day-summary-card" aria-label={`Planned: ${session.title}`}>
-              {<><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : 'No completion recorded'}</p><details className="session-more"><summary>View exercises and completion</summary><SessionItem session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></details></> : <>
+              {<>
                 {historyReady && (complete || viaStrava || (entry && entry.status !== 'Skipped')) && <p className="day-done" role="status">
                   <Runner pose="victory" size={34} className="day-done-runner" />
                   <span><strong>{entry?.status === 'CutShort' ? 'Done, cut short' : 'Done'}</strong>{viaStrava ? ' · from Strava' : ''}<br /><span className="field-help">Every session you finish counts. Nice work.</span></span>

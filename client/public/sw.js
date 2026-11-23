@@ -15,7 +15,8 @@
 //
 // Bump VERSION to drop everything stored by an older worker.
 
-const VERSION = 'taperday-v2'
+// Rotate the shell cache for the login-required release so old anonymous landing bundles are evicted.
+const VERSION = 'taperday-v3'
 const SHELL = '/'
 const MAX_ASSETS = 60
 const OPENS_AT = '/?view=home'

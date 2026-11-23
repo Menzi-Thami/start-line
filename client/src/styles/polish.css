@@ -435,6 +435,17 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
 .day-summary .run-result { background: transparent; border: 0; border-radius: 0; padding: 0; }
 .day-summary .check-in-summary { margin-top: var(--space-2); }
 .day-summary .session-more { margin-block: var(--space-2); }
+/* Daily run actions are separate full-size tap targets. Never concatenate Move and Log links. */
+.day-summary-card > .link-button {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  min-height: var(--tap);
+  margin-block-start: var(--space-2);
+  text-align: left;
+}
+.day-summary-card > .link-button + .link-button { margin-block-start: var(--space-1); }
 @media (min-width: 64rem) {
   .home-hello { margin-bottom: var(--space-4); }
 }

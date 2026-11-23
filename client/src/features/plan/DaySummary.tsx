@@ -1,4 +1,3 @@
-import { ExerciseList } from '../strength/ExerciseList'
 import { useEffect, useId, useRef, useState } from 'react'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, type Units } from '../../lib/format'
 import type { ActivitySummary, CheckIn, Session, TrainingPlan } from '../../lib/types'
@@ -12,11 +11,10 @@ import { completedViaStrava } from '../coaching/strava-completion'
 import { RunLog } from '../coaching/RunLog'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { RunSticker } from '../sharing/RunSticker'
-import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength-progress'
+import { withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey } from './plan-math'
 import { SessionSteps } from './SessionSteps'
 import { compareWorkoutDistance } from './workout-distance-feedback'
-import { SessionItem } from './SessionItem'
 import { RunWalkChip } from './RunWalkChip'
 import { canMoveFrom } from './move-window'
 import { Runner } from '../shared/Runner'
@@ -127,7 +125,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
       </div>}
       <div className="day-summary-columns">
         <section aria-labelledby={`${id}-planned`} className="day-summary-section">
-          <h4 id={`${id}-planned`}>Planned run</h4>
+          <h4 id={`${id}-planned`}>Planned</h4>
           {runSessions.length === 0 && <div className="day-summary-card"><h5>{inPlan ? (strengthSessions.length ? 'No run scheduled' : 'Rest day') : 'Outside this plan'}</h5><p>{inPlan ? (strengthSessions.length ? 'Strength is tracked separately from running.' : 'No workout scheduled.') : 'There are no scheduled sessions from this plan on this date.'}</p></div>}
           {runSessions.map(session => {
             const entry = coach?.get(session)
@@ -135,7 +133,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
             const viaStrava = completedViaStrava(session, coach)
             const pace = plan.paces.find(pace => pace.zone === session.zone)
             const card = <article key={sessionKey(session)} className="day-summary-card" aria-label={`Planned: ${session.title}`}>
-              {session.type === 'Strength' ? future ? <><h5>{session.title}</h5><p>{session.exercises.length} exercises · Upcoming</p><p>{session.detail}</p>{dedicated && <ExerciseList session={session} done={done} onDoneChange={onDoneChange} readOnly />}</>  : dedicated ? <><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : `${setsDone(done, session).done} of ${setsDone(done, session).total} sets recorded on this device`}</p><SessionItem expanded session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></> : <><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : 'No completion recorded'}</p><details className="session-more"><summary>View exercises and completion</summary><SessionItem session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></details></> : <>
+              {<><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : 'No completion recorded'}</p><details className="session-more"><summary>View exercises and completion</summary><SessionItem session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></details></> : <>
                 {historyReady && (complete || viaStrava || (entry && entry.status !== 'Skipped')) && <p className="day-done" role="status">
                   <Runner pose="victory" size={34} className="day-done-runner" />
                   <span><strong>{entry?.status === 'CutShort' ? 'Done, cut short' : 'Done'}</strong>{viaStrava ? ' · from Strava' : ''}<br /><span className="field-help">Every session you finish counts. Nice work.</span></span>

@@ -1,3 +1,4 @@
+import { RunnerLoading } from '../shared/RunnerLoading'
 import './run-cards.css'
 import { lazy, Suspense, useEffect, useId, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
@@ -231,11 +232,8 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
       </div>}
 
       {list.kind === 'loading' && (
-        <div className="choice-list" aria-busy="true" style={{ marginTop: 'var(--space-5)' }}>
-          {[0, 1].map((i) => (
-            <div className="skeleton" key={i} aria-hidden="true" />
-          ))}
-          <span className="visually-hidden">Loading your runs…</span>
+        <div aria-busy="true" style={{ marginTop: 'var(--space-5)' }}>
+          <RunnerLoading label="Loading your runs…" detail="Checking for your latest recordings." compact />
         </div>
       )}
 

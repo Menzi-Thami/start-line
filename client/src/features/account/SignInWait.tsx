@@ -2,6 +2,7 @@ import './account-warmup.css'
 import { useEffect, useState } from 'react'
 import { useMediaQuery } from '../../lib/use-media-query'
 import { Runner } from '../shared/Runner'
+import { RunnerLoading } from '../shared/RunnerLoading'
 import { SLOW_AFTER_MS, type WakeStep } from './wait-film'
 import { useWakeStep } from './useWakeStep'
 
@@ -57,7 +58,7 @@ export function SignInWait({ onRetry, onSignOut, quietUntilSlow = false }: Props
   }, [slow, paused])
 
   if (quietUntilSlow && !slow) return null
-  if (!slow) return <div className="sign-in-wait"><p className="loading-line" role="status">Checking your account<span className="loading-dots" aria-hidden="true"><i /><i /><i /></span></p></div>
+  if (!slow) return <div className="sign-in-wait"><RunnerLoading label="Checking your account" compact /></div>
 
   return (
     <section className="sign-in-wait account-warmup" aria-label="Connecting to Taperday" data-paused={paused} data-reduced-motion={reduced}>

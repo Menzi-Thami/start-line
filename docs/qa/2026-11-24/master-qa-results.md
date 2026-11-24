@@ -281,3 +281,21 @@ S0–S15 manual/error/keyboard/screen-reader matrix. D-18 is a deferred vocabula
 of the original brand or immutable generator text was made. These gaps prevent GO even if automated CI is green.
 
 Current 104-ID register: **15 PASS · 0 FAIL · 10 BLOCKED · 79 NOT RUN**. PASS is limited to its stated evidence level; partial observations are recorded without upgrading the full row.
+
+## Sign-in copy in both modes (PR #319) — static review
+
+Checked every runner-facing string that mentions codes or passwords, with `VITE_AUTH_PASSWORDS` on and off.
+
+| Surface | Code mode (production today) | Password mode (staging) | Result |
+|---|---|---|---|
+| SignInLanding | no hint (the old "tap Yes to stay signed in" line is gone) | "Signed in with an emailed code before? Choose **Forgot password?** once to set a password, and let your phone save it." | PASS (static, unit test in #319) |
+| SignUpPitch | "We email you a code to sign in. No password to remember, no card needed." | "Choose a password and let your phone save it. No card needed." | PASS (static). Note: SignUpPitch sits behind SessionGate, so production runners never see it; the hosted Entra pages carry the real sign-up wording |
+| Privacy notice | "Sign-in is handled by Microsoft, so we never see a password." | same, still true | PASS (static) |
+| Outage email (`UpdateEmails.cs`, "Not getting your Taperday sign-in code?") | accurate for the code outage it was written for | wrong if re-sent to password-flow runners | Note: one-off broadcast; do not re-send once passwords are on |
+| Microsoft-hosted sign-in, sign-up and reset pages | not in this repository | not in this repository | BLOCKED: live tenant, #315 |
+
+## Final head CI
+
+Head `51f919d`: [Checks (PR)](https://github.com/Menzi-Thami/start-line/actions/runs/45367390190) and [Checks (unsharded release regression, workflow_dispatch)](https://github.com/Menzi-Thami/start-line/actions/runs/45367547993) both green on every job; [Copy check](https://github.com/Menzi-Thami/start-line/actions/runs/45367391538) and [Secret scan](https://github.com/Menzi-Thami/start-line/actions/runs/45367390483) green. The PR merges cleanly into staging `0fe4c08`.
+
+**Still NO-GO.** Staging cannot show this PR's changes until it is merged into staging, and the owner has asked for no merge before the gates are met. The rendered checks above are Playwright emulation, not the deployed staging build or a physical iPhone.

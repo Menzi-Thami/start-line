@@ -237,7 +237,7 @@ describe('signing up comes first', () => {
 
     expect(await screen.findByRole('heading', { name: 'Bring your runs with you.' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Which race?' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: "I'll connect later" }))
+    await user.click(screen.getByRole('button', { name: "I’ll connect later" }))
     expect(await screen.findByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Runs' })).toBeInTheDocument()
     expect(db.profiles[0]).toMatchObject({ displayName: 'Thandi M', acceptPrivacyNotice: true, units: navigator.language.endsWith('-US') ? 'Miles' : 'Kilometres', weeklyEmails: true })
@@ -412,7 +412,7 @@ describe('a signed-up runner', () => {
     await openTheirPlan(user)
     await user.click(screen.getByRole('button', { name: 'Home' }))
     const today = await screen.findByRole('region', { name: 'Today' })
-    await user.click(await within(today).findByRole('button', { name: "Open today's workout" }))
+    await user.click(await within(today).findByRole('button', { name: "Open today’s workout" }))
     const day = await screen.findByRole('region', { name: 'Tuesday 13 October 2026' }, { timeout: 10000 })
     expect(new URLSearchParams(window.location.search).get('day')).toBe('2026-10-13')
     await user.click(within(day).getByRole('button', { name: /Back to plan/ }))
@@ -683,7 +683,7 @@ describe('signing up, with a little theatre', () => {
     // The Strava choice appears underneath without waiting for the celebration to finish.
     expect(screen.getByRole('heading', { name: 'Bring your runs with you.' })).toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('You’re on the start list!')).not.toBeInTheDocument(), { timeout: 5000 })
-    await user.click(screen.getByRole('button', { name: "I'll connect later" }))
+    await user.click(screen.getByRole('button', { name: "I’ll connect later" }))
     expect(await screen.findByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
   }, 10000)
 })

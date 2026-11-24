@@ -171,7 +171,7 @@ export function CouchTo5K() {
       {account && !serverReady && !syncError && <p role="status">Loading your saved programme…</p>}
       {syncError && <div role="alert" className="field-help"><p>{syncError}</p>{account && serverReady && progressOwner === owner && <button type="button" className="button button-quiet" onClick={() => setSyncAttempt(n => n + 1)}>Retry saving progress</button>}</div>}
       {account && serverReady && progressOwner === owner && transferCandidate && <div className="panel" role="status"><p>You have a Couch to 5K programme saved on this device. Move it to your account?</p><button type="button" className="button button-quiet" onClick={() => { update(transferCandidate); setTransferCandidate(null) }}>Move my programme</button><button type="button" className="button button-quiet" onClick={() => setTransferCandidate(null)}>Keep account programme</button></div>}
-      {recordedUnconfirmed > 0 && <p className="beginner-recorded-summary" role="status">{recordedUnconfirmed} run{recordedUnconfirmed === 1 ? '' : 's'} recorded via Strava · confirm the sessions when you're ready.</p>}
+      {recordedUnconfirmed > 0 && <p className="beginner-recorded-summary" role="status">{recordedUnconfirmed} run{recordedUnconfirmed === 1 ? '' : 's'} recorded via Strava · confirm the sessions when you’re ready.</p>}
       <div className="beginner-tabs" role="group" aria-label="Beginner training views">
         {([['week', 'This week'], ['calendar', 'Calendar'], ['progress', 'Progress']] as const).map(([id, label]) => <button key={id} type="button" className={`beginner-tab${activeTab === id ? ' is-active' : ''}`} aria-pressed={activeTab === id} onClick={() => setActiveTab(id)}>{label}</button>)}
       </div>

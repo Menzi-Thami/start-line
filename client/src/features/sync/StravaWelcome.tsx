@@ -21,14 +21,14 @@ export function StravaWelcome({ onContinue, notice, connecting = false }: Props)
       <p>Connect a free Strava account once. Record on your phone, or link your running app or watch to Strava, and shared recordings arrive in Taperday automatically. No paid Strava subscription is required.</p>
       <StravaSection key={notice ?? 'initial'} notice={notice} connecting={connecting} onStatusChange={setStatus} />
       {ready && !status.available && !status.connected && (
-        <p className="field-help" role="status">Strava connections aren't available right now. You can still build your plan and connect later.</p>
+        <p className="field-help" role="status">Strava connections aren’t available right now. You can still build your plan and connect later.</p>
       )}
       {status === 'error' && (
-        <p className="field-help">Couldn't check Strava right now. You can continue and connect later in Account.</p>
+        <p className="field-help">Couldn’t check Strava right now. You can continue and connect later in Account.</p>
       )}
       <div className="submit-row">
         <button type="button" className={connected ? 'button button-primary' : 'button button-quiet'} onClick={onContinue}>
-          {connected ? 'Continue to my plan' : "I'll connect later"}
+          {connected ? 'Continue to my plan' : "I’ll connect later"}
         </button>
       </div>
       <p className="field-help">Optional. You can use Taperday without Strava and upload a run from My runs at any time.</p>

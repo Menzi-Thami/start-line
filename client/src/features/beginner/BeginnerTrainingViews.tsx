@@ -60,7 +60,7 @@ export function BeginnerProgress({
         <span className="mono">{week.confirmed}/3</span>
       </div>)}
     </div>
-    <p className="field-help">Solid = confirmed workouts · Outline = recorded via Strava. We don't judge whether you followed every interval from a recording alone.</p>
-    <p className="field-help">Your ninth week builds towards 30 minutes of comfortable running. Reaching 5 km can take longer, and that's okay.</p>
+    <p className="field-help">Solid = confirmed workouts · Outline = recorded via Strava. We don’t judge whether you followed every interval from a recording alone.</p>
+    <p className="field-help">Your ninth week builds towards 30 minutes of comfortable running. Reaching 5 km can take longer, and that’s okay.</p>
   </section>
 }

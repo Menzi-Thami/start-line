@@ -1,0 +1,38 @@
+# Reviewed words for the Taperday copy check. British English comes from cspell's en-GB dictionary; this list only
+# holds names and running terms that are spelt correctly but missing from it. Case does not matter.
+# Add a word only after checking it is right. Never add a misspelling to make the check pass.
+
+# Product, brands and services
+Taperday
+Strava
+Brevo
+COROS
+Suunto
+Wahoo
+Fitbit
+Garmin
+Hoka
+ASICS
+Sanlam
+Segoe
+POPIA
+inforegulator
+
+# Races and places
+Knysna
+parkrun
+
+# Running and training
+replan
+replanned
+replanning
+fartlek
+glute
+glutes
+deadlift
+deadlifts
+overstride
+
+# Names in the privacy notice (the data controller)
+Thamsanqa
+Menzi

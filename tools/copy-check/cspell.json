@@ -1,0 +1,8 @@
+{
+  "version": "0.2",
+  "language": "en-GB",
+  "dictionaryDefinitions": [{ "name": "taperday", "path": "./words.txt", "addWords": false }],
+  "dictionaries": ["taperday"],
+  "allowCompoundWords": false,
+  "minWordLength": 4
+}

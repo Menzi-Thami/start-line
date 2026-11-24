@@ -20,13 +20,13 @@ const completion = (overrides: Partial<SyncedCompletion> = {}): SyncedCompletion
 describe('Strava completion wording', () => {
   it('counts a shorter run as showing up, in the exact words agreed for #177', () => {
     expect(completionFeedback(completion(), 'km')).toBe(
-      "You got out there — that counts. You ran 5.2 km of your planned 8 km today. It's okay to have shorter days. When you're feeling ready, aim for the full session, but don't force it if you're tired or sore.",
+      "You got out there — that counts. You ran 5.2 km of your planned 8 km today. It’s okay to have shorter days. When you’re feeling ready, aim for the full session, but don’t force it if you’re tired or sore.",
     )
   })
 
   it('praises a longer run and nudges towards the planned distance', () => {
     expect(completionFeedback(completion({ actualKm: 11, feedback: 'Longer' }), 'km')).toBe(
-      "Nice work getting your run in! You covered 11 km against 8 km planned. More isn't always better — try to follow your planned distance next time so you can recover well and stay consistent.",
+      "Nice work getting your run in! You covered 11 km against 8 km planned. More isn’t always better — try to follow your planned distance next time so you can recover well and stay consistent.",
     )
   })
 

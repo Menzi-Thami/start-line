@@ -43,7 +43,7 @@ export function BeginnerHomeCard({ today, onOpenProgramme, primary = false, onAv
       <p><strong>Week {progress.week} of 9</strong> · {done} of 27 workouts completed</p>
       <progress value={done} max={27} style={{ width: '100%' }} aria-label="Beginner programme completion" />
       {progress.paused
-        ? <p>Paused — your progress is saved. Resume whenever you're ready.</p>
+        ? <p>Paused — your progress is saved. Resume whenever you’re ready.</p>
         : upcoming ? <p>Next: {upcoming.date} · Run/walk session {upcoming.session.day}</p>
           : <p>All sessions in this week are checked off. Nice work.</p>}
       <button type="button" className={primary ? 'button button-primary' : 'button button-quiet'} onClick={onOpenProgramme}>Open Couch to 5K</button>

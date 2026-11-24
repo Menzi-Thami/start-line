@@ -110,7 +110,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
       </dl>
       <details className="training-story-method">
         <summary>How these numbers were counted</summary>
-        <p>Recorded distance comes from distances you entered or uploaded. Planned distance is not a measurement, and runs not confirmed don't count as done.</p>
+        <p>Recorded distance comes from distances you entered or uploaded. Planned distance is not a measurement, and runs not confirmed don’t count as done.</p>
         <p><strong>Planned distance for confirmed runs:</strong> {formatDistance(story.plannedKmConfirmed, units)}</p>
       </details>
       {story.provisional > 0 && (

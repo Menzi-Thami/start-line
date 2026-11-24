@@ -37,7 +37,7 @@ test('training stays focused while all detail remains reachable @phone', async (
   await expect(page.getByRole('region', { name: 'Today', exact: true })).toContainText('Long run')
   await page.evaluate(() => document.fonts.ready)
   await expect(page.getByRole('tablist', { name: 'Home', exact: true })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: "Open today's workout", exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: "Open today’s workout", exact: true })).toHaveCount(1)
   await expect(page.getByRole('button', { name: 'Log a run manually', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Log this workout', exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Log a run', exact: true })).toHaveCount(0)

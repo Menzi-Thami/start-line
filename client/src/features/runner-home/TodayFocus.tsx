@@ -55,7 +55,7 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
     <p className="plan-kicker">Today</p>
     {session && coach?.get(session)?.status === 'Done' && <span className="chip home-done-chip">Done</span>}
     <h2 id="home-today" className="home-card-heading">{recording ? formatDistance(recording.distanceKm, units) : progress?.kind === 'race' ? 'Race day.' : day?.runs[0]?.title ?? (day?.strength.length ? 'No run today' : progress?.kind === 'before' ? 'Your plan' : 'Rest day')}</h2>
-    {!plan ? failed ? <p>Today’s session will appear when your plan loads.</p> : <div className="skeleton-stack" role="status" aria-label="Loading today's session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>
+    {!plan ? failed ? <p>Today’s session will appear when your plan loads.</p> : <div className="skeleton-stack" role="status" aria-label="Loading today’s session"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>
       : progress?.kind === 'before' ? <p>Your plan starts {formatDate(plan.startDate, 'long')}. Easy running until then.</p>
       : progress?.kind === 'race' ? <p className="home-today-title">{plan.race.name}. Start easy, trust your training and enjoy it.</p>
       : own && own.status !== 'Skipped' ? <><RunResult entry={own} runs={runs} units={units} compact /><p className="home-recorded-source">{own.distanceKm != null || own.duration ? 'Manually logged' : recording ? `${recording.source.kind === 'Strava' ? 'Strava' : 'Upload'} · moving time` : own.activityId ? 'Linked recording is no longer available.' : 'Confirmed without recorded measurements'}</p></>
@@ -77,7 +77,7 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
         setDismissedOn(today)
       }} />
     </section>}
-    {recording ? <button type="button" className="button button-primary" onClick={() => onOpenRun(recording.id)}>Open run details</button> : <button type="button" className="button button-primary" onClick={open}>{progress?.kind === 'race' ? 'Open race day' : plan && onOpenDay && progress?.kind !== 'before' ? "Open today's workout" : 'Open your plan'}</button>}
+    {recording ? <button type="button" className="button button-primary" onClick={() => onOpenRun(recording.id)}>Open run details</button> : <button type="button" className="button button-primary" onClick={open}>{progress?.kind === 'race' ? 'Open race day' : plan && onOpenDay && progress?.kind !== 'before' ? "Open today’s workout" : 'Open your plan'}</button>}
     {/* While the rating is asking, its More details opens this log: one way in, not two. */}
     {session && coach && progress?.kind !== 'race' && (!tickPrompt || own || logging) && <div className="home-manual"><button type="button" className="link-button" aria-expanded={logging} onClick={() => setLogging(value => !value)}>{logging ? 'Close run log' : coach.get(session) ? 'Edit run log' : 'Log a run manually'}</button>{logging && <>{!tickPrompt && <StravaCompletion session={session} coach={coach} />}<CheckInCard session={session} coach={coach} runs={runs} done={!!coach.get(session) && coach.get(session)!.status !== 'Skipped'} compactActions /></>}</div>}
   </section>

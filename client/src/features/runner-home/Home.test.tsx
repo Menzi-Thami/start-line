@@ -90,7 +90,7 @@ describe('Home', () => {
     server.use(http.post('*/api/v1/me/plans/:id/coach', () => failed ? new HttpResponse(null, { status: 503 }) : HttpResponse.json({ id: 'plan-1', plan: plan5k, coaching: [] })))
     const { user } = renderHome({ current, today: '2026-10-20' }, { signIn: true })
     await screen.findByRole('button', { name: 'Retry plan' })
-    expect(screen.queryByRole('status', { name: "Loading today's session" })).toBeNull()
+    expect(screen.queryByRole('status', { name: "Loading today’s session" })).toBeNull()
     failed = false
     await user.click(screen.getByRole('button', { name: 'Retry plan' }))
     const today = screen.getByRole('region', { name: 'Today' })

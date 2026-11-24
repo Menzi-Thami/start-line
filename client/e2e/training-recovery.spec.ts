@@ -220,7 +220,7 @@ test('recovery has its own days; concluded training is read-only, responsive and
   await expect(page.getByRole('heading', { name: 'Parkrun PB', exact: true, level: 2 })).toBeVisible()
   const navigation = page.getByRole('navigation', { name: 'Main', exact: true })
   await navigation.getByRole('button', { name: 'Home', exact: true }).click()
-  await expect(page.getByRole('button', { name: "Open today's workout", exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: "Open today’s workout", exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Open recovery plan', exact: true })).toHaveCount(0)
   await navigation.getByRole('button', { name: 'Plan', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Parkrun PB', exact: true, level: 2 })).toBeVisible()

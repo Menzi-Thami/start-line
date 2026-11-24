@@ -1,0 +1,14 @@
+{
+  "name": "taperday-copy-check",
+  "private": true,
+  "description": "Spelling and copy check for the words runners see. Run from the repository root: node tools/copy-check/copy-check.mjs",
+  "type": "module",
+  "scripts": {
+    "check": "node copy-check.mjs",
+    "test": "node --test copy-check.test.mjs"
+  },
+  "devDependencies": {
+    "cspell": "10.4.0",
+    "typescript": "5.9.3"
+  }
+}

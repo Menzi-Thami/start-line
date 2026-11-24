@@ -40,6 +40,7 @@ import { ProgressInsights } from './ProgressInsights'
 import { PlanCalendar } from './PlanCalendar'
 import { WeekGlance } from './WeekGlance'
 import { canMoveFrom, canMoveTo } from './move-window'
+import { count } from '../../lib/plural'
 import { RunnerLoading } from '../shared/RunnerLoading'
 
 const DaySummary = lazy(() => import('./DaySummary'))
@@ -485,7 +486,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
           Goal <strong>{formatDuration(goalSeconds)}</strong> ({formatPace(plan.goalPaceSecondsPerKm, units)})
         </li>}
         {!concluded && <li>
-          {plan.weeks.length} weeks from {formatDate(plan.startDate)}
+          {count(plan.weeks.length, 'week')} from {formatDate(plan.startDate)}
         </li>}
       </ul>
 

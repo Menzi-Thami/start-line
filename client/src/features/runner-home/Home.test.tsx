@@ -90,7 +90,7 @@ describe('Home', () => {
     server.use(http.post('*/api/v1/me/plans/:id/coach', () => failed ? new HttpResponse(null, { status: 503 }) : HttpResponse.json({ id: 'plan-1', plan: plan5k, coaching: [] })))
     const { user } = renderHome({ current, today: '2026-10-20' }, { signIn: true })
     await screen.findByRole('button', { name: 'Retry plan' })
-    expect(screen.queryByRole('status', { name: "Loading today's session" })).toBeNull()
+    expect(screen.queryByRole('status', { name: "Loading today’s session" })).toBeNull()
     failed = false
     await user.click(screen.getByRole('button', { name: 'Retry plan' }))
     const today = screen.getByRole('region', { name: 'Today' })
@@ -130,7 +130,7 @@ describe('Home', () => {
     const { user, onBuildPlan } = renderHome()
 
     expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Choose my next challenge' }))
+    await user.click(screen.getByRole('button', { name: 'Choose my goal' }))
     expect(onBuildPlan).toHaveBeenCalled()
   })
 
@@ -180,7 +180,7 @@ describe('Home', () => {
     renderHome()
     expect(screen.queryByRole('tablist', { name: 'Home' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Choose my next challenge' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Choose my goal' })).toBeVisible()
   })
 
 
@@ -424,6 +424,13 @@ it('keeps race preparation reachable from today without a second focus card', as
   await user.click(within(today).getByRole('button', { name: 'Race-day checklist and pacing' }))
   expect(onOpenRacePrep).toHaveBeenCalledOnce()
   expect(document.querySelectorAll('.home-focus .button-primary')).toHaveLength(1)
+})
+
+it('says "1 day" the day before the race, never "1 days"', () => {
+  renderHome({ ...withPlan, today: '2026-12-12' })
+  const today = screen.getByRole('region', { name: 'Today' })
+  expect(today).toHaveTextContent('1 day to Parkrun PB')
+  expect(today).not.toHaveTextContent('1 days')
 })
 
 it('keeps race week off Home until the last seven days', () => {

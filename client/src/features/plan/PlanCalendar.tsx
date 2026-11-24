@@ -107,7 +107,7 @@ export function PlanCalendar({ weeks, planStart, raceDate, today, done, addition
           )
         })}
       </div>
-      <p className="field-help plan-calendar-key">✓ Completed · − Cut short · ↗ Activity recorded · • Scheduled · ○ Rest within plan · ◌ Recovery · Unmarked Outside plan. Select a date to preview it, then open day details.</p>
+      <p className="field-help plan-calendar-key">✓ Completed · − Cut short · ↗ Activity recorded · • Scheduled · ○ Rest within plan · ◌ Recovery · Unmarked: outside plan. Select a date to preview it, then open day details.</p>
     </section>
   )
 }

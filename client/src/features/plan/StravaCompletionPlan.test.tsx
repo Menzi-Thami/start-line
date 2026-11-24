@@ -52,7 +52,7 @@ describe('a plan session completed via Strava', () => {
     expect(await screen.findByRole('button', { name: /^Tuesday 13 October 2026:.*Hill repeats.*Recorded via Strava/ })).toBeInTheDocument()
     const day = await openWeekDay('2026-10-13')
     expect(within(day).getByText('Activity recorded via Strava · provisional', { selector: '.day-summary-status' })).toBeInTheDocument()
-    expect(within(day).getByText(/You covered 6\.4 km against 5\.5 km planned\. More isn't always better — try to follow your planned distance next time/)).toBeInTheDocument()
+    expect(within(day).getByText(/You covered 6\.4 km against 5\.5 km planned\. More isn’t always better — try to follow your planned distance next time/)).toBeInTheDocument()
 
     await closePlanDay()
     await userEvent.click(screen.getByRole('tab', { name: 'Calendar' }))

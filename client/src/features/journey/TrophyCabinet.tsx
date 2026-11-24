@@ -45,7 +45,7 @@ export function TrophyCabinet({ history, units, onMajor, onRace, onLocalRace }: 
     kicker: 'TAPERDAY · TROPHY CABINET', heading: 'EARNED IN MILES.', raceName: 'My Marathon Majors collection',
     stats: [{ value: `${earnedCount}/${history.majors.length}`, label: 'Major events finished' }],
     medals: history.majors.map(major => ({ label: major.city, earned: finishes.some(race => race.major === major.id && race.majorEligible) })),
-    footer: `${finishes.length} RACE FINISHES · MY COLLECTION · taperday.run`,
+    footer: `${finishes.length} RACE ${finishes.length === 1 ? 'FINISH' : 'FINISHES'} · MY COLLECTION · taperday.run`,
   }, [earnedCount, finishes, history.majors, units])
   return <section className="trophy-cabinet" aria-labelledby="cabinet-title">
     <header className="cabinet-heading">

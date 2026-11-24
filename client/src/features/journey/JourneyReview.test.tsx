@@ -17,10 +17,10 @@ const result = raceResult({ raceDate: run.localDate, finishTime: '02:06:15', dis
 const award = { id: 'race-award', kind: 'RaceFinished' as const, planId: PLAN_ID, earnedOn: run.localDate, awardedAt: '2026-11-15T10:00:00Z', celebratedAt: null }
 const local = { total: 10, completed: 4, provisional: 0, distanceKm: 32, weeks: 4, allConfirmed: false, trainingEnded: true, racePassed: true, earned: false, visible: true }
 
-function Screen({ recordings = [run] }: { recordings?: ActivitySummary[] }) {
+function Screen({ recordings = [run], onOpenRecovery }: { recordings?: ActivitySummary[]; onOpenRecovery?: (raceId?: string) => void }) {
   const journey = useJourney(true)
   return <JourneyPanel plan={plan} today="2026-11-15" units="km" planId={PLAN_ID} journey={journey} local={local}
-    runs={recordings} onLoadActivity={async () => ({ ...run, elapsedSeconds: 7575 }) as unknown as Activity} runDays={['Tuesday', 'Thursday', 'Saturday']} />
+    runs={recordings} onOpenRecovery={onOpenRecovery} onLoadActivity={async () => ({ ...run, elapsedSeconds: 7575 }) as unknown as Activity} runDays={['Tuesday', 'Thursday', 'Saturday']} />
 }
 const show = (recordings?: ActivitySummary[]) => render(<AuthContext.Provider value={auth}><Screen recordings={recordings} /></AuthContext.Provider>)
 afterEach(() => vi.restoreAllMocks())
@@ -51,7 +51,7 @@ describe('Review my race handoff', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.getByText('THE WORK BEHIND THE FINISH')).not.toBeVisible()
     expect(screen.queryByText('Want a gentle recovery plan?')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Start recovery plan' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Explore recovery options' })).toBeVisible()
     expect(save).toHaveBeenCalledTimes(1)
     expect(save).toHaveBeenCalledWith('test-token', PLAN_ID, expect.objectContaining({ finishTime: '02:06:15', distanceKm: 20.3, activityId: run.id, timeKind: 'RecordedElapsed' }))
     view.unmount()
@@ -73,4 +73,14 @@ describe('Review my race handoff', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'I finished' })).not.toBeInTheDocument()
   })
+})
+
+it('opens recovery options for the exact saved race without starting recovery on the review screen', async () => {
+  vi.spyOn(api.me.journey, 'get').mockResolvedValue(journeyOf([chapter({ raceResult: result })]))
+  const start = vi.spyOn(api.me.journey, 'startRecovery')
+  const onOpenRecovery = vi.fn()
+  render(<AuthContext.Provider value={auth}><Screen onOpenRecovery={onOpenRecovery} /></AuthContext.Provider>)
+  await userEvent.click(await screen.findByRole('button', { name: 'Explore recovery options' }))
+  expect(onOpenRecovery).toHaveBeenCalledWith(result.id)
+  expect(start).not.toHaveBeenCalled()
 })

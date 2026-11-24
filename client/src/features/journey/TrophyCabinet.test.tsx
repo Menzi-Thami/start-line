@@ -19,3 +19,10 @@ describe('a cabinet for every runner', () => {
     expect(save.mock.calls[0]?.[0]).not.toHaveProperty('medals')
   })
 })
+
+it('uses a singular finish in the exported card for one eligible Major', async () => {
+  const save = vi.spyOn(sharing, 'downloadCard').mockResolvedValue('png')
+  render(<TrophyCabinet history={{ races: [raceMemory({ major: 'London', majorEligible: true })], majors: majorDefinitions }} units="km" onMajor={vi.fn()} onRace={vi.fn()} />)
+  await userEvent.click(screen.getByRole('button', { name: 'Save cabinet card' }))
+  expect(save.mock.calls[0]?.[0].footer).toMatch(/^1 RACE FINISH ·/)
+})

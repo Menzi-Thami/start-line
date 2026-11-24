@@ -52,6 +52,20 @@ public class GoalOutlookTests
     };
 
     [Fact]
+    public void Ultra_build_advice_uses_an_ultra_instead_of_a_ultra()
+    {
+        var p = new PlanParameters(Distance.FromKilometres(56), TimeSpan.FromHours(7),
+            new DateOnly(2027, 2, 28), Today,
+            [DayOfWeek.Tuesday, DayOfWeek.Thursday, DayOfWeek.Saturday, DayOfWeek.Sunday],
+            DayOfWeek.Sunday, 10, Experience.New, GeneratorVersion: TrainingPlanGenerator.OriginalVersion);
+
+        var outlook = Assess(p);
+
+        outlook.Reasons.ShouldContain(r => r.Message.Contains("an ultra", StringComparison.Ordinal));
+        outlook.Reasons.ShouldNotContain(r => r.Message.Contains("a ultra", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void A_goal_slower_than_todays_fitness_points_higher()
     {
         var outlook = Assess(Marathon(Hm(4, 0)), TenKInFifty);

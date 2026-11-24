@@ -73,7 +73,11 @@ describe('Past plan race recordings', () => {
     await user.click(await screen.findByRole('button', { name: 'View chapter' }))
     expect(await screen.findByRole('heading', { name: 'Finished in 4:39:12' })).toBeInTheDocument()
     await user.click(screen.getByText('Race details & corrections'))
-    await user.click(screen.getByRole('button', { name: 'Undo' }))
+    await user.click(screen.getByRole('button', { name: 'Remove saved result' }))
+    expect(saved).not.toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Keep it' }))
+    expect(saved).not.toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Remove saved result' }))
     await user.click(screen.getByRole('button', { name: 'Remove result' }))
     expect(await screen.findByRole('heading', { name: 'We found your Past marathon.' })).toBeInTheDocument()
     expect(saved).toBeNull()
@@ -91,7 +95,7 @@ describe('Past plan race recordings', () => {
     function Flow() {
       const [recoveryPage, setRecoveryPage] = useState(false)
       const journey = useJourney(true)
-      return recoveryPage ? <RecoveryPlanPage journey={journey} today="2026-11-14" units="km" onNewRace={vi.fn()} onOpenJourney={vi.fn()} />
+      return recoveryPage ? <RecoveryPlanPage journey={journey} today="2026-11-14" units="km" onNewRace={vi.fn()} onOpenJourney={vi.fn()} onOpenRaces={vi.fn()} />
         : <RunningJourney units="km" today="2026-11-14" onOpenRecovery={() => setRecoveryPage(true)} />
     }
     render(<AuthContext.Provider value={auth}><Flow /></AuthContext.Provider>)

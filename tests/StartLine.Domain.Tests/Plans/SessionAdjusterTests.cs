@@ -50,6 +50,20 @@ public sealed class SessionAdjusterTests
     private static SessionAdjustmentRequest PaceOf(int day, int seconds) => new(Monday.AddDays(day), AdjustmentKind.Pace, PaceSecondsPerKm: seconds);
 
     [Fact]
+    public void Shortened_hill_repeats_explain_the_change_with_a_grammatical_session_name()
+    {
+        var original = Plan();
+        var week = original.Weeks[0];
+        var hills = week.Sessions.Select(s => s.Date == Monday.AddDays(1) ? s with { Type = SessionType.Hills, Title = "Hill repeats" } : s).ToArray();
+        var plan = original with { Weeks = [week with { Sessions = hills }, .. original.Weeks.Skip(1)] };
+
+        var result = Ask(Km(1, 6), plan: plan);
+
+        result.Reason.ShouldContain("This hill repeats session doesn't fit into 6 km");
+        result.After!.Type.ShouldBe(SessionType.Easy);
+    }
+
+    [Fact]
     public void A_shorter_easy_run_stays_an_easy_run_at_the_same_pace()
     {
         var result = Ask(Km(3, 5));

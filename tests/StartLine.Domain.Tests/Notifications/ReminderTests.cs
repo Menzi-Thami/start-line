@@ -291,4 +291,16 @@ public sealed class ReminderTests
         headsUp.Body.ShouldStartWith("Easy run: 6 km at ");
         headsUp.Body.ShouldEndWith("Lay out your kit tonight and start easy. This is where your plan begins.");
     }
+
+    [Theory]
+    [InlineData("12 km", "a 12 km")]
+    [InlineData("8 km", "an 8 km")]
+    [InlineData("8.5 km", "an 8.5 km")]
+    [InlineData("11 km", "an 11 km")]
+    [InlineData("18 km", "an 18 km")]
+    [InlineData("80 km", "an 80 km")]
+    [InlineData("110 km", "a 110 km")]
+    [InlineData("1 mi", "a 1 mi")]
+    public void A_long_run_takes_the_article_it_is_said_with(string figure, string expected) =>
+        Reminders.WithArticle(figure).ShouldBe(expected);
 }

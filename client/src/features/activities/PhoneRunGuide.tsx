@@ -18,7 +18,7 @@ export function PhoneRunGuide({ onOpenConnections, onOpenPlan }: Props) {
       <details className="device-guide"><summary>Help connecting my app or watch</summary><RunningAppGuides /></details>
       {onOpenPlan && <>
         <h3>No file for a training run?</h3>
-        <p className="field-help">In your current training plan, use <strong>Log a run</strong> to save the time and distance you know. A manual log does not add GPS data or recording analysis.</p>
+        <p className="field-help">Open a day in your current training plan, then use <strong>Log a run</strong> to save the time and distance you know. A manual log does not add GPS data or recording analysis.</p>
         <button type="button" className="button button-quiet" onClick={onOpenPlan}>Open my training plan</button>
       </>}
     </div>

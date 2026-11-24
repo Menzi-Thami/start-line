@@ -195,7 +195,7 @@ public static class Reminders
         var key = runs.Where(s => IsHard(s.Type)).Select(s => $"{s.Title} on {s.Date.DayOfWeek}").ToList();
         if (runs.Where(s => IsLong(s.Type)).OrderByDescending(s => s.DistanceKm).FirstOrDefault() is { } longRun)
         {
-            key.Add($"a {Distance(longRun.DistanceKm, units)} long run on {longRun.Date.DayOfWeek}");
+            key.Add($"{WithArticle(Distance(longRun.DistanceKm, units))} long run on {longRun.Date.DayOfWeek}");
         }
 
         var total = Distance(runs.Sum(s => s.DistanceKm), units);
@@ -221,6 +221,10 @@ public static class Reminders
         parts.Count == 1 ? parts[0] : $"{string.Join(", ", parts.Take(parts.Count - 1))} and {parts[^1]}";
 
     /// <summary>A distance in the runner's units, to a tenth: "8 km", "5.2 mi".</summary>
+    /// <summary>"a" or "an" before a number as it is said: "an 8 km", "an 18 km", "a 12 km".</summary>
+    public static string WithArticle(string figure) =>
+        (figure.StartsWith('8') || System.Text.RegularExpressions.Regex.IsMatch(figure, @"^1[18](\D|$)") ? "an " : "a ") + figure;
+
     public static string Distance(double km, Units units) => units == Units.Miles
         ? $"{(km / KmPerMile).ToString("0.#", CultureInfo.InvariantCulture)} mi"
         : $"{km.ToString("0.#", CultureInfo.InvariantCulture)} km";

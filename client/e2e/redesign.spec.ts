@@ -132,7 +132,7 @@ for (const width of [320, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     for (const screen of ['home', 'builder', 'runs', 'account']) {
       await page.goto(`/e2e/fixtures/redesign-screens.html?screen=${screen}`)
-      if (screen === 'home') await expect(page.getByRole('button', { name: "Open today's workout" })).toBeVisible()
+      if (screen === 'home') await expect(page.getByRole('button', { name: "Open today’s workout" })).toBeVisible()
       if (screen === 'builder') {
         await expect(page.getByRole('button', { name: 'Build my plan' })).toBeVisible()
         const framed = await page.locator('.plan-builder-flow[data-framed]').count()

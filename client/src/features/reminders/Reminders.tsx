@@ -175,7 +175,7 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
       <section className="section callout" aria-label="Enable notifications">
         <h3>Want a reminder for your day?</h3>
         {support === 'home-screen-first' ? (
-          <p>On iPhone or iPad, add Taperday to your Home Screen from Safari’s Share menu, then open it from there to turn reminders on.</p>
+          <p>On iPhone or iPad, add Taperday to your home screen from Safari’s Share menu, then open it from there to turn reminders on.</p>
         ) : (
           <>
             <p>A short note about the day’s training, around 06:00. Change it any time in Account.</p>

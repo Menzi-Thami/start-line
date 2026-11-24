@@ -8,9 +8,9 @@ import { useRaceHistory } from './useRaceHistory'
 import type { useJourney } from './useJourney'
 import './journey.css'
 
-export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onOpenTraining }: {
+export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onOpenRaces, onOpenTraining }: {
   journey: ReturnType<typeof useJourney>; today: string; units: Units
-  onNewRace: () => void; onOpenJourney: () => void; onOpenTraining?: () => void
+  onNewRace: () => void; onOpenJourney: () => void; onOpenRaces: () => void; onOpenTraining?: () => void
 }) {
   const data = journey.state.kind === 'ready' ? journey.state.journey : null
   const existing = data?.recovery ?? null
@@ -67,7 +67,7 @@ export function RecoveryPlanPage({ journey, today, onNewRace, onOpenJourney, onO
     {!maintaining && !recovery && !source && races.state.kind === 'ready' && <section className="panel">
       <h2 className="journey-subtitle">Ready when you are.</h2>
       <p>Recovery starts from a saved race. Review your race, or add one you ran outside Taperday under Races &amp; trophies.</p>
-      <button type="button" className="button button-primary" onClick={onOpenJourney}>Review my race</button>
+      <button type="button" className="button button-primary" onClick={onOpenRaces}>Review my race</button>
     </section>}
     {maintaining && data?.maintenance && <div className="panel"><MaintenanceCard maintenance={data.maintenance} today={today} onEnd={actions.endMaintenance} onNewRace={onNewRace} /></div>}
     <div className="journey-actions">

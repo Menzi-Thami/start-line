@@ -219,7 +219,7 @@ export function RunSticker({ run, units, prominent = false }: { run: StickerRun;
               </div>
               <p className="field-help">
                 For videos, save the transparent PNG and add it in your video editor. A picture cannot contain a clickable link:
-                add https://taperday.run separately using the platform's Link sticker. This is the Taperday homepage,
+                add https://taperday.run separately using the platform’s Link sticker. This is the Taperday homepage,
                 not a public page exposing your run. Sharing availability depends on your device.
               </p>
             </>

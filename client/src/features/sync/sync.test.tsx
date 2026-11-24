@@ -67,6 +67,8 @@ describe('connecting Strava from Account', () => {
 
     expect(await screen.findByText(/never where you ran/)).toBeInTheDocument()
     expect(screen.getByText(/seven days at a time/)).toBeInTheDocument()
+    expect(screen.getByText(/Runs you upload are yours/)).toBeInTheDocument()
+    expect(screen.queryByText(/Uploaded .fit files are yours/)).not.toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Powered by Strava' })).toBeInTheDocument()
   })
 
@@ -203,7 +205,7 @@ describe('coming back from Strava', () => {
       </AuthContext.Provider>,
     )
 
-    expect(await screen.findByText(/Strava is connected. Your runs from the last six weeks are on their way/)).toBeInTheDocument()
+    expect(await screen.findByText(/Strava is connected. Your runs from the last six weeks are on their way/)).toBeVisible()
     expect(sent).toEqual({ code: 'the-code', state: 'the-state', scope: 'read,activity:read_all' })
     expect(window.location.pathname).toBe('/')
     expect(window.location.search).toBe('?view=account')
@@ -219,6 +221,13 @@ describe('coming back from Strava', () => {
       </AuthContext.Provider>,
     )
 
-    expect(await screen.findByText('Strava wasn’t connected, and nothing was shared with Taperday.')).toBeInTheDocument()
+    expect(await screen.findByText('Strava wasn’t connected, and nothing was shared with Taperday.')).toBeVisible()
   })
+})
+
+it('shows the provider outcome when it arrives after the connection section has mounted', async () => {
+  const view = section(available)
+  await screen.findByRole('button', { name: 'Connect with Strava' })
+  view.rerender(<AuthContext.Provider value={auth}><StravaSection notice="Strava was not connected. Try again when ready." /></AuthContext.Provider>)
+  expect(screen.getByRole('status')).toHaveTextContent('Strava was not connected. Try again when ready.')
 })

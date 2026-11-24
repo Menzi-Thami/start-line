@@ -23,6 +23,13 @@ describe('Training story sharing', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('Shared.')
   })
 
+  it('says "1 confirmed training run over 1 week", never "1 runs" or "1 weeks"', async () => {
+    const story = { ...storyFromChapter(chapter()), confirmedRuns: 1, scheduledRuns: 1, weeks: 1 }
+    render(<TrainingStory story={story} units="km" raceResult={raceResult({ finishTime: '00:25:00' })} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Share my story' }))
+    expect(shareCard).toHaveBeenLastCalledWith(expect.anything(), expect.stringContaining('1 confirmed training run over 1 week.'), expect.anything(), null)
+  })
+
   it('keeps an unfinished race out of the finish card and share text', async () => {
     render(<TrainingStory story={storyFromChapter(chapter())} units="km" raceResult={raceResult({ outcome: 'DidNotFinish', finishTime: null })} />)
     await userEvent.click(screen.getByRole('button', { name: 'Share my story' }))

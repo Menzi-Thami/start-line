@@ -3,6 +3,7 @@ import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDistance, formatShortDay as shortDay, type Units } from '../../lib/format'
 import type { RunData, TotalsBreakdown } from '../../lib/types'
+import { count } from '../../lib/plural'
 
 type State = { kind: 'loading' } | { kind: 'ready'; data: RunData } | { kind: 'error'; message: string }
 
@@ -18,10 +19,6 @@ function isRunData(value: unknown): value is RunData {
     && Array.isArray(data.totals) && Array.isArray(data.syncIssues) && typeof data.missing === 'object' && data.missing !== null
 }
 
-function plural(count: number, one: string, many = `${one}s`) {
-  return `${count} ${count === 1 ? one : many}`
-}
-
 /** What makes up a total: every kilometre traced to where it came from, and runs that counted with no distance. */
 function Breakdown({ totals, units }: { totals: TotalsBreakdown; units: Units }) {
   const label = totals.period === 'week' ? 'This week' : 'This month'
@@ -33,7 +30,7 @@ function Breakdown({ totals, units }: { totals: TotalsBreakdown; units: Units })
   return (
     <div className="run-data-total">
       <p className="run-data-total-head">
-        <strong>{label}</strong> <span className="mono">{formatDistance(totals.totalKm, units)}</span> from {plural(totals.runs, 'run')}
+        <strong>{label}</strong> <span className="mono">{formatDistance(totals.totalKm, units)}</span> from {count(totals.runs, 'run')}
       </p>
       {rows.length > 0 && (
         <table className="run-data-table">
@@ -43,14 +40,14 @@ function Breakdown({ totals, units }: { totals: TotalsBreakdown; units: Units })
               <tr key={row.name}>
                 <th scope="row">{row.name}</th>
                 <td className="mono">{formatDistance(row.km, units)}</td>
-                <td>{plural(row.runs, 'run')}</td>
+                <td>{count(row.runs, 'run')}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
       {totals.withoutDistance > 0 && (
-        <p className="field-help">{plural(totals.withoutDistance, 'run')} counted without a distance: ticked off with no distance and no linked run.</p>
+        <p className="field-help">{count(totals.withoutDistance, 'run')} counted without a distance: ticked off with no distance and no linked run.</p>
       )}
     </div>
   )
@@ -106,7 +103,7 @@ export function RunDataPanel({ units, refreshKey }: Props) {
   const retry = () =>
     act('retry', async (token) => {
       const { retried } = await api.me.retryStrava(token)
-      return retried > 0 ? `Trying ${plural(retried, 'run')} from Strava again.` : 'Nothing to retry.'
+      return retried > 0 ? `Trying ${count(retried, 'run')} from Strava again.` : 'Nothing to retry.'
     })
 
   const data = state.kind === 'ready' ? state.data : null
@@ -118,8 +115,8 @@ export function RunDataPanel({ units, refreshKey }: Props) {
     <details className="settings-group run-data" onToggle={(event) => setOpen(event.currentTarget.open)}>
       <summary>
         Your run data
-        {attention > 0 && <span className="field-error"> · {plural(attention, 'run')} from Strava didn’t arrive</span>}
-        {attention === 0 && skipped > 0 && <span className="field-help"> · {plural(skipped, 'recording')} skipped</span>}
+        {attention > 0 && <span className="field-error"> · {count(attention, 'run')} from Strava didn’t arrive</span>}
+        {attention === 0 && skipped > 0 && <span className="field-help"> · {count(skipped, 'recording')} skipped</span>}
       </summary>
 
       {state.kind === 'loading' && <p className="field-help" role="status">Checking your runs…</p>}
@@ -146,7 +143,7 @@ export function RunDataPanel({ units, refreshKey }: Props) {
             <h3 id="run-data-sources">Sources</h3>
             <ul className="run-data-list">
               <li>
-                {plural(data.sources.uploads, 'uploaded run')}
+                {count(data.sources.uploads, 'uploaded run')}
                 {data.sources.uploads > 0 && (
                   <span className="field-help">
                     {' '}({[['FIT', data.sources.fit], ['GPX', data.sources.gpx], ['TCX', data.sources.tcx], ['earlier uploads', data.sources.unknownFormat]]
@@ -161,7 +158,7 @@ export function RunDataPanel({ units, refreshKey }: Props) {
                 {data.sources.stravaConnected ? (
                   <>
                     Strava {data.sources.stravaStatus === 'NeedsReconnect' ? <strong>needs connecting again</strong> : 'connected'}
-                    {data.sources.lastSyncedAt ? `, last synced ${shortDay(data.sources.lastSyncedAt)}` : ''}. {plural(data.sources.strava, 'run')} held
+                    {data.sources.lastSyncedAt ? `, last synced ${shortDay(data.sources.lastSyncedAt)}` : ''}. {count(data.sources.strava, 'run')} held
                     for up to 7 days at a time{data.sources.stravaPending > 0 ? `, ${data.sources.stravaPending} still arriving` : ''}.
                   </>
                 ) : (

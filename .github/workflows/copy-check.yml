@@ -1,0 +1,39 @@
+name: 1 - Copy check
+
+# Step 1 of shipping, beside the checks: spelling and house style for every word a runner reads (screens, dialogs,
+# errors, notifications and emails). cspell and the TypeScript parser are pinned in tools/copy-check/package-lock.json.
+# Reviewed words live in tools/copy-check/words.txt. Nothing is corrected automatically.
+# Runs on every pull request, docs-only ones too: it takes about a minute and needs no database or browser.
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: [main, staging]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('copy-pr-{0}', github.ref) || format('copy-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: tools/copy-check
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: client/.nvmrc
+          cache: npm
+          cache-dependency-path: tools/copy-check/package-lock.json
+      - run: npm ci --ignore-scripts
+      - name: The check catches what it should and leaves code alone
+        run: npm test
+      - name: Spelling and copy
+        run: npm run check

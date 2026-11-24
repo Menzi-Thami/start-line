@@ -177,6 +177,8 @@ export function App() {
     setNavigated(true)
   }
   const [openRun, setOpenRun] = useState<OpenRun | null>(runFromUrl)
+  // Bumped when Plan is tapped on Couch to 5K, which brings it back to This week.
+  const [beginnerWeek, setBeginnerWeek] = useState(0)
   // Strava's answer when the runner comes back from connecting, read once and handled when they're signed in.
   const [stravaCallback] = useState(() => readStravaCallback(window.location))
   const stravaHandled = useRef(false)
@@ -537,8 +539,14 @@ export function App() {
     if (item === 'runs') return go('runs')
     if (item === 'journey') return go('journey')
     if (item === 'account') return go('account')
-    // Couch to 5K is a plan of its own: Plan stays lit on it, and tapping Plan there opens the runner's race plan if they have one.
-    if (view === 'beginner') return ownPlan ? openOwnPlan('week') : undefined
+    // Couch to 5K is a plan of its own: Plan stays lit on it, and tapping Plan there opens the runner's race plan if they
+    // have one, or else brings Couch to 5K back to This week, as it does on a race plan.
+    if (view === 'beginner') {
+      if (ownPlan) return openOwnPlan('week')
+      setBeginnerWeek(n => n + 1)
+      window.scrollTo?.({ top: 0 })
+      return
+    }
     if (!ownPlan && (recovering || maintaining) && !(view === 'build' && plan.kind === 'ready' && plan.plan.race.date >= today && !editing)) return go('recovery')
     const tab = 'week'
     if (view === 'build' && plan.kind === 'ready' && !editing) {
@@ -604,6 +612,10 @@ export function App() {
   const openRecovery = (raceId?: string) => {
     go('recovery')
     if (raceId) window.history.replaceState(null, '', `?view=recovery&race=${encodeURIComponent(raceId)}`)
+  }
+  const openRaces = () => {
+    go('journey')
+    window.history.replaceState(null, '', '?view=journey&section=races')
   }
   const openChapter = (planId?: string) => {
     go('journey')
@@ -697,6 +709,8 @@ export function App() {
   const openSaved = (request: GeneratePlanRequest) => {
     const inputs = fromRequest(request)
     if (!inputs) return
+    landing.current = true
+    setLanded(true)
     setView('build')
     // Remount the form so it shows the saved plan's choices, not whatever was typed before.
     setBuilderKey((k) => k + 1)
@@ -947,7 +961,7 @@ export function App() {
         {view === 'sign-in' && state.kind === 'signed-out' && <SignInLanding onSignIn={auth.signIn} onSignUp={auth.signUp} onGoogle={auth.signInWithGoogle} onBack={() => go('build')} />}
         {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty" role="status"><p>{state.kind === 'loading' || state.kind === 'ready' ? 'Finding your training plan…' : state.kind === 'error' && state.needsSignIn ? 'Your sign-in needs renewing. Continue securely to return to your training.' : 'Finish your account setup to continue.'}</p>{state.kind === 'needs-sign-up' && <button type="button" className="button" onClick={() => go('sign-up')}>Finish setting up your account</button>}</div>}
         {view === 'onboarding' && state.kind === 'ready' && (
-          <StravaWelcome notice={stravaNotice} connecting={stravaConnecting} onContinue={leaveStravaWelcome} />
+          <StravaWelcome hasPlan={plan.kind === 'ready'} notice={stravaNotice} connecting={stravaConnecting} onContinue={leaveStravaWelcome} />
         )}
         {view === 'privacy' && <PrivacyPolicy />}
         {view === 'unsubscribe' && <Unsubscribe token={new URLSearchParams(window.location.search).get('t')} weekly={new URLSearchParams(window.location.search).get('list') === 'weekly'} onOpenAccount={() => go('account')} />}
@@ -989,7 +1003,7 @@ export function App() {
           </section>
         )}
 
-        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account') && state.kind === 'loading' && (
+        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account' || view === 'beginner' || view === 'onboarding') && state.kind === 'loading' && (
           <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} quietUntilSlow={view === 'home' && !!homeRunner} />
         )}
 
@@ -1027,14 +1041,14 @@ export function App() {
         {view === 'beginner' && !gated && (state.kind === 'ready' || state.kind === 'signed-out' || state.kind === 'off') && (
           <section aria-label="Your Couch to 5K programme" className="beginner-page">
             <button type="button" className="link-button" onClick={() => go(state.kind === 'ready' ? 'home' : 'build')}>← Back</button>
-            <CouchTo5K />
+            <CouchTo5K showWeek={beginnerWeek} />
           </section>
         )}
 
         {view === 'journey' && state.kind === 'ready' && (
           <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} onOpenRecovery={openRecovery} journey={journey} />
         )}
-        {view === 'recovery' && state.kind === 'ready' && <RecoveryPlanPage key={state.runner.id} units={units} today={today} journey={journey} onNewRace={startFresh} onOpenJourney={() => openChapter()} onOpenTraining={ownPlan ? () => openOwnPlan() : undefined} />}
+        {view === 'recovery' && state.kind === 'ready' && <RecoveryPlanPage key={state.runner.id} units={units} today={today} journey={journey} onNewRace={startFresh} onOpenJourney={() => openChapter()} onOpenRaces={openRaces} onOpenTraining={ownPlan ? () => openOwnPlan() : undefined} />}
         {view === 'runs' && state.kind === 'ready' && (
           compact ? (
             openRun ? (
@@ -1214,7 +1228,7 @@ export function App() {
                 journeyPlanId={savedOnScreen && state.kind === 'ready' ? savedOnScreen : null}
                 onNewRace={startFresh}
                 onOpenJourney={() => openChapter()}
-                onOpenRecovery={() => openRecovery()}
+                onOpenRecovery={openRecovery}
                 onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                 // The bar's Home does this job wherever the bar is shown.
                 onBack={state.kind === 'ready' && !showBar ? () => go('home') : undefined}

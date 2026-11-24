@@ -20,15 +20,15 @@ describe('optional Strava welcome', () => {
 
     expect(screen.getByRole('heading', { name: 'Bring your runs with you.' })).toBeInTheDocument()
     expect(await screen.findByRole('button', { name: 'Connect with Strava' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: "I'll connect later" }))
+    await userEvent.click(screen.getByRole('button', { name: "I’ll connect later" }))
     expect(continueToPlan).toHaveBeenCalledTimes(1)
   })
 
   it('does not block the runner if Strava integration is unavailable', async () => {
     server.use(http.get('*/api/v1/me/sync/strava', () => HttpResponse.json(stravaOff)))
     render(<AuthContext.Provider value={auth}><StravaWelcome onContinue={() => undefined} /></AuthContext.Provider>)
-    await waitFor(() => expect(screen.getByText(/Strava connections aren't available right now/)).toBeInTheDocument())
-    expect(screen.getByRole('button', { name: "I'll connect later" })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText(/Strava connections aren’t available right now/)).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: "I’ll connect later" })).toBeInTheDocument()
   })
 
   it('recognises an active existing connection after an OAuth return', async () => {
@@ -37,6 +37,14 @@ describe('optional Strava welcome', () => {
       connectedAt: '2026-11-12T06:00:00Z', lastSyncedAt: null, syncedRuns: 0,
     })))
     render(<AuthContext.Provider value={auth}><StravaWelcome notice="Strava is connected." onContinue={() => undefined} /></AuthContext.Provider>)
-    expect(await screen.findByRole('button', { name: 'Continue to my plan' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Choose my training goal' })).toBeInTheDocument()
   })
+})
+
+it('continues to an already built plan after connecting Strava', async () => {
+  server.use(http.get('*/api/v1/me/sync/strava', () => HttpResponse.json({ ...stravaOff, available: true, connected: true, status: 'Active' })))
+  const onContinue = vi.fn()
+  render(<AuthContext.Provider value={auth}><StravaWelcome hasPlan onContinue={onContinue} /></AuthContext.Provider>)
+  await userEvent.click(await screen.findByRole('button', { name: 'Continue to my plan' }))
+  expect(onContinue).toHaveBeenCalledOnce()
 })

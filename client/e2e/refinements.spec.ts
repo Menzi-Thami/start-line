@@ -34,7 +34,7 @@ for (const width of [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920]) {
     const today = page.getByRole('region', { name: 'Today', exact: true })
     const week = page.getByRole('region', { name: 'This week', exact: true })
     const setup = page.getByRole('region', { name: /Get set up/ })
-    await expect(today.getByRole('button', { name: "Open today's workout" })).toBeInViewport()
+    await expect(today.getByRole('button', { name: "Open today’s workout" })).toBeInViewport()
     await expect(setup).toHaveCount(0)
     const heroBox = (await today.boundingBox())!
     const weekBox = (await week.boundingBox())!
@@ -99,9 +99,9 @@ for (const mode of ['no-plan', 'race-week', 'expired', 'error', 'long-name']) {
     await mockApi(page, mode === 'error')
     await page.setViewportSize({ width: 320, height: 900 })
     await page.goto(`/e2e/fixtures/redesign-screens.html?screen=home&mode=${mode}`)
-    if (mode === 'no-plan') await expect(page.getByRole('button', { name: 'Choose my next challenge', exact: true })).toBeVisible()
+    if (mode === 'no-plan') await expect(page.getByRole('button', { name: 'Choose my goal', exact: true })).toBeVisible()
     else if (mode === 'error') await expect(page.getByRole('button', { name: 'Retry plan' })).toBeVisible()
-    else await expect(page.getByRole('button', { name: mode === 'race-week' ? 'Open race day' : "Open today's workout" })).toBeVisible()
+    else await expect(page.getByRole('button', { name: mode === 'race-week' ? 'Open race day' : "Open today’s workout" })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
   })
 }

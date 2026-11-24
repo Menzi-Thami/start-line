@@ -27,8 +27,8 @@ export function completionFeedback(completion: SyncedCompletion, units: Units): 
   const figures = plannedVsActual(completion, units)
   if (!figures || completion.feedback === 'Near' || completion.feedback === 'Unmeasured') return 'Run recorded. Nice work showing up today.'
   if (completion.feedback === 'Shorter') {
-    return `You got out there — that counts. You ran ${figures.actual} of your planned ${figures.planned} today. It's okay to have shorter days. When you're feeling ready, aim for the full session, but don't force it if you're tired or sore.`
+    return `You got out there — that counts. You ran ${figures.actual} of your planned ${figures.planned} today. It’s okay to have shorter days. When you’re feeling ready, aim for the full session, but don’t force it if you’re tired or sore.`
   }
   const measure = completion.measure === 'Duration' ? 'time' : 'distance'
-  return `Nice work getting your run in! You covered ${figures.actual} against ${figures.planned} planned. More isn't always better — try to follow your planned ${measure} next time so you can recover well and stay consistent.`
+  return `Nice work getting your run in! You covered ${figures.actual} against ${figures.planned} planned. More isn’t always better — try to follow your planned ${measure} next time so you can recover well and stay consistent.`
 }

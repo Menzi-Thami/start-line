@@ -26,9 +26,10 @@ export function StravaSection({ notice, connecting = false, onStatusChange, onOp
   const [state, setState] = useState<State>({ kind: 'loading' })
   const [busy, setBusy] = useState(false)
   const [confirming, setConfirming] = useState(false)
-  const [message, setMessage] = useState<string | null>(notice ?? null)
+  const [message, setMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    if (connecting) return
     let cancelled = false
     auth
       .getToken()
@@ -38,7 +39,7 @@ export function StravaSection({ notice, connecting = false, onStatusChange, onOp
     return () => {
       cancelled = true
     }
-  }, [auth])
+  }, [auth, connecting])
 
   useEffect(() => {
     onStatusChange?.(state.kind === 'ready' ? state.status : state.kind === 'error' ? 'error' : null)
@@ -88,8 +89,12 @@ export function StravaSection({ notice, connecting = false, onStatusChange, onOp
       )
     })
 
+  // OAuth can finish after this section mounts. Derive incoming feedback from the current prop, not its initial value.
+  const feedback = message ?? notice
+  const feedbackView = feedback && <p className="callout" role="status">{feedback}</p>
   if (state.kind === 'ready' && !state.status.available && !state.status.connected) return <div className="section strava-section">
     <h3>Automatic imports</h3>
+    {feedbackView}
     <p className="field-help">Automatic Strava imports are currently unavailable. You can still upload a FIT, GPX or TCX recording.</p>
     {onOpenRuns && <button type="button" className="link-button" onClick={onOpenRuns}>Open Runs</button>}
   </div>
@@ -97,11 +102,7 @@ export function StravaSection({ notice, connecting = false, onStatusChange, onOp
   return (
     <div className="section strava-section">
       <h3>Runs from Strava</h3>
-      {message && (
-        <p className="callout" role="status">
-          {message}
-        </p>
-      )}
+      {feedbackView}
       {connecting && (
         <RunnerLoading label="Finishing connecting Strava…" compact immediate />
       )}
@@ -159,7 +160,7 @@ export function StravaSection({ notice, connecting = false, onStatusChange, onOp
       <p className="field-help">
         Taperday reads each run’s time, distance, elevation and heart rate, never where you ran. Strava’s rules allow a copy for seven days at a time, so
         Taperday fetches your runs again while you stay connected. Disconnect, here or in Strava’s settings, and the copies are deleted straight away.
-        Uploaded .fit files are yours and stay until you delete them.
+        Runs you upload are yours and stay until you delete them.
       </p>
       <PoweredByStrava />
     </div>

@@ -20,6 +20,6 @@ describe('Couch to 5K navigation views', () => {
     expect(screen.getByText('Confirmed workouts')).toBeInTheDocument()
     expect(screen.getByText('Recorded via Strava')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Week 1: 1 confirmed, 1 recorded via Strava, 1 scheduled' })).toBeInTheDocument()
-    expect(screen.getByText(/don't judge whether you followed every interval/)).toBeInTheDocument()
+    expect(screen.getByText(/don’t judge whether you followed every interval/)).toBeInTheDocument()
   })
 })

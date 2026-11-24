@@ -28,7 +28,7 @@ export function ShoePicker({ run }: { run: Activity }) {
   // Retired pairs stay listed only when this run is already on one.
   const choices = shoes.filter((s) => !s.retired || s.id === worn)
   if (choices.length === 0) {
-    return <p className="field-help shoe-picker">Add your shoes in Account › Shoes to count their kilometres.</p>
+    return <p className="field-help shoe-picker">Add your shoes in Account › Profile › More to count their kilometres.</p>
   }
 
   const change = async (shoeId: string) => {

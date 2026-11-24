@@ -4,6 +4,7 @@ import { formatClock } from './journey-model'
 import { downloadCard, prepareCard, shareCard, type CardContent } from './share-card'
 import { highlights, type StoryData } from './journey-story'
 import type { RaceResult } from './types'
+import { count } from '../../lib/plural'
 
 interface Props {
   story: StoryData
@@ -43,7 +44,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
   }), [finishTime, isFinisher, raceResult, story.confirmedRuns, story.scheduledRuns, story.weeks,
     story.recordedKm, story.plannedKmConfirmed, story.earned, story.raceName, units])
   const shareText = isFinisher
-    ? `I finished ${story.raceName}${finishTime ? ` in ${finishTime}` : ''}! My Taperday story: ${story.confirmedRuns} confirmed training runs over ${story.weeks} weeks. #Taperday`
+    ? `I finished ${story.raceName}${finishTime ? ` in ${finishTime}` : ''}! My Taperday story: ${count(story.confirmedRuns, 'confirmed training run')} over ${count(story.weeks, 'week')}. #Taperday`
     : `My Taperday training story for ${story.raceName}: ${story.confirmedRuns} of ${story.scheduledRuns} training runs confirmed over ${story.weeks} weeks. #Taperday`
   const fileName = isFinisher ? 'taperday-race-finish' : 'taperday-training-story'
   const needsFile = typeof navigator.share === 'function'
@@ -110,12 +111,12 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
       </dl>
       <details className="training-story-method">
         <summary>How these numbers were counted</summary>
-        <p>Recorded distance comes from distances you entered or uploaded. Planned distance is not a measurement, and runs not confirmed don't count as done.</p>
+        <p>Recorded distance comes from distances you entered or uploaded. Planned distance is not a measurement, and runs not confirmed don’t count as done.</p>
         <p><strong>Planned distance for confirmed runs:</strong> {formatDistance(story.plannedKmConfirmed, units)}</p>
       </details>
       {story.provisional > 0 && (
         <p className="training-story-note">
-          {story.provisional} more {story.provisional === 1 ? 'run was' : 'runs were'} matched from Strava but not confirmed. Cached copies aren’t counted until you confirm the runs.
+          {story.provisional} more {story.provisional === 1 ? 'run was' : 'runs were'} matched from Strava but not confirmed. They aren’t counted until you confirm them.
         </p>
       )}
       {(story.skippedRuns > 0 || story.scheduledRuns > story.confirmedRuns) && !story.earned && (

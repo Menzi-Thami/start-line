@@ -5,11 +5,12 @@ import { StravaSection } from './StravaSection'
 interface Props {
   onContinue: () => void
   notice?: string | null
+  hasPlan?: boolean
   connecting?: boolean
 }
 
 /** An optional first-run step, using the same Strava OAuth and privacy copy as Account. */
-export function StravaWelcome({ onContinue, notice, connecting = false }: Props) {
+export function StravaWelcome({ onContinue, notice, connecting = false, hasPlan = false }: Props) {
   const [status, setStatus] = useState<StravaStatus | 'error' | null>(null)
   const ready = status !== null && status !== 'error'
   const connected = ready && status.connected && status.status !== 'NeedsReconnect'
@@ -21,17 +22,17 @@ export function StravaWelcome({ onContinue, notice, connecting = false }: Props)
       <p>Connect a free Strava account once. Record on your phone, or link your running app or watch to Strava, and shared recordings arrive in Taperday automatically. No paid Strava subscription is required.</p>
       <StravaSection key={notice ?? 'initial'} notice={notice} connecting={connecting} onStatusChange={setStatus} />
       {ready && !status.available && !status.connected && (
-        <p className="field-help" role="status">Strava connections aren't available right now. You can still build your plan and connect later.</p>
+        <p className="field-help" role="status">Strava connections aren’t available right now. You can still build your plan and connect later.</p>
       )}
       {status === 'error' && (
-        <p className="field-help">Couldn't check Strava right now. You can continue and connect later in Account.</p>
+        <p className="field-help">Couldn’t check Strava right now. You can continue and connect later in Account.</p>
       )}
       <div className="submit-row">
         <button type="button" className={connected ? 'button button-primary' : 'button button-quiet'} onClick={onContinue}>
-          {connected ? 'Continue to my plan' : "I'll connect later"}
+          {connected ? (hasPlan ? 'Continue to my plan' : 'Choose my training goal') : "I’ll connect later"}
         </button>
       </div>
-      <p className="field-help">Optional. You can use Taperday without Strava and upload a run from My runs at any time.</p>
+      <p className="field-help">Optional. You can use Taperday without Strava and upload a run from Runs at any time.</p>
     </section>
   )
 }

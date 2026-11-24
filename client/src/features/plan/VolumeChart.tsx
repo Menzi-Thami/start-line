@@ -3,6 +3,7 @@ import { formatDistance, type Units } from '../../lib/format'
 import type { PlanWeek } from '../../lib/types'
 import { PHASES } from './copy'
 import { trainingKm, weekLabels } from './plan-math'
+import { count } from '../../lib/plural'
 
 interface Props {
   weeks: PlanWeek[]
@@ -49,7 +50,7 @@ export function VolumeChart({ weeks, units, currentWeek, ran }: Props) {
       <div
         className={`volume-plot${weeks.length > LABEL_EVERY_BAR ? ' is-dense' : ''}`}
         role={weeks.length ? 'slider' : 'img'}
-        aria-label={`Weekly distance over ${weeks.length} weeks, peaking at ${formatDistance(values[biggest] ?? 0, units)}. ${detail ?? 'Use arrow keys to explore individual weeks.'}`}
+        aria-label={`Weekly distance over ${count(weeks.length, 'week')}, peaking at ${formatDistance(values[biggest] ?? 0, units)}. ${detail ?? 'Use arrow keys to explore individual weeks.'}`}
         aria-valuemin={weeks.length ? 1 : undefined}
         aria-valuemax={weeks.length || undefined}
         aria-valuenow={weeks.length ? (selectedIndex ?? 0) + 1 : undefined}

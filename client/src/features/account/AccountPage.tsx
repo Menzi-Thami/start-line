@@ -47,13 +47,16 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
     notifications: linked.group === 'notifications',
     data: linked.group === 'data',
   }))
+  const [acknowledgedNotice, setAcknowledgedNotice] = useState(stravaNotice)
+  const newConnectionNotice = !!stravaNotice && stravaNotice !== acknowledgedNotice
   const [shoesOpen, setShoesOpen] = useState(linked.shoes)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [newCalendarLink, setNewCalendarLink] = useState(false)
   const [status, setStatus] = useState<{ kind: 'idle' } | { kind: 'busy' } | { kind: 'error'; message: string }>({ kind: 'idle' })
 
   const group = (id: Group, title: string, body: ReactNode) => (
-    <details className="settings-group" id={`account-${id}`} open={open[id]} onToggle={(event) => {
+    <details className="settings-group" id={`account-${id}`} open={open[id] || id === 'connections' && newConnectionNotice} onToggle={(event) => {
+      if (id === 'connections') setAcknowledgedNotice(stravaNotice)
       const next = event.currentTarget.open
       setOpen((current) => current[id] === next ? current : { ...current, [id]: next })
     }}>

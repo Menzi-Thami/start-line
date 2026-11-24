@@ -2,6 +2,7 @@ import { formatDate } from '../../lib/format'
 import type { PlanWeek, TrainingPlan } from '../../lib/types'
 import { ExerciseLibrary, ExerciseList } from './ExerciseList'
 import { setsDone, type DoneUpdate } from './strength-progress'
+import { count } from '../../lib/plural'
 
 interface Props {
   plan: TrainingPlan
@@ -46,7 +47,7 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength, re
         const progress = setsDone(done, session)
         return (
           <details className="strength-session strength-disclosure" key={session.date}>
-            <summary><span>{formatDate(session.date)} · {session.title}</span><span className="field-help">{session.exercises.length} exercises · {progress.done}/{progress.total} sets done</span></summary>
+            <summary><span>{formatDate(session.date)} · {session.title}</span><span className="field-help">{count(session.exercises.length, 'exercise')} · {progress.done}/{progress.total} sets done</span></summary>
             <div className="this-week-head">
               <h3 id={`strength-${session.date}`}>
                 {formatDate(session.date, 'weekday')} {formatDate(session.date, 'dayMonth')} · {session.title}

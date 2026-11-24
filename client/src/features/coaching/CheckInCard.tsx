@@ -229,11 +229,11 @@ export function CheckInCard({
           </div>
           {activityId && (
             <p className="field-help">
-              This entry links to the imported run without duplicating it. Strava details follow its seven-day cache; enter your own
+              This entry links to the imported run without duplicating it. Strava details are only kept for seven days; enter your own
               distance and time manually to keep a lasting record.
             </p>
           )}
-          {!activityId && originalActivityId && <p className="field-help">Enter your own measurements below. The activity association prevents this run being counted twice; imported measurements are not copied.</p>}
+          {!activityId && originalActivityId && <p className="field-help">Enter your own measurements below. This run is linked, so it isn’t counted twice. Numbers from the recording aren’t copied.</p>}
           {!skipped && (
             <>
               <div className="field">

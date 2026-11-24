@@ -5,6 +5,7 @@ import { ZONES } from '../plan/copy'
 import { CoachNote } from './CoachNote'
 import type { RemainingWeekActions } from './RemainingWeekAdjustment'
 import type { LifeHappensActions } from '../plan/LifeHappens'
+import { count } from '../../lib/plural'
 
 export interface AdjustmentActions extends Partial<RemainingWeekActions> {
   review: (recovery?: RecoveryReadiness) => Promise<CoachingProposal>
@@ -98,7 +99,7 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
                   prescribed
                 </li>
                 <li>
-                  {proposal.review.substitutions} substitutions · {proposal.review.unknownDistances} runs without a reported distance
+                  {count(proposal.review.substitutions, 'substitution')} · {count(proposal.review.unknownDistances, 'run')} without a reported distance
                 </li>
                 {proposal.review.recoveryFromCheckIn && (
                   <li>

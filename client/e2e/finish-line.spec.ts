@@ -55,7 +55,7 @@ test.describe('finish line journey', () => {
     await expect(page.getByRole('button', { name: 'I finished', exact: true })).toHaveCount(0)
 
     // Recovery is offered, optional, and shaped by the runner's answers.
-    await page.getByRole('button', { name: 'Start recovery plan', exact: true }).click()
+    await page.getByRole('button', { name: 'Explore recovery options', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Want a gentle recovery plan?' })).toBeVisible()
     await page.getByText('Adjust recovery preferences', { exact: true }).click()
     await page.getByRole('radio', { name: /All out/, includeHidden: true }).check()
@@ -95,7 +95,7 @@ test.describe('finish line journey', () => {
     await page.getByRole('button', { name: 'Confirm my recorded finish' }).click()
     const film = page.getByRole('dialog', { name: 'RACE FINISHED.' })
     await expect(film).toBeVisible()
-    await film.getByRole('button', { name: 'Close the Finish Line' }).click()
+    await film.getByRole('button', { name: 'Close the finish line' }).click()
     await expect(page.getByRole('heading', { name: 'Finished in 4:40:12' })).toBeVisible()
     await expect(page.locator('.race-result-event')).toHaveText('Mandela Marathon')
     await expect(page.locator('.race-result.is-saved .plan-kicker')).toContainText('Finished')
@@ -121,7 +121,7 @@ test.describe('finish line journey', () => {
     await expect(page.getByRole('textbox', { name: 'Minutes' })).toHaveValue('40')
     await page.getByRole('button', { name: 'Save race result' }).dblclick()
     await expect(page.getByRole('dialog', { name: 'RACE FINISHED.' })).toBeVisible()
-    await page.getByRole('button', { name: 'Close the Finish Line' }).click()
+    await page.getByRole('button', { name: 'Close the finish line' }).click()
     await expect(page.getByRole('heading', { name: 'Finished in 4:40:12' })).toBeVisible()
     await page.getByText('Race details & corrections', { exact: true }).click()
     await page.getByRole('button', { name: 'Edit result' }).click()
@@ -134,7 +134,7 @@ test.describe('finish line journey', () => {
     await noSideScroll(page)
     await accessible(page)
     await page.getByText('Race details & corrections', { exact: true }).click()
-    await page.getByRole('button', { name: 'Undo' }).click()
+    await page.getByRole('button', { name: 'Remove saved result' }).click()
     await page.getByRole('button', { name: 'Remove result' }).click()
     await expect(page.getByRole('heading', { name: 'We found your Mandela Marathon.' })).toBeVisible()
     await expect(page.getByText('✓ Race finisher')).toHaveCount(0)
@@ -186,7 +186,7 @@ test.describe('finish line journey', () => {
     await noSideScroll(page)
     await accessible(page)
     await confirm.click()
-    await page.getByRole('button', { name: 'Close the Finish Line' }).click()
+    await page.getByRole('button', { name: 'Close the finish line' }).click()
     await expect(page.getByRole('heading', { name: 'Finished in 4:40:12' })).toBeVisible()
   })
 
@@ -280,7 +280,7 @@ test.describe('finish line journey', () => {
     await expect(film).toBeVisible()
     await expect(film.getByText('YOU DID IT.')).toBeVisible()
     await page.screenshot({ path: shot('02-finish-film-reduced-motion-phone-dark') })
-    await film.getByRole('button', { name: 'Close the Finish Line' }).click()
+    await film.getByRole('button', { name: 'Close the finish line' }).click()
     await expect(page.getByRole('button', { name: 'Replay finish line' })).toBeFocused()
   })
 

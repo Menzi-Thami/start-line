@@ -19,6 +19,7 @@ import { RunWalkChip } from './RunWalkChip'
 import { canMoveFrom } from './move-window'
 import { Runner } from '../shared/Runner'
 import { isStrength } from '../../lib/strength'
+import { count } from '../../lib/plural'
 
 interface Props {
   dedicated?: boolean
@@ -170,7 +171,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
 
         {strengthSessions.length > 0 && <section aria-labelledby={`${id}-strength`} className="day-summary-section day-summary-strength">
           <h4 id={`${id}-strength`}>Strength</h4>
-          <p className="day-summary-status">{strengthSessions.map(session => session.title).join(', ')} · {strengthSessions.reduce((sum, session) => sum + session.exercises.length, 0)} exercises</p>
+          <p className="day-summary-status">{strengthSessions.map(session => session.title).join(', ')} · {count(strengthSessions.reduce((sum, session) => sum + session.exercises.length, 0), 'exercise')}</p>
           {completedStrength.length > 0 && <p className="day-summary-status">Strength completed on this device.</p>}
           <p className="field-help">Exercises and sets are kept in the Strength tab, separate from your run and run analysis.</p>
           {onOpenStrength && <button type="button" className="button button-quiet" onClick={onOpenStrength}>Open strength workouts</button>}

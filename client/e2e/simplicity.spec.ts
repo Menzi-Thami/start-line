@@ -152,7 +152,7 @@ for (const entry of ['Home link', 'fresh device'] as const) test(`failed current
   await expect(page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Runs', exact: true })).toBeVisible()
   failed = false
   await page.getByRole('button', { name: 'Retry current plan', exact: true }).click()
-  await expect(page.getByRole('button', { name: "Open today's workout", exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: "Open today’s workout", exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Retry current plan', exact: true })).toHaveCount(0)
 })
 
@@ -176,7 +176,7 @@ for (const mode of ['light', 'dark'] as const) {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto(fixture)
     await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)
-    const primary = page.getByRole('button', { name: "Open today's workout", exact: true })
+    const primary = page.getByRole('button', { name: "Open today’s workout", exact: true })
     await expect(primary).toBeVisible()
     for (const width of [320, 390, 820, 2560]) {
       await page.setViewportSize({ width, height: 900 })
@@ -203,10 +203,10 @@ for (const scene of scenes) for (const mode of ['light', 'dark'] as const) {
       const primary = page.locator('.home-focus .button-primary')
       await expect(primary).toHaveCount(scene === 'failed' ? 0 : 1)
       await expect(page.getByText(/Add training feedback|Coaching, insights and tools/)).toHaveCount(0)
-      if (scene === 'training') await expect(primary).toHaveText("Open today's workout")
+      if (scene === 'training') await expect(primary).toHaveText("Open today’s workout")
       if (scene === 'synced') { await expect(primary).toHaveText('Open run details'); await expect(page.locator('.home-today')).toContainText('8.4 km'); await expect(page.getByRole('textbox')).toHaveCount(0) }
       if (scene === 'race-review') await expect(primary).toHaveText('Review my race')
-      if (scene === 'race-saved') { await expect(primary).toHaveText('Start recovery plan'); await expect(page.locator('.journey-home')).toContainText('Recording elapsed time') }
+      if (scene === 'race-saved') { await expect(primary).toHaveText('Explore recovery options'); await expect(page.locator('.journey-home')).toContainText('Recording elapsed time') }
       if (['recovery', 'paused', 'safety'].includes(scene)) await expect(primary).toHaveText('Open recovery plan')
       if (['recovery-ended', 'settled'].includes(scene)) { await expect(primary).toHaveText('Choose my next challenge'); await expect(page.getByText('Recovered', { exact: true })).toHaveCount(0) }
       if (scene === 'maintenance') { await expect(primary).toHaveText('Open easy running'); await expect(page.getByRole('button', { name: 'Train for another race' })).toBeVisible() }

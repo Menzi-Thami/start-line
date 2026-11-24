@@ -20,6 +20,7 @@ import { BeginnerHomeCard } from './BeginnerHomeCard'
 import { LatestRun } from './LatestRun'
 import { TodayFocus } from './TodayFocus'
 import { useHomePlan, useAvailableRecordings, type HomePlan } from './home-data'
+import { count } from '../../lib/plural'
 import './home-navigation.css'
 
 export interface HomeProps {
@@ -91,7 +92,7 @@ export function Home(props: HomeProps) {
         {!pending && !afterTraining && !current && <BeginnerHomeCard today={today} primary onAvailable={setBeginnerActive} onOpenProgramme={props.onOpenBeginner ?? onBuildPlan} />}
         {!pending && !afterTraining && current && <TodayFocus plan={plan} failed={failed} today={today} units={units} runs={available} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={props.onOpenDay} onOpenRacePrep={props.onOpenRacePrep} onOpenRun={onOpenRun} />}
         {!pending && !afterTraining && current && plan && week && plan.race.date !== today && <section className="home-week-preview" aria-label="This week">
-          <div><h2 className="home-card-heading">Your week</h2><p className="field-help">Week {week.number} of {plan.weeks.length} · {plan.race.name}</p><p className="field-help">{formatDistance(plan.race.distanceKm, units)} · {formatDate(plan.race.date)} · {week.phase}</p><p className="field-help">{doneRuns} of {weekRuns.length} runs</p></div>
+          <div><h2 className="home-card-heading">Your week</h2><p className="field-help">Week {week.number} of {plan.weeks.length} · {plan.race.name}</p><p className="field-help">{formatDistance(plan.race.distanceKm, units)} · {formatDate(plan.race.date)} · {week.phase}</p><p className="field-help">{doneRuns} of {count(weekRuns.length, 'run')}</p></div>
           <button type="button" className="link-button" onClick={onOpenPlan}>View this week</button>
         </section>}
         {!pending && !afterTraining && plan && coach && <NotificationTick plan={plan} today={today} coach={coach} />}

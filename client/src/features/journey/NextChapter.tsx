@@ -66,7 +66,7 @@ function MaintenanceForm({ runDays, onStart, onCancel }: { runDays: DayOfWeek[];
     try {
       await onStart({ daysPerWeek: days.length, runDays: days, includeStrength: strength })
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Maintenance couldn’t start. Try again.')
+      setError(reason instanceof Error ? reason.message : 'Easy running couldn’t start. Try again.')
     } finally {
       setBusy(false)
     }
@@ -134,11 +134,11 @@ export function MaintenanceCard({ maintenance, today, onEnd, onNewRace, compact 
       {!compact && (
         <div className="journey-actions">
           {onNewRace && <button type="button" className="button" onClick={onNewRace}>Train for another race</button>}
-          {!confirm && <button type="button" className="button button-quiet" onClick={() => setConfirm(true)}>Stop maintenance</button>}
+          {!confirm && <button type="button" className="button button-quiet" onClick={() => setConfirm(true)}>Stop easy running</button>}
         </div>
       )}
       {confirm && (
-        <div className="journey-confirm" role="group" aria-label="Stop maintenance">
+        <div className="journey-confirm" role="group" aria-label="Stop easy running">
           <p>Stop your easy-running schedule? Your runs and history stay.</p>
           <button type="button" className="button" disabled={busy} onClick={() => void end()}>{busy ? 'Stopping…' : 'Stop'}</button>
           <button type="button" className="button button-quiet" onClick={() => setConfirm(false)}>Keep it</button>

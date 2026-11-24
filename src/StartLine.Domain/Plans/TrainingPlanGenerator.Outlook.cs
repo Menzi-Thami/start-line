@@ -182,7 +182,7 @@ public static partial class TrainingPlanGenerator
         if (lowVolume)
         {
             return new("build-thin",
-                $"Building safely from where you are can't reach the {Km(usualPeakKm)} a week a {race} usually needs in the time left. " +
+                $"Building safely from where you are can't reach the {Km(usualPeakKm)} a week {WithArticle(race)} usually needs in the time left. " +
                 "More weeks or a more forgiving goal would help.");
         }
 
@@ -190,12 +190,12 @@ public static partial class TrainingPlanGenerator
         {
             return new("build-kept",
                 $"The plan now builds to {Km(peakKm)} a week, {Percent(peakKm / writtenPeakKm)} of the {Km(writtenPeakKm)} it was first written for. " +
-                $"That's {share} of the {Km(usualPeakKm)} a {race} usually needs.");
+                $"That's {share} of the {Km(usualPeakKm)} {WithArticle(race)} usually needs.");
         }
 
         return adjusted
-            ? new("build-kept", $"The changes barely touch your peak: the plan still builds to {Km(peakKm)} a week, enough for a {race}.")
-            : new("build-enough", $"The plan builds to {Km(peakKm)} a week at its peak, {share} of the {Km(usualPeakKm)} a {race} usually needs: enough.");
+            ? new("build-kept", $"The changes barely touch your peak: the plan still builds to {Km(peakKm)} a week, enough for {WithArticle(race)}.")
+            : new("build-enough", $"The plan builds to {Km(peakKm)} a week at its peak, {share} of the {Km(usualPeakKm)} {WithArticle(race)} usually needs: enough.");
     }
 
     private static string Summary(GoalVerdict verdict, TimeSpan goal, TimeSpan? suggested, bool adjusted, bool lowVolume) => verdict switch
@@ -242,6 +242,8 @@ public static partial class TrainingPlanGenerator
         Setback.Behind => "running less than planned",
         _ => "missed training",
     };
+
+    private static string WithArticle(string race) => (race.StartsWith('u') ? "an " : "a ") + race;
 
     private static string Label(DistanceCategory category) => category switch
     {

@@ -23,3 +23,11 @@ updates:
     target-branch: staging
     schedule:
       interval: weekly
+  - package-ecosystem: npm
+    directory: /tools/copy-check
+    target-branch: staging
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]

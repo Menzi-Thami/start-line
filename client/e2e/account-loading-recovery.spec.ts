@@ -127,3 +127,17 @@ for (const motion of ['no-preference', 'reduce'] as const) {
     expect(state.reads()).toBe(1)
   })
 }
+
+for (const view of ['beginner', 'onboarding']) {
+  test(`${view} deep link keeps a visible account wait until the account answers @phone`, async ({ page }) => {
+    const state = await connection(page)
+    await page.goto(`http://127.0.0.1:5176/e2e/fixtures/journey.html?view=${view}`)
+    await expect.poll(() => state.held.length).toBe(1)
+    const wait = page.getByRole('status', { name: 'Checking your account', exact: true })
+    await expect(wait).toBeVisible()
+    state.recover()
+    for (const route of state.held) await route.fulfill({ json: { id: 'synthetic-journey-runner', displayName: 'Naledi', timeZone: 'UTC', units: 'Kilometres', privacyNoticeVersion: '2026-10-21', needsPrivacyConsent: false } })
+    await expect(wait).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: view === 'beginner' ? 'Couch to 5K' : 'Bring your runs with you.' })).toBeVisible()
+  })
+}

@@ -8,18 +8,14 @@
   gap: var(--space-3);
 }
 .account-warmup-heading { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--space-3); align-items: center; }
-.account-warmup h2 { font-size: clamp(1.15rem, 3.5vw, 1.45rem); line-height: 1.25; margin: var(--space-1) 0 var(--space-2); overflow-wrap: anywhere; }
-.account-warmup-kicker { color: var(--ink); font-size: var(--text-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.account-warmup h2 { font-size: clamp(1.15rem, 3.5vw, 1.45rem); line-height: 1.25; margin: 0 0 var(--space-2); overflow-wrap: anywhere; }
 .account-warmup-visual { position: relative; height: 92px; display: grid; place-items: center; overflow: hidden; color: var(--accent); }
 .account-warmup-visual .runner { position: relative; margin-bottom: 9px; }
-.account-warmup-track { position: absolute; inset: auto 0 8px; height: 2px; background: repeating-linear-gradient(90deg, var(--ink) 0 12px, transparent 12px 28px); background-size: 28px 100%; opacity: .5; animation: account-warmup-track 1s linear infinite; }
-.account-warmup[data-paused='true'] .account-warmup-track,
-.account-warmup[data-paused='true'] .limb { animation-play-state: paused; }
-.account-warmup-tip { padding-top: var(--space-3); border-top: 1px solid var(--line); }
-.account-warmup-tip-label { display: flex; justify-content: space-between; gap: var(--space-2); font-size: var(--text-xs); font-weight: 700; margin-bottom: var(--space-2); }
-.account-warmup-controls { display: flex; flex-wrap: wrap; column-gap: var(--space-4); }
-.account-warmup-controls .link-button { min-height: 44px; }
+.account-warmup-track { position: absolute; inset: auto 0 8px; height: 2px; background: repeating-linear-gradient(90deg, var(--ink) 0 12px, transparent 12px 28px); background-size: 28px 100%; opacity: .5; animation: account-warmup-track 1s linear 5; }
+/* About five seconds of running, then the runner rests: the words and buttons carry the rest of the wait (WCAG 2.2.2). */
+.account-warmup .runner .limb { animation-iteration-count: 16; }
 .account-warmup .submit-row { flex-wrap: wrap; }
+.account-warmup .submit-row .link-button { min-height: 44px; }
 @keyframes account-warmup-track { to { background-position: -28px 0; } }
 @media (max-width: 360px) { .account-warmup { padding: var(--space-4); } .account-warmup-heading { grid-template-columns: 54px minmax(0, 1fr); gap: var(--space-2); } }
 @media (prefers-reduced-motion: reduce) { .account-warmup *, .account-warmup *::before, .account-warmup *::after { animation: none; transition: none; } }

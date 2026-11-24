@@ -1,0 +1,55 @@
+/* Purposeful waiting without an artificial delay. Reuse Taperday's runner and its existing motion tokens. */
+.runner-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: min(100%, 35rem);
+  min-width: 0;
+  padding: var(--space-5) var(--space-3);
+  color: var(--ink);
+  /* A fast load finishes before this shows, so nothing flashes. The space is held from the start, so nothing shifts. */
+  animation: runner-loading-in 180ms ease-out 220ms both;
+}
+.runner-loading-immediate { animation: none; }
+.runner-loading-compact { gap: var(--space-3); padding: var(--space-2) 0; }
+.runner-loading-visual {
+  position: relative;
+  width: 116px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 116px;
+  overflow: hidden;
+  color: var(--accent);
+}
+.runner-loading-compact .runner-loading-visual { width: 78px; height: 54px; flex-basis: 78px; }
+.runner-loading-visual .runner { position: relative; z-index: 1; margin-bottom: 6px; }
+/* About five seconds of motion, then the runner rests and the words carry the wait: nothing loops forever (WCAG 2.2.2). */
+.runner-loading .runner .limb { animation-iteration-count: 16; }
+.runner-loading-track {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  opacity: .5;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 12px, transparent 12px 28px);
+  background-size: 28px 100%;
+  animation: runner-loading-track 1s linear 5;
+}
+.runner-loading-copy { flex: 1 1 0; min-width: 0; }
+.runner-loading-label { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+.runner-loading-detail { margin: var(--space-1) 0 0; }
+.runner-loading-actions { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin-top: var(--space-2); }
+.runner-loading-actions button { min-height: 44px; }
+@keyframes runner-loading-track { to { background-position: -28px 0; } }
+@keyframes runner-loading-in { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 360px) {
+  .runner-loading { gap: var(--space-2); padding-inline: 0; }
+  .runner-loading-visual { width: 76px; flex-basis: 76px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Still no flash on fast loads, but no fade: it simply appears, with a still runner. */
+  .runner-loading { animation-duration: 1ms; }
+  .runner-loading-track, .runner-loading .limb { animation: none; }
+}

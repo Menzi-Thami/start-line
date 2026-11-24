@@ -5,7 +5,7 @@ import { AuthContext, type Auth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import type { ActivitySummary, PersonalBest, StravaStatus } from '../../lib/types'
 import { stravaOff } from '../../test/server'
-import { POLL_MS, VISIBLE_POLL_MS, useSyncedRuns } from './useSyncedRuns'
+import { POLL_MS, VISIBLE_POLL_MS, forgetSyncedRuns, useSyncedRuns } from './useSyncedRuns'
 
 const auth: Auth = { enabled: true, loading: false, account: { id: 'runner-a', name: 'Runner A', email: null }, error: null,
   signIn: vi.fn(), signUp: vi.fn(), signOut: vi.fn(), getToken: () => Promise.resolve('token-a') }
@@ -26,6 +26,7 @@ function setup(enabled = true) {
 }
 
 beforeEach(() => {
+  forgetSyncedRuns()
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2026-11-17T06:35:00Z'))
   vi.spyOn(api.me, 'activities').mockResolvedValue([])
@@ -183,5 +184,53 @@ describe('recordings and automatic imports without a training plan', () => {
     const disabled = vi.mocked(api.me.activities).mock.calls.length
     await act(async () => document.dispatchEvent(new Event('visibilitychange')))
     expect(api.me.activities).toHaveBeenCalledTimes(disabled)
+  })
+})
+
+describe('moving between screens', () => {
+  it('shows the same runner’s last recordings at once while they refresh, and never another runner’s', async () => {
+    vi.mocked(api.me.activities).mockResolvedValue([run])
+    const first = setup()
+    await settle()
+    expect(first.result.current.runs).toEqual([run])
+    first.unmount()
+    const pending = deferred<ActivitySummary[]>()
+    vi.mocked(api.me.activities).mockReturnValueOnce(pending.promise)
+    const again = setup()
+    expect(again.result.current.runs).toEqual([run])
+    expect(again.result.current.loading).toBe(true)
+    await act(async () => pending.resolve([]))
+    expect(again.result.current.runs).toEqual([])
+    again.unmount()
+    const other = { ...auth, account: { id: 'runner-b', name: 'Runner B', email: null }, getToken: () => Promise.resolve('token-b') }
+    const { result } = renderHook(() => useSyncedRuns(true, false), {
+      wrapper: ({ children }: { children: ReactNode }) => <AuthContext.Provider value={other}>{children}</AuthContext.Provider>,
+    })
+    expect(result.current.runs).toBeUndefined()
+  })
+
+  it('does not show a Strava copy that expired while the runner was elsewhere', async () => {
+    vi.mocked(api.me.activities).mockResolvedValue([{ ...run, source: { ...run.source, cachedUntil: '2026-11-17T06:36:00Z' } }])
+    const first = setup()
+    await settle()
+    expect(first.result.current.runs).toHaveLength(1)
+    first.unmount()
+    vi.setSystemTime(new Date('2026-11-17T06:37:00Z'))
+    vi.mocked(api.me.activities).mockReturnValue(new Promise(() => {}))
+    expect(setup().result.current.runs).toEqual([])
+  })
+
+  it('reads recordings once on opening when the catch-up brings nothing new, twice when it does', async () => {
+    setup()
+    await settle()
+    await settle()
+    expect(api.me.strava.catchUp).toHaveBeenCalledOnce()
+    expect(api.me.activities).toHaveBeenCalledOnce()
+    vi.mocked(api.me.activities).mockClear()
+    vi.mocked(api.me.strava.catchUp).mockResolvedValue({ ...connected, syncedRuns: 1, lastSyncedAt: '2026-11-17T06:35:00Z' })
+    setup()
+    await settle()
+    await settle()
+    expect(api.me.activities).toHaveBeenCalledTimes(2)
   })
 })

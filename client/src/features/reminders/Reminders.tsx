@@ -3,6 +3,7 @@ import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { addressOf, currentSubscription, deviceKeyOf, notificationsBlocked, pushSupport, subscribe, unsubscribe } from '../../lib/push'
 import type { NotificationPreferences, ReminderDevice } from '../../lib/types'
+import { RunnerLoading } from '../shared/RunnerLoading'
 
 const DEFAULT_TIME = '06:00'
 const NEW_PREFERENCES: NotificationPreferences = {
@@ -192,7 +193,7 @@ export function RemindersSection({ offer = false }: { offer?: boolean }) {
       <h3 id={ids.heading}>Reminders</h3>
       <p>Reminders on this device, at times in your profile’s time zone.</p>
 
-      {state.kind === 'loading' && <p className="loading-line">Checking reminders…</p>}
+      {state.kind === 'loading' && <RunnerLoading label="Checking reminders…" compact />}
       {state.kind === 'error' && (
         <p className="field-error" role="alert">
           {state.message}

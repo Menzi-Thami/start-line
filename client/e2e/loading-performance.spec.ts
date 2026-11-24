@@ -120,6 +120,8 @@ test('signed-in journey: request counts and time to Today on a cold start', asyn
   const details = startup.find(hit => hit.method === 'GET' && hit.path === '/api/v1/me/plans/{id}')!
   const coach = startup.find(hit => hit.method === 'POST' && hit.path === '/api/v1/me/plans/{id}/coach')!
   expect(coach.start).toBeLessThan(details.end)
+  const checkIns = startup.find(hit => hit.path === '/api/v1/me/plans/{id}/check-ins')!
+  expect(checkIns.start).toBeLessThan(details.end)
   // Opening the runner's own plan from Home uses the coached copy Home already has: no regeneration first.
   const plan = Object.entries(steps).find(([name]) => name.startsWith('Plan'))![1]
   expect(plan.counts['POST /api/v1/plans'] ?? 0).toBe(0)

@@ -48,8 +48,11 @@ export function Home(props: HomeProps) {
   const afterTraining = isPostTrainingHome(data, current === undefined ? undefined : current?.id ?? null, today) || !!stored && !current || !!current && !!data?.chapters.find(chapter => chapter.planId === current.id)?.raceResult
   const pending = current === undefined || current === null && journey.state.kind === 'loading'
   const { plan, failed, retry } = useHomePlan(afterTraining ? null : current, initialPlan, onPlanLoaded, props.pendingPlanId)
-  const checkIns = useCheckIns(afterTraining ? null : current?.id ?? null)
-  const synced = useSyncedCompletions(afterTraining ? null : current?.id ?? null, completionsKey(checkIns.entries, available))
+  // The plan list already names the plan, so its check-ins and Strava completions load alongside its details.
+  // Reads only: anything that changes the plan still waits for the confirmed plan (planId below).
+  const readPlanId = afterTraining ? null : current?.id ?? (current === undefined ? props.pendingPlanId ?? null : null)
+  const checkIns = useCheckIns(readPlanId)
+  const synced = useSyncedCompletions(readPlanId, completionsKey(checkIns.entries, available))
   const auth = useAuth()
   const planId = afterTraining ? null : current?.id ?? null
   const signedIn = async () => { const token = await auth.getToken(); if (!token) throw new Error('Sign in again to update your week.'); return token }

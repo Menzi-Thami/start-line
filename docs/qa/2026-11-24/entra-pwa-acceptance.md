@@ -87,12 +87,12 @@ No changes to the service worker were needed: it never caches API or identity re
 | Client scope is exactly `api://<API AzureAd:ClientId>/Plans.ReadWrite` | PASS |
 | API `AzureAd:Scope` | Unset, so the code default `Plans.ReadWrite` applies |
 | API `AzureAd:Audience` | Unset, so Microsoft.Identity.Web accepts the API client ID. Correct, because the staging API app issues v2 tokens (next row) |
-| Staging origin registered under the **Single-page application** platform on Taperday Web (staging) | PASS (owner screenshot, admin centre) |
-| Taperday API (staging), the app whose client ID the staging API uses: `Plans.ReadWrite` exposed with `isEnabled: true`, `requestedAccessTokenVersion: 2` | PASS (owner screenshot of manifest; app ID compared locally, not recorded) |
-| Taperday Web (staging) has delegated `Plans.ReadWrite` on Taperday API (staging), granted for the tenant | PASS (owner screenshot) |
-| User flow "Taperday sign up and sign in v2" lists Taperday Web (staging); Email one-time passcode selected; Google ticked (`VITE_AUTH_GOOGLE` is `true` on staging) | PASS (owner screenshots) |
+| Staging origin registered under the **Single-page application** platform on Taperday Web (staging) | PASS (Graph read, 24 Nov) |
+| Taperday API (staging), the app whose client ID the staging API uses: `Plans.ReadWrite` exposed with `isEnabled: true`, `requestedAccessTokenVersion: 2` | PASS (Graph read, 24 Nov; app ID compared locally, not recorded) |
+| Taperday Web (staging) has delegated `Plans.ReadWrite` on Taperday API (staging), granted for the tenant | PASS (owner screenshot; Graph confirms the app requests it) |
+| User flow "Taperday sign up and sign in v2" lists Taperday Web (staging); Email one-time passcode selected; Google ticked (`VITE_AUTH_GOOGLE` is `true` on staging) | PASS (Graph read, 24 Nov) |
 
-Graph and CLI reads failed because the tenant admin is a personal Microsoft account added as a guest (AADSTS50076, AADSTS500208, AADSTS90123). The registrations above were checked from admin-centre screenshots instead.
+Read with a dedicated read/write CLI account in the tenant (MFA required by Conditional Access); the owner's admin is a personal guest account, which Microsoft blocks in the Azure CLI. Only pass/fail was recorded, never IDs or addresses. The staging web app has exactly one SPA redirect URI (the staging origin) and no Web-platform redirect for it.
 
 ### Anonymous API surface (audited, not changed)
 

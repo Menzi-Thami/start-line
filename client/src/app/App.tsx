@@ -19,6 +19,7 @@ import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
 import { Runner as TaperdayRunner } from '../features/shared/Runner'
+import { RunnerLoading } from '../features/shared/RunnerLoading'
 import { ThemeToggle } from './ThemeToggle'
 import { ScreenRecovery } from './ScreenRecovery'
 import { SignInWait } from '../features/account/SignInWait'
@@ -923,7 +924,7 @@ export function App() {
       <main id="main-content" tabIndex={-1} key={view} className={navigated ? 'view-enter' : undefined}>
         <OfflineRunDrafts activePlanId={view === 'home' ? ownPlan?.id : showPlan ? savedOnScreen : null} />
         <ScreenRecovery>
-        <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
+        <Suspense fallback={<RunnerLoading label="Opening your page…" compact />}>
         {/* While the account is still loading, wait: a load that fails shows its own recovery with the same action,
             so this notice would only flash and take its button with it. */}
         {auth.error && state.kind !== 'error' && state.kind !== 'loading' && (
@@ -1174,7 +1175,7 @@ export function App() {
               )}
             </div>
 
-            {planPending && <div className="panel skeleton-stack" role="status" aria-label="Opening your plan"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
+            {planPending && <RunnerLoading label="Opening your plan…" detail="Getting your schedule ready." compact />}
             {planLocked && plan.kind === 'ready' && (
               <PlanLocked
                 plan={plan.plan}

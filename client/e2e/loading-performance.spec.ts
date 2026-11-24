@@ -23,6 +23,17 @@ async function mockApi(page: Page, options: { accountWakeMs?: number; failPlan?:
     startedAt: `2026-10-${String(10 + i).padStart(2, '0')}T07:00:00Z`, distanceKm: 5 + i, movingSeconds: 1800 + i * 300, paceSecondsPerKm: 360, elapsedSeconds: 1900 + i * 300,
     averageHeartRate: null, maxHeartRate: null, elevationGainMetres: null, source: { kind: 'Upload', format: 'Fit', cachedUntil: null } }))
   await page.clock.install({ time: new Date('2026-10-18T12:00:00Z') })
+  // Every loader that appears, by its label, so a step can say whether the runner saw one at all.
+  await page.addInitScript(() => {
+    const seen: string[] = []
+    Object.assign(window, { __loadersSeen: seen })
+    new MutationObserver(() => {
+      for (const node of document.querySelectorAll('.runner-loading, .skeleton-stack, .skeleton, .account-warmup')) {
+        const label = node.querySelector('[role=status]')?.getAttribute('aria-label') ?? node.getAttribute('aria-label') ?? node.className
+        if (!seen.includes(label)) seen.push(label)
+      }
+    }).observe(document, { subtree: true, childList: true })
+  })
   const started = Date.now()
   const hits: Hit[] = []
   let inflight = 0
@@ -44,6 +55,7 @@ async function mockApi(page: Page, options: { accountWakeMs?: number; failPlan?:
       if (options.failPlan) hit.status = 503
       data = { ...summary, inputs, plan, coaching: [] }
     }
+    else if (path === '/api/v1/plans') data = plan
     else if (path === '/api/v1/me/activities') data = runs
     else if (path.endsWith('/sync/strava')) data = { available: true, connected: false, status: null, pending: 0, failed: 0, syncedRuns: 0, includesPrivateRuns: false, connectedAt: null, lastSyncedAt: null }
     else if (path.endsWith('/reminders')) data = { available: false }
@@ -65,11 +77,14 @@ async function mockApi(page: Page, options: { accountWakeMs?: number; failPlan?:
   return { hits, settle, since: () => Date.now() - started }
 }
 
-const summarise = (hits: Hit[]) => {
+const summarise = (hits: Hit[], from = 0) => {
   const counts: Record<string, number> = {}
   for (const hit of hits) counts[`${hit.method} ${hit.path}`] = (counts[`${hit.method} ${hit.path}`] ?? 0) + 1
-  return { total: hits.length, duplicates: Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 1)), counts }
+  // Network time for the step: from the tap to the last response it caused (0 when it needed none).
+  const networkMs = hits.length ? Math.max(...hits.map(hit => hit.end)) - from : 0
+  return { total: hits.length, networkMs, duplicates: Object.fromEntries(Object.entries(counts).filter(([, n]) => n > 1)), counts }
 }
+const loadersSeen = (page: Page) => page.evaluate(() => (window as unknown as { __loadersSeen: string[] }).__loadersSeen.splice(0))
 
 async function record(name: string, data: unknown) {
   await mkdir(out, { recursive: true })
@@ -86,13 +101,15 @@ test('signed-in journey: request counts and time to Today on a cold start', asyn
   const todayReadyMs = api.since()
   await api.settle()
   const startup = api.hits.slice()
-  const steps: Record<string, ReturnType<typeof summarise>> = { startup: summarise(startup) }
+  const steps: Record<string, ReturnType<typeof summarise> & { loaders: string[] }> = { startup: { ...summarise(startup), loaders: await loadersSeen(page) } }
   const nav = page.getByRole('navigation', { name: 'Main', exact: true })
   for (const tab of ['Plan', 'Runs', 'Journey', 'Account', 'Home', 'Runs']) {
     const before = api.hits.length
+    await loadersSeen(page)
+    const tapped = api.since()
     await nav.getByRole('button', { name: tab, exact: true }).click()
     await api.settle()
-    steps[`${tab} (#${Object.keys(steps).length})`] = summarise(api.hits.slice(before))
+    steps[`${tab} (#${Object.keys(steps).length})`] = { ...summarise(api.hits.slice(before), tapped), loaders: await loadersSeen(page) }
   }
   await page.screenshot({ path: join(out, `journey-end-${info.project.name}.png`) })
   await record(`journey-${info.project.name}`, {

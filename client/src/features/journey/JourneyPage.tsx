@@ -22,9 +22,11 @@ const sectionFromUrl = (): Section => {
 /** Bring the race list into view after a trophy opens a race, its filter or a new-race form. */
 const showRaceList = () => window.requestAnimationFrame(() => document.getElementById('race-memories-title')?.scrollIntoView?.({ block: 'start' }))
 
-export function JourneyPage({ today, units, onArchived, onOpenRecovery }: { today: string; units: Units; onNewRace: () => void; onArchived: () => void; onOpenRecovery?: (raceId?: string) => void }) {
+export function JourneyPage({ today, units, onArchived, onOpenRecovery, journey: shared }: { today: string; units: Units; onNewRace: () => void; onArchived: () => void; onOpenRecovery?: (raceId?: string) => void; journey?: ReturnType<typeof useJourney> }) {
   const races = useRaceHistory()
-  const journey = useJourney(true)
+  // The app's own journey when it has one, as Home uses: a second copy only read the same chapters again.
+  const own = useJourney(!shared)
+  const journey = shared ?? own
   const [section, setSection] = useState<Section>(sectionFromUrl)
   const [selectedMajor, setSelectedMajor] = useState<MarathonMajor | null>(null)
   const [selectedRaceId, setSelectedRaceId] = useState<string | null>(null)

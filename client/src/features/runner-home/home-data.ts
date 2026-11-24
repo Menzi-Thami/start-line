@@ -5,40 +5,52 @@ import type { CoachNote, LoggedRun, TrainingPlan } from '../../lib/types'
 import type { CurrentPlan } from '../account/useCurrentPlan'
 export type HomePlan = { id: string; plan: TrainingPlan }
 
+/** The last plan Home showed, in memory only, so coming back to Home shows it while the coach read refreshes it. */
+let lastHome: { owner: string; plan: HomePlan; notes: CoachNote[] } | null = null
+/** For tests. */
+export function forgetHomePlan() { lastHome = null }
+
 export function useHomePlan(
   current: CurrentPlan | null | undefined,
   initial?: HomePlan | null,
   onLoaded?: (plan: HomePlan) => void,
+  /** The current plan's id from the plan list, known before the plan itself: the coach read starts alongside it. */
+  pendingId?: string | null,
 ): { plan: TrainingPlan | null; coaching: CoachNote[]; failed: boolean; retry: () => void } {
   const auth = useAuth()
-  const [plan, setPlan] = useState<HomePlan | null>(null)
-  const [coaching, setCoaching] = useState<{ id: string; notes: CoachNote[] } | null>(null)
+  const ownerId = auth.account?.id ?? null
+  const remembered = ownerId !== null && lastHome?.owner === ownerId ? lastHome : null
+  const [plan, setPlan] = useState<HomePlan | null>(() => remembered?.plan ?? null)
+  const [coaching, setCoaching] = useState<{ id: string; notes: CoachNote[] } | null>(() => remembered ? { id: remembered.plan.id, notes: remembered.notes } : null)
   const [attempt, setAttempt] = useState(0)
   const [failure, setFailure] = useState<{ id: string; attempt: number } | null>(null)
   const loaded = useRef(onLoaded)
   useEffect(() => {
     loaded.current = onLoaded
   }, [onLoaded])
+  const id = current ? current.id : current === undefined ? pendingId ?? null : null
   useEffect(() => {
-    if (!current) return
+    if (!id) return
     const flags = { cancelled: false }
     auth
       .getToken()
-      .then((token) => (token ? api.me.coachPlan(token, current.id) : null))
+      .then((token) => (token ? api.me.coachPlan(token, id) : null))
       .then((saved) => {
         if (flags.cancelled) return
-        if (!saved) { setFailure({ id: current.id, attempt }); return }
-        const found = { id: current.id, plan: saved.plan }
+        if (!saved) { setFailure({ id, attempt }); return }
+        const found = { id, plan: saved.plan }
         setFailure(null)
         setPlan(found)
-        setCoaching({ id: current.id, notes: saved.coaching ?? [] })
+        setCoaching({ id, notes: saved.coaching ?? [] })
+        if (ownerId !== null) lastHome = { owner: ownerId, plan: found, notes: saved.coaching ?? [] }
         loaded.current?.(found)
       })
-      .catch(() => { if (!flags.cancelled) setFailure({ id: current.id, attempt }) })
+      .catch(() => { if (!flags.cancelled) setFailure({ id, attempt }) })
     return () => {
       flags.cancelled = true
     }
-  }, [current, auth, attempt])
+    // Keyed by the id alone: the full plan arriving for the same id must not start a second coach read.
+  }, [id, auth, attempt, ownerId])
   // Until this visit's plan arrives, the copy from last time (if it's the same plan) stands in for it.
   const shown = plan && current && plan.id === current.id ? plan : initial
   return {

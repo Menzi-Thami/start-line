@@ -74,7 +74,7 @@ test('cached Home → slow account → deadline → retry restores the saved cha
 })
 
 for (const motion of ['no-preference', 'reduce'] as const) {
-  test(`slow connection has an automatic runner and rotating tips and immediate recovery with ${motion} motion @phone`, async ({ page }, info) => {
+  test(`slow connection shows the runner, a plain status and immediate recovery with ${motion} motion @phone`, async ({ page }, info) => {
     const state = await connection(page)
     await page.emulateMedia({ reducedMotion: motion })
     await page.setViewportSize({ width: 375, height: 900 })
@@ -92,22 +92,14 @@ for (const motion of ['no-preference', 'reduce'] as const) {
     await expect(greeting).toBeVisible()
     await expect(nav).toBeVisible()
     expect(await warm.locator('.limb').count()).toBeGreaterThan(0)
-    const animationStates = () => warm.locator('.limb').evaluateAll(limbs => limbs.map(limb => ({ name: getComputedStyle(limb).animationName, state: getComputedStyle(limb).animationPlayState })))
-    if (motion === 'no-preference') expect((await animationStates()).every(value => value.name !== 'none' && value.state === 'running')).toBe(true)
+    const animationStates = () => warm.locator('.limb').evaluateAll(limbs => limbs.map(limb => ({ name: getComputedStyle(limb).animationName, count: getComputedStyle(limb).animationIterationCount })))
+    // The runner moves for a few seconds and then rests: finite, so there is nothing to pause (WCAG 2.2.2).
+    if (motion === 'no-preference') expect((await animationStates()).every(value => value.name !== 'none' && value.count !== 'infinite')).toBe(true)
     else expect((await animationStates()).every(value => value.name === 'none')).toBe(true)
-    await expect(warm.getByRole('button', { name: 'Next tip', exact: true })).toHaveCount(0)
-    await expect(warm).toContainText('A free Strava account can bring')
-    await page.clock.runFor(8000)
-    await expect(warm).toContainText('completed training chapters and race results are kept in Journey')
-    await warm.getByRole('button', { name: 'Pause warm-up', exact: true }).click()
-    if (motion === 'no-preference') expect((await animationStates()).every(value => value.state === 'paused')).toBe(true)
-    await page.clock.runFor(8000)
-    await expect(warm).toContainText('completed training chapters and race results are kept in Journey')
-    await warm.getByRole('button', { name: 'Resume warm-up', exact: true }).click()
-    if (motion === 'no-preference') expect((await animationStates()).every(value => value.state === 'running')).toBe(true)
-    await page.clock.runFor(8000)
-    await expect(warm).toContainText('Recovery has its own plan. Home stays your starting point.')
-    await warm.getByRole('button', { name: 'Pause warm-up', exact: true }).click()
+    await expect(warm.getByRole('button')).toHaveText(['Try again', 'Sign out'])
+    await expect(warm).not.toContainText('While you wait')
+    // Let the finite motion end so the screenshots below are stable; finish() throws on an infinite animation.
+    await warm.evaluate(node => node.getAnimations({ subtree: true }).forEach(animation => animation.finish()))
     for (const width of [320, 375, 820, 1440]) for (const mode of ['light', 'dark']) {
       await page.setViewportSize({ width, height: 900 })
       await page.evaluate(value => { document.documentElement.dataset.theme = value }, mode)

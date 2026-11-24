@@ -20,7 +20,22 @@ interface Snapshot {
   syncing: boolean
   newArrival: ActivitySummary | null
 }
-const empty = (owner: Auth): Snapshot => ({ owner, revision: 0, error: null, syncError: null, loading: true, syncing: false, newArrival: null })
+/**
+ * The last recordings read for the signed-in runner, in memory only (never stored), so moving between Home and Runs
+ * shows them at once while they refresh instead of a loader. Only ever offered back to the same account.
+ */
+let lastKnown: { owner: string; runs: ActivitySummary[]; bests?: PersonalBest[]; strava?: StravaStatus } | null = null
+/** For sign-out and tests. */
+export function forgetSyncedRuns() { lastKnown = null }
+const ownerKey = (auth: Auth) => auth.account?.id ?? null
+const unexpired = (runs: ActivitySummary[]) => runs.filter(run => run.source.kind !== 'Strava' || !run.source.cachedUntil || Date.parse(run.source.cachedUntil) > Date.now())
+const empty = (owner: Auth): Snapshot => {
+  const key = ownerKey(owner)
+  const known = key !== null && lastKnown?.owner === key ? lastKnown : null
+  const runs = known && unexpired(known.runs)
+  return { owner, revision: 0, error: null, syncError: null, loading: true, syncing: false, newArrival: null,
+    ...(known && runs ? { runs, bests: known.bests?.filter(best => runs.some(run => run.id === best.activityId)), strava: known.strava } : {}) }
+}
 const fingerprint = (status: StravaStatus) => `${status.status}|${status.syncedRuns}|${status.lastSyncedAt ?? ''}|${status.pending}|${status.failed}`
 
 /** Account-owned recordings and import progress, shared by Home, Plan and Runs, including runners without a plan. */
@@ -30,6 +45,8 @@ export function useSyncedRuns(enabled: boolean, includeBests = true) {
   const active = useRef<Auth | null>(null)
   const reads = useRef(0)
   const checks = useRef(0)
+  /** Whether the last catch-up actually changed the import status, so the recordings are worth reading again. */
+  const caughtUpChanges = useRef(false)
   const previousIds = useRef<Set<string> | null>(null)
   const seen = useRef('')
   const current = loaded.owner === auth ? loaded : empty(auth)
@@ -74,7 +91,9 @@ export function useSyncedRuns(enabled: boolean, includeBests = true) {
       if (!token) throw new Error('Sign in again to check your imports.')
       let status = await api.me.strava.status(token)
       if (active.current !== auth || mine !== checks.current) return
+      const before = fingerprint(status)
       if (catchUp && status.connected && status.status === 'Active') status = await api.me.strava.catchUp(token)
+      caughtUpChanges.current = fingerprint(status) !== before
       if (active.current !== auth || mine !== checks.current) return
       update({ strava: status, syncError: null, syncing: false })
       return status
@@ -98,7 +117,8 @@ export function useSyncedRuns(enabled: boolean, includeBests = true) {
     // Keep existing recordings usable immediately; status/catch-up must not block their first read.
     void loadRuns()
     void checkImports(true).then(status => {
-      if (status?.connected && status.status === 'Active') void loadRuns()
+      // The first read is already under way; read again only if the catch-up brought something in.
+      if (status?.connected && status.status === 'Active' && caughtUpChanges.current) void loadRuns()
     })
     const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
     document.addEventListener('visibilitychange', onVisible)
@@ -107,6 +127,12 @@ export function useSyncedRuns(enabled: boolean, includeBests = true) {
       document.removeEventListener('visibilitychange', onVisible)
     }
   }, [enabled, auth, loadRuns, checkImports, refresh])
+
+  useEffect(() => {
+    const key = ownerKey(auth)
+    if (key === null) { lastKnown = null; return }
+    if (current.runs) lastKnown = { owner: key, runs: current.runs, bests: current.bests, strava: current.strava }
+  }, [auth, current.runs, current.bests, current.strava])
 
   // A failed refresh may retain available recordings, but never extend a provider copy's lifetime.
   useEffect(() => {

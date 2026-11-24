@@ -1,0 +1,26 @@
+{
+  "accountWakeMs": 3000,
+  "latencyMs": 300,
+  "visibleWaitsDuringWake": 1,
+  "todayReadyMs": 4440,
+  "startup": {
+    "total": 13,
+    "networkMs": 4507,
+    "duplicates": {},
+    "counts": {
+      "GET /api/v1/races": 1,
+      "GET /api/v1/me": 1,
+      "GET /api/v1/me/reminders": 1,
+      "GET /api/v1/me/activities": 1,
+      "GET /api/v1/me/activities/bests": 1,
+      "GET /api/v1/me/sync/strava": 1,
+      "GET /api/v1/me/plans": 1,
+      "GET /api/v1/me/journey": 1,
+      "GET /api/v1/me/photo": 1,
+      "GET /api/v1/me/plans/{id}": 1,
+      "POST /api/v1/me/plans/{id}/coach": 1,
+      "GET /api/v1/me/plans/{id}/strava-completions": 1,
+      "GET /api/v1/me/plans/{id}/check-ins": 1
+    }
+  }
+}

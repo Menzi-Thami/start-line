@@ -8,6 +8,7 @@ import { api } from '../../lib/api-client'
 import { formatDate, formatDuration, formatPace, formatShortDay, type Units } from '../../lib/format'
 import type { Activity, BestEffort, HeartRate } from '../../lib/types'
 import { RunSticker } from '../sharing/RunSticker'
+import { RunnerLoading } from '../shared/RunnerLoading'
 import { ShoePicker } from './ShoePicker'
 import { PoweredByStrava, ViewOnStrava } from '../sync/StravaBrand'
 import { halvesSummary, KIND_LABEL } from './activity-copy'
@@ -91,7 +92,7 @@ export function ActivityPage({ id, initial, units, onBack, backLabel, onDeleted,
     return (
       <section aria-busy="true">
         {back}
-        <p className="loading-line">Loading your run…</p>
+        <RunnerLoading label="Loading your run…" detail="Opening your recording and analysis." />
       </section>
     )
   }

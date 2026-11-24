@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { prefersMotion } from '../../lib/motion'
 import { Runner } from '../shared/Runner'
+import { signsInWithPassword } from '../../app/sign-in-method'
 
 interface Props {
   onSignUp: () => void
@@ -137,7 +138,7 @@ export function SignUpPitch({ onSignUp, onSignIn }: Props) {
         <button type="button" className={dashing ? 'button button-primary is-dashing' : 'button button-primary'} onClick={signUp} disabled={dashing}>
           Sign up free
         </button>
-        <p className="field-help">We email you a code to sign in. No password to remember, no card needed.</p>
+        <p className="field-help">{signsInWithPassword() ? 'Choose a password and let your phone save it. No card needed.' : 'We email you a code to sign in. No password to remember, no card needed.'}</p>
         <p>
           Already have an account?{' '}
           <button type="button" className="link-button" onClick={onSignIn}>

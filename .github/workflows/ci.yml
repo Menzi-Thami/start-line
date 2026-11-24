@@ -270,6 +270,13 @@ jobs:
           name: race-week-visual-qa-${{ matrix.shard }}
           path: client/test-results/**/race-week-*.png
           if-no-files-found: ignore
+      # Request counts, waterfalls and loading screenshots from loading-performance.spec.ts (synthetic data only).
+      - uses: actions/upload-artifact@v7
+        if: always() && env.RUN_TESTS == 'true'
+        with:
+          name: loading-performance-${{ matrix.shard }}
+          path: client/test-results/loading-performance
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v7
         if: failure() && env.RUN_TESTS == 'true'
         with:

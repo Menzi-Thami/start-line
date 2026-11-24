@@ -40,11 +40,12 @@ export function sameRace(a: GeneratePlanRequest, b: GeneratePlanRequest): boolea
   return !b.raceSlug && (a.raceName ?? '').trim().toLowerCase() === (b.raceName ?? '').trim().toLowerCase() && a.raceDate === b.raceDate
 }
 
-async function fetchCurrent(getToken: () => Promise<string | null>, today: string): Promise<CurrentPlan | null | undefined> {
+async function fetchCurrent(getToken: () => Promise<string | null>, today: string, onActive?: (id: string) => void): Promise<CurrentPlan | null | undefined> {
   const token = await getToken()
   if (!token) return undefined
   const active = (await api.me.plans(token)).find((p) => p.status === 'Active' && (!p.raceDate || p.raceDate >= today))
   if (!active) return null
+  onActive?.(active.id)
   const plan = await api.me.plan(token, active.id)
   if (plan.status !== 'Active' || plan.plan.race.date < today) return null
   return { id: plan.id, name: plan.name, inputs: plan.inputs, raceDate: plan.plan.race.date }
@@ -58,6 +59,8 @@ export function useCurrentPlan(enabled: boolean, today = localToday()) {
   const auth = useAuth()
   const [loaded, setCurrent] = useState<{ owner: typeof auth; value: CurrentPlan | null | undefined }>({ owner: auth, value: undefined })
   const [failure, setFailure] = useState<typeof auth | null>(null)
+  // Only an id, never shown: it lets Home start reading the plan while its details load.
+  const [pending, setPending] = useState<{ owner: typeof auth; id: string } | null>(null)
   const current = loaded.owner === auth ? loaded.value : undefined
   const sequence = useRef(0)
 
@@ -75,7 +78,7 @@ export function useCurrentPlan(enabled: boolean, today = localToday()) {
     const requests = sequence
     const mine = ++sequence.current
     // A failed lookup is unknown, never evidence that the runner has no saved plan.
-    fetchCurrent(auth.getToken, today)
+    fetchCurrent(auth.getToken, today, id => { if (!cancelled && mine === sequence.current) setPending({ owner: auth, id }) })
       .then((found) => {
         if (found === undefined) throw new Error('Your current plan could not be checked. Try again.')
         if (!cancelled && mine === sequence.current) { setCurrent({ owner: auth, value: found }); setFailure(null) }
@@ -93,5 +96,6 @@ export function useCurrentPlan(enabled: boolean, today = localToday()) {
     return () => window.removeEventListener(JOURNEY_CHANGED, refresh)
   }, [enabled, load])
 
-  return { current: enabled ? currentTraining(current, today) : undefined, failed: enabled && failure === auth, remember: (saved: CurrentPlan) => { sequence.current++; setCurrent({ owner: auth, value: saved }); setFailure(null) }, refresh: () => load().catch(() => undefined) }
+  return { current: enabled ? currentTraining(current, today) : undefined,
+    pendingId: enabled && current === undefined && pending?.owner === auth ? pending.id : null, failed: enabled && failure === auth, remember: (saved: CurrentPlan) => { sequence.current++; setCurrent({ owner: auth, value: saved }); setFailure(null) }, refresh: () => load().catch(() => undefined) }
 }

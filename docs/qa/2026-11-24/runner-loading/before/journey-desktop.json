@@ -1,0 +1,140 @@
+{
+  "latencyMs": 300,
+  "todayReadyMs": 1889,
+  "startupWaterfall": [
+    "GET /api/v1/races 573-873",
+    "GET /api/v1/me 573-874",
+    "GET /api/v1/me/reminders 898-1198",
+    "GET /api/v1/me/activities 898-1199",
+    "GET /api/v1/me/activities/bests 898-1199",
+    "GET /api/v1/me/sync/strava 898-1199",
+    "GET /api/v1/me/plans 898-1199",
+    "GET /api/v1/me/journey 899-1200",
+    "GET /api/v1/me/photo 899-1200",
+    "GET /api/v1/me/plans/{id} 1211-1511",
+    "POST /api/v1/me/plans/{id}/coach 1526-1826",
+    "GET /api/v1/me/plans/{id}/strava-completions 1527-1827",
+    "GET /api/v1/me/plans/{id}/check-ins 1527-1827"
+  ],
+  "steps": {
+    "startup": {
+      "total": 13,
+      "networkMs": 1827,
+      "duplicates": {},
+      "counts": {
+        "GET /api/v1/races": 1,
+        "GET /api/v1/me": 1,
+        "GET /api/v1/me/reminders": 1,
+        "GET /api/v1/me/activities": 1,
+        "GET /api/v1/me/activities/bests": 1,
+        "GET /api/v1/me/sync/strava": 1,
+        "GET /api/v1/me/plans": 1,
+        "GET /api/v1/me/journey": 1,
+        "GET /api/v1/me/photo": 1,
+        "GET /api/v1/me/plans/{id}": 1,
+        "POST /api/v1/me/plans/{id}/coach": 1,
+        "GET /api/v1/me/plans/{id}/strava-completions": 1,
+        "GET /api/v1/me/plans/{id}/check-ins": 1
+      },
+      "loaders": [
+        "Checking your account",
+        "Loading today's session"
+      ]
+    },
+    "Plan (#1)": {
+      "total": 7,
+      "networkMs": 1038,
+      "duplicates": {
+        "GET /api/v1/me/calendar": 2
+      },
+      "counts": {
+        "POST /api/v1/plans": 1,
+        "GET /api/v1/me/journey": 1,
+        "GET /api/v1/me/plans/{id}/strava-completions": 1,
+        "GET /api/v1/me/calendar": 2,
+        "POST /api/v1/me/plans/{id}/coach": 1,
+        "GET /api/v1/me/plans/{id}/check-ins": 1
+      },
+      "loaders": [
+        "Opening your training…"
+      ]
+    },
+    "Runs (#2)": {
+      "total": 4,
+      "networkMs": 944,
+      "duplicates": {},
+      "counts": {
+        "GET /api/v1/me/activities": 1,
+        "GET /api/v1/me/sync/strava": 1,
+        "GET /api/v1/me/running?includeSynced=true": 1,
+        "GET /api/v1/me/running?allTime=true": 1
+      },
+      "loaders": [
+        "Opening your page…",
+        "Loading your runs…",
+        "Loading running totals"
+      ]
+    },
+    "Journey (#3)": {
+      "total": 3,
+      "networkMs": 631,
+      "duplicates": {
+        "GET /api/v1/me/journey": 2
+      },
+      "counts": {
+        "GET /api/v1/me/journey": 2,
+        "GET /api/v1/me/journey/races": 1
+      },
+      "loaders": [
+        "Opening your page…"
+      ]
+    },
+    "Account (#4)": {
+      "total": 4,
+      "networkMs": 628,
+      "duplicates": {},
+      "counts": {
+        "GET /api/v1/me/shoes": 1,
+        "GET /api/v1/me/sync/strava": 1,
+        "GET /api/v1/me/reminders": 1,
+        "GET /api/v1/me/run-data": 1
+      },
+      "loaders": [
+        "Opening your page…",
+        "skeleton"
+      ]
+    },
+    "Home (#5)": {
+      "total": 7,
+      "networkMs": 333,
+      "duplicates": {},
+      "counts": {
+        "GET /api/v1/me/reminders": 1,
+        "POST /api/v1/me/plans/{id}/coach": 1,
+        "GET /api/v1/me/plans/{id}/strava-completions": 1,
+        "GET /api/v1/me/activities": 1,
+        "GET /api/v1/me/activities/bests": 1,
+        "GET /api/v1/me/sync/strava": 1,
+        "GET /api/v1/me/plans/{id}/check-ins": 1
+      },
+      "loaders": [
+        "Loading today's session"
+      ]
+    },
+    "Runs (#6)": {
+      "total": 4,
+      "networkMs": 637,
+      "duplicates": {},
+      "counts": {
+        "GET /api/v1/me/activities": 1,
+        "GET /api/v1/me/sync/strava": 1,
+        "GET /api/v1/me/running?includeSynced=true": 1,
+        "GET /api/v1/me/running?allTime=true": 1
+      },
+      "loaders": [
+        "Loading your runs…",
+        "Loading running totals"
+      ]
+    }
+  }
+}

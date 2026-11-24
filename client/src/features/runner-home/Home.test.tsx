@@ -106,7 +106,7 @@ describe('Home', () => {
     expect(within(screen.getByRole('region', { name: 'Today' })).getByText('Fartlek')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Open your plan' })).toBeInTheDocument()
   })
-  it('puts today before the compact weekly preview and keeps the prescription identifiable', () => {
+  it('puts today before the weekly workouts and keeps the prescription identifiable', () => {
     renderHome({ ...withPlan, today: '2026-10-20' })
     const today = screen.getByRole('region', { name: 'Today' })
     const week = screen.getByRole('region', { name: 'This week' })
@@ -144,12 +144,12 @@ describe('Home', () => {
   })
 
 
-  it('summarises the week without repeating the plan agenda on Home', () => {
+  it('shows the whole week as seven dated workout rows on Home', () => {
     renderHome({ ...withPlan, runs: [run('2026-10-20', 6.5)] })
     expect(screen.getByRole('region', { name: 'This week' })).toBeInTheDocument()
-    expect(screen.queryByRole('list', { name: 'This week’s runs' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'This week’s workouts' })).getAllByRole('listitem')).toHaveLength(7)
   })
-  it('keeps real race context in the quiet week preview', () => {
+  it('keeps real race context above the weekly workout list', () => {
     renderHome(withPlan)
     const week = screen.getByRole('region', { name: 'This week' })
     expect(week).toHaveTextContent('5 km')
@@ -158,7 +158,7 @@ describe('Home', () => {
     expect(week).toHaveTextContent('13 Dec')
   })
 
-  it('opens the current week from its compact preview', async () => {
+  it('opens the editable week from the Home workout list', async () => {
     const { user, onOpenPlan } = renderHome(withPlan)
     await user.click(screen.getByRole('button', { name: 'View this week' }))
     expect(onOpenPlan).toHaveBeenCalledOnce()

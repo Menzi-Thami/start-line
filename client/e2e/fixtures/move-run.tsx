@@ -10,6 +10,8 @@ import '../../src/styles/tokens.css'
 import '../../src/styles/app.css'
 import '../../src/styles/polish.css'
 import '../../src/styles/skin.css'
+import '../../src/features/plan/plan-journey.css'
+import '../../src/features/plan/schedule-drag.css'
 
 const original = plan as TrainingPlan
 const isRun = (type: string) => type !== 'Strength' && type !== 'Race'
@@ -36,7 +38,7 @@ export function QA() {
   const [moving, setMoving] = useState<{ from: string; to?: string } | null>(null)
   const [applied, setApplied] = useState(false)
   return (
-    <>
+    <div className="plan">
       <h1>Run move interaction QA</h1>
       <WeekGlance week={week} done={new Set()} today={week.startDate} units="km" onSelectDate={() => {}} onRequestMove={(from, to) => setMoving({ from, to })} />
       <button type="button" onClick={() => setMoving({ from })}>Move run</button>
@@ -45,7 +47,7 @@ export function QA() {
       {moving && <MoveRunDialog from={moving.from} to={moving.to} units="km" plan={original}
         actions={{ ...actions, apply: async (change, token) => { await actions.apply(change, token); setApplied(true) } }}
         onClose={() => setMoving(null)} />}
-    </>
+    </div>
   )
 }
 createRoot(document.getElementById('root')!).render(<QA />)

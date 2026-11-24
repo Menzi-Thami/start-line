@@ -1,0 +1,31 @@
+.home-week-workouts { padding-block: var(--space-5); border-top: 1px solid var(--line-strong); }
+.home-week-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
+.home-week-heading > div { flex: 1 1 220px; min-width: 0; overflow-wrap: anywhere; }
+.home-week-heading h2 { margin: .4rem 0 .65rem; font: 400 clamp(2.1rem, 6vw, 3rem)/1.1 var(--font-display); letter-spacing: -.025em; }
+.home-week-heading .plan-kicker { margin: 0; }
+.home-week-heading .field-help { margin: 0; line-height: 1.6; }
+.home-week-heading > .link-button { flex: none; min-height: 44px; }
+.home-week-completion { margin-block: var(--space-5) var(--space-3); }
+.home-week-progress { display: flex; gap: 6px; height: 5px; margin-bottom: .75rem; }
+.home-week-progress > span { flex: 1; background: var(--line-strong); border-radius: 3px; }
+.home-week-progress > .is-recorded { background: var(--accent); }
+.home-workout-list { list-style: none; margin: var(--space-4) 0 0; padding: 0; }
+.home-workout-list > li { margin: 0; padding: 0; }
+.home-workout-button { display: flex; align-items: center; gap: clamp(1rem, 4vw, 1.5rem); width: 100%; min-height: 132px; padding: 1.15rem 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--ink); text-align: start; font: inherit; cursor: pointer; }
+.home-workout-button:hover { background: var(--surface); }
+.home-workout-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.home-workout-button:disabled { opacity: .65; cursor: default; }
+.home-workout-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: .35rem; white-space: normal; }
+.home-workout-date { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .875rem; color: var(--muted); }
+.home-workout-today { color: var(--accent); font-weight: 700; }
+.home-workout-copy > strong { font: 600 clamp(1.15rem, 4.8vw, 1.4rem)/1.25 var(--font-body); overflow-wrap: anywhere; }
+.home-workout-measure { color: var(--ink-2); font-size: 1rem; line-height: 1.4; }
+.home-workout-strength { color: var(--ink-2); font-size: .8125rem; font-weight: 600; }
+.home-workout-status { color: var(--muted); font-size: .8125rem; line-height: 1.5; }
+.home-workout-status.is-recorded { color: var(--accent); }
+.home-workout-arrow { flex: none; color: var(--muted); font-size: 1.1rem; }
+.home-workout-list > .is-today .workout-artwork { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 390px) {
+  .home-week-heading { flex-wrap: wrap; gap: .35rem; }
+  .home-workout-button { --workout-art-size: 76px; min-height: 124px; gap: 1rem; }
+}

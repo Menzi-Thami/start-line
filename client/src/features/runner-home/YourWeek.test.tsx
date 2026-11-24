@@ -115,7 +115,7 @@ describe('Home with a plan', () => {
     expect(within(todayCard).getByRole('button', { name: 'Open your plan' })).toBeInTheDocument()
   })
 
-  it('keeps the coach review in Plan while Home shows a compact weekly preview', async () => {
+  it('keeps the coach review in Plan while Home shows the weekly workouts', async () => {
     renderHome('2026-10-20')
 
     const panel = await screen.findByRole('region', { name: 'This week' })

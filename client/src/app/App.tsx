@@ -1103,7 +1103,7 @@ export function App() {
               never flashes past a returning runner.
             */}
             {awaitingSavedTraining && auth.loading && (
-              <p className="loading-line" role="status">Checking your session…</p>
+              <RunnerLoading label="Checking your session…" compact />
             )}
             {awaitingSavedTraining && !auth.loading && auth.account && state.kind !== 'error' && (
               <FindingPlan name={auth.account.name || null} onRetry={runner.refresh} onSignOut={auth.signOut} />
@@ -1149,7 +1149,7 @@ export function App() {
 
             <div aria-live="polite" aria-busy={plan.kind === 'loading'}>
               {plan.kind === 'loading' &&
-                (showBuilder ? <p className="visually-hidden">Building your plan…</p> : <p className="loading-line">Building your plan…</p>)}
+                (showBuilder ? <p className="visually-hidden">Building your plan…</p> : <RunnerLoading label="Building your plan…" compact />)}
               {plan.kind === 'error' && view === 'build' && (
                 <div className="error-panel" style={{ marginTop: 'var(--space-7)' }} role="alert">
                   <strong>We couldn’t build that plan.</strong>

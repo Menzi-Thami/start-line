@@ -11,7 +11,20 @@ describe('Taperday runner loading state', () => {
   })
 
   it('fits inline waits without taking over the screen', () => {
-    render(<RunnerLoading label="Opening your training…" compact />)
-    expect(screen.getByRole('status', { name: 'Opening your training…' })).toHaveClass('runner-loading-compact')
+    const { container } = render(<RunnerLoading label="Opening your training…" compact />)
+    expect(screen.getByRole('status', { name: 'Opening your training…' })).toBeInTheDocument()
+    expect(container.firstChild).toHaveClass('runner-loading-compact')
+  })
+
+  it('fades in late by default so fast loads never flash, unless asked to show at once', () => {
+    const { container, rerender } = render(<RunnerLoading label="Opening your page…" />)
+    expect(container.firstChild).not.toHaveClass('runner-loading-immediate')
+    rerender(<RunnerLoading label="Opening your page…" immediate />)
+    expect(container.firstChild).toHaveClass('runner-loading-immediate')
+  })
+
+  it('keeps retry and back controls out of the announced status', () => {
+    render(<RunnerLoading label="Loading your runs…" actions={<button type="button">Try again</button>} />)
+    expect(screen.getByRole('status')).not.toContainElement(screen.getByRole('button', { name: 'Try again' }))
   })
 })

@@ -317,7 +317,7 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
 
       {list.kind === 'ready' && list.runs.length > 0 && <details className="disclosure runs-share" onToggle={event => { if (event.currentTarget.open) setShareOpened(true) }}>
         <summary>Share a milestone</summary>
-        {shareOpened && <ScreenRecovery><Suspense fallback={<p className="field-help" role="status">Preparing your milestones…</p>}><MilestoneCards runs={list.runs} /></Suspense></ScreenRecovery>}
+        {shareOpened && <ScreenRecovery><Suspense fallback={<RunnerLoading label="Preparing your milestones…" compact />}><MilestoneCards runs={list.runs} /></Suspense></ScreenRecovery>}
       </details>}
       <details ref={toolsRef} className="disclosure runs-tools" open={toolsOpen} onToggle={event => {
         const open = event.currentTarget.open
@@ -328,7 +328,7 @@ export function MyRuns({ units, onOpen, selectedId, onOpenConnections, onOpenPla
       }}><summary>Running tools</summary>
         {toolsOpened && (
           <ScreenRecovery>
-            <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading running tools"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /></div>}>
+            <Suspense fallback={<RunnerLoading label="Opening running tools…" compact />}>
               <Calculators units={units} maxHeartRate={maxHeartRate} race={race} />
             </Suspense>
           </ScreenRecovery>

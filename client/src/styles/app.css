@@ -3873,13 +3873,6 @@ a.menu-item {
   border-top: 1px solid var(--line);
 }
 
-.bulk-progress > p {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0;
-}
-
 .bulk-progress {
   display: flex;
   flex-wrap: wrap;
@@ -4555,22 +4548,6 @@ a.menu-item {
   color: var(--ink);
 }
 
-.wait-spinner {
-  width: 18px;
-  height: 18px;
-  flex: none;
-  border: 2.5px solid var(--accent-soft);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: wait-spin 0.8s linear infinite;
-}
-
-@keyframes wait-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* Three dots filling in after the text, in time with the stride. */
 .loading-dots {
   display: inline-flex;
@@ -5221,7 +5198,6 @@ select.input option {
 }
 .finding-plan .runner-loading { width: 100%; }
 .finding-plan p { margin: 0; }
-.finding-plan strong { font-weight: 600; color: var(--ink); }
 .finding-plan-slow {
   display: flex;
   align-items: flex-start;
@@ -5230,13 +5206,6 @@ select.input option {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: var(--surface);
-}
-.finding-plan-slow .field-help { margin-top: var(--space-2); }
-.finding-plan-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  margin-top: var(--space-2) !important;
 }
 
 /* ---------- The app's bottom bar, on a phone (app/TabBar.tsx) ---------- */
@@ -5995,5 +5964,11 @@ button.plan-calendar-day {
 @media (prefers-reduced-motion: reduce) {
   .wordmark-peek svg {
     animation: none;
+  }
+}
+
+@keyframes wait-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

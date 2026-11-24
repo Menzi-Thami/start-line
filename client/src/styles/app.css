@@ -5210,15 +5210,16 @@ select.input option {
 
 /* Quiet handoff after identity sign-in; only an unusually slow load needs a recovery panel. */
 .finding-plan {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--space-2);
   margin: var(--space-3) 0;
   padding: var(--space-2) 0;
   color: var(--muted);
   font-size: 0.875rem;
 }
-.finding-plan .wait-spinner { flex-shrink: 0; }
+.finding-plan .runner-loading { width: 100%; }
 .finding-plan p { margin: 0; }
 .finding-plan strong { font-weight: 600; color: var(--ink); }
 .finding-plan-slow {

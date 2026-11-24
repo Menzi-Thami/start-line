@@ -15,8 +15,8 @@
 //
 // Bump VERSION to drop everything stored by an older worker.
 
-// Rotate the shell cache for the login-required release so old anonymous landing bundles are evicted.
-const VERSION = 'taperday-v3'
+// Rotate the shell cache to evict old navigation responses whose metadata could retain callback query parameters.
+const VERSION = 'taperday-v4'
 const SHELL = '/'
 const MAX_ASSETS = 60
 const OPENS_AT = '/?view=home'
@@ -61,7 +61,14 @@ async function fromNetworkThenShell(request) {
     // Only a good page replaces the copy kept for offline use (a redirected one can't be replayed for a navigation).
     if (response.ok && response.type === 'basic' && !response.redirected) {
       const cache = await caches.open(VERSION)
-      await cache.put(SHELL, response.clone())
+      // Response.url is persisted by Cache Storage too. A callback URL can carry a one-use code or private route
+      // parameters even though its HTML is public. Store the same shell bytes/headers without that URL metadata.
+      const headers = new Headers(response.headers)
+      // Fetch exposes decoded bytes. The synthetic response must not describe those bytes as still compressed.
+      headers.delete('content-encoding')
+      headers.delete('content-length')
+      const shell = new Response(response.clone().body, { status: response.status, statusText: response.statusText, headers })
+      await cache.put(SHELL, shell)
     }
     return response
   } catch (error) {

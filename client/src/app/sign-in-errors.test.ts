@@ -36,4 +36,19 @@ describe('describeSignInError', () => {
     expect(describeSignInError(fromServer('AADSTS99999', 'Something new.'))).toEqual({ message: 'We couldn’t sign you in. Please try again.', code: 'AADSTS99999' })
     expect(describeSignInError(new Error('network down'))).toEqual({ message: 'We couldn’t sign you in. Please try again.', code: null })
   })
+
+  it('tells apart an ended session, a network failure and a set-up fault', () => {
+    expect(describeSignInError(new AuthError('login_required', 'x')).message).toBe('Your session has ended. Continue securely to sign in again.')
+    expect(describeSignInError(new AuthError('no_network_connectivity', 'x')).message).toContain('Check your connection')
+    for (const code of ['AADSTS50011', 'AADSTS700016', 'AADSTS9002326', 'AADSTS500011']) {
+      const problem = describeSignInError(fromServer(code, 'Synthetic set-up fault.'))
+      expect(problem.message).toContain('isn’t set up correctly')
+      expect(problem.code).toBe(code)
+    }
+  })
+
+  it('never puts Microsoft’s raw description in front of a runner', () => {
+    const problem = describeSignInError(fromServer('AADSTS50011', "The redirect URI 'https://example.test' does not match."))
+    expect(problem.message).not.toContain('example.test')
+  })
 })

@@ -86,7 +86,10 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         // A cached MSAL account is NOT proof of a usable session. Never reveal plans or cached
         // workouts until the identity provider supplies an access token for this API.
         let verified = Boolean(result?.accessToken)
-        if (account && config && !verified && !result && !quietRenewalTried()) {
+        // A successful login redirect can supply an account without an API access token. Likewise,
+        // a previous failed prompt=none attempt must not block a later cache-only token recovery.
+        // Always try the silent cache/refresh path first; only the interactive quiet redirect is once-per-launch.
+        if (account && config && !verified) {
           try {
             const token = await msal.acquireTokenSilent({
               scopes: [config.scope], account, cacheLookupPolicy: CacheLookupPolicy.AccessTokenAndRefreshToken,

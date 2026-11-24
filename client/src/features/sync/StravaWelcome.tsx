@@ -5,11 +5,12 @@ import { StravaSection } from './StravaSection'
 interface Props {
   onContinue: () => void
   notice?: string | null
+  hasPlan?: boolean
   connecting?: boolean
 }
 
 /** An optional first-run step, using the same Strava OAuth and privacy copy as Account. */
-export function StravaWelcome({ onContinue, notice, connecting = false }: Props) {
+export function StravaWelcome({ onContinue, notice, connecting = false, hasPlan = false }: Props) {
   const [status, setStatus] = useState<StravaStatus | 'error' | null>(null)
   const ready = status !== null && status !== 'error'
   const connected = ready && status.connected && status.status !== 'NeedsReconnect'
@@ -28,7 +29,7 @@ export function StravaWelcome({ onContinue, notice, connecting = false }: Props)
       )}
       <div className="submit-row">
         <button type="button" className={connected ? 'button button-primary' : 'button button-quiet'} onClick={onContinue}>
-          {connected ? 'Continue to my plan' : "I’ll connect later"}
+          {connected ? (hasPlan ? 'Continue to my plan' : 'Choose my training goal') : "I’ll connect later"}
         </button>
       </div>
       <p className="field-help">Optional. You can use Taperday without Strava and upload a run from Runs at any time.</p>

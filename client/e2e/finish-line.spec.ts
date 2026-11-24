@@ -55,7 +55,7 @@ test.describe('finish line journey', () => {
     await expect(page.getByRole('button', { name: 'I finished', exact: true })).toHaveCount(0)
 
     // Recovery is offered, optional, and shaped by the runner's answers.
-    await page.getByRole('button', { name: 'Start recovery plan', exact: true }).click()
+    await page.getByRole('button', { name: 'Explore recovery options', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Want a gentle recovery plan?' })).toBeVisible()
     await page.getByText('Adjust recovery preferences', { exact: true }).click()
     await page.getByRole('radio', { name: /All out/, includeHidden: true }).check()
@@ -134,7 +134,7 @@ test.describe('finish line journey', () => {
     await noSideScroll(page)
     await accessible(page)
     await page.getByText('Race details & corrections', { exact: true }).click()
-    await page.getByRole('button', { name: 'Undo' }).click()
+    await page.getByRole('button', { name: 'Remove saved result' }).click()
     await page.getByRole('button', { name: 'Remove result' }).click()
     await expect(page.getByRole('heading', { name: 'We found your Mandela Marathon.' })).toBeVisible()
     await expect(page.getByText('✓ Race finisher')).toHaveCount(0)

@@ -29,7 +29,7 @@ interface Props {
   onLoadActivity?: (id: string) => Promise<Activity>
   runDays: DayOfWeek[]
   onNewRace?: () => void
-  onOpenRecovery?: () => void
+  onOpenRecovery?: (raceId?: string) => void
   onOpenRacePrep?: () => void
   onSignIn?: () => void
 }
@@ -184,7 +184,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
           {signedIn && result && recoveryWelcome(result.outcome) && <section className="panel journey-rest" aria-label="Recovery plan">
             <p className="plan-kicker">Next · recovery</p><h3 className="journey-subtitle">Recovery has its own plan.</h3>
             <p>Your training chapter stays here. Take your next days gently.</p>
-            <button type="button" className="button" onClick={() => onOpenRecovery ? onOpenRecovery() : window.location.assign(`?view=recovery&race=${encodeURIComponent(result.id)}`)}>{isLiveRecovery(ready?.recovery) ? 'Open recovery plan' : 'Start recovery plan'}</button>
+            <button type="button" className="button" onClick={() => onOpenRecovery ? onOpenRecovery(result.id) : window.location.assign(`?view=recovery&race=${encodeURIComponent(result.id)}`)}>{isLiveRecovery(ready?.recovery) ? 'Open recovery plan' : 'Explore recovery options'}</button>
           </section>}
         </div>
         {raceStage && <details className="journey-training panel" ref={trainingDetails}>

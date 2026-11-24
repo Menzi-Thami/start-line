@@ -206,7 +206,7 @@ for (const scene of scenes) for (const mode of ['light', 'dark'] as const) {
       if (scene === 'training') await expect(primary).toHaveText("Open today’s workout")
       if (scene === 'synced') { await expect(primary).toHaveText('Open run details'); await expect(page.locator('.home-today')).toContainText('8.4 km'); await expect(page.getByRole('textbox')).toHaveCount(0) }
       if (scene === 'race-review') await expect(primary).toHaveText('Review my race')
-      if (scene === 'race-saved') { await expect(primary).toHaveText('Start recovery plan'); await expect(page.locator('.journey-home')).toContainText('Recording elapsed time') }
+      if (scene === 'race-saved') { await expect(primary).toHaveText('Explore recovery options'); await expect(page.locator('.journey-home')).toContainText('Recording elapsed time') }
       if (['recovery', 'paused', 'safety'].includes(scene)) await expect(primary).toHaveText('Open recovery plan')
       if (['recovery-ended', 'settled'].includes(scene)) { await expect(primary).toHaveText('Choose my next challenge'); await expect(page.getByText('Recovered', { exact: true })).toHaveCount(0) }
       if (scene === 'maintenance') { await expect(primary).toHaveText('Open easy running'); await expect(page.getByRole('button', { name: 'Train for another race' })).toBeVisible() }

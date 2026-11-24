@@ -99,7 +99,7 @@ for (const mode of ['no-plan', 'race-week', 'expired', 'error', 'long-name']) {
     await mockApi(page, mode === 'error')
     await page.setViewportSize({ width: 320, height: 900 })
     await page.goto(`/e2e/fixtures/redesign-screens.html?screen=home&mode=${mode}`)
-    if (mode === 'no-plan') await expect(page.getByRole('button', { name: 'Choose my next challenge', exact: true })).toBeVisible()
+    if (mode === 'no-plan') await expect(page.getByRole('button', { name: 'Choose my goal', exact: true })).toBeVisible()
     else if (mode === 'error') await expect(page.getByRole('button', { name: 'Retry plan' })).toBeVisible()
     else await expect(page.getByRole('button', { name: mode === 'race-week' ? 'Open race day' : "Open today’s workout" })).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)

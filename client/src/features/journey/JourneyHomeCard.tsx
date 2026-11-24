@@ -35,7 +35,12 @@ export function JourneyHomeCard({ journey, today, currentPlanId, onOpenPlan, onO
   if (concluded && recoveryWelcome(concluded.raceResult?.outcome) && onOpenRecovery) return <section className="panel home-card journey-home" aria-labelledby="journey-home-finish">
     <p className="plan-kicker">Training concluded</p><h2 id="journey-home-finish" className="home-card-heading">{concluded.raceName}</h2>
     {concluded.raceResult?.finishTime && <p className="mono">{formatClock(concluded.raceResult.finishTime)} · {concluded.raceResult.timeKind === 'OfficialChip' ? 'Official chip time' : concluded.raceResult.timeKind === 'RecordedElapsed' ? 'Recording elapsed time' : 'Finish time'}</p>}
-    <p>Your result is saved. Take your next steps gently.</p><button type="button" className="button button-primary" onClick={() => onOpenRecovery(concluded.raceResult!.id)}>Start recovery plan</button>
+    <p>Your result is saved. Take your next steps gently.</p><button type="button" className="button button-primary" onClick={() => onOpenRecovery(concluded.raceResult!.id)}>Explore recovery options</button>
+  </section>
+  if (!recovery && journey.state.journey.chapters.length === 0) return <section className="panel home-card journey-home" aria-labelledby="journey-home-first">
+    <p className="plan-kicker">Your running</p><h2 id="journey-home-first" className="home-card-heading">What are you running towards?</h2>
+    <p>Choose a race or a personal goal to build your training plan.</p>
+    <button type="button" className="button button-primary" onClick={onNewRace}>Choose my goal</button>
   </section>
   return <section className="panel home-card journey-home" aria-labelledby="journey-home-next">
     <p className="plan-kicker">{recovery ? 'Your next chapter' : 'Your running'}</p><h2 id="journey-home-next" className="home-card-heading">Ready when you are.</h2>

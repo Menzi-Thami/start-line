@@ -212,7 +212,7 @@ export function RaceResultForm({ chapter, today, units, runs = [], onLoadActivit
         <div className="journey-actions">
           {saved.outcome === 'Finished' && onCelebrate && <button type="button" className="button" onClick={(event) => onCelebrate(event.currentTarget)}>Replay race celebration</button>}
           <button type="button" className="button button-quiet" onClick={() => { setDraft(draftFrom({ ...chapter, raceResult: saved }, today)); setMode('form') }}>Edit result</button>
-          {!confirmUndo && <button type="button" className="button button-quiet" onClick={() => setConfirmUndo(true)}>Undo</button>}
+          {!confirmUndo && <button type="button" className="button button-quiet" onClick={() => setConfirmUndo(true)}>Remove saved result</button>}
         </div>
         {confirmUndo && (
           <div className="journey-confirm" role="group" aria-label="Remove race result">

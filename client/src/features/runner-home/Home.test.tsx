@@ -130,7 +130,7 @@ describe('Home', () => {
     const { user, onBuildPlan } = renderHome()
 
     expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Choose my next challenge' }))
+    await user.click(screen.getByRole('button', { name: 'Choose my goal' }))
     expect(onBuildPlan).toHaveBeenCalled()
   })
 
@@ -180,7 +180,7 @@ describe('Home', () => {
     renderHome()
     expect(screen.queryByRole('tablist', { name: 'Home' })).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Welcome back, Thandi' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Choose my next challenge' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Choose my goal' })).toBeVisible()
   })
 
 

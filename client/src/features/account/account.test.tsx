@@ -343,19 +343,31 @@ describe('a signed-up runner', () => {
     await user.click(screen.getByRole('button', { name: 'Yes, delete' }))
 
     // Home, offering a new plan, with nothing of the deleted one left on screen or in the link.
-    expect(await screen.findByRole('heading', { name: 'Ready when you are.' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'What are you running towards?' })).toBeInTheDocument()
     expect(db.plans).toHaveLength(0)
     expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
     expect(window.location.search).toBe('?view=home')
 
     // Building a new plan starts from a blank builder, and the wordmark never brings the deleted plan back.
-    await user.click(await screen.findByRole('button', { name: 'Choose my next challenge' }))
+    await user.click(await screen.findByRole('button', { name: 'Choose my goal' }))
     expect(screen.getByRole('heading', { name: 'Which race?' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Taperday' }))
     expect(screen.queryByRole('heading', { name: 'Parkrun PB' })).not.toBeInTheDocument()
   })
 
   const current = { id: 'plan-1', name: 'Parkrun PB', raceName: 'Parkrun PB', raceDate: '2026-12-13', createdAt: '2026-10-08T09:00:00Z', status: 'Active' } as const
+
+  it('opening a saved plan from a Home deep link ends the account handoff instead of showing a second loader', async () => {
+    accountApi({ runner: thandi, plans: [current] })
+    window.history.replaceState(null, '', '/?view=home')
+    const user = renderWith(signedIn())
+    await screen.findByRole('heading', { name: 'Welcome back, Thandi' })
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    await user.click(await within(nav).findByRole('button', { name: 'Plan' }))
+    await screen.findByRole('tab', { name: 'This week' })
+    expect(document.querySelector('.finding-plan')).toBeNull()
+    expect(screen.queryByText('Your account is taking longer than expected')).not.toBeInTheDocument()
+  })
 
   it('goes Home from the Taperday wordmark, even from a half-finished change of answers', async () => {
     accountApi({ runner: thandi, plans: [current] })

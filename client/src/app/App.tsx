@@ -709,6 +709,8 @@ export function App() {
   const openSaved = (request: GeneratePlanRequest) => {
     const inputs = fromRequest(request)
     if (!inputs) return
+    landing.current = true
+    setLanded(true)
     setView('build')
     // Remount the form so it shows the saved plan's choices, not whatever was typed before.
     setBuilderKey((k) => k + 1)
@@ -959,7 +961,7 @@ export function App() {
         {view === 'sign-in' && state.kind === 'signed-out' && <SignInLanding onSignIn={auth.signIn} onSignUp={auth.signUp} onGoogle={auth.signInWithGoogle} onBack={() => go('build')} />}
         {view === 'sign-in' && state.kind !== 'signed-out' && <div className="empty" role="status"><p>{state.kind === 'loading' || state.kind === 'ready' ? 'Finding your training plan…' : state.kind === 'error' && state.needsSignIn ? 'Your sign-in needs renewing. Continue securely to return to your training.' : 'Finish your account setup to continue.'}</p>{state.kind === 'needs-sign-up' && <button type="button" className="button" onClick={() => go('sign-up')}>Finish setting up your account</button>}</div>}
         {view === 'onboarding' && state.kind === 'ready' && (
-          <StravaWelcome notice={stravaNotice} connecting={stravaConnecting} onContinue={leaveStravaWelcome} />
+          <StravaWelcome hasPlan={plan.kind === 'ready'} notice={stravaNotice} connecting={stravaConnecting} onContinue={leaveStravaWelcome} />
         )}
         {view === 'privacy' && <PrivacyPolicy />}
         {view === 'unsubscribe' && <Unsubscribe token={new URLSearchParams(window.location.search).get('t')} weekly={new URLSearchParams(window.location.search).get('list') === 'weekly'} onOpenAccount={() => go('account')} />}
@@ -1001,7 +1003,7 @@ export function App() {
           </section>
         )}
 
-        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account') && state.kind === 'loading' && (
+        {(view === 'home' || view === 'runs' || view === 'journey' || view === 'recovery' || view === 'account' || view === 'beginner' || view === 'onboarding') && state.kind === 'loading' && (
           <SignInWait onRetry={runner.refresh} onSignOut={auth.signOut} quietUntilSlow={view === 'home' && !!homeRunner} />
         )}
 
@@ -1226,7 +1228,7 @@ export function App() {
                 journeyPlanId={savedOnScreen && state.kind === 'ready' ? savedOnScreen : null}
                 onNewRace={startFresh}
                 onOpenJourney={() => openChapter()}
-                onOpenRecovery={() => openRecovery()}
+                onOpenRecovery={openRecovery}
                 onSignIn={state.kind === 'signed-out' ? auth.signIn : undefined}
                 // The bar's Home does this job wherever the bar is shown.
                 onBack={state.kind === 'ready' && !showBar ? () => go('home') : undefined}

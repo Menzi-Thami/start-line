@@ -107,7 +107,7 @@ test('race day ends at the runner’s midnight without assuming a result or star
   await page.clock.runFor(1200)
   await expect(page.getByText('Training concluded', { exact: true })).toBeVisible()
   await expect(page.getByText('Your training chapter is saved in Journey.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Start recovery plan', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Explore recovery options', exact: true })).toHaveCount(0)
   await expect(page.getByRole('dialog')).toHaveCount(0)
   expect(state.results).toEqual([]); expect(state.starts).toEqual([])
   await page.clock.resume()
@@ -145,7 +145,7 @@ test('concluded training → saved recording → separate recovery → Home/Plan
   await expect(page.getByLabel('Distance (km)', { exact: true })).toHaveCount(0)
   const nav = page.getByRole('navigation', { name: 'Main', exact: true })
   await nav.getByRole('button', { name: 'Home', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Start recovery plan', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Explore recovery options', exact: true })).toBeVisible()
   await calmHome(page)
   await expect(page.locator('.journey-home button')).toHaveCount(1)
   expect(state.starts).toHaveLength(0)
@@ -158,7 +158,7 @@ test('concluded training → saved recording → separate recovery → Home/Plan
       await page.screenshot({ path: `${homeQa}/race-confirmed-375-${mode}.png`, fullPage: true })
     }
   }
-  await page.getByRole('button', { name: 'Start recovery plan', exact: true }).click()
+  await page.getByRole('button', { name: 'Explore recovery options', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your recovery plan.', exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Start my recovery', exact: true }).dblclick()
   await expect(page.getByRole('button', { name: 'Good to go', exact: true })).toBeVisible()

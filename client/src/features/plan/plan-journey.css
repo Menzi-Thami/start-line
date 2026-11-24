@@ -1,12 +1,21 @@
 .plan [hidden] { display: none !important; }
 .plan .week-navigation { display: flex; justify-content: space-between; gap: .5rem; margin-block: 1rem; }
-.plan .week-master-detail { display: grid; gap: 1rem; min-width: 0; }
-.plan .week-strip.week-agenda { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; margin: 0; padding: 0; }
-.plan .week-agenda .week-day { min-width: 0; padding: 0; margin: 0; }
-.plan .week-agenda .week-day-button { display: flex; flex-direction: column; justify-content: center; gap: .3rem; width: 100%; min-width: 0; min-height: 88px; padding: .5rem 0; border-radius: 14px; border: 1px solid transparent; }
-.plan .week-agenda .week-day-name { font-size: .7rem; }
+.plan .week-master-detail { display: block; min-width: 0; }
+.plan .week-inline-preview { margin-block: 0 1rem; }
+.plan .week-strip.week-agenda { display: flex; flex-direction: column; gap: 0; margin: 0; padding: 0; }
+.plan .week-agenda .week-day { position: relative; min-width: 0; padding: 0; margin: 0; border-bottom: 1px solid var(--line); }
+.plan .week-agenda .week-day-button { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 1.15rem; width: 100%; min-width: 0; min-height: 126px; padding: 1.1rem 0; border-radius: 0; border: 1px solid transparent; text-align: start; background: transparent; }
+.plan .week-agenda .week-day-name { font-size: .85rem; }
 .plan .week-agenda .week-day-dot { width: auto; height: auto; border: 0; background: none; color: var(--ink); opacity: 1; }
-.plan .week-agenda .week-day-workout, .plan .week-status-label { display: none; }
+.plan .week-agenda .week-day-workout { display: flex; flex-direction: column; gap: .35rem; flex: 1; min-width: 0; white-space: normal; }
+.plan .week-agenda .week-day-workout > strong { font: 600 1.2rem/1.25 var(--font-body); overflow-wrap: anywhere; }
+.plan .workout-day-label { display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem; color: var(--muted); }
+.plan .workout-current { color: var(--accent); font-weight: 700; font-size: .85rem; }
+.plan .week-agenda .workout-artwork { --workout-art-size: 80px; }
+.plan .week-agenda .has-move .week-day-button { padding-inline-end: 64px; }
+.plan .week-agenda .schedule-drag-handle { position: absolute; inset-inline-end: 0; inset-block-start: 12px; margin: 0; width: 44px; height: 44px; padding: 0; color: var(--muted); font-size: 1.4rem; }
+.plan .week-agenda .schedule-drag-handle::after { inset: 0; }
+.plan .workout-move { position: absolute; inset-inline-end: 0; inset-block-start: 68px; min-height: 44px; min-width: 54px; font-size: .875rem; }
 .plan .week-day-button[data-selected="true"] { border-color: var(--ink); background: rgba(190, 215, 167, .12); }
 .plan .week-day-button[aria-current="date"] .week-day-dot { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .25rem; }
 .plan .day-preview { margin: 0; min-width: 0; padding: clamp(1rem, 3vw, 2rem); }
@@ -20,12 +29,13 @@
 .plan .calendar-status { display: block; font-size: .7rem; line-height: 1; }
 .plan .plan-calendar-day[aria-pressed="true"] { outline: 2px solid currentColor; outline-offset: 1px; }
 @media (min-width: 768px) {
-  .plan .week-master-detail { grid-template-columns: minmax(250px, .85fr) minmax(0, 1.3fr); align-items: start; }
-  .plan .week-strip.week-agenda { grid-template-columns: 1fr; gap: .35rem; }
-  .plan .week-agenda .week-day-button { flex-direction: row; justify-content: flex-start; min-height: 64px; gap: .75rem; padding: .75rem; text-align: left; }
-  .plan .week-agenda .week-day-workout { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .plan .week-agenda .workout-artwork { --workout-art-size: 72px; }
   .plan .week-agenda .week-day-dot { flex-shrink: 0; }
   .plan .day-detail-page .day-summary-columns { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 360px) {
+  .plan .week-agenda .workout-artwork { --workout-art-size: 64px; }
+  .plan .week-agenda .week-day-button { gap: .8rem; }
 }
 @media (prefers-reduced-motion: no-preference) {
   .plan .week-day-button, .plan .day-preview { transition: background-color 200ms, border-color 200ms; }

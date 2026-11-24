@@ -1,0 +1,10 @@
+.workout-artwork { position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--workout-art-size, 88px); aspect-ratio: 1; border-radius: 10px; overflow: hidden; isolation: isolate; background: var(--accent-soft); color: var(--accent); }
+.workout-artwork-track { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .2; stroke-width: 1.25; }
+.workout-artwork > .runner { position: relative; flex: none; color: inherit; max-width: 80%; animation: none; }
+.workout-artwork .limb, .workout-artwork .runner-breathe { animation: none; }
+.workout-artwork.is-interval, .workout-artwork.is-race { background: var(--accent); color: var(--on-accent); }
+.workout-artwork.is-tempo, .workout-artwork.is-longrun { background: var(--sage); color: var(--on-sage); }
+.workout-artwork.is-recovery, .workout-artwork.is-strength { background: var(--surface-sunk); color: var(--ink-2); }
+.workout-artwork.is-rest, .workout-artwork.is-outside { background: var(--surface); color: var(--muted); }
+.workout-artwork.is-rest .workout-artwork-track, .workout-artwork.is-outside .workout-artwork-track { display: none; }
+.workout-artwork-strength { width: 60%; height: 60%; }

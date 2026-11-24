@@ -60,15 +60,17 @@ Both last reported a required audit failure on [GHSA-fc5q-39xc-vjpf](https://git
 
 ### Home
 
+**24 November 2026 refinement:** the owner superseded the compact-week direction below. During active training, Home shows all seven dated days as large, full-width vertical workout rows with original Taperday artwork, planned/recorded values and accessible links. Today stays first but takes less space. Plan uses the same visual language and keeps the full editing, drag/drop and explicit Move confirmation flow. This is a presentation change, not a new completion, matching or plan lifecycle. Post-race, recovery and settled Home states keep their existing calm next action; they do not acquire an old training week.
+
 Mobile reading order:
 
 1. Existing brand/theme header, welcome greeting and local date.
 2. One focus area: a short context label, one headline, one concise explanation and at most one prominent action.
-3. During active training only, a compact weekly preview/link if useful. Keep the full seven-day schedule in Plan. Planned and actual values must remain distinguishable.
+3. During active training only, the full seven-day vertical workout list and a link to Plan for editing. Each large row carries its date, workout, artwork and actual recording or clearly labelled prescription. Planned and actual values must remain distinguishable.
 4. At most one compact recent-recording row with its actual date/source and a link to Runs. Keep it available after training and recovery end; hide the row gracefully if no recent recording exists.
 5. Existing navigation, safe-area spacing and normal footer.
 
-Desktop may put the supporting preview beside the focus area. It must not introduce another primary action or more Home modules. Reuse an existing panel for the focus area; use spacing and simple dividers for secondary content. Do not strip every container or replace pills with tiny controls.
+Desktop keeps the workout list full width beneath Today. It must not introduce another primary action or more Home modules. Reuse an existing panel for the focus area; use spacing and simple dividers for secondary content. Do not strip every container or replace pills with tiny controls.
 
 Move weekly coaching review and adjustment controls to their relevant Plan location; keep essential current safety/coaching information available. Keep activity import/source diagnostics in Runs or Account, and historical detail in Journey. Preserve legacy links that currently open tools, reviews or settings and preserve unsaved calculator/form drafts. Do not merely conceal the existing dashboard beneath a large generic More disclosure.
 

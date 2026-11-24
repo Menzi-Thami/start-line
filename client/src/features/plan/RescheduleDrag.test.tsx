@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { planFixture } from '../../test/server'
 import { WeekGlance } from './WeekGlance'
@@ -13,6 +13,14 @@ const runWeek = () => {
 const at = (x: number, y: number) => [{ clientX: x, clientY: y }]
 
 describe('reschedule from calendar drag', () => {
+  it('opens the same move flow from a named button without needing to drag', () => {
+    const { week, from } = runWeek()
+    const requestMove = vi.fn()
+    render(<WeekGlance week={week} today={week.startDate} units="km" done={new Set()} onSelectDate={vi.fn()} onRequestMove={requestMove} />)
+    fireEvent.click(screen.getAllByRole('button', { name: /^Move .+ from / })[0]!)
+    expect(requestMove).toHaveBeenCalledOnce()
+    expect(requestMove).toHaveBeenCalledWith(from)
+  })
   it('routes a drop on another date to Move Run without changing the plan', () => {
     const week = planFixture.weeks.find(w => w.sessions.some(s => s.type !== 'Strength' && s.type !== 'Race'))!
     const from = week.sessions.find(s => s.type !== 'Strength' && s.type !== 'Race')!.date

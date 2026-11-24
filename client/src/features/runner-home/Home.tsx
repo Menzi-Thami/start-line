@@ -9,9 +9,6 @@ import { CheckInLoadState } from '../coaching/CheckInLoadState'
 import { useCheckIns, type SessionCoach } from '../coaching/useCheckIns'
 import { completionsKey, useSyncedCompletions } from '../coaching/useSyncedCompletions'
 import { JourneyHomeCard } from '../journey/JourneyHomeCard'
-import { syncedFor } from '../coaching/strava-completion'
-import { formatDistance } from '../../lib/format'
-import { recordingForToday } from './today-recording'
 import { isPostTrainingHome } from '../journey/journey-model'
 import { useJourney } from '../journey/useJourney'
 import { weekEnd } from '../../lib/plan-runs'
@@ -20,7 +17,7 @@ import { BeginnerHomeCard } from './BeginnerHomeCard'
 import { LatestRun } from './LatestRun'
 import { TodayFocus } from './TodayFocus'
 import { useHomePlan, useAvailableRecordings, type HomePlan } from './home-data'
-import { count } from '../../lib/plural'
+import { HomeWeek } from './HomeWeek'
 import './home-navigation.css'
 
 export interface HomeProps {
@@ -35,7 +32,7 @@ export interface HomeProps {
   /** The current plan's id, known from the plan list before the plan itself arrives. */
   pendingPlanId?: string | null
 }
-/** One priority on Home. Running totals and tools live on Runs; progress and the weekly review live on the plan. */
+/** Today's priority and a readable training week. Editing and the coaching review stay in Plan. */
 export function Home(props: HomeProps) {
   const { runner, units, today, current: stored, runs = [], strava, onOpenPlan, onBuildPlan, onOpenRun, onOpenRuns,
     initialPlan, onPlanLoaded, photo = null, accountLoading = false } = props
@@ -75,9 +72,8 @@ export function Home(props: HomeProps) {
     save: checkIns.save, remove: checkIns.remove, saveAdditional: checkIns.saveAdditional, removeAdditional: checkIns.removeAdditional,
   } : undefined
   const week = plan?.weeks.find(value => value.startDate <= today && today <= weekEnd(value))
-  const weekRuns = week?.sessions.filter(session => session.type !== 'Strength' && session.type !== 'Race') ?? []
-  const doneRuns = weekRuns.filter(session => { const own = coach?.get(session); return own ? own.status !== 'Skipped' : syncedFor(session, coach)?.state === 'Completed' || !!recordingForToday(session, coach, available) }).length
-  return <div className={`home home-simple${afterTraining ? ' is-after-training' : ''}`}>
+  const showWeek = !pending && !afterTraining && !!current && !!plan && !!week && plan.race.date !== today
+  return <div className={`home home-simple${afterTraining ? ' is-after-training' : ''}${showWeek ? ' has-week' : ''}`}>
     <div>
       <header className="home-hello"><Avatar name={runner.displayName} photo={photo} size={48} /><div>
         <h1 ref={heading} tabIndex={-1} className="home-title">Welcome back, {runner.displayName}</h1><p className="home-lede">{formatDate(today, 'long')}</p>
@@ -91,10 +87,7 @@ export function Home(props: HomeProps) {
         {!pending && !beginnerActive && (afterTraining || current === null) && <JourneyHomeCard journey={journey} today={today} currentPlanId={null} onOpenPlan={onOpenPlan} onOpenJourney={props.onOpenJourney} onOpenRecovery={props.onOpenRecovery} onNewRace={onBuildPlan} />}
         {!pending && !afterTraining && !current && <BeginnerHomeCard today={today} primary onAvailable={setBeginnerActive} onOpenProgramme={props.onOpenBeginner ?? onBuildPlan} />}
         {!pending && !afterTraining && current && <TodayFocus plan={plan} failed={failed} today={today} units={units} runs={available} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={props.onOpenDay} onOpenRacePrep={props.onOpenRacePrep} onOpenRun={onOpenRun} />}
-        {!pending && !afterTraining && current && plan && week && plan.race.date !== today && <section className="home-week-preview" aria-label="This week">
-          <div><h2 className="home-card-heading">Your week</h2><p className="field-help">Week {week.number} of {plan.weeks.length} · {plan.race.name}</p><p className="field-help">{formatDistance(plan.race.distanceKm, units)} · {formatDate(plan.race.date)} · {week.phase}</p><p className="field-help">{doneRuns} of {count(weekRuns.length, 'run')}</p></div>
-          <button type="button" className="link-button" onClick={onOpenPlan}>View this week</button>
-        </section>}
+        {showWeek && <HomeWeek plan={plan!} week={week!} today={today} units={units} runs={available} coach={coach} onOpenPlan={onOpenPlan} onOpenDay={props.onOpenDay} onOpenRun={onOpenRun} />}
         {!pending && !afterTraining && plan && coach && <NotificationTick plan={plan} today={today} coach={coach} />}
         {!pending && <LatestRun runs={available} strava={strava} units={units} today={today} onOpenRun={onOpenRun} onOpenRuns={onOpenRuns} />}
         {!pending && strava?.status === 'NeedsReconnect' && <p className="field-help home-connection-note">Your Strava connection needs attention. <button type="button" className="link-button" onClick={props.onOpenAccount}>Reconnect Strava</button></p>}

@@ -2,6 +2,20 @@ import { expect, test } from '@playwright/test'
 
 const fixture = 'http://127.0.0.1:5176/e2e/fixtures/move-run.html'
 
+test('the visible row Move button is keyboard accessible and waits for confirmation @phone', async ({ page }) => {
+  await page.goto(fixture)
+  const move = page.locator('.workout-move').first()
+  await expect(move).toBeVisible()
+  await move.focus()
+  await page.keyboard.press('Enter')
+  const dialog = page.getByRole('dialog', { name: 'Move this run?' })
+  await expect(dialog).toBeVisible()
+  await expect(page.locator('#saved-state')).toHaveText('Not saved')
+  await dialog.getByRole('group', { name: 'Available dates' }).getByRole('button').first().click()
+  await dialog.getByRole('button', { name: 'Move run', exact: true }).click()
+  await expect(page.locator('#saved-state')).toHaveText('Saved')
+})
+
 test('dragging a workout opens a compact confirmation that does not auto-save @phone', async ({ page }) => {
   await page.goto(fixture)
   const source = page.locator('.week-day-button[draggable="true"]').first()

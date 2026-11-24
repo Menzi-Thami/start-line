@@ -6,10 +6,11 @@ import type { PlanWeek } from '../../lib/types'
 import { useMoveDrag } from './useMoveDrag'
 import { calendarDayState, moveCalendarFocus } from './calendar-day'
 import { isStrength } from '../../lib/strength'
+import { WorkoutArtwork } from '../shared/WorkoutArtwork'
 
 interface Props {
   statusFor?: (date: string) => ReturnType<typeof dayStatus>
-  onRequestMove?: (from: string, to: string) => void
+  onRequestMove?: (from: string, to?: string) => void
   /** Days a run can be moved from and to (move-window.ts); without them, any day from today. */
   canMoveFrom?: (date: string) => boolean
   canMoveTo?: (date: string) => boolean
@@ -33,7 +34,7 @@ const addDays = (iso: string, n: number) => {
 }
 
 /**
- * The week at a glance, above its days: what it asks for (distance and runs), then its seven days as a strip. A day is
+ * The week at a glance: what it asks for (distance and runs), then seven large dated workout rows. A day is
  * done once its sessions are ticked; recorded activities have a separate marker. Today is in volt; rest days are dim. All from the plan
  * and the runner's own ticks and runs, never made up.
  */
@@ -64,22 +65,22 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
           const recorded = ran || additional || activityDates.includes(date)
           const state = calendarDayState(sessions, done, recorded, date, today)
           const status = statusFor?.(date)
+          const movable = !!onRequestMove && canMoveFrom(date) && sessions.some(s => s.type !== 'Strength' && s.type !== 'Race')
           return (
-            <li key={date} className={`week-day is-${status?.kind === 'complete' ? 'done' : status?.kind === 'partial' ? 'partial' : status && state === 'done' ? 'ahead' : state}${date === today ? ' is-today' : ''}${recorded ? ' has-activity' : ''}`}>
-              <button type="button" className="week-day-button" data-date={date} draggable={!!onRequestMove && canMoveFrom(date) && sessions.some(s => s.type !== 'Strength' && s.type !== 'Race')} {...drag.day(date)} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} data-selected={date === selectedDate} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
+            <li key={date} className={`week-day is-${status?.kind === 'complete' ? 'done' : status?.kind === 'partial' ? 'partial' : status && state === 'done' ? 'ahead' : state}${date === today ? ' is-today' : ''}${recorded ? ' has-activity' : ''}${movable ? ' has-move' : ''}`}>
+              <button type="button" className="week-day-button" data-date={date} draggable={movable} {...drag.day(date)} aria-pressed={date === selectedDate} aria-controls={date === selectedDate ? daySummaryId : undefined} data-selected={date === selectedDate} aria-current={date === today ? 'date' : undefined} onClick={event => onSelectDate(date, event.currentTarget)}>
                 <span className="visually-hidden">{formatDate(date, 'long')}: </span>
-                {onRequestMove && canMoveFrom(date) && sessions.some(s => s.type !== 'Strength' && s.type !== 'Race') && <span className="schedule-drag-handle" aria-hidden="true" {...drag.handle(date)}>⠿</span>}
-                <span className="week-day-name">{formatDate(date, 'weekday').slice(0, 3)}</span>
-                <span className="week-day-dot mono">{Number(date.slice(8))}</span>
-                <span className="week-day-workout"><strong>{dayRuns.length ? dayRuns.map(session => session.title).join(' + ') : sessions.length ? sessions.map(session => session.title).join(' + ') : status?.kind === 'outside' ? 'Outside this plan' : 'Rest day'}</strong>{dayRuns.length > 0 && dayRuns.length < sessions.length && <span className="chip chip-good week-day-strength">+ Strength</span>}<span className="field-help">{sessions.filter(session => session.distanceKm > 0).map(session => formatDistance(session.distanceKm, units)).join(' + ')}{recorded ? ' · Activity recorded' : state === 'done' ? ' · Complete' : state === 'missed' ? ' · Not logged' : ''}</span></span>
-                <span className={`training-status is-${status?.kind ?? 'planned'}`} aria-label={status?.label}>{status?.icon ?? '•'}<span className="week-status-label"> {status?.label ?? 'Scheduled'}</span></span>
+                <WorkoutArtwork session={dayRuns[0] ?? sessions[0]} outside={status?.kind === 'outside'} />
+                <span className="week-day-workout"><span className="workout-day-label"><span className="week-day-name">{formatDate(date, 'weekday')}</span><span className="week-day-dot mono">{Number(date.slice(8))}</span>{date === today && <span className="workout-current">Today</span>}</span><strong>{dayRuns.length ? dayRuns.map(session => session.title).join(' + ') : sessions.length ? sessions.map(session => session.title).join(' + ') : status?.kind === 'outside' ? 'Outside this plan' : 'Rest day'}</strong>{dayRuns.length > 0 && dayRuns.length < sessions.length && <span className="chip chip-good week-day-strength">+ Strength</span>}<span className="field-help">{sessions.filter(session => session.distanceKm > 0).map(session => formatDistance(session.distanceKm, units)).join(' + ')}{recorded ? ' · Activity recorded' : state === 'done' ? ' · Complete' : state === 'missed' ? ' · Not logged' : ''}</span><span className={`training-status is-${status?.kind ?? 'planned'}`} aria-label={status?.label}>{status?.icon ?? '•'}<span className="week-status-label"> {status?.label ?? 'Scheduled'}</span></span></span>
+                {movable && <span className="schedule-drag-handle" aria-hidden="true" {...drag.handle(date)}>⠿</span>}
                 <span className="visually-hidden">
                   {sessions.length === 0 ? (status?.kind === 'outside' ? ', outside this plan' : ', rest') : `, ${sessions.map((s) => s.title).join(', ')}`}
                   {state === 'done' ? ', done' : ''}
                   {additional ? ', additional run logged' : ''}
                 </span>
               </button>
-
+              {movable && <button type="button" className="link-button workout-move" aria-label={`Move ${dayRuns.map(session => session.title).join(' + ')} from ${formatDate(date, 'long')}`} onClick={() => onRequestMove?.(date)}>Move</button>}
+              {date === selectedDate && renderSelectedDay && <div className="week-inline-preview">{renderSelectedDay()}</div>}
             </li>
           )
         })}
@@ -89,7 +90,7 @@ export function WeekGlance({ week, done, runs, additionalDates = [], activityDat
         <button type="button" className="button button-quiet" disabled={selectedDate === days[0]} onClick={event => onSelectDate(days[Math.max(0, days.indexOf(selectedDate ?? days[0]!) - 1)]!, event.currentTarget)}>← Previous day</button>
         <button type="button" className="button button-quiet" disabled={selectedDate === days[6]} onClick={event => onSelectDate(days[Math.min(6, days.indexOf(selectedDate ?? days[0]!) + 1)]!, event.currentTarget)}>Next day →</button>
       </div>
-      {renderSelectedDay?.()}
+      {!days.includes(selectedDate ?? '') && renderSelectedDay?.()}
       </div>
       </div>
       <p className="field-help calendar-day-key">• Run · ○ Rest · ✓ Done. Tap a day to see it.</p>

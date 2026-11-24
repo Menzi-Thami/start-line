@@ -6,8 +6,7 @@ import { SessionSteps } from './SessionSteps'
 import { isStrength, strengthSummary } from '../../lib/strength'
 
 /**
- * The selected day beside the week. On a phone it's a short preview under the strip; on a desktop it fills the second
- * column with each session's distance, pace and structure, so the week and the day read side by side.
+ * The selected day's distance, pace and structure appear directly below its workout row at every width.
  */
 export function DayPreview({ date, sessions, status, units, onOpen, id, paces }: {
   date: string; sessions: readonly Session[]; status: ReturnType<typeof dayStatus>; units: Units; onOpen: () => void; id: string

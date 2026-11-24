@@ -29,6 +29,11 @@ Forgot password is **not a verified OTP-to-password migration**. See corrected [
 ### Fixes in this completion pass
 
 - Empty tokens no longer reopen the session.
+- A real production-browser probe confirmed cached shell Response.url metadata retained a synthetic callback code.
+  The worker now caches identical HTML/headers without navigation URL metadata, removes compression headers for its
+  decoded synthetic body, and rotates only the app-shell cache to v4 to evict old metadata. Accounts/drafts are not cleared.
+  A Chromium desktop/phone regression seeds v3, verifies eviction/no code or private URL in cache, and reopens offline.
+  Both profiles passed against normal production preview HTML and against a separate gzip-compressed loopback server.
 - Token requests that finish after sign-out, account change or unmount return no token and cannot reopen private UI.
 - MSAL 5 cross-tab `ACTIVE_ACCOUNT_CHANGED`/`LOGOUT_SUCCESS` events close the previous account’s private UI; a tab
   does not silently adopt another runner. The MSAL subscription is removed on unmount.
@@ -171,7 +176,7 @@ Playwright device profiles are not counted as iPhone evidence anywhere in this d
 6. **Double tap on Continue securely could start a second interaction** (the guard was released as soon as navigation began). It now stays set until the page leaves or the call fails. Sign out is guarded the same way.
 7. **Sign-out failure paths.** A rejected `logoutRedirect` was unhandled and left the "Welcome back" card for an account whose cache was already gone. Now the device always ends signed out (first-visit page) and a failure is shown. Offline, sign-out clears the device without trying to load Microsoft's page; the next sign-in still uses `select_account`.
 
-No changes to the service worker were needed: it never caches API or identity responses, navigations are network-first, and the cache name was already rotated for the sign-in release.
+At the historical commit, no service-worker changes were made (the completion pass above now fixes response URL metadata): it never caches API or identity responses, navigations are network-first, and the cache name was already rotated for the sign-in release.
 
 ### Configuration preflight (read-only, values not recorded)
 

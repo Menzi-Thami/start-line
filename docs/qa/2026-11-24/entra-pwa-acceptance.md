@@ -32,6 +32,7 @@ Forgot password is **not a verified OTP-to-password migration**. See corrected [
 - Token requests that finish after sign-out, account change or unmount return no token and cannot reopen private UI.
 - MSAL 5 cross-tab `ACTIVE_ACCOUNT_CHANGED`/`LOGOUT_SUCCESS` events close the previous account’s private UI; a tab
   does not silently adopt another runner. The MSAL subscription is removed on unmount.
+- Startup acquisition also discards the old identity if another tab changes account before it completes; quiet-return configuration faults keep their actionable code instead of being hidden as normal session expiry. Both reproduced failing before the fixes.
 - Password-mode copy preserves the old customer’s actual method instead of promising conversion via Forgot password.
 - Unit regressions cover every change. Original colours, cartoon, motion and plan film are unchanged.
 
@@ -42,7 +43,7 @@ Forgot password is **not a verified OTP-to-password migration**. See corrected [
   [secret scan](https://github.com/Menzi-Thami/start-line/actions/runs/45363598103).
 - CI frontend: **1,098 tests in 145 files**, lint/typecheck/build and dependency audit (zero vulnerabilities).
   Backend, four Playwright shards and connection engine jobs ran; exact final-head results are recorded in the PR description.
-- Latest local auth regression run: **47/47** (AuthProvider, AppAuth, SignInLanding). New browser-only gate suite:
+- Latest local auth regression run: **49/49** (AuthProvider, AppAuth, SignInLanding). New browser-only gate suite:
   **20/20** across desktop Chromium, Android Chromium, desktop Firefox, iPhone WebKit and iPad WebKit. Four tests per
   profile: signed-out and remembered-account deep links with no private child, session revocation unmount, 12-second
   initialization recovery and public privacy access. Screens at 320/390/768/1440 in both themes; axe checks on the gate.

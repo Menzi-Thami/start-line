@@ -494,3 +494,26 @@ describe('late token responses and other browser tabs', () => {
     expect(msal.removeEventCallback).toHaveBeenCalledWith('listener')
   })
 })
+
+it('does not reopen the startup account after another tab changes identity during silent acquisition', async () => {
+  let finish!: (token: { accessToken: string }) => void
+  msal.acquireTokenSilent.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  open()
+  await waitFor(() => expect(msal.acquireTokenSilent).toHaveBeenCalledOnce())
+  const other = account('other')
+  cached = [other]
+  active = other
+  act(() => accountEvent?.({ eventType: EventType.ACTIVE_ACCOUNT_CHANGED } as EventMessage))
+  await act(async () => finish({ accessToken: 'late-startup-token' }))
+  expect(screen.getByTestId('who')).toHaveTextContent('signed out')
+  expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+})
+
+it('shows configuration errors from a quiet return instead of hiding them as an ended session', async () => {
+  sessionStorage.setItem('taperday.quiet-renewal', 'pending')
+  msal.handleRedirectPromise.mockRejectedValueOnce(new ServerError('invalid_request', 'synthetic', 'AADSTS50011: Synthetic redirect mismatch.'))
+  open()
+  await screen.findByText('remembered@example.com')
+  expect(screen.getByTestId('error')).toHaveTextContent('set up correctly')
+  expect(screen.getByTestId('error')).toHaveTextContent('AADSTS50011')
+})

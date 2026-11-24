@@ -126,7 +126,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
             })
             verified = Boolean(token.accessToken)
           } catch (failure) {
-            if (!cancelled && !result && !quietRenewalTried() && navigator.onLine && !isNetworkFailure(failure)) {
+            if (!cancelled && msal.getActiveAccount()?.homeAccountId === account.homeAccountId && !result && !quietRenewalTried() && navigator.onLine && !isNetworkFailure(failure)) {
               markQuietRenewal('pending')
               redirecting.current = true
               leaving = true
@@ -138,6 +138,12 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
           }
         }
         if (cancelled) return
+        // Cross-tab account changes can happen while startup token acquisition is pending, before our account ref exists.
+        if (account && msal.getActiveAccount()?.homeAccountId !== account.homeAccountId) {
+          setSessionReady(false)
+          setInfo(null)
+          return
+        }
         activateOwner(account)
         currentAccount.current = account
         setSessionReady(Boolean(account && verified))
@@ -155,6 +161,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
           if (account) msal.setActiveAccount(account)
           activateOwner(account)
           currentAccount.current = account
+          setError(tokenProblem(failure))
           setSessionReady(false)
           setInfo(account)
           return

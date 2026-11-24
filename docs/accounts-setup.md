@@ -146,10 +146,12 @@ A new external tenant comes with **security defaults** switched on. They can't b
 policy can be switched on while they are, so Taperday uses two policies (Entra ID → Conditional Access →
 Policies). Confirm the current tenant's feature availability and licensing before changing these settings.
 
-**Required configuration, not a current verification result:** the earlier read-only check recorded in PR #318 found
-that the runner-session policy excluded only Global Administrator and Organizational Branding Administrator. The
-seven CLI roles below still needed exclusions. That finding has not been rechecked or repaired by this documentation
-change. The CLI account's MFA coverage must also be verified in the current tenant before it is treated as protected.
+**Checked live on 24 November 2026** (read-only Graph check, signed in as the CLI account). An earlier check that day
+found the runner-session policy excluded only Global Administrator and Organizational Branding Administrator; the
+owner has since added the seven CLI roles. Both policies are **On** and target the same nine roles: the MFA policy
+includes them (excluding only the emergency access account) and the runner-session policy excludes them. The CLI
+account holds exactly the seven roles in section 8, and its sign-ins that day show multifactor authentication was
+required and Conditional Access succeeded. Recheck after any role or policy change.
 
 | Policy | Applies to | Does |
 |---|---|---|
@@ -171,8 +173,8 @@ For an owner-approved initial setup or repair, order matters:
 4. Keep that admin tab open and check you can still sign in from a private window before closing it. If you can't,
    turn the MFA policy off from the open tab.
 
-For the outstanding CLI-role repair, propose the exact difference to the existing policies first; do not recreate
-them or repeat the initial setup. Preserve existing targets, emergency-account exclusions and controls. An owner with
+For any later change, such as a new admin role, propose the exact difference to the existing policies first; do not
+recreate them or repeat the initial setup. Preserve existing targets, emergency-account exclusions and controls. An owner with
 the appropriate policy-administration role must approve and apply any change. Verify both policies are **On** (not
 Off or Report-only), the CLI account is covered by admin MFA and excluded from runner persistence, and a fresh private
 CLI sign-in satisfies the policy in the sign-in logs. Record the date and sanitized outcome; a document or green CI
@@ -210,14 +212,14 @@ subscription, created the same way in that tenant, would cover the hosting side 
 The normal admin is a personal Microsoft account added to the tenant as a guest. The earlier CLI attempt with that
 account failed with AADSTS500208. That observation is specific to the account, tenant and client configuration; it does
 not establish that all personal guest accounts are unsupported by Azure CLI. A separate member account was recorded
-as created in this tenant on 24 November 2026 for administrative scripts and checks. Its current assignments and policy
-coverage still require live verification.
+as created in this tenant on 24 November 2026 for administrative scripts and checks. Its assignments and policy
+coverage were checked live the same day (section 6).
 
 - **A member account created in the tenant** (`<name>@<subdomain>.onmicrosoft.com`). Its name lives in your password
   manager, not in this public repo.
 - **Recorded roles, not a default bundle to grant.** Review which roles the approved task actually needs. Prefer a
-  read-only identity for audits; remove unused write access through a separately approved change. The earlier account
-  record listed these seven direct assignments:
+  read-only identity for audits; remove unused write access through a separately approved change. On 24 November
+  2026 the account held exactly these seven direct assignments:
 
   | Role | Used for |
   |---|---|
@@ -234,9 +236,9 @@ coverage still require live verification.
   Application Administrator can add app credentials and impersonate an application's identity, and User Flow
   Administrator can change authentication controls. Omitting the broader roles does not make compromise harmless.
   See [Microsoft's role permissions](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference#application-administrator).
-- **Conditional Access is pending verification/repair:** require coverage by "Taperday: require MFA for admins" and
-  exclusion from "Taperday: keep runners signed in" as described in section 6. Recheck actual assignments and policy
-  targeting after any approved role change. Do not infer MFA coverage just because a role appears in this table.
+- **Conditional Access (checked 24 November 2026):** the account is covered by "Taperday: require MFA for admins" and
+  excluded from "Taperday: keep runners signed in" through its seven roles, as described in section 6. Recheck actual
+  assignments and policy targeting after any approved role change. Do not infer MFA coverage just because a role appears in this table.
 - **Signing in:** use the tenant ID from your password manager, sign in as the dedicated member account in a private
   window, and complete the required authentication. Do not share the device code, password, MFA response or token:
 

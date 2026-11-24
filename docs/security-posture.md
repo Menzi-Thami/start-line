@@ -48,7 +48,7 @@ Azure App Service and Static Web Apps. It holds no payment data. Heart rate is t
 | 25 | Refresh tokens | Covered | Handled by MSAL on the client; Strava refresh tokens rotate and are re-encrypted on use. |
 | 26–27 | OAuth 2.0 / OpenID Connect | Covered | Entra External ID (auth code + PKCE) for sign-in; Strava OAuth for sync. |
 | 28 | Session fixation | Covered | No server session. MSAL caches tokens in `localStorage` so the installed app stays signed in; they persist past the browser session only when the runner chose "Stay signed in?", and are otherwise encrypted with a key in a session cookie (`msal.cache.encryption`). Sign-out clears them. |
-| 29 | MFA | Partial | Admin MFA was previously recorded, but the CLI account's current policy coverage needs live verification. PR #318 reported missing CLI-role exclusions from runner-session persistence; the required repair is not confirmed. See [accounts-setup.md](accounts-setup.md), sections 6–8. Runner authentication depends on the actual user flow and account method; the application delegates challenges to Entra. |
+| 29 | MFA | Covered | Admins: a Conditional Access policy requires MFA for all nine admin roles in use, including the seven held by the CLI account, with an emergency access account excluded; the same roles are excluded from runner-session persistence. Checked live on 24 November 2026 ([accounts-setup.md](accounts-setup.md), sections 6–8). Runner authentication depends on the actual user flow and account method; the application delegates challenges to Entra. |
 | 30–31 | Brute force / account enumeration | Partial | Sign-in (email code) is handled by Entra, which has its own protections. The API's own rate limiter adds a per-IP cap. |
 | 32 | Timing attacks | Covered | The webhook secret and verify token are compared in constant time (`CryptographicOperations.FixedTimeEquals`). |
 | 37 | Encryption at rest | Covered | Azure SQL is encrypted at rest; Strava tokens and push endpoints and keys are additionally app-encrypted with a Key Vault-wrapped key. |
@@ -111,10 +111,9 @@ Specific follow-ups; priority depends on the affected credentials and current co
 2. **Rehearse a database restore** from Azure SQL's point-in-time backup, and check the free offer's retention is enough (raise the tier if not).
 3. **Add an audit log** of security-relevant events (sign-up, account delete, Strava connect/disconnect), write-only, for incident response.
 4. **A required-review branch rule** on `main`, and a billing budget alert on the resource group, for belt and braces.
-5. **Verify CLI administrator policy coverage.** The 22 November admin-MFA check predates the separate CLI account.
-   PR #318 recorded missing CLI-role exclusions from runner persistence. Check both live policies and fresh sign-in
-   evidence, and obtain owner approval before changing targets or roles ([accounts-setup.md](accounts-setup.md),
-   sections 6–8). Documentation and CI do not close this item.
+5. ~~**Verify CLI administrator policy coverage.**~~ Done (24 November 2026): both policies are on and target the
+   CLI account's seven roles (MFA required, runner-session persistence excluded), and its sign-ins required MFA
+   ([accounts-setup.md](accounts-setup.md), sections 6–8).
 
 ## Verified by
 

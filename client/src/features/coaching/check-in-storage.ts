@@ -53,6 +53,12 @@ export function readCheckInCopies(owner: string | null): Record<string, CheckInC
   return stored?.owner === owner ? stored.plans : EMPTY_PLANS
 }
 
+/** Unsynced drafts on this device, whoever they belong to. Checked before anything that could replace their owner. */
+export function pendingDraftCount(): number {
+  const plans = read()?.plans ?? EMPTY_PLANS
+  return Object.values(plans).reduce((sum, copy) => sum + (Array.isArray(copy?.pending) ? copy.pending.length : 0), 0)
+}
+
 /** A blocked/full store is an error for a queued save: never claim an unsent answer has been saved. */
 export function writeCheckInCopy(owner: string, planId: string, copy: CheckInCopy): void {
   const previous = read()

@@ -3,8 +3,7 @@
 Taperday signs runners in with **your own personal External ID tenant**. Use your personal Microsoft
 account and a personal Azure subscription: never a work tenant, and never an employer's sandbox.
 
-Until this is done, accounts are simply off: the plan builder works as normal, and the "My plans" API
-answers 401. Nothing else needs to change.
+A production build without identity settings fails closed; it never opens private training. Only the explicit local/E2E mode supports the anonymous builder. Runner-owned API routes require authentication.
 
 Portal labels move around; if a step's wording doesn't match, the Microsoft Learn page
 "Create an external tenant" has the current screens.
@@ -103,11 +102,24 @@ one user flow, so the switch is per environment:
 1. Create a second "Sign up and sign in" flow with **Email with password** and Google, collecting the same attributes
    (email, display name) as the code flow.
 2. Move the environment's web app to it (the flow's Applications), staging first. To undo, move it back.
-3. Set the GitHub environment variable `VITE_AUTH_PASSWORDS=true` and redeploy, so Taperday's own pages tell runners
-   who used a code to choose **Forgot password?** once.
+3. Only after verifying the staging flow with a disposable new customer, set `VITE_AUTH_PASSWORDS=true` for staging.
+   This changes explanatory copy only; it cannot change a Microsoft credential challenge.
 
-Existing accounts don't change. A runner who only ever used a code sets a password once through Forgot password,
-which emails them a code to prove the address.
+**Existing OTP-only customers retain their original sign-in method.** Changing the flow affects new customers;
+it does not prove an old customer can add a password through Forgot password. SSPR resets an existing password;
+OTP used as password-reset proof or MFA is distinct from primary email-code sign-in. Do not promise conversion.
+Preserve Entra `oid`, `Runner.IdentitySubject`, runner ID, plans, runs, offline drafts and Strava linkage. Never
+recreate accounts or link by matching email. Any migration requires a Microsoft-supported path demonstrated on
+disposable identities, identity/data checks and separate owner approval before credential changes.
+
+Microsoft sources: [existing-user behaviour](https://learn.microsoft.com/en-us/entra/external-id/customers/concept-authentication-methods-customers#update-sign-in-methods),
+[password reset](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-enable-password-reset-customers).
+
+Password-manager AutoFill may be unlocked by the OS using biometrics or a device PIN; Taperday never stores passwords.
+This is different from FIDO2 passkey sign-in. External ID passkeys must be assessed for eligible password-backed local
+customers, MFA/enrolment, delegated credential-management permissions, provider and actual device support. Existing
+OTP-only/social customers must not be promised eligibility. No passkey credential UI or tenant-policy change is enabled
+by this PR. [Microsoft passkey documentation](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-sign-in-with-passkey).
 
 ## 5. Point the app at it
 
@@ -143,26 +155,44 @@ forgets the device's remembered account first, so Microsoft's page never locks i
 ## 6. Keep runners signed in, and protect the admins (Conditional Access)
 
 A new external tenant comes with **security defaults** switched on. They can't be tuned, and no Conditional Access
-policy can be switched on while they are, so Taperday replaces them with two policies (Entra ID → Conditional Access →
-Policies). External ID includes Conditional Access free for the first 50,000 monthly users.
+policy can be switched on while they are, so Taperday uses two policies (Entra ID → Conditional Access →
+Policies). Confirm the current tenant's feature availability and licensing before changing these settings.
+
+**Checked live on 24 November 2026** (read-only Graph check, signed in as the CLI account). An earlier check that day
+found the runner-session policy excluded only Global Administrator and Organizational Branding Administrator; the
+owner has since added the seven CLI roles. Both policies are **On** and target the same nine roles: the MFA policy
+includes them (excluding only the emergency access account) and the runner-session policy excludes them. The CLI
+account holds exactly the seven roles in section 8, and its sign-ins that day show multifactor authentication was
+required and Conditional Access succeeded. Recheck after any role or policy change.
 
 | Policy | Applies to | Does |
 |---|---|---|
-| Taperday: keep runners signed in | All users, except the Global Administrator and Organizational Branding Administrator roles | All resources. Session → Persistent browser session → **Always persistent**. |
-| Taperday: require MFA for admins | The Global Administrator and Organizational Branding Administrator roles, except the emergency access account (section 7) | All resources. Grant → **Require multifactor authentication**. |
+| Taperday: keep runners signed in | All users, except Global Administrator, Organizational Branding Administrator and every role currently assigned to the CLI account (the seven recorded roles are in section 8) | All resources. Session → Persistent browser session → **Always persistent**. |
+| Taperday: require MFA for admins | Global Administrator, Organizational Branding Administrator and the seven roles of the CLI admin account (section 8), except the emergency access account (section 7) | All resources. Grant → **Require multifactor authentication**. |
 
-Why the first one: the app's own sign-in lasts 24 hours, which Microsoft fixes for single-page apps. After that the app
-renews quietly with Microsoft (`client/src/app/AuthProvider.tsx`), and that only works if Microsoft's session cookie
-outlived the browser. Microsoft's "Stay signed in?" prompt was meant to set that cookie, but runners weren't being shown
-it, so they were asked for a code again. **Always persistent** sets the cookie for everyone and hides the prompt.
+Why the first one: Microsoft's [SPA refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens#token-lifetime)
+expire after 24 hours; that is not the lifetime of an API access token or a promise that a runner stays signed in.
+Taperday tries to recover the session with Microsoft (`client/src/app/AuthProvider.tsx`). A persistent browser session
+can help after a browser restart, but revocation, other policies and browser/PWA restrictions can still require an
+interactive return. **Always persistent** applies to users targeted by the policy and suppresses the "Stay signed in?"
+prompt. Verify the actual provider and installed-device behaviour under PR #315.
 
-Order matters:
+For an owner-approved initial setup or repair, order matters:
 
 1. Create both policies with **Enable policy: Off**.
 2. Turn off security defaults: Entra ID → Overview → Properties → Manage security defaults → Disabled → Save.
 3. Turn the MFA policy **On** first, then the session policy, and **Save** each one.
 4. Keep that admin tab open and check you can still sign in from a private window before closing it. If you can't,
    turn the MFA policy off from the open tab.
+
+For any later change, such as a new admin role, propose the exact difference to the existing policies first; do not
+recreate them or repeat the initial setup. Preserve existing targets, emergency-account exclusions and controls. An owner with
+the appropriate policy-administration role must approve and apply any change. Verify both policies are **On** (not
+Off or Report-only), the CLI account is covered by admin MFA and excluded from runner persistence, and a fresh private
+CLI sign-in satisfies the policy in the sign-in logs. Record the date and sanitized outcome; a document or green CI
+cannot establish that the tenant policy was changed. Directory-role targeting supports tenant-wide built-in roles;
+review user/group targeting separately if assignments are object-scoped or administrative-unit-scoped
+([Microsoft's assignment rules](https://learn.microsoft.com/en-us/entra/identity/conditional-access/concept-conditional-access-users-groups)).
 
 Security defaults also blocked legacy protocols such as IMAP and POP. Taperday uses none of them, and external tenants
 can't target them in Conditional Access, so nothing replaces that part.
@@ -188,6 +218,67 @@ A second Global Administrator, so a lost personal account or a broken policy can
 The personal Microsoft account behind your normal admin also owns the Azure subscription that hosts Taperday, in its own
 tenant. Keep that account's recovery phone, alternate email and recovery code current. An extra Owner on the
 subscription, created the same way in that tenant, would cover the hosting side too.
+
+## 8. CLI admin account (scripted changes to the tenant)
+
+The normal admin is a personal Microsoft account added to the tenant as a guest. The earlier CLI attempt with that
+account failed with AADSTS500208. That observation is specific to the account, tenant and client configuration; it does
+not establish that all personal guest accounts are unsupported by Azure CLI. A separate member account was recorded
+as created in this tenant on 24 November 2026 for administrative scripts and checks. Its assignments and policy
+coverage were checked live the same day (section 6).
+
+- **A member account created in the tenant** (`<name>@<subdomain>.onmicrosoft.com`). Its name lives in your password
+  manager, not in this public repo.
+- **Recorded roles, not a default bundle to grant.** Review which roles the approved task actually needs. Prefer a
+  read-only identity for audits; remove unused write access through a separately approved change. On 24 November
+  2026 the account held exactly these seven direct assignments:
+
+  | Role | Used for |
+  |---|---|
+  | Global Reader | Reading supported settings for checks and audits; role and Graph permission limits still apply |
+  | Application Administrator | App registrations and credentials, redirect URIs, scopes and supported consent grants; does not grant Microsoft Graph application permissions |
+  | External ID User Flow Administrator | User flows: attached apps, sign-in methods, page layouts, MFA and session settings where supported |
+  | External ID User Flow Attribute Administrator | Custom sign-up attributes |
+  | External Identity Provider Administrator | Google and any other social sign-in |
+  | User Administrator | Runner account support, such as a full-erasure request (see Privacy below) |
+  | Reports Reader | Sign-in and audit logs to diagnose AADSTS errors; confirm the tenant's retention and API permissions |
+
+- **Do not grant:** Global Administrator, Privileged Role Administrator, Conditional Access Administrator, Security
+  Administrator or Authentication Policy Administrator to this CLI account. The narrower roles are still powerful:
+  Application Administrator can add app credentials and impersonate an application's identity, and User Flow
+  Administrator can change authentication controls. Omitting the broader roles does not make compromise harmless.
+  See [Microsoft's role permissions](https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference#application-administrator).
+- **Conditional Access (checked 24 November 2026):** the account is covered by "Taperday: require MFA for admins" and
+  excluded from "Taperday: keep runners signed in" through its seven roles, as described in section 6. Recheck actual
+  assignments and policy targeting after any approved role change. Do not infer MFA coverage just because a role appears in this table.
+- **Signing in:** use the tenant ID from your password manager, sign in as the dedicated member account in a private
+  window, and complete the required authentication. Do not share the device code, password, MFA response or token:
+
+  ```bash
+  az login --tenant '<tenant-id>' --allow-no-subscriptions --use-device-code --output none
+  ```
+
+  Use `az rest` so Azure CLI supplies the bearer token internally. For example, this read-only request suppresses the
+  policy response; success establishes API access only, not correct targeting or enforcement:
+
+  ```bash
+  az rest --method get \
+    --url 'https://graph.microsoft.com/v1.0/policies/conditionalAccessPolicies' \
+    --output none
+  ```
+
+  The account's role and Azure CLI's existing delegated Graph permissions both matter. If access or consent is
+  missing, report the check as blocked; do not grant extra permissions automatically. Avoid token-extraction commands,
+  `--debug`, shell tracing and unredacted Graph output in shared logs. Azure CLI maintains its own credential cache:
+  protect that profile and use `az logout --output none` when the temporary task is finished. Never copy tokens into
+  source files, screenshots, chat or custom caches.
+- **Changes are proposed first.** An authorized script or assistant may perform scoped read-only checks, but must
+  describe each write and wait for the owner's approval. Role assignments, consent, credentials, user-flow settings
+  and Conditional Access changes all count as writes. No real runner account may be altered as a test.
+- Check whether time-limited activation is supported in this tenant before using it. Microsoft's
+  [PIM licensing requirements](https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-configure)
+  include Entra ID P2 or Entra ID Governance; feature availability must be verified separately. Lack of PIM does not
+  justify granting all seven write/read roles permanently. Review and minimize any standing assignments.
 
 ## Database
 

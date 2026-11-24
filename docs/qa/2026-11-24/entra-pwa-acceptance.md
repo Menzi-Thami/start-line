@@ -86,9 +86,13 @@ No changes to the service worker were needed: it never caches API or identity re
 | API `AzureAd:TenantId` matches the authority's issuer tenant | PASS |
 | Client scope is exactly `api://<API AzureAd:ClientId>/Plans.ReadWrite` | PASS |
 | API `AzureAd:Scope` | Unset, so the code default `Plans.ReadWrite` applies |
-| API `AzureAd:Audience` | Unset, so Microsoft.Identity.Web accepts the API client ID. Correct only if the API app issues v2 tokens (see next row) |
-| SPA redirect URI for the staging origin, platform, exposed scope enabled, `requestedAccessTokenVersion = 2`, web app requests the scope | NOT RUN: Graph read needs an interactive MFA login under the admin-MFA policy (AADSTS50076) |
-| User flow assigned to the staging web app; email OTP; Google on the flow (`VITE_AUTH_GOOGLE` is `true` on staging) | NOT RUN: same reason |
+| API `AzureAd:Audience` | Unset, so Microsoft.Identity.Web accepts the API client ID. Correct, because the staging API app issues v2 tokens (next row) |
+| Staging origin registered under the **Single-page application** platform on Taperday Web (staging) | PASS (owner screenshot, admin centre) |
+| Taperday API (staging), the app whose client ID the staging API uses: `Plans.ReadWrite` exposed with `isEnabled: true`, `requestedAccessTokenVersion: 2` | PASS (owner screenshot of manifest; app ID compared locally, not recorded) |
+| Taperday Web (staging) has delegated `Plans.ReadWrite` on Taperday API (staging), granted for the tenant | PASS (owner screenshot) |
+| User flow "Taperday sign up and sign in v2" lists Taperday Web (staging); Email one-time passcode selected; Google ticked (`VITE_AUTH_GOOGLE` is `true` on staging) | PASS (owner screenshots) |
+
+Graph and CLI reads failed because the tenant admin is a personal Microsoft account added as a guest (AADSTS50076, AADSTS500208, AADSTS90123). The registrations above were checked from admin-centre screenshots instead.
 
 ### Anonymous API surface (audited, not changed)
 
@@ -116,7 +120,6 @@ OpenAPI and Scalar are mapped only in Development.
 ### Remaining risks
 
 - Real email-code delivery, the installed iPhone PWA redirect return, reopen and sign-out are untested (E03, E04, E07, E11 live, E15).
-- Entra app registration and user-flow assignment are unverified until an MFA Graph read is done.
 - All live passes are on `5d7a966`; this PR's fixes need a staging deploy before they can be checked live.
 
 ## Live acceptance matrix — use a dedicated staging test account

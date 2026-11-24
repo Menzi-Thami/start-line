@@ -53,6 +53,7 @@ function Buttons() {
   return (
     <>
       <p data-testid="who">{auth.loading ? 'loading' : auth.account?.email ?? 'signed out'}</p>
+      <p data-testid="verified">{auth.sessionReady ? 'verified' : 'needs sign-in'}</p>
       <button type="button" onClick={auth.signIn}>sign in</button>
       <button type="button" onClick={auth.signUp}>sign up</button>
       <button type="button" onClick={auth.signOut}>sign out</button>
@@ -111,11 +112,12 @@ describe('opening the app after its 24-hour sign-in has run out', () => {
     expect(sessionStorage.getItem('taperday.quiet-renewal')).toBe('tried')
   })
 
-  it('tries the quiet renewal once per launch, never in a loop', async () => {
+  it('never repeats the quiet redirect, but still checks the token cache on every launch', async () => {
     sessionStorage.setItem('taperday.quiet-renewal', 'tried')
     open()
     expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
-    expect(msal.acquireTokenSilent).not.toHaveBeenCalled()
+    expect(msal.acquireTokenSilent).toHaveBeenCalledOnce()
+    expect(screen.getByTestId('verified')).toHaveTextContent('verified')
     expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
   })
 
@@ -128,11 +130,31 @@ describe('opening the app after its 24-hour sign-in has run out', () => {
     } finally { connection.mockRestore() }
   })
 
-  it('does not renew on the way back from a sign-in that just finished', async () => {
+  it('verifies a usable API token after a successful redirect that returned an account only', async () => {
     redirectResult = { account: remembered }
     open()
     expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
-    expect(msal.acquireTokenSilent).not.toHaveBeenCalled()
+    expect(msal.acquireTokenSilent).toHaveBeenCalledWith(expect.objectContaining({ account: remembered }))
+    expect(screen.getByTestId('verified')).toHaveTextContent('verified')
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+  })
+
+  it('does not expose a private session after a redirect with no usable API token', async () => {
+    redirectResult = { account: remembered }
+    msal.acquireTokenSilent.mockRejectedValueOnce(expired())
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+    // Do not trigger a second automatic redirect while processing a redirect result.
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+  })
+
+  it('retries cached token recovery after a previous quiet renewal failed without looping redirects', async () => {
+    sessionStorage.setItem('taperday.quiet-renewal', 'tried')
+    msal.acquireTokenSilent.mockRejectedValueOnce(expired())
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
     expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
   })
 })

@@ -299,3 +299,16 @@ Checked every runner-facing string that mentions codes or passwords, with `VITE_
 Head `51f919d`: [Checks (PR)](https://github.com/Menzi-Thami/start-line/actions/runs/45367390190) and [Checks (unsharded release regression, workflow_dispatch)](https://github.com/Menzi-Thami/start-line/actions/runs/45367547993) both green on every job; [Copy check](https://github.com/Menzi-Thami/start-line/actions/runs/45367391538) and [Secret scan](https://github.com/Menzi-Thami/start-line/actions/runs/45367390483) green. The PR merges cleanly into staging `0fe4c08`.
 
 **Still NO-GO.** Staging cannot show this PR's changes until it is merged into staging, and the owner has asked for no merge before the gates are met. The rendered checks above are Playwright emulation, not the deployed staging build or a physical iPhone.
+
+## Commit identity rewrite (24 November 2026)
+
+Three commits on this branch were re-authored to the GitHub noreply address at the owner's request. Their content is unchanged: the tree is identical, and earlier commits (up to `e51b0f6`) and staging `0fe4c08` keep their SHAs. SHAs cited above map as follows:
+
+| Before | After |
+|---|---|
+| `27b2e9e` (merge of staging) | `1063013` |
+| `c85415e` | `a633302` |
+| `51f919d` | `bc60f8f` |
+| `3799f6d` | `b1da36c` |
+
+CI runs linked against the old SHAs tested the same tree. A fresh run on the new head is linked in the PR conversation.

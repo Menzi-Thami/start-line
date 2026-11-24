@@ -44,7 +44,7 @@ For each item, record actual status and evidence level plus a reproducible outco
 | COPY-15 | Add representative assertions for critical labels/CTA terms in component or browser tests | PASS | Unit + CI | Assertions added for plural copy and updated for every changed label (unit and e2e). Full suites on `8918f89`: see CI. |
 | NAV-01 | Installed PWA / Safari / desktop cold opening | NOT RUN | — | — |
 | NAV-02 | Signed-out journey opens clear sign-in without exposing private content, including deep links, plan buil | NOT RUN | Static only | Source: SessionGate mounts App only with a session and account; privacy and unsubscribe stay public. Not driven in a browser here. |
-| NAV-03 | Main nav **Home, Plan, Runs, Journey, Account** (Plan hidden only when appropriate) works on phone botto | FAIL | Static | D-10: Plan tab does nothing on Couch to 5K without a race plan (app/App.tsx:538). Rest of the bar inventoried in screen-inventory.md. |
+| NAV-03 | Main nav **Home, Plan, Runs, Journey, Account** (Plan hidden only when appropriate) works on phone botto | NOT RUN | Unit (fix only) | D-10 found statically and fixed in `9b6c031` (CouchTo5K returns to This week; unit test). Rendered bar not driven here; existing e2e covers the race-plan bar. |
 | NAV-04 | Tap every page's primary/secondary buttons, list cards, tabs, navigation links, disclosures, dialogs, em | FAIL | Static | D-10 to D-17 (mismatched destinations, dead control). Full CTA inventory in screen-inventory.md. |
 | NAV-05 | Deep-link to a plan, run, race, day, share link, calendar and email/unsubscribe URL | NOT RUN | Static only | Deep links inventoried (screen-inventory.md); `?view=plan` pushes fall back to build and reach the plan through the landing effect. |
 | NAV-06 | Rapidly switch tabs while async responses are pending | NOT RUN | — | — |
@@ -139,9 +139,9 @@ The full static inventory of views, tabs, dialogs, CTAs, empty/error/loading sta
 | Screen / entry point | State + role | Expected destination and back path | Width / theme / device | Result | Evidence |
 |---|---|---|---|---|---|
 | Bottom bar / rail: Home, Runs, Journey, Account | signed-in runner | that view; selected marker from `barCurrent` | — | NOT RUN (rendered) | static: `app/TabBar.tsx`, `app/App.tsx:533-561`; existing e2e `focused-training.spec.ts` in CI |
-| Bar: Plan on Couch to 5K, no race plan | beginner runner | opens something | — | FAIL | static `app/App.tsx:538` returns `undefined` (D-10) |
+| Bar: Plan on Couch to 5K, no race plan | beginner runner | back to This week | — | NOT RUN (rendered) | D-10 fixed in `9b6c031`, unit test |
 | Plan tabs: This week / Calendar / Strength / Progress | active plan | each tab; Strength separate (PR #314) | — | NOT RUN (rendered) | static `features/plan/PlanView.tsx:100-105`; existing e2e in CI |
-| Recovery "Review my race" | no saved race | Races & trophies (as the copy says) | — | FAIL | opens Training chapters (D-11) |
+| Recovery "Review my race" | no saved race | Races & trophies (as the copy says) | — | NOT RUN (rendered) | D-11 fixed in `9b6c031`, unit test |
 | Home "Start recovery plan" / JourneyPanel "Start recovery plan" | finished race | starts recovery | — | FAIL (label) | only navigates; JourneyPanel drops race id (D-13) |
 | StravaWelcome "Continue to my plan" | new runner, no plan | their plan | — | FAIL (label) | lands on empty builder (D-14) |
 | Runs › PhoneRunGuide "Open my training plan" | own plan | where "Log a run" is | — | FAIL (copy) | opens week view; Log a run is in day detail (D-15) |
@@ -191,8 +191,8 @@ Static review of source strings. Fixed lines are in `53fad58` and `8918f89`; non
 | D-07 | P3 | various counts at 1 | singular | plural | no shared helper | `8918f89` | lib/plural.test, TrainingStory.test |
 | D-08 | P3 | screens with contractions | `’` | `'` on 13 lines; "authorize" | mixed sources | `53fad58` | copy check in CI |
 | D-09 | P3 | Easy running, check-in, story, Strava welcome, shoe picker | runner words, right screen names | "maintenance", "cache", "activity association", "My runs", "Account › Shoes" | internal names in copy | `8918f89` | unit tests updated |
-| D-10 | P2 | Couch to 5K runner with no race plan taps Plan | something happens | nothing | `app/App.tsx:538` returns `undefined` | open — `App.tsx` is in PR #316's diff; flagged there | — |
-| D-11 | P2 | Recovery page, no saved race, tap "Review my race" | Races & trophies | Training chapters | `openChapter()` targets training section | open — wiring in `App.tsx` (PR #316 diff) | — |
+| D-10 | P2 | Couch to 5K runner with no race plan taps Plan | something happens | nothing | `app/App.tsx:538` returns `undefined` | `9b6c031`: back to This week and top of page, as on a race plan (owner chose to fix here) | CouchTo5K.test (unit); App wiring by review; CI e2e |
+| D-11 | P2 | Recovery page, no saved race, tap "Review my race" | Races & trophies | Training chapters | `openChapter()` targets training section | `9b6c031`: opens Races & trophies via `openRaces` | RecoveryPlanPage.test (unit) |
 | D-12 | P3 | Saved race result › Undo | label says what happens | "Undo" begins removing the result | label | open | — |
 | D-13 | P3 | Home or plan "Start recovery plan" | starts recovery | only opens the page; plan version drops race id | label + `App.tsx:1213` | open (PR #316 diff) | — |
 | D-14 | P3 | New runner, StravaWelcome "Continue to my plan" | their plan | empty builder | label | open | — |
@@ -224,17 +224,17 @@ Not measured in this PR; PR #316 owns it. No figures are claimed.
 
 **Verdict: NO-GO.**
 
-Register (104 IDs): **10 PASS · 3 FAIL · 9 BLOCKED · 82 NOT RUN**. A PASS here means observed evidence at the level stated; many NOT RUN areas are touched by existing Playwright suites that passed in CI, but none was re-scoped and inspected against its row, so they are not counted.
+Register (104 IDs): **10 PASS · 2 FAIL · 9 BLOCKED · 83 NOT RUN**. A PASS here means observed evidence at the level stated; many NOT RUN areas are touched by existing Playwright suites that passed in CI, but none was re-scoped and inspected against its row, so they are not counted.
 
 CI on `8918f89`: backend (incl. DataIsolationTests on disposable SQL), frontend, Playwright 1–4/4, connections android-chromium, iphone-webkit, desktop-firefox all **passed**; copy check and secret scan passed. connections ipad-webkit timed out in `playwright install` before any test ran and was re-run; its result and the final head run are in the PR conversation. Green CI is necessary, not sufficient.
 
 P0 open: none found.
 P1 open: none found in what was examined.
-P2 open: D-10, D-11 (navigation, in `App.tsx`).
+P2 open: none (D-10, D-11 fixed in `9b6c031`; unit-tested, not yet clicked through on staging).
 Copy review complete: **static yes** (all 4,144 strings proofread, pinned check in CI); **rendered no**.
 Navigation inventory complete: **static yes**, rendered no.
 All primary user states completed: **No** (S0–S15 not driven in a browser by this PR beyond the existing suites).
 Live provider / physical PWA checks: **Not run** (owner-assisted, PR #315).
 Owner acceptance: **Pending**.
 
-Why NO-GO: two open P2 navigation defects; no rendered/visual review at the required widths; live Entra and physical iPhone acceptance not done. Before production: fix D-10/D-11 (here or in #316), run a staging click-through with screenshots at 375/390/768/1440 in both themes, and complete #315's physical sign-in checks.
+Why NO-GO: no rendered/visual review at the required widths; live Entra and physical iPhone acceptance not done; open P3 label mismatches (D-12 to D-17). Before production: run a staging click-through (including D-10/D-11) with screenshots at 375/390/768/1440 in both themes, and complete #315's physical sign-in checks.

@@ -28,7 +28,7 @@ Bottom bar below 64rem, left rail above (`app/TabBar.tsx:24-30`): **Home, Plan, 
 
 | Tap | State | Goes to |
 |---|---|---|
-| Plan | on Couch to 5K, no race plan | **nothing happens** (`app/App.tsx:538`) — defect D-10 |
+| Plan | on Couch to 5K, no race plan | back to This week (was: nothing happened — D-10, fixed in `9b6c031`) |
 | Plan | no plan, in recovery or easy running | `recovery` |
 | Plan | already on a plan | This week, day cleared |
 | Plan | otherwise | own plan This week, else linked plan, else builder |
@@ -87,8 +87,8 @@ Race week panel (film, training story, result form: I finished / I didn’t fini
 
 | # | Where | What | Ledger |
 |---|---|---|---|
-| 1 | `app/App.tsx:538` | Plan tab does nothing on Couch to 5K without a race plan | D-10 |
-| 2 | `features/journey/RecoveryPlanPage.tsx:69-70` | copy says Races & trophies, button opens Training chapters | D-11 |
+| 1 | `app/App.tsx:538` | Plan tab did nothing on Couch to 5K without a race plan — fixed `9b6c031` | D-10 |
+| 2 | `features/journey/RecoveryPlanPage.tsx:69-70` | copy said Races & trophies, button opened Training chapters — fixed `9b6c031` | D-11 |
 | 3 | `features/journey/RaceResultForm.tsx:215` | "Undo" on a saved result starts removing it | D-12 |
 | 4 | `JourneyHomeCard.tsx:38`, `JourneyPanel.tsx:187`, `app/App.tsx:1213` | "Start recovery plan" only opens the page; JourneyPanel drops the race id | D-13 |
 | 5 | `features/sync/StravaWelcome.tsx:31` | "Continue to my plan" lands a new runner on an empty builder | D-14 |

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { SLOW_AFTER_MS } from './wait-film'
 import { useWakeStep } from './useWakeStep'
+import { RunnerLoading } from '../shared/RunnerLoading'
 
 interface Props {
   /** The name the sign-in gave, before the account itself has answered. */
@@ -23,22 +24,15 @@ export function FindingPlan({ name: _name, onRetry, onSignOut }: Props) {
   }, [])
 
   return (
-    <div className={`finding-plan${slow ? " finding-plan-slow" : ""}`} role="status" aria-live="polite">
-      <span className="wait-spinner" aria-hidden="true" />
-      <div>
-        <p><strong>{slow ? 'Your account is taking longer than expected' : 'Opening your training…'}</strong></p>
-        {slow && <p className="field-help">{step === 'server' ? 'Connecting to Taperday.' : step === 'database' ? 'Checking your training data.' : 'Finishing up.'} You can retry without signing in again.</p>}
-        {slow && (
-          <p className="finding-plan-actions">
-            <button type="button" className="link-button" onClick={onRetry}>
-              Try again
-            </button>
-            <button type="button" className="link-button" onClick={onSignOut}>
-              Sign out
-            </button>
-          </p>
-        )}
-      </div>
+    <div className={`finding-plan${slow ? ' finding-plan-slow' : ''}`}>
+      <RunnerLoading label={slow ? 'Your account is taking longer than expected' : 'Opening your training…'} compact />
+      {slow && <div>
+        <p className="field-help">{step === 'server' ? 'Connecting to Taperday.' : step === 'database' ? 'Checking your training data.' : 'Finishing up.'} You can retry without signing in again.</p>
+        <p className="finding-plan-actions">
+          <button type="button" className="link-button" onClick={onRetry}>Try again</button>
+          <button type="button" className="link-button" onClick={onSignOut}>Sign out</button>
+        </p>
+      </div>}
     </div>
   )
 }

@@ -131,6 +131,6 @@ test('Quick tab changes while requests are out end on the last tab with no loade
   await api.settle()
   await expect(page.locator('.runner-loading, .account-warmup')).toHaveCount(0)
   await expect(page.getByRole('region', { name: 'Today', exact: true }).getByRole('status')).toHaveCount(0)
-  expect(new URL(page.url()).searchParams.get('view')).toBe('home')
+  await expect(nav.getByRole('button', { name: 'Home', exact: true })).toHaveAttribute('aria-current', 'page')
   expect(errors).toEqual([])
 })

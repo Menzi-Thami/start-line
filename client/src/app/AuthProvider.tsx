@@ -1,4 +1,4 @@
-import { CacheLookupPolicy, InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
+import { CacheLookupPolicy, EventType, InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { clearSnapshot } from '../lib/home-snapshot'
 import { activateCheckInOwner, clearCheckInCopies, pendingDraftCount } from '../features/coaching/check-in-storage'
@@ -39,7 +39,7 @@ const activateOwner = (account: AccountInfo | null) => {
 
 /**
  * Signs runners in with the External ID tenant. The sign-in is kept in localStorage, so the installed app still knows the
- * runner next time it opens and goes straight to their plan from the device's copy, with no sign-in and no wait for the
+ * runner next time it opens. Only a verified API token opens their training; a device copy never bypasses that gate or the
  * database. MSAL keeps it past closing the app only for a runner who said yes to "Stay signed in?" (External ID asks by
  * default); otherwise it's encrypted with a key held in a session cookie and is gone once the browser closes, as before.
  * Either way signing out clears it. Tokens are requested per call and silently renewed where possible. When the app opens
@@ -69,12 +69,29 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
   const [sessionReady, setSessionReady] = useState(false)
   // Guard duplicate redirects per mount, not across PWA reloads, account changes or tests.
   const redirecting = useRef(false)
+  // In-flight requests belong to one verified identity. Sign-out, cross-tab changes and unmount invalidate them.
+  const sessionVersion = useRef(0)
+  const currentAccount = useRef<AccountInfo | null>(null)
   const [error, setError] = useState<SignInProblem | null>(null)
 
   // Finish any sign-in that just redirected back here, then pick up an existing session.
   useEffect(() => {
     if (!msal) return
     let cancelled = false
+    const invalidate = () => { sessionVersion.current++; currentAccount.current = null }
+    const eventId = msal.addEventCallback((event) => {
+      if (event.eventType !== EventType.ACTIVE_ACCOUNT_CHANGED && event.eventType !== EventType.LOGOUT_SUCCESS) return
+      const previous = currentAccount.current
+      if (!previous) return
+      const active = msal.getActiveAccount()
+      const stillCached = msal.getAllAccounts().some(account => account.homeAccountId === previous.homeAccountId)
+      if (stillCached && active?.homeAccountId === previous.homeAccountId) return
+      // Another tab signed out or changed accounts. Close private UI immediately; do not take over its identity or drafts.
+      invalidate()
+      setSessionReady(false)
+      setInfo(null)
+      clearSnapshot()
+    })
     // True while the page is on its way to Microsoft for a quiet renewal: stay loading rather than flash signed out.
     let leaving = false
     msal
@@ -122,6 +139,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         }
         if (cancelled) return
         activateOwner(account)
+        currentAccount.current = account
         setSessionReady(Boolean(account && verified))
         setInfo(account)
       })
@@ -136,6 +154,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
           const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null
           if (account) msal.setActiveAccount(account)
           activateOwner(account)
+          currentAccount.current = account
           setSessionReady(false)
           setInfo(account)
           return
@@ -146,6 +165,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null
         if (account) msal.setActiveAccount(account)
         activateOwner(account)
+        currentAccount.current = account
         setSessionReady(false)
         setInfo(account)
         setError(describeSignInError(failure))
@@ -155,6 +175,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       })
     return () => {
       cancelled = true
+      invalidate()
+      if (eventId) msal.removeEventCallback(eventId)
       redirecting.current = false
     }
   }, [msal, config])
@@ -211,6 +233,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         if (redirecting.current) return
         if (pendingDraftCount() && !window.confirm('You have unsynced run drafts on this device. Sign out and discard these drafts?')) return
         redirecting.current = true
+        sessionVersion.current++
+        currentAccount.current = null
         setSessionReady(false)
         clearSnapshot()
         clearCheckInCopies()
@@ -232,12 +256,15 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         })()
       },
       getToken: async () => {
-        if (!info) return null
+        if (!info || currentAccount.current?.homeAccountId !== info.homeAccountId) return null
+        const version = sessionVersion.current
         try {
           const token = (await msal.acquireTokenSilent({ scopes: [config.scope], account: info })).accessToken
-          setSessionReady(true)
-          return token
+          if (version !== sessionVersion.current || currentAccount.current?.homeAccountId !== info.homeAccountId) return null
+          setSessionReady(Boolean(token))
+          return token || null
         } catch (error) {
+          if (version !== sessionVersion.current) return null
           // A silent attempt can fail after a PWA has been closed for days, or because Safari blocks
           // identity-provider cookies. Never navigate automatically from a background API call.
           // The account stays remembered; the UI offers a deliberate "Continue securely" action.

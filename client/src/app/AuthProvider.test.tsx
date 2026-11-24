@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
-import { AuthError, InteractionRequiredAuthError, ServerError } from '@azure/msal-browser'
+import { AuthError, EventType, InteractionRequiredAuthError, ServerError, type EventMessage } from '@azure/msal-browser'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth, type AuthConfig } from './auth-context'
@@ -15,7 +15,10 @@ const calls: string[] = []
 let cached: Account[] = []
 let active: Account | null = null
 let redirectResult: { account: Account; accessToken?: string } | null = null
+let accountEvent: ((event: EventMessage) => void) | null = null
 const msal = {
+  addEventCallback: vi.fn((callback: (event: EventMessage) => void) => { accountEvent = callback; return 'listener' }),
+  removeEventCallback: vi.fn(),
   initialize: vi.fn(() => Promise.resolve()),
   handleRedirectPromise: vi.fn(() => Promise.resolve(redirectResult)),
   getAllAccounts: vi.fn(() => cached),
@@ -434,5 +437,60 @@ describe('duplicate taps and sign-out failure paths', () => {
     await waitFor(() => expect(screen.getByTestId('who')).toHaveTextContent('signed out'))
     expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
     expect(screen.getByTestId('error')).toHaveTextContent('couldn’t reach Microsoft')
+  })
+})
+
+
+describe('late token responses and other browser tabs', () => {
+  it('closes the session when MSAL returns an empty API token', async () => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    msal.acquireTokenSilent.mockResolvedValueOnce({ accessToken: '' })
+    await user.click(screen.getByRole('button', { name: 'read token' }))
+    expect(await screen.findByText('no token')).toBeVisible()
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+  })
+
+  it('discards an API token resolved after sign-out instead of reopening private UI', async () => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    let finish!: (token: { accessToken: string }) => void
+    msal.acquireTokenSilent.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await user.click(screen.getByRole('button', { name: 'read token' }))
+    await user.click(screen.getByRole('button', { name: 'sign out' }))
+    await waitFor(() => expect(screen.getByTestId('who')).toHaveTextContent('signed out'))
+    await act(async () => finish({ accessToken: 'late-synthetic-token' }))
+    expect(await screen.findByText('no token')).toBeVisible()
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+  })
+
+  it.each([EventType.LOGOUT_SUCCESS, EventType.ACTIVE_ACCOUNT_CHANGED])('closes private UI after %s in another tab and discards a pending token', async eventType => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    let finish!: (token: { accessToken: string }) => void
+    msal.acquireTokenSilent.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    await user.click(screen.getByRole('button', { name: 'read token' }))
+    cached = eventType === EventType.LOGOUT_SUCCESS ? [] : [remembered, account('other')]
+    active = eventType === EventType.LOGOUT_SUCCESS ? null : cached[1] ?? null
+    act(() => accountEvent?.({ eventType } as EventMessage))
+    expect(screen.getByTestId('who')).toHaveTextContent('signed out')
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+    await act(async () => finish({ accessToken: 'late-synthetic-token' }))
+    expect(await screen.findByText('no token')).toBeVisible()
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+  })
+
+  it('keeps this session when an unrelated cached account is removed', async () => {
+    await renderWith(false)
+    act(() => accountEvent?.({ eventType: EventType.LOGOUT_SUCCESS } as EventMessage))
+    expect(screen.getByTestId('who')).toHaveTextContent('remembered@example.com')
+    expect(screen.getByTestId('verified')).toHaveTextContent('verified')
+  })
+
+  it('removes the cross-tab subscription on unmount', async () => {
+    const view = open()
+    await screen.findByText('remembered@example.com')
+    view.unmount()
+    expect(msal.removeEventCallback).toHaveBeenCalledWith('listener')
   })
 })

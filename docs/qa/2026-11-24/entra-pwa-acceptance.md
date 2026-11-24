@@ -4,6 +4,74 @@
 **Scope:** External ID sign-in, token acquisition, session recovery, PWA account isolation and production release safety.
 **Target:** `staging`. This is the executable QA/handover for the separate Entra PR; it is **not** evidence that a live Microsoft sign-in has passed.
 
+## Current cross-platform contract (supersedes historical OTP-only wording below)
+
+Returning runner: open Taperday → verified reusable API session → same training immediately. If Microsoft genuinely
+requires interaction, continue with the account’s supported method and return to the intended URL. No per-launch
+biometric prompt, local biometric bypass, plaintext credential storage or replacement runner identity.
+
+The owner has confirmed staging still asks their existing customer for OTP after the successful `0fe4c088` deployment.
+This is consistent with Microsoft’s documented existing-user behaviour, but **the actual current staging assignment has
+not been verified in this run**. Earlier Graph checks below describe the old OTP flow and cannot establish today’s password flow.
+
+**Verified documentation, 24 Nov 2026:** read Microsoft’s official `MicrosoftDocs/entra-docs` source files
+`docs/external-id/customers/concept-authentication-methods-customers.md`, `how-to-sign-in-with-passkey.md` and
+`docs/identity-platform/reference-credential-management-api.md` through GitHub. Existing users keep their original
+method when a flow changes. Only password-backed local customers can currently enrol passkeys; OTP-only and social
+identities cannot. Registration requires recent MFA (within five minutes), an app-built credential-management experience
+and delegated `Me.UserAuthenticationMethod.Passkey.ReadWrite` (read-only listing uses `.Read`). There is no built-in
+external-tenant registration experience and native-authentication APIs do not currently support passkeys. Provider-hosted
+web sign-in with a platform passkey is distinct from a native-authentication API and from password-manager AutoFill.
+
+No tenant policy, account credentials, Graph grants, passkey UI, production configuration or identity mapping is changed.
+Forgot password is **not a verified OTP-to-password migration**. See corrected [account setup](../../accounts-setup.md).
+
+### Fixes in this completion pass
+
+- Empty tokens no longer reopen the session.
+- Token requests that finish after sign-out, account change or unmount return no token and cannot reopen private UI.
+- MSAL 5 cross-tab `ACTIVE_ACCOUNT_CHANGED`/`LOGOUT_SUCCESS` events close the previous account’s private UI; a tab
+  does not silently adopt another runner. The MSAL subscription is removed on unmount.
+- Password-mode copy preserves the old customer’s actual method instead of promising conversion via Forgot password.
+- Unit regressions cover every change. Original colours, cartoon, motion and plan film are unchanged.
+
+### Device × mode × account × credential / fallback evidence
+
+Every row must exercise new password-backed, existing OTP-only and returning cached-session accounts, fresh/expired/revoked
+sessions, cancelled sign-in, deep links, offline drafts/reconnect, sign-out and shared-device account changes. Supported
+credential enrolment must preserve `oid`, `Runner.IdentitySubject`, `Runner.Id`, training history, plans and Strava linkage.
+
+| Device / engine | Entry modes | Candidate supported credential / fallback | Evidence in this run |
+|---|---|---|---|
+| iPhone Safari | browser + actual installed standalone PWA | iCloud Passwords AutoFill with Face ID/Touch ID/PIN where available; eligible opt-in passkey only after separate verification; password or existing OTP fallback | Physical BLOCKED; WebKit emulation is separate browser evidence only |
+| iPad Safari | browser + installed PWA, rotation | iCloud AutoFill/Touch ID/Face ID where available; password or existing OTP fallback | Physical BLOCKED |
+| Android Chrome | browser + installed PWA | Google Password Manager/fingerprint/PIN where available; password or existing OTP fallback | Physical BLOCKED |
+| macOS Safari / Chrome | browser + installed mode where offered | iCloud/password-manager AutoFill/Touch ID where available; password or OTP fallback | Actual macOS BLOCKED |
+| Windows Edge / Chrome | browser + installed PWA | saved credentials/Windows Hello/PIN where supported; password or OTP fallback | Actual Windows BLOCKED |
+| Desktop Firefox | browser | compatible password-manager AutoFill; password or OTP fallback | Real provider NOT RUN; simulated browser matrix recorded separately |
+| New browser / lost device / no enrolled credential | all supported modes | recover the original identity through its supported password/OTP/provider fallback; never link accounts by email | Provider BLOCKED |
+| Two users on one device | browser + installed PWA | explicit sign-out / account choice; no old data or stale in-flight token after change | Unit regressions; physical/provider BLOCKED |
+
+**No live Entra or physical-device PASS is claimed by these rows.** Azure CLI installed locally; login/Graph access is
+blocked by the environment’s Microsoft hostname restrictions. Two access-change requests were rejected with “The owner
+did not approve the change. No settings changed.” GitHub environment-variable read also returned 403. Owner offered
+Azure login; awaiting permitted connectivity before generating a device code. Do not paste passwords, codes or tokens
+into the report. No current Graph configuration assertion is based on the earlier historical checks.
+
+### Minimum owner-assisted live steps (dedicated test identities only)
+
+1. Read-only Graph/portal: compare the actual staging SPA client and callback origin, assigned password flow/first factor,
+   delegated API scope/audience and token version. Record comparisons only, never account identifiers or tokens.
+2. New disposable customer: register under that flow, save a password through the OS if offered, sign out and sign in.
+   Separate email verification, password-reset proof and MFA from the normal sign-in challenge.
+3. Existing disposable OTP customer: sign in using the original method and compare stable identity + synthetic training
+   before/after. No credential mutation or migration until Microsoft support and the owner approve a demonstrated path.
+4. On each physical row above: browser then installed PWA, open/close/reopen, genuine expiry/revocation, cancelled or wrong
+   credentials, fallback with no biometrics, offline draft, reconnect once, logout and second account; repeat light/dark,
+   reduced motion and deep-link/Strava return. Record device/OS/browser, mode, exact deployed SHA and safe screenshots.
+5. Passkey enrolment is a separate opt-in phase: confirm eligibility, MFA, least-privilege grants, recovery and owner approval
+   before implementing/configuring; never promise it to existing OTP-only customers.
+
 ## Why this PR exists
 
 A reported iPhone PWA could get stuck at **Checking your session**, then expose the race builder while signed out. PR #314 introduced a frontend session gate, but its test suite used synthetic MSAL identities. Real email-one-time-passcode, External ID callbacks, standalone iOS PWA navigation, and production tenant configuration were not verified.
@@ -42,7 +110,7 @@ Only check for presence and correctness in the **staging** GitHub environment an
 | Web app | Correct **SPA** platform with callback and logout redirect URI for the actual staging origin; localhost only for local dev |
 | API app | Valid `AzureAd:Instance`, `AzureAd:TenantId`, `AzureAd:ClientId`; expected audience and accepted token version |
 | Delegated permission | `api://<api-client-id>/Plans.ReadWrite` matches Expose an API and the client scope |
-| User flow | Staging web application is assigned; email one-time-passcode sign-in is enabled |
+| User flow | Read the actual staging web-app assignment and first factor; new password-backed and existing OTP-only customers are separate cases. The copy flag is not provider configuration. |
 | Provider | Google button is shown only if `VITE_AUTH_GOOGLE=true` and Google is enabled on that actual user flow |
 | Browser | MSAL redirect URI equals the PWA's browser origin; verify provider callback in both Safari tab and installed standalone mode |
 | Server | No unauthenticated access to runner-owned `/api/v1/me` or `/api/v1/me/plans` endpoints |
@@ -50,7 +118,7 @@ Only check for presence and correctness in the **staging** GitHub environment an
 
 **No tenant secrets, access/ID/refresh tokens, passcodes, authorization response URLs, personal emails or cookies belong in screenshots, PR comments or CI output.** If logs contain them, redact locally before upload.
 
-## Results, 24 November 2026
+## Historical results from the earlier implementation (not current-head acceptance)
 
 **PR head tested:** `6667c77` (unit, lint, typecheck locally on the changed areas; full CI on the PR).
 **Staging deployed:** `5d7a966` (#314). This PR is not on staging yet, so every live row below was run against `5d7a966`, not the PR head.
@@ -119,7 +187,7 @@ OpenAPI and Scalar are mapped only in Development.
 
 ### Remaining risks
 
-- Real email-code delivery, the installed iPhone PWA redirect return, reopen and sign-out are untested (E03, E04, E07, E11 live, E15).
+- Current password-flow assignment, new password-backed signup, existing OTP delivery, installed iPhone PWA redirect return, reopen and sign-out are untested (E03, E04, E07, E11 live, E15).
 - All live passes are on `5d7a966`; this PR's fixes need a staging deploy before they can be checked live.
 
 ## Live acceptance matrix — use a dedicated staging test account
@@ -130,8 +198,8 @@ Record each row as `PASS`, `FAIL` or `NOT RUN` with a concise observation and sa
 |---|---|---|---|
 | E01 | Fresh browser, signed out, load `/?view=home` | Sign-in UI; no Home/Plan/Run data, build controls or private navigation | PASS: live staging @5d7a966, desktop Chromium, signed out. Sign-in page only, no tab bar or plan data. iPhone NOT RUN |
 | E02 | Fresh browser, direct plan link, Runs, Account, and deep links | No protected content mounts without verified API token | PASS: live staging @5d7a966, desktop Chromium. `?view=plan`, `runs`, `account` and a `/plan/<id>` path all show the sign-in page, no navigation. iPhone NOT RUN |
-| E03 | Sign up with a **new** staging email via one-time passcode | Email arrives, valid code completes login, initial onboarding appears once | NOT RUN (owner, real inbox) |
-| E04 | Existing account email code login | Return to Taperday and load the *same account's* saved Home/plan; no endless spinner | NOT RUN (owner) |
+| E03 | New dedicated staging customer in the assigned password flow | Verify email, create password, sign out/in with that password; optional OS AutoFill, initial onboarding once | BLOCKED: current tenant access and isolated test inbox required; no live sign-in performed |
+| E04 | Existing OTP-only customer, then separate new password-backed customer | Each uses its supported original method; same Entra oid / runner ID, plan, runs and Strava links; no replacement identity or email-only linking | BLOCKED: provider-live and identity/data comparison not performed |
 | E05 | Redirect result with account but no token | Silent API-token acquisition attempted; sign-in gate opens only if token obtained | Unit PASS @6667c77 (token in redirect, account-only redirect, no token stays closed); live NOT RUN |
 | E06 | Wrong or expired passcode, cancel, Back, duplicate tap, lost network | Visible recoverable error; no blank/looping screen or protected UI | Unit PASS @6667c77 (cancel, failed return with code, double tap, network failure). Wrong/expired passcode is on Microsoft's page: live NOT RUN |
 | E07 | Close/reopen Safari and installed iPhone PWA, valid session | Quiet cached-token restoration succeeds; no extra email code if session remains valid | NOT RUN (owner, installed PWA) |
@@ -152,7 +220,7 @@ Record each row as `PASS`, `FAIL` or `NOT RUN` with a concise observation and sa
 ### Manual test steps for the owner
 
 1. Open the *staging* website in Safari **without signing in**. Try Home, Plan, Run and Account links; each must prompt for sign-in, without briefly flashing a training page.
-2. Sign in using a dedicated test inbox and the actual email code. Verify you reach your own plan, not a race-builder spinner. Sign out and verify the gate appears again.
+2. Use separate dedicated staging identities: an existing OTP-only customer and a new password-backed customer. Sign in using each account’s supported method; do not reset or recreate the owner’s account. Verify you reach your own plan, not a race-builder spinner. Sign out and verify the gate appears again.
 3. In Safari, Share → **Add to Home Screen**. Launch the installed PWA, sign in there, fully close and reopen. Repeat after toggling airplane mode and restoring connectivity.
 4. With a logged-in plan, tick a safe test run and create an offline draft. Verify cancellation of sign-out does not discard it; after reconnect it saves exactly once.
 5. Record safe evidence: device model, iOS version, test time, staging commit, browser/standalone, precise user action, visible error *code only*, screenshot **without personal identifiers**, and PASS/FAIL.

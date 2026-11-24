@@ -3,8 +3,7 @@
 Taperday signs runners in with **your own personal External ID tenant**. Use your personal Microsoft
 account and a personal Azure subscription: never a work tenant, and never an employer's sandbox.
 
-Until this is done, accounts are simply off: the plan builder works as normal, and the "My plans" API
-answers 401. Nothing else needs to change.
+A production build without identity settings fails closed; it never opens private training. Only the explicit local/E2E mode supports the anonymous builder. Runner-owned API routes require authentication.
 
 Portal labels move around; if a step's wording doesn't match, the Microsoft Learn page
 "Create an external tenant" has the current screens.
@@ -103,11 +102,24 @@ one user flow, so the switch is per environment:
 1. Create a second "Sign up and sign in" flow with **Email with password** and Google, collecting the same attributes
    (email, display name) as the code flow.
 2. Move the environment's web app to it (the flow's Applications), staging first. To undo, move it back.
-3. Set the GitHub environment variable `VITE_AUTH_PASSWORDS=true` and redeploy, so Taperday's own pages tell runners
-   who used a code to choose **Forgot password?** once.
+3. Only after verifying the staging flow with a disposable new customer, set `VITE_AUTH_PASSWORDS=true` for staging.
+   This changes explanatory copy only; it cannot change a Microsoft credential challenge.
 
-Existing accounts don't change. A runner who only ever used a code sets a password once through Forgot password,
-which emails them a code to prove the address.
+**Existing OTP-only customers retain their original sign-in method.** Changing the flow affects new customers;
+it does not prove an old customer can add a password through Forgot password. SSPR resets an existing password;
+OTP used as password-reset proof or MFA is distinct from primary email-code sign-in. Do not promise conversion.
+Preserve Entra `oid`, `Runner.IdentitySubject`, runner ID, plans, runs, offline drafts and Strava linkage. Never
+recreate accounts or link by matching email. Any migration requires a Microsoft-supported path demonstrated on
+disposable identities, identity/data checks and separate owner approval before credential changes.
+
+Microsoft sources: [existing-user behaviour](https://learn.microsoft.com/en-us/entra/external-id/customers/concept-authentication-methods-customers#update-sign-in-methods),
+[password reset](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-enable-password-reset-customers).
+
+Password-manager AutoFill may be unlocked by the OS using biometrics or a device PIN; Taperday never stores passwords.
+This is different from FIDO2 passkey sign-in. External ID passkeys must be assessed for eligible password-backed local
+customers, MFA/enrolment, delegated credential-management permissions, provider and actual device support. Existing
+OTP-only/social customers must not be promised eligibility. No passkey credential UI or tenant-policy change is enabled
+by this PR. [Microsoft passkey documentation](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-sign-in-with-passkey).
 
 ## 5. Point the app at it
 

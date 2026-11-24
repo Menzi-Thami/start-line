@@ -34,10 +34,11 @@ describe('focused sign-in entry', () => {
     expect(signIn).toHaveBeenCalledOnce()
   })
 
-  it('tells runners who used a code how to set a password, only where the flow asks for one', () => {
+  it('preserves the existing sign-in method without promising an OTP-to-password conversion', () => {
     const { unmount } = render(<SignInLanding onSignIn={vi.fn()} onSignUp={vi.fn()} passwords />)
-    expect(screen.getByText(/Signed in with an emailed code before\?/)).toBeInTheDocument()
-    expect(screen.getByText('Forgot password?')).toBeInTheDocument()
+    expect(screen.getByText(/Existing accounts may still use an emailed code/)).toBeInTheDocument()
+    expect(screen.queryByText(/Forgot password/)).not.toBeInTheDocument()
+    expect(screen.getByText(/password manager can help/)).toBeInTheDocument()
     unmount()
     render(<SignInLanding onSignIn={vi.fn()} onSignUp={vi.fn()} passwords={false} />)
     expect(screen.queryByText(/Forgot password/)).not.toBeInTheDocument()

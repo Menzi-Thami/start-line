@@ -33,4 +33,15 @@ describe('focused sign-in entry', () => {
     expect(google).toHaveBeenCalledOnce()
     expect(signIn).toHaveBeenCalledOnce()
   })
+
+  it('tells runners who used a code how to set a password, only where the flow asks for one', () => {
+    const { unmount } = render(<SignInLanding onSignIn={vi.fn()} onSignUp={vi.fn()} passwords />)
+    expect(screen.getByText(/Signed in with an emailed code before\?/)).toBeInTheDocument()
+    expect(screen.getByText('Forgot password?')).toBeInTheDocument()
+    unmount()
+    render(<SignInLanding onSignIn={vi.fn()} onSignUp={vi.fn()} passwords={false} />)
+    expect(screen.queryByText(/Forgot password/)).not.toBeInTheDocument()
+    // The old "tap Yes to stay signed in" hint is gone: Conditional Access keeps runners signed in and hides that prompt.
+    expect(screen.queryByText(/stay signed in/)).not.toBeInTheDocument()
+  })
 })

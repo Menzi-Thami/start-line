@@ -95,6 +95,20 @@ fail. Microsoft's page: "Add Google as an identity provider" (External ID, exter
 **4. Switch the app's button on:** GitHub → Settings → Environments → `staging` (and later `production`) → Variables →
 `VITE_AUTH_GOOGLE` = `true`, then deploy. Locally, add `VITE_AUTH_GOOGLE=true` to `client/.env.local`.
 
+## 4b. Email and password instead of an emailed code
+
+Runners find a saved password (filled by Face ID or a fingerprint) quicker than fetching a code. A web app belongs to
+one user flow, so the switch is per environment:
+
+1. Create a second "Sign up and sign in" flow with **Email with password** and Google, collecting the same attributes
+   (email, display name) as the code flow.
+2. Move the environment's web app to it (the flow's Applications), staging first. To undo, move it back.
+3. Set the GitHub environment variable `VITE_AUTH_PASSWORDS=true` and redeploy, so Taperday's own pages tell runners
+   who used a code to choose **Forgot password?** once.
+
+Existing accounts don't change. A runner who only ever used a code sets a password once through Forgot password,
+which emails them a code to prove the address.
+
 ## 5. Point the app at it
 
 API (user-secrets: these values identify your tenant, so they stay out of the repo):
@@ -113,6 +127,7 @@ VITE_AUTH_CLIENT_ID=<web-client-id>
 VITE_AUTH_AUTHORITY=https://<subdomain>.ciamlogin.com/<tenant-id>/
 VITE_AUTH_SCOPE=api://<api-client-id>/Plans.ReadWrite
 # VITE_AUTH_GOOGLE=true   # only after step 4a
+# VITE_AUTH_PASSWORDS=true   # only when this web app is on the email-and-password flow (step 4b)
 ```
 
 Every sign-in button lets the runner choose the account: the app asks Microsoft with `prompt=select_account` and

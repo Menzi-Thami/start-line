@@ -19,6 +19,7 @@ import { PRIVACY_CONTACT } from '../features/privacy/privacy-notice'
 import { useMediaQuery } from '../lib/use-media-query'
 import { TabBar, type TabBarItem } from './TabBar'
 import { Runner as TaperdayRunner } from '../features/shared/Runner'
+import { RunnerLoading } from '../features/shared/RunnerLoading'
 import { ThemeToggle } from './ThemeToggle'
 import { ScreenRecovery } from './ScreenRecovery'
 import { SignInWait } from '../features/account/SignInWait'
@@ -253,7 +254,9 @@ export function App() {
       setEditing(false)
     }
     // A reload of the runner's own plan link must retain the cached account identity and offline logging controls.
-    if (cached && !navigator.onLine) { queueMicrotask(showCached); return }
+    // The same holds online: this is the runner's own plan as Home's coach read last left it on this device, so it shows
+    // at once and the coach read below brings it up to date in one request. Regenerating it first only added a round trip.
+    if (cached && !playMovie) { queueMicrotask(showCached); return }
 
     api
       .plan(toRequest(withDate), controller.signal)
@@ -935,7 +938,7 @@ export function App() {
       <main id="main-content" tabIndex={-1} key={view} className={navigated ? 'view-enter' : undefined}>
         <OfflineRunDrafts activePlanId={view === 'home' ? ownPlan?.id : showPlan ? savedOnScreen : null} />
         <ScreenRecovery>
-        <Suspense fallback={<div className="panel skeleton-stack" role="status" aria-label="Loading page"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}>
+        <Suspense fallback={<RunnerLoading label="Opening your page…" compact />}>
         {/* While the account is still loading, wait: a load that fails shows its own recovery with the same action,
             so this notice would only flash and take its button with it. */}
         {auth.error && state.kind !== 'error' && state.kind !== 'loading' && (
@@ -1011,6 +1014,7 @@ export function App() {
             today={today}
             current={ownPlan}
             currentPlanFailed={currentPlan.failed}
+            pendingPlanId={currentPlan.pendingId}
             onRetryCurrentPlan={() => void currentPlan.refresh()}
             journey={journey}
             runs={runs ?? copy?.runs}
@@ -1040,7 +1044,7 @@ export function App() {
         )}
 
         {view === 'journey' && state.kind === 'ready' && (
-          <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} onOpenRecovery={openRecovery} />
+          <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} onOpenRecovery={openRecovery} journey={journey} />
         )}
         {view === 'recovery' && state.kind === 'ready' && <RecoveryPlanPage key={state.runner.id} units={units} today={today} journey={journey} onNewRace={startFresh} onOpenJourney={() => openChapter()} onOpenRaces={openRaces} onOpenTraining={ownPlan ? () => openOwnPlan() : undefined} />}
         {view === 'runs' && state.kind === 'ready' && (
@@ -1114,7 +1118,7 @@ export function App() {
               never flashes past a returning runner.
             */}
             {awaitingSavedTraining && auth.loading && (
-              <p className="loading-line" role="status">Checking your session…</p>
+              <RunnerLoading label="Checking your session…" compact />
             )}
             {awaitingSavedTraining && !auth.loading && auth.account && state.kind !== 'error' && (
               <FindingPlan name={auth.account.name || null} onRetry={runner.refresh} onSignOut={auth.signOut} />
@@ -1160,7 +1164,7 @@ export function App() {
 
             <div aria-live="polite" aria-busy={plan.kind === 'loading'}>
               {plan.kind === 'loading' &&
-                (showBuilder ? <p className="visually-hidden">Building your plan…</p> : <p className="loading-line">Building your plan…</p>)}
+                (showBuilder ? <p className="visually-hidden">Building your plan…</p> : <RunnerLoading label="Building your plan…" compact />)}
               {plan.kind === 'error' && view === 'build' && (
                 <div className="error-panel" style={{ marginTop: 'var(--space-7)' }} role="alert">
                   <strong>We couldn’t build that plan.</strong>
@@ -1186,7 +1190,7 @@ export function App() {
               )}
             </div>
 
-            {planPending && <div className="panel skeleton-stack" role="status" aria-label="Opening your plan"><span className="skeleton-line skeleton-line-wide" /><span className="skeleton-line" /><span className="skeleton-line skeleton-line-short" /></div>}
+            {planPending && <RunnerLoading label="Opening your plan…" detail="Getting your schedule ready." compact />}
             {planLocked && plan.kind === 'ready' && (
               <PlanLocked
                 plan={plan.plan}

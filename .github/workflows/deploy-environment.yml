@@ -90,6 +90,8 @@ jobs:
           VITE_AUTH_SCOPE: ${{ vars.VITE_AUTH_SCOPE }}
           # Optional: "true" once Google is in the tenant's user flow (docs/accounts-setup.md). Unset hides the button.
           VITE_AUTH_GOOGLE: ${{ vars.VITE_AUTH_GOOGLE }}
+          # Optional: "true" when this environment's web app is on the email-and-password user flow. Only changes wording.
+          VITE_AUTH_PASSWORDS: ${{ vars.VITE_AUTH_PASSWORDS }}
           VITE_SITE_URL: ${{ vars.VITE_SITE_URL }}
         run: |
           npm ci

@@ -6,6 +6,7 @@ import type { StravaStatus } from '../../lib/types'
 import { ConnectWithStrava, PoweredByStrava } from './StravaBrand'
 import { StravaDeviceGuide } from './StravaDeviceGuide'
 import { POLL_FOR_MS, POLL_MS } from './useSyncedRuns'
+import { RunnerLoading } from '../shared/RunnerLoading'
 
 interface Props {
   /** Reuse this section's request for the Account overview, including unavailable data. */
@@ -102,9 +103,7 @@ export function StravaSection({ notice, connecting = false, onStatusChange, onOp
         </p>
       )}
       {connecting && (
-        <p className="loading-line" role="status">
-          Finishing connecting Strava…
-        </p>
+        <RunnerLoading label="Finishing connecting Strava…" compact immediate />
       )}
       {!connecting && state.kind === 'loading' && <div className="skeleton" aria-hidden="true" />}
       {state.kind === 'error' && <><p className="field-error">{state.message}</p>

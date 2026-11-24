@@ -1,4 +1,5 @@
 import type { BulkProgress, BulkResult, FileOutcome } from '../../lib/bulk-upload'
+import { RunnerLoading } from '../shared/RunnerLoading'
 
 const REASON: Partial<Record<FileOutcome['status'], string>> = {
   Skipped: 'Not a run',
@@ -46,17 +47,11 @@ const checked = (progress: BulkProgress) => Object.values(progress).reduce((sum,
 export function BulkSummary({ running, progress, result, error, onStop }: Props) {
   if (running) {
     return (
-      <div className="bulk-progress" aria-live="polite">
-        <p>
-          <span className="wait-spinner" aria-hidden="true" />
-          <span>
-            <strong>Reading your files…</strong> {plural(progress.Imported, 'run')} added so far
-            {checked(progress) > progress.Imported && `, from ${plural(checked(progress), 'file')} checked`}.
-          </span>
-        </p>
-        <button type="button" className="button button-quiet" onClick={onStop}>
-          Stop
-        </button>
+      <div className="bulk-progress">
+        {/* Real counts as the files are read: no total is known, so no percentage. */}
+        <RunnerLoading compact immediate label="Reading your files…" detail={<>{plural(progress.Imported, 'run')} added so far
+          {checked(progress) > progress.Imported && `, from ${plural(checked(progress), 'file')} checked`}.</>}
+          actions={<button type="button" className="button button-quiet" onClick={onStop}>Stop</button>} />
       </div>
     )
   }

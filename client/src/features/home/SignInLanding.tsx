@@ -1,13 +1,17 @@
+import { signsInWithPassword } from '../../app/sign-in-method'
+
 interface Props {
   onSignIn: () => void
   onSignUp: () => void
   onBack?: () => void
   /** Present only when Google is set up in the tenant. */
   onGoogle?: () => void
+  /** The environment's user flow asks for a password rather than an emailed code. */
+  passwords?: boolean
 }
 
 /** A focused account entry; the identity provider still handles all credentials. */
-export function SignInLanding({ onSignIn, onSignUp, onBack, onGoogle }: Props) {
+export function SignInLanding({ onSignIn, onSignUp, onBack, onGoogle, passwords = signsInWithPassword() }: Props) {
   return (
     <section className="sign-in-landing" aria-labelledby="sign-in-landing-title">
       <div className="sign-in-landing-card">
@@ -27,7 +31,7 @@ export function SignInLanding({ onSignIn, onSignUp, onBack, onGoogle }: Props) {
           <button type="button" className="button button-primary" onClick={onSignIn}>{onGoogle ? 'Continue with email' : 'Continue to sign in'}</button>
           <button type="button" className="button button-quiet" onClick={onSignUp}>Create an account</button>
         </div>
-        <p className="field-help sign-in-stay">When Microsoft asks, tap <strong>Yes</strong> to stay signed in, so you won’t need a code next time.</p>
+        {passwords && <p className="field-help sign-in-stay">Signed in with an emailed code before? Choose <strong>Forgot password?</strong> once to set a password, and let your phone save it.</p>}
         {onBack && <button type="button" className="link-button" onClick={onBack}>Back to Taperday</button>}
       </div>
     </section>

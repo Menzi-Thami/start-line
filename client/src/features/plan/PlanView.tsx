@@ -40,6 +40,7 @@ import { ProgressInsights } from './ProgressInsights'
 import { PlanCalendar } from './PlanCalendar'
 import { WeekGlance } from './WeekGlance'
 import { canMoveFrom, canMoveTo } from './move-window'
+import { RunnerLoading } from '../shared/RunnerLoading'
 
 const DaySummary = lazy(() => import('./DaySummary'))
 
@@ -464,7 +465,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   return (
     <section className={`plan plan-on-${tab}${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
       {moveRequest && coach?.adjustments?.life && <MoveRunDialog key={moveRequest.id} from={moveRequest.from} to={moveRequest.to} plan={plan} units={units} actions={coach.adjustments.life} onClose={closeMove} />}
-      {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canLogTraining} onOpenRun={onOpenRun} onClose={closeDay} onOpenStrength={openStrengthFromDay} onMove={moveEnabled ? (moveDate) => { requestMove(moveDate); closeDay() } : undefined} /></Suspense>}
+      {detailDate && <Suspense fallback={<RunnerLoading label="Opening day…" compact />}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canLogTraining} onOpenRun={onOpenRun} onClose={closeDay} onOpenStrength={openStrengthFromDay} onMove={moveEnabled ? (moveDate) => { requestMove(moveDate); closeDay() } : undefined} /></Suspense>}
       <div hidden={detailDate !== null}>
       {onBack && (
         <button type="button" className="plan-back" aria-label="Back to Home" onClick={onBack}>

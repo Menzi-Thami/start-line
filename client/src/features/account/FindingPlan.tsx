@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { SLOW_AFTER_MS } from './wait-film'
 import { useWakeStep } from './useWakeStep'
+import { RunnerLoading } from '../shared/RunnerLoading'
 
 interface Props {
   /** The name the sign-in gave, before the account itself has answered. */
@@ -8,6 +9,8 @@ interface Props {
   onRetry: () => void
   onSignOut: () => void
 }
+
+const STEP = { server: 'Connecting to Taperday.', database: 'Checking your training data.', almost: 'Finishing up.' } as const
 
 /**
  * Just signed in, on a device with no saved copy: the page stays usable while the account answers. Slow API or network
@@ -23,22 +26,16 @@ export function FindingPlan({ name: _name, onRetry, onSignOut }: Props) {
   }, [])
 
   return (
-    <div className={`finding-plan${slow ? " finding-plan-slow" : ""}`} role="status" aria-live="polite">
-      <span className="wait-spinner" aria-hidden="true" />
-      <div>
-        <p><strong>{slow ? 'Your account is taking longer than expected' : 'Opening your training…'}</strong></p>
-        {slow && <p className="field-help">{step === 'server' ? 'Connecting to Taperday.' : step === 'database' ? 'Checking your training data.' : 'Finishing up.'} You can retry without signing in again.</p>}
-        {slow && (
-          <p className="finding-plan-actions">
-            <button type="button" className="link-button" onClick={onRetry}>
-              Try again
-            </button>
-            <button type="button" className="link-button" onClick={onSignOut}>
-              Sign out
-            </button>
-          </p>
-        )}
-      </div>
+    <div className={`finding-plan${slow ? ' finding-plan-slow' : ''}`}>
+      <RunnerLoading
+        compact
+        label={slow ? 'Your account is taking longer than expected' : 'Opening your training…'}
+        detail={slow ? `${STEP[step]} You can retry without signing in again.` : undefined}
+        actions={slow && <>
+          <button type="button" className="link-button" onClick={onRetry}>Try again</button>
+          <button type="button" className="link-button" onClick={onSignOut}>Sign out</button>
+        </>}
+      />
     </div>
   )
 }

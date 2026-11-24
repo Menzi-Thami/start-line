@@ -18,6 +18,20 @@ const KNOWN: { codes: readonly string[]; message: string }[] = [
     message: 'Sign-in was cancelled. Try again whenever you’re ready.',
   },
   {
+    // The runner's session with Microsoft has ended. Not a fault: "Continue securely" asks for a fresh code.
+    codes: ['interaction_required', 'login_required', 'no_tokens_found', 'refresh_token_expired', 'AADSTS70043', 'AADSTS700084', 'AADSTS50173', 'AADSTS50078'],
+    message: 'Your session has ended. Continue securely to sign in again.',
+  },
+  {
+    codes: ['no_network_connectivity', 'post_request_failed', 'get_request_failed', 'endpoints_resolution_error', 'network_error'],
+    message: 'We couldn’t reach Microsoft to sign you in. Check your connection, then try again.',
+  },
+  {
+    // Set-up faults on Taperday's side (wrong tenant, redirect address or API scope). Retrying won't help the runner.
+    codes: ['AADSTS700016', 'AADSTS50011', 'AADSTS90002', 'AADSTS9002326', 'AADSTS500011', 'AADSTS650053', 'AADSTS50194', 'invalid_authority', 'untrusted_authority', 'redirect_uri_empty'],
+    message: 'Sign-in isn’t set up correctly at the moment. Please try again later, or contact hello@taperday.run and quote the code.',
+  },
+  {
     codes: ['AADSTS50020', 'AADSTS90072'],
     // Not "use your email instead": Microsoft sends a Gmail address straight back to Google.
     message: 'We couldn’t create your account with that sign-in. Please try again, and contact us if it keeps happening.',

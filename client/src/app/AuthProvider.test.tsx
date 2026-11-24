@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
-import { InteractionRequiredAuthError } from '@azure/msal-browser'
+import { AuthError, InteractionRequiredAuthError, ServerError } from '@azure/msal-browser'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth, type AuthConfig } from './auth-context'
@@ -14,7 +14,7 @@ const remembered = account('remembered')
 const calls: string[] = []
 let cached: Account[] = []
 let active: Account | null = null
-let redirectResult: { account: Account } | null = null
+let redirectResult: { account: Account; accessToken?: string } | null = null
 const msal = {
   initialize: vi.fn(() => Promise.resolve()),
   handleRedirectPromise: vi.fn(() => Promise.resolve(redirectResult)),
@@ -54,6 +54,7 @@ function Buttons() {
     <>
       <p data-testid="who">{auth.loading ? 'loading' : auth.account?.email ?? 'signed out'}</p>
       <p data-testid="verified">{auth.sessionReady ? 'verified' : 'needs sign-in'}</p>
+      <p data-testid="error">{auth.error ? `${auth.error.message}|${auth.error.code ?? ''}` : 'no error'}</p>
       <button type="button" onClick={auth.signIn}>sign in</button>
       <button type="button" onClick={auth.signUp}>sign up</button>
       <button type="button" onClick={auth.signOut}>sign out</button>
@@ -78,6 +79,7 @@ beforeEach(() => {
   active = null
   redirectResult = null
   sessionStorage.clear()
+  localStorage.clear()
 })
 
 describe('opening the app after its 24-hour sign-in has run out', () => {
@@ -288,5 +290,149 @@ describe('one runner per device', () => {
     await renderWith(false)
     expect(screen.getByTestId('who')).toHaveTextContent('fresh@example.com')
     expect(cached).toEqual([fresh])
+  })
+})
+
+// Regression cases from the 24 Nov 2026 Entra/PWA review (docs/qa/2026-11-24/entra-pwa-acceptance.md).
+const draft = (owner: string) => writeCheckInCopy(owner, 'plan', { entries: [], pending: [{ revision: 'one', key: '2026-10-14|Easy',
+  date: '2026-10-14', sessionType: 'Easy', base: null, answers: { status: 'Done', effort: null, distanceUnreported: false } }] })
+const open = () => render(<AuthProvider config={config(false)}><Buttons /></AuthProvider>)
+
+describe('session verification edge cases', () => {
+  it('opens straight away when the redirect itself carried an API token', async () => {
+    redirectResult = { account: remembered, accessToken: 'synthetic-token' }
+    open()
+    await waitFor(() => expect(screen.getByTestId('verified')).toHaveTextContent('verified'))
+    expect(msal.acquireTokenSilent).not.toHaveBeenCalled()
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+  })
+
+  it('an ended session on launch shows the Continue securely card, not a sign-in error', async () => {
+    sessionStorage.setItem('taperday.quiet-renewal', 'tried')
+    msal.acquireTokenSilent.mockRejectedValueOnce(new InteractionRequiredAuthError('login_required', 'Synthetic session ended'))
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+    expect(screen.getByTestId('error')).toHaveTextContent('no error')
+  })
+
+  it('a network failure on launch says offline, stays closed and never redirects', async () => {
+    msal.acquireTokenSilent.mockRejectedValueOnce(new AuthError('no_network_connectivity', 'Synthetic network failure'))
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+    expect(screen.getByTestId('error')).toHaveTextContent('You’re offline')
+    expect(msal.acquireTokenRedirect).not.toHaveBeenCalled()
+  })
+
+  it('a quiet renewal that cannot start still ends loading on the Continue securely card', async () => {
+    msal.acquireTokenSilent.mockRejectedValueOnce(new InteractionRequiredAuthError('no_tokens_found', 'Synthetic expired'))
+    msal.acquireTokenRedirect.mockRejectedValueOnce(new AuthError('interaction_in_progress', 'Synthetic'))
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+    expect(screen.getByRole('button', { name: 'continue securely' })).toBeInTheDocument()
+    expect(sessionStorage.getItem('taperday.quiet-renewal')).toBe('tried')
+  })
+})
+
+describe('failed or cancelled returns from Microsoft', () => {
+  it('a cancelled Continue securely keeps the remembered runner, their drafts and the way back in', async () => {
+    draft('t:remembered')
+    active = remembered
+    msal.handleRedirectPromise.mockRejectedValueOnce(new AuthError('user_cancelled', 'Synthetic cancel'))
+    open()
+    expect(await screen.findByText('remembered@example.com')).toBeInTheDocument()
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+    expect(screen.getByTestId('error')).toHaveTextContent('Sign-in was cancelled')
+    expect(screen.getByRole('button', { name: 'continue securely' })).toBeInTheDocument()
+    expect(readCheckInCopies('t:remembered').plan?.pending).toHaveLength(1)
+  })
+
+  it('a failed first sign-in with nobody remembered stays on the signed-out page with the code', async () => {
+    cached = []
+    msal.handleRedirectPromise.mockRejectedValueOnce(new ServerError('invalid_request', 'corr-1', 'AADSTS50011: Synthetic redirect mismatch. Trace ID: 1'))
+    open()
+    await waitFor(() => expect(screen.getByTestId('who')).toHaveTextContent('signed out'))
+    expect(screen.getByTestId('error')).toHaveTextContent('AADSTS50011')
+    expect(screen.getByTestId('error')).toHaveTextContent('set up correctly')
+  })
+})
+
+describe('account isolation and drafts', () => {
+  it('drafts survive a launch where MSAL no longer knows the account', async () => {
+    draft('t:remembered')
+    cached = []
+    open()
+    await waitFor(() => expect(screen.getByTestId('who')).toHaveTextContent('signed out'))
+    expect(readCheckInCopies('t:remembered').plan?.pending).toHaveLength(1)
+  })
+
+  it('asks before a sign-in that could replace drafts belonging to an account the app no longer shows', async () => {
+    const user = userEvent.setup()
+    draft('t:remembered')
+    cached = []
+    open()
+    await waitFor(() => expect(screen.getByTestId('who')).toHaveTextContent('signed out'))
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
+    await user.click(screen.getByRole('button', { name: 'sign in' }))
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(msal.loginRedirect).not.toHaveBeenCalled()
+    expect(readCheckInCopies('t:remembered').plan?.pending).toHaveLength(1)
+    confirm.mockRestore()
+  })
+
+  it('a different runner signing in never sees the previous runner’s drafts', async () => {
+    draft('t:remembered')
+    const fresh = account('fresh')
+    cached = [remembered, fresh]
+    redirectResult = { account: fresh }
+    open()
+    expect(await screen.findByText('fresh@example.com')).toBeInTheDocument()
+    expect(readCheckInCopies('t:remembered')).toEqual({})
+    expect(readCheckInCopies('t:fresh')).toEqual({})
+  })
+})
+
+describe('duplicate taps and sign-out failure paths', () => {
+  it('a double tap on Continue securely starts one interaction only', async () => {
+    const user = userEvent.setup()
+    await renderWith(false)
+    await user.click(screen.getByRole('button', { name: 'continue securely' }))
+    await user.click(screen.getByRole('button', { name: 'continue securely' }))
+    await waitFor(() => expect(msal.acquireTokenRedirect).toHaveBeenCalledOnce())
+  })
+
+  it('a double tap on sign out signs out once', async () => {
+    const user = userEvent.setup()
+    active = remembered
+    await renderWith(false)
+    await user.click(screen.getByRole('button', { name: 'sign out' }))
+    await user.click(screen.getByRole('button', { name: 'sign out' }))
+    await waitFor(() => expect(calls).toEqual(['clear:all', 'logout:remembered']))
+  })
+
+  it('signing out offline clears this device and shows the signed-out page without going to Microsoft', async () => {
+    const user = userEvent.setup()
+    active = remembered
+    await renderWith(false)
+    const connection = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    try {
+      await user.click(screen.getByRole('button', { name: 'sign out' }))
+      await waitFor(() => expect(screen.getByTestId('who')).toHaveTextContent('signed out'))
+      expect(calls).toEqual(['clear:all'])
+      expect(cached).toEqual([])
+    } finally { connection.mockRestore() }
+  })
+
+  it('a sign-out Microsoft cannot complete still leaves this device signed out, with a visible reason', async () => {
+    const user = userEvent.setup()
+    active = remembered
+    await renderWith(false)
+    msal.logoutRedirect.mockRejectedValueOnce(new AuthError('no_network_connectivity', 'Synthetic'))
+    await user.click(screen.getByRole('button', { name: 'sign out' }))
+    await waitFor(() => expect(screen.getByTestId('who')).toHaveTextContent('signed out'))
+    expect(screen.getByTestId('verified')).toHaveTextContent('needs sign-in')
+    expect(screen.getByTestId('error')).toHaveTextContent('couldn’t reach Microsoft')
   })
 })

@@ -1,7 +1,7 @@
 import { CacheLookupPolicy, InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { clearSnapshot } from '../lib/home-snapshot'
-import { activateCheckInOwner, clearCheckInCopies, readCheckInCopies } from '../features/coaching/check-in-storage'
+import { activateCheckInOwner, clearCheckInCopies, pendingDraftCount } from '../features/coaching/check-in-storage'
 import { activateRatingOwner, clearRatingDismissals } from '../features/coaching/rating-dismissal'
 import { AuthContext, accountsOff, type Auth, type AuthConfig } from './auth-context'
 import { describeSignInError, type SignInProblem } from './sign-in-errors'
@@ -22,7 +22,20 @@ const quietRenewalPending = () => {
   try { return sessionStorage.getItem(QUIET_RENEWAL) === 'pending' } catch { return false }
 }
 const isNetworkFailure = (failure: unknown) =>
-  !navigator.onLine || /network|timed_out|timeout/i.test((failure as { errorCode?: string } | null)?.errorCode ?? '')
+  !navigator.onLine || /network|timed_out|timeout|request_failed|endpoints_resolution/i.test((failure as { errorCode?: string } | null)?.errorCode ?? '')
+const OFFLINE: SignInProblem = { message: 'You’re offline. Reconnect to the internet, then continue securely.', code: null }
+// What to tell the runner when a token couldn't be had: offline is not a sign-in fault, and an ended session is what
+// the "Continue securely" card already explains, so neither shows as an error.
+const tokenProblem = (failure: unknown): SignInProblem | null =>
+  isNetworkFailure(failure) ? OFFLINE : failure instanceof InteractionRequiredAuthError ? null : describeSignInError(failure)
+
+// Local data belongs to one runner. Only a known account takes it over: an account MSAL has lost (storage cleared, a
+// failed sign-in) must not wipe another runner's unsynced drafts; sign-out and an explicit account switch clear them.
+const activateOwner = (account: AccountInfo | null) => {
+  if (!account) return
+  activateCheckInOwner(toAccount(account).id)
+  activateRatingOwner(toAccount(account).id)
+}
 
 /**
  * Signs runners in with the External ID tenant. The sign-in is kept in localStorage, so the installed app still knows the
@@ -103,12 +116,12 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
               await msal.acquireTokenRedirect({ scopes: [config.scope], account, prompt: 'none', redirectStartPage: window.location.href })
               return
             }
-            if (!cancelled) setError(describeSignInError(failure))
+            // Straight back from Microsoft, an ended session is a real failure and is shown with its code.
+            if (!cancelled) setError(result ? describeSignInError(failure) : tokenProblem(failure))
           }
         }
         if (cancelled) return
-        activateCheckInOwner(account ? toAccount(account).id : null)
-        activateRatingOwner(account ? toAccount(account).id : null)
+        activateOwner(account)
         setSessionReady(Boolean(account && verified))
         setInfo(account)
       })
@@ -122,14 +135,19 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
           leaving = false
           const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null
           if (account) msal.setActiveAccount(account)
-          activateCheckInOwner(account ? toAccount(account).id : null)
-          activateRatingOwner(account ? toAccount(account).id : null)
+          activateOwner(account)
           setSessionReady(false)
           setInfo(account)
           return
         }
-        // The runner stays signed out, but is told why rather than left guessing.
+        // A sign-in or "Continue securely" that came back failed or cancelled. Training stays closed and the runner is
+        // told why. A runner this device still remembers keeps the "Continue securely" card (and their drafts) rather
+        // than dropping to the first-visit page as if nobody were here.
+        const account = msal.getActiveAccount() ?? msal.getAllAccounts()[0] ?? null
+        if (account) msal.setActiveAccount(account)
+        activateOwner(account)
         setSessionReady(false)
+        setInfo(account)
         setError(describeSignInError(failure))
       })
       .finally(() => {
@@ -148,8 +166,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
     // isn't locked into Microsoft's page.
     const start = (kind: SignInKind) => {
       if (redirecting.current) return
-      const drafts = Object.values(readCheckInCopies(info ? toAccount(info).id : null)).reduce((sum, copy) => sum + copy.pending.length, 0)
-      if (drafts && !window.confirm('You have unsynced run drafts on this device. Choosing a different account removes them. Continue to sign in?')) return
+      // Any drafts on the device, not only the remembered runner's: whoever signs in next replaces their owner.
+      if (pendingDraftCount() && !window.confirm('You have unsynced run drafts on this device. Choosing a different account removes them. Continue to sign in?')) return
       msal.setActiveAccount(null)
       setError(null)
       redirecting.current = true
@@ -170,34 +188,47 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       resumeSession: () => {
         if (!info || redirecting.current) return
         if (!navigator.onLine) {
-          setError({ message: 'You’re offline. Reconnect to the internet, then continue securely.', code: null })
+          setError(OFFLINE)
           return
         }
         // Keep the same remembered identity and its local run drafts. Unlike signIn, this must not reset
         // the active account or open an account chooser.
+        setError(null)
         redirecting.current = true
+        // Stays guarded once the page is on its way to Microsoft, so a second tap can't start another interaction.
         void msal.acquireTokenRedirect({
           scopes: [config.scope],
           account: info,
           redirectStartPage: window.location.href,
         }).catch((failure: unknown) => {
-          setError(describeSignInError(failure))
-        }).finally(() => {
           redirecting.current = false
+          setError(describeSignInError(failure))
         })
       },
       // Signing out leaves nothing of anyone's on this device: every remembered account (MSAL's logout only removes the one
       // it's given, and an older one would then open as signed in), and the copy of their Home. Then Microsoft ends its session.
       signOut: () => {
-        const drafts = Object.values(readCheckInCopies(info ? toAccount(info).id : null)).reduce((sum, copy) => sum + copy.pending.length, 0)
-        if (drafts && !window.confirm('You have unsynced run drafts on this device. Sign out and discard these drafts?')) return
+        if (redirecting.current) return
+        if (pendingDraftCount() && !window.confirm('You have unsynced run drafts on this device. Sign out and discard these drafts?')) return
+        redirecting.current = true
         setSessionReady(false)
         clearSnapshot()
         clearCheckInCopies()
         clearRatingDismissals()
         void (async () => {
           await msal.clearCache().catch(() => undefined)
-          await msal.logoutRedirect({ account: info ?? undefined })
+          // Nothing of the runner's is left here now, so the gate shows the first-visit page, never "Welcome back".
+          setInfo(null)
+          // Offline, Microsoft's page can't load. This device is signed out regardless, and the next sign-in still offers
+          // "use another account" (select_account), so a lingering Microsoft session can't choose the runner for them.
+          if (!navigator.onLine) {
+            redirecting.current = false
+            return
+          }
+          await msal.logoutRedirect({ account: info ?? undefined }).catch((failure: unknown) => {
+            redirecting.current = false
+            setError(describeSignInError(failure))
+          })
         })()
       },
       getToken: async () => {

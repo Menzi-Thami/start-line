@@ -1,0 +1,8 @@
+{
+  "profile": "Slow 3G (400 ms, 50 kB/s)",
+  "bootScreenMs": 3240,
+  "appShownMs": 6035,
+  "networkIdleMs": 9023,
+  "requests": 11,
+  "kilobytes": 987
+}

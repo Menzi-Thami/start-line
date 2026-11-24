@@ -252,7 +252,9 @@ export function App() {
       setEditing(false)
     }
     // A reload of the runner's own plan link must retain the cached account identity and offline logging controls.
-    if (cached && !navigator.onLine) { queueMicrotask(showCached); return }
+    // The same holds online: this is the runner's own plan as Home's coach read last left it on this device, so it shows
+    // at once and the coach read below brings it up to date in one request. Regenerating it first only added a round trip.
+    if (cached && !playMovie) { queueMicrotask(showCached); return }
 
     api
       .plan(toRequest(withDate), controller.signal)
@@ -1000,6 +1002,7 @@ export function App() {
             today={today}
             current={ownPlan}
             currentPlanFailed={currentPlan.failed}
+            pendingPlanId={currentPlan.pendingId}
             onRetryCurrentPlan={() => void currentPlan.refresh()}
             journey={journey}
             runs={runs ?? copy?.runs}
@@ -1029,7 +1032,7 @@ export function App() {
         )}
 
         {view === 'journey' && state.kind === 'ready' && (
-          <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} onOpenRecovery={openRecovery} />
+          <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} onOpenRecovery={openRecovery} journey={journey} />
         )}
         {view === 'recovery' && state.kind === 'ready' && <RecoveryPlanPage key={state.runner.id} units={units} today={today} journey={journey} onNewRace={startFresh} onOpenJourney={() => openChapter()} onOpenTraining={ownPlan ? () => openOwnPlan() : undefined} />}
         {view === 'runs' && state.kind === 'ready' && (

@@ -16,6 +16,7 @@ it('starts automatically on a slow load, rotates tips, and pauses/resumes withou
   const { container } = render(<SignInWait onRetry={retry} onSignOut={signOut} />)
   await act(() => vi.advanceTimersByTimeAsync(SLOW_AFTER_MS - 1))
   expect(container.querySelector('.account-warmup')).toBeNull()
+  expect(screen.getByRole('status', { name: 'Checking your account' }).querySelector('.runner-sprint')).toBeInTheDocument()
   expect(client.isUp).not.toHaveBeenCalled()
   await act(() => vi.advanceTimersByTimeAsync(1))
   expect(container.querySelector('.runner-sprint')).toHaveAttribute('aria-hidden', 'true')

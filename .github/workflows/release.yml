@@ -52,6 +52,21 @@ jobs:
           fi
           echo "Staging passed for ${sha:0:7}."
 
+      - name: Staging full CI passed for this exact commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse origin/staging)
+          # Deployment smoke tests run in parallel with CI. A successful deploy alone is not a release gate.
+          # Require a successful FULL push-run of 1 - Checks, not a PR run against a different base.
+          passed=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=$sha&event=push&per_page=100" \
+            --jq '[.workflow_runs[] | select(.head_sha == "'$sha'" and .status == "completed" and .conclusion == "success")] | length')
+          if [ "$passed" = "0" ]; then
+            echo "::error::Full staging CI has not passed for ${sha:0:7}. Production release is blocked."
+            exit 1
+          fi
+          echo "Full staging CI passed for ${sha:0:7}."
+
       - name: Merge staging into main
         id: merge
         run: |

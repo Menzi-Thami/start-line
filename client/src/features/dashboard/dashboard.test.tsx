@@ -128,10 +128,10 @@ const synced = [
 ]
 
 describe('progress in one place', () => {
-  it('keeps personal bests in Plan › Progress, with no separate overview or extra plan tab', async () => {
+  it('keeps personal bests in Plan › Progress, with a separate strength tab, not a duplicated running overview', async () => {
     render(<PlanView plan={plan} units="km" shareUrl="https://taperday.run/?x" today="2026-10-19" runs={synced} bests={bests} />)
     const tabs = screen.getAllByRole('tab').map((t) => t.textContent)
-    expect(tabs).toEqual(['This week', 'Calendar', 'Progress'])
+    expect(tabs).toEqual(['This week', 'Calendar', 'Strength', 'Progress'])
     await userEvent.click(screen.getByRole('tab', { name: 'Progress' }))
     expect(screen.queryByText('Running insights', { selector: 'summary' })).not.toBeInTheDocument()
 

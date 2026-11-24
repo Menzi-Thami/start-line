@@ -100,6 +100,7 @@ interface Props {
 const PLAN_TABS = [
   { id: 'week', label: 'This week' },
   { id: 'all', label: 'Calendar' },
+  { id: 'strength', label: 'Strength' },
   { id: 'progress', label: 'Progress' },
 ] as const
 type TabId = (typeof PLAN_TABS)[number]['id']
@@ -130,7 +131,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const trainingEnded = today > plan.race.date
   const concluded = completedRace || trainingEnded
   const canLogTraining = canCompleteRuns && !trainingEnded
-  const [historyOpen, setHistoryOpen] = useState(() => openTab?.id === 'all' || openTab?.id === 'progress' || !!readDayRoute() || ['all', 'progress'].includes(new URLSearchParams(window.location.search).get('planTab') ?? ''))
+  const [historyOpen, setHistoryOpen] = useState(() => openTab?.id === 'all' || openTab?.id === 'strength' || openTab?.id === 'progress' || !!readDayRoute() || ['all', 'strength', 'progress'].includes(new URLSearchParams(window.location.search).get('planTab') ?? ''))
   const trainingHistoryId = useId()
   const headingRef = useRef<HTMLHeadingElement>(null)
   const racePrepRef = useRef<HTMLElement>(null)
@@ -436,6 +437,16 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const statusOn = (date: string) => dayStatus(sessionsOn(date), effectiveDone, entries.filter(entry => entry.date === date), activityDates.includes(date), sessionsOn(date).some(session => completedViaStrava(session, coach)), date >= plan.startDate && date <= plan.race.date)
   // On a desktop the calendar shows today's day (or the first plan day) beside the month until a day is chosen.
   const calendarDefault = today >= plan.startDate && today <= plan.race.date ? today : plan.startDate
+  const openStrengthFromDay = () => {
+    setDetailDate(null)
+    setSelectedDay(null)
+    setTab('strength')
+    const url = new URL(window.location.href)
+    url.searchParams.delete('day')
+    url.searchParams.set('planTab', 'strength')
+    window.history.replaceState({ ...window.history.state, taperdayDay: false }, '', url)
+    window.scrollTo?.({ top: 0 })
+  }
   const preview = (date: string) => <DayPreview id={daySummaryId} date={date} sessions={sessionsOn(date)} status={statusOn(date)} units={units} paces={plan.paces} onOpen={() => openDay(date)} />
 
   // Race prep lives on This week; the journey's "Race-week checklist" brings it into view.
@@ -453,7 +464,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   return (
     <section className={`plan plan-on-${tab}${reveal ? ' plan-reveal' : ''}`} aria-labelledby="plan-title">
       {moveRequest && coach?.adjustments?.life && <MoveRunDialog key={moveRequest.id} from={moveRequest.from} to={moveRequest.to} plan={plan} units={units} actions={coach.adjustments.life} onClose={closeMove} />}
-      {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canLogTraining} onOpenRun={onOpenRun} onClose={closeDay} onMove={moveEnabled ? (moveDate) => { requestMove(moveDate); closeDay() } : undefined} /></Suspense>}
+      {detailDate && <Suspense fallback={<p role="status">Opening day…</p>}><DaySummary dedicated key={`${planKey}|${detailDate}`} id={`${daySummaryId}-detail`} date={detailDate} today={today} plan={plan} units={units} done={effectiveDone} onDoneChange={updateDone} runs={runs} coach={coach} canCompleteRuns={canLogTraining} onOpenRun={onOpenRun} onClose={closeDay} onOpenStrength={openStrengthFromDay} onMove={moveEnabled ? (moveDate) => { requestMove(moveDate); closeDay() } : undefined} /></Suspense>}
       <div hidden={detailDate !== null}>
       {onBack && (
         <button type="button" className="plan-back" aria-label="Back to Home" onClick={onBack}>
@@ -560,7 +571,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
               <WeekGlance week={shown.week} done={effectiveDone} runs={byDate} additionalDates={additionalDates} activityDates={activityDates} today={today} units={units} onSelectDate={selectDate} selectedDate={previewDate} daySummaryId={daySummaryId} renderSelectedDay={() => preview(previewDate)} statusFor={statusOn} onRequestMove={moveEnabled ? requestMove : undefined} canMoveFrom={date => canMoveFrom(plan, today, date)} canMoveTo={date => canMoveTo(plan, today, date)} />
             </>
           )}
-          <details className="disclosure training-guide" id="strength-workouts" aria-label="Strength workouts" open={!!shown?.week.sessions.some(session => session.type === 'Strength')}><summary>Strength workouts</summary><StrengthTab readOnly={trainingEnded} plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={trainingEnded ? undefined : onEditStrength} /></details>
+          
         </div>
 
         <div {...panel('all')}>
@@ -569,6 +580,15 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
           {selectedDay?.tab === 'all' && selectedDate ? preview(selectedDate) : tab === 'all' && <div className="calendar-default-day"><DayPreview id={`${daySummaryId}-calendar`} date={calendarDefault} sessions={sessionsOn(calendarDefault)} status={statusOn(calendarDefault)} units={units} paces={plan.paces} onOpen={() => openDay(calendarDefault)} /></div>}
           </div>
           {!coach && <p className="tab-intro">Open a day to tick it off. Ticks are saved on this device only.</p>}
+        </div>
+
+        <div {...panel('strength')}>
+          <div className="this-week-head">
+            <h3>Strength workouts</h3>
+            <p className="week-meta">{shown?.week ? `Week ${shown.week.number} of ${plan.weeks.length}` : 'Your strength programme'}</p>
+          </div>
+          <p className="tab-intro">Strength has its own space. Your running sessions and run analysis stay under This week and Calendar.</p>
+          <StrengthTab readOnly={trainingEnded} plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={trainingEnded ? undefined : onEditStrength} />
         </div>
 
         <div {...panel('progress')}>
@@ -654,7 +674,7 @@ function readDayRoute(): string | null {
 function readPlanTab(): TabId {
   const tab = new URLSearchParams(window.location.search).get('planTab')
   if (readsReview()) return 'progress'
-  return tab === 'all' || tab === 'progress' ? tab : 'week'
+  return tab === 'all' || tab === 'strength' || tab === 'progress' ? tab : 'week'
 }
 
 /** The weekly review's reminder link (`review=1`), which once opened Home's review, now opens Plan › Progress. */

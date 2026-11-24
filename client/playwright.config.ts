@@ -59,7 +59,7 @@ export default defineConfig({
       timeout: 240_000,
     },
     {
-      command: 'npm run build && npx vite preview --port 5173 --strictPort',
+      command: 'npm run build -- --mode e2e && npx vite preview --port 5173 --strictPort',
       url: web,
       env: { VITE_API_BASE_URL: api },
       reuseExistingServer: !process.env.CI,

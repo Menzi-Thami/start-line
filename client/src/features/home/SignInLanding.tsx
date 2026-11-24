@@ -1,7 +1,7 @@
 interface Props {
   onSignIn: () => void
   onSignUp: () => void
-  onBack: () => void
+  onBack?: () => void
   /** Present only when Google is set up in the tenant. */
   onGoogle?: () => void
 }
@@ -28,7 +28,7 @@ export function SignInLanding({ onSignIn, onSignUp, onBack, onGoogle }: Props) {
           <button type="button" className="button button-quiet" onClick={onSignUp}>Create an account</button>
         </div>
         <p className="field-help sign-in-stay">When Microsoft asks, tap <strong>Yes</strong> to stay signed in, so you won’t need a code next time.</p>
-        <button type="button" className="link-button" onClick={onBack}>Back to Taperday</button>
+        {onBack && <button type="button" className="link-button" onClick={onBack}>Back to Taperday</button>}
       </div>
     </section>
   )

@@ -1,4 +1,3 @@
-import { ExerciseList } from '../strength/ExerciseList'
 import { useEffect, useId, useRef, useState } from 'react'
 import { formatDate, formatDistance, formatDuration, formatPace, formatPaceRange, type Units } from '../../lib/format'
 import type { ActivitySummary, CheckIn, Session, TrainingPlan } from '../../lib/types'
@@ -12,11 +11,10 @@ import { completedViaStrava } from '../coaching/strava-completion'
 import { RunLog } from '../coaching/RunLog'
 import type { SessionCoach } from '../coaching/useCheckIns'
 import { RunSticker } from '../sharing/RunSticker'
-import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength-progress'
+import { withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey } from './plan-math'
 import { SessionSteps } from './SessionSteps'
 import { compareWorkoutDistance } from './workout-distance-feedback'
-import { SessionItem } from './SessionItem'
 import { RunWalkChip } from './RunWalkChip'
 import { canMoveFrom } from './move-window'
 import { Runner } from '../shared/Runner'
@@ -37,12 +35,14 @@ interface Props {
   canCompleteRuns: boolean
   onOpenRun?: (id: string) => void
   onClose: () => void
+  /** Open strength in its own tab instead of embedding exercise controls in run details. */
+  onOpenStrength?: () => void
   /** Move one of this day's runs to another day this week (Life happens), when the runner can. */
   onMove?: (date: string) => void
 }
 
 /** One date, with prescription and history kept separate. Opening it never changes completion. */
-export default function DaySummary({ dedicated = false, id: panelId, trigger, date, today, plan, units, done, onDoneChange, runs, coach, canCompleteRuns, onOpenRun, onClose, onMove }: Props) {
+export default function DaySummary({ dedicated = false, id: panelId, trigger, date, today, plan, units, done, onDoneChange, runs, coach, canCompleteRuns, onOpenRun, onClose, onOpenStrength, onMove }: Props) {
   const id = useId()
   const panelRef = useRef<HTMLElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -53,6 +53,8 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
   const [expandedRatings, setExpandedRatings] = useState<Set<string>>(() => new Set())
   const [dismissedRatings, setDismissedRatings] = useState<Set<string>>(() => new Set())
   const sessions = plan.weeks.flatMap(week => week.sessions).filter(session => session.date === date)
+  const strengthSessions = sessions.filter(isStrength)
+  const runSessions = sessions.filter(session => !isStrength(session))
   const entries = (coach?.entries ?? sessions.flatMap(session => { const entry = coach?.get(session); return entry ? [entry] : [] }))
     .filter(entry => entry.date === date && entry.status !== 'Skipped' && entry.sessionType !== 'Strength')
   const importsUnavailable = !!coach && runs === undefined
@@ -124,14 +126,14 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
       <div className="day-summary-columns">
         <section aria-labelledby={`${id}-planned`} className="day-summary-section">
           <h4 id={`${id}-planned`}>Planned</h4>
-          {sessions.length === 0 && <div className="day-summary-card"><h5>{inPlan ? 'Rest day' : 'Outside this plan'}</h5><p>{inPlan ? 'No workout scheduled.' : 'There are no scheduled sessions from this plan on this date.'}</p></div>}
-          {sessions.map(session => {
+          {runSessions.length === 0 && <div className="day-summary-card"><h5>{inPlan ? (strengthSessions.length ? 'No run scheduled' : 'Rest day') : 'Outside this plan'}</h5><p>{inPlan ? (strengthSessions.length ? 'Strength is tracked separately from running.' : 'No workout scheduled.') : 'There are no scheduled sessions from this plan on this date.'}</p></div>}
+          {runSessions.map(session => {
             const entry = coach?.get(session)
             const complete = done.has(sessionKey(session))
             const viaStrava = completedViaStrava(session, coach)
             const pace = plan.paces.find(pace => pace.zone === session.zone)
             const card = <article key={sessionKey(session)} className="day-summary-card" aria-label={`Planned: ${session.title}`}>
-              {session.type === 'Strength' ? future ? <><h5>{session.title}</h5><p>{session.exercises.length} exercises · Upcoming</p><p>{session.detail}</p>{dedicated && <ExerciseList session={session} done={done} onDoneChange={onDoneChange} readOnly />}</>  : dedicated ? <><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : `${setsDone(done, session).done} of ${setsDone(done, session).total} sets recorded on this device`}</p><SessionItem expanded session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></> : <><h5>{session.title}</h5><p className="day-summary-status">{complete ? 'Completed on this device' : 'No completion recorded'}</p><details className="session-more"><summary>View exercises and completion</summary><SessionItem session={session} units={units} pace={undefined} done={done} onDoneChange={onDoneChange} /></details></> : <>
+              {<>
                 {historyReady && (complete || viaStrava || (entry && entry.status !== 'Skipped')) && <p className="day-done" role="status">
                   <Runner pose="victory" size={34} className="day-done-runner" />
                   <span><strong>{entry?.status === 'CutShort' ? 'Done, cut short' : 'Done'}</strong>{viaStrava ? ' · from Strava' : ''}<br /><span className="field-help">Every session you finish counts. Nice work.</span></span>
@@ -162,11 +164,17 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
                 {historyReady && !coach && session.type !== 'Race' && !future && <label className="session-done"><input type="checkbox" checked={complete} onChange={event => onDoneChange(current => withSessionDone(current, session, event.target.checked))} /> Complete on this device</label>}
               </>}
             </article>
-            // Strength is its own labelled block under the day's run, never read as part of it.
-            return isStrength(session) ? <div key={sessionKey(session)} className="day-summary-strength"><p className="plan-kicker">Strength{sessions.some(other => !isStrength(other)) ? ' · after your run' : ''}</p>{card}</div> : card
+            return card
           })}
         </section>
 
+        {strengthSessions.length > 0 && <section aria-labelledby={`${id}-strength`} className="day-summary-section day-summary-strength">
+          <h4 id={`${id}-strength`}>Strength</h4>
+          <p className="day-summary-status">{strengthSessions.map(session => session.title).join(', ')} · {strengthSessions.reduce((sum, session) => sum + session.exercises.length, 0)} exercises</p>
+          {completedStrength.length > 0 && <p className="day-summary-status">Strength completed on this device.</p>}
+          <p className="field-help">Exercises and sets are kept in the Strength tab, separate from your run and run analysis.</p>
+          {onOpenStrength && <button type="button" className="button button-quiet" onClick={onOpenStrength}>Open strength workouts</button>}
+        </section>}
         <section aria-labelledby={`${id}-recorded`} className="day-summary-section">
           <h4 id={`${id}-recorded`}>Recorded</h4>
           {!historyReady && <p role="status">Saved run history is not available yet. Close this day to check loading or retry above the plan.</p>}
@@ -198,8 +206,7 @@ export default function DaySummary({ dedicated = false, id: panelId, trigger, da
               <RunSticker units={units} run={{ date, title: 'Run completed', distanceKm: run.distanceKm, seconds: run.movingSeconds, source: run.source.kind, averageHeartRate: run.averageHeartRate }} />
             </article>)}
             {historyReady && deviceRuns.map(session => <div key={sessionKey(session)} className="day-summary-card"><h5>{session.title} completed</h5><p className="field-help">Completed on this device. Actual distance and time were not recorded.</p></div>)}
-            {completedStrength.map(session => <div key={sessionKey(session)} className="day-summary-card"><h5>{session.title} completed</h5><p className="field-help">Strength completion is saved on this device.</p></div>)}
-            {historyReady && !importsUnavailable && entries.length === 0 && unlinked.length === 0 && deviceRuns.length === 0 && completedStrength.length === 0 && <div className="day-summary-empty"><p>No activity recorded for this date.</p></div>}
+            {historyReady && !importsUnavailable && entries.length === 0 && unlinked.length === 0 && deviceRuns.length === 0 && <div className="day-summary-empty"><p>No activity recorded for this date.</p></div>}
           </>}
           {historyReady && coach && inPlan && !future && <div ref={logRef}><RunLog key={requestedRun?.id ?? 'manual'} plan={plan} coach={coach} runs={dayRuns} fixedDate={date} initialRun={requestedRun} onClose={() => { setRequestedRun(undefined); headingRef.current?.focus({ preventScroll: true }) }} showEntries={false} /></div>}
           {!coach && historyReady && <p className="field-help">{runs?.length ? 'Open your own saved plan to log or edit runs.' : 'On a shared plan, completion ticks stay on this device. Sign in and save your own plan to keep a run log.'}</p>}

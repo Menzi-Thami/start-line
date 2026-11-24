@@ -16,8 +16,8 @@ export async function openDisclosure(page: Page, label: string | RegExp) {
 }
 
 export async function openStrengthWorkouts(page: Page) {
-  await page.getByRole('tab', { name: 'This week', exact: true }).click()
-  return openDisclosure(page, 'Strength workouts')
+  await page.getByRole('tab', { name: 'Strength', exact: true }).click()
+  return page.locator('#plan-panel-strength')
 }
 
 /** The running totals now live on Runs; the run-history harness shows the real totals there. */

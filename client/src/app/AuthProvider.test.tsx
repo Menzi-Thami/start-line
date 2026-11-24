@@ -138,12 +138,12 @@ describe('opening the app after its 24-hour sign-in has run out', () => {
 })
 
 describe('starting a sign-in on a device that remembers someone', () => {
-  it('forgets the remembered account first, so the runner can type any email', async () => {
+  it('forgets the active account and prevents a duplicate redirect while choosing an identity', async () => {
     const user = userEvent.setup()
     await renderWith(false)
     await user.click(screen.getByRole('button', { name: 'sign in' }))
     await user.click(screen.getByRole('button', { name: 'sign up' }))
-    expect(calls).toEqual(['active:none', 'redirect:select_account', 'active:none', 'redirect:create'])
+    expect(calls).toEqual(['active:none', 'redirect:select_account'])
   })
 
   it('hides Google until it is switched on', async () => {

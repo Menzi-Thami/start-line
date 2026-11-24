@@ -81,6 +81,14 @@ Forgot password is **not a verified OTP-to-password migration**. See corrected [
   widths, built-in browser). Graph shows both enabled. Re-check before E03; if it persists, move the staging app back
   to the v2 flow (seconds, no data change).
 
+**Rolled back, 24 Nov (owner approved):** a new-customer sign-up on staging (owner, iPhone, plus-addressed test
+address) failed on Microsoft's hosted page with "There was an issue looking up your account" / "Your account '' already
+exists". Graph showed no user created, and the staging sign-in log had no record of the attempt. Taken together with the
+incomplete hosted page, the password flow was judged unreliable. Taperday Web (staging) was moved back to the v2
+email-code flow (verified via Graph); the password flow is kept with no apps attached; `VITE_AUTH_PASSWORDS` was removed
+from staging. Both environments now use email codes plus Google. E03 is therefore N/A for this PR; one-touch return
+relies on session persistence (this PR), with passkeys a separate proposal.
+
 **Assessment: NO-GO for release.** New password-backed signup (E03), identity/data preservation for any credential
 enrolment (E04), live existing-account OTP on the installed PWA and all physical browser/PWA/native-credential rows
 remain blocked on the owner: a disposable staging test inbox and real devices. See the minimum owner-assisted steps below. Original palette, animations and the plan film are retained.

@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page, type TestInfo } from '@playwright/test'
 import { mkdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { mockApi } from './perf-api'
@@ -8,6 +8,15 @@ const fixture = `http://127.0.0.1:${process.env.HOME_WEEK_FIXTURE_PORT ?? '5176'
 const baseline = process.env.HOME_WEEK_BASELINE === '1'
 const capture = process.env.HOME_WEEK_CAPTURE === '1'
 const evidence = fileURLToPath(new URL(`../../docs/qa/2026-11-24/home-week/${baseline ? 'before' : 'after'}/`, import.meta.url))
+
+async function auditScreen(page: Page, info: TestInfo, screen: string) {
+  expect(page.frames()).toHaveLength(1)
+  const audit = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
+  await info.attach(`${screen}-accessibility.json`, { body: JSON.stringify(audit, null, 2), contentType: 'application/json' })
+  expect(audit.passes.length).toBeGreaterThan(0)
+  expect(audit.violations.map(value => ({ id: value.id, targets: value.nodes.map(node => node.target) }))).toEqual([])
+}
 
 for (const width of [375, 1440]) for (const theme of ['light', 'dark']) {
   test(`large dated workouts fill Home and Plan at ${width}px ${theme} @phone`, async ({ page }, info) => {
@@ -30,8 +39,6 @@ for (const width of [375, 1440]) for (const theme of ['light', 'dark']) {
         expect(row.width).toBeGreaterThanOrEqual(Math.min(width - 120, 500))
         if (index > 0) expect(row.top).toBeGreaterThanOrEqual(bounds[index - 1]!.bottom - 1)
       }
-      const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
-      expect(audit.violations.map(value => ({ id: value.id, targets: value.nodes.map(node => node.target) }))).toEqual([])
       await rows.last().scrollIntoViewIfNeeded()
       await expect(rows.last()).toBeInViewport()
       await page.evaluate(() => scrollTo(0, 0))
@@ -48,13 +55,28 @@ for (const width of [375, 1440]) for (const theme of ['light', 'dark']) {
       const heights = await rows.evaluateAll(elements => elements.map(element => element.getBoundingClientRect().height))
       expect(heights.every(height => height >= 120)).toBe(true)
       await expect(page.locator('.week-agenda .workout-artwork')).toHaveCount(7)
-      const audit = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze()
-      expect(audit.violations.map(value => ({ id: value.id, targets: value.nodes.map(node => node.target) }))).toEqual([])
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     if (capture && info.project.name === 'desktop') await page.screenshot({ path: `${evidence}plan-${width}-${theme}.png`, fullPage: true, animations: 'disabled' })
     else await page.screenshot({ path: info.outputPath(`plan-week-${width}-${theme}.png`), fullPage: true, animations: 'disabled' })
     expect(errors).toEqual([])
+  })
+
+  test(`Home and Plan WCAG audit at ${width}px ${theme} @phone`, async ({ page, browserName }, info) => {
+    // Existing Gecko/axe native crash (e2e/axe.ts, PR #276), reproduced in both adapter modes.
+    // Keep this as an explicit skipped audit, not an empty successful result. Every Firefox layout/navigation test runs.
+    test.skip(browserName === 'firefox', 'Firefox content process crashes inside axe; full audits run in Chromium and WebKit.')
+    const api = await mockApi(page, { latencyMs: 5 })
+    await page.setViewportSize({ width, height: 900 })
+    await page.addInitScript(mode => localStorage.setItem('taperday:theme', mode), theme)
+    await page.goto(`${fixture}?view=home`)
+    await expect(page.locator('.home-workout-button')).toHaveCount(7)
+    await api.settle()
+    await page.evaluate(() => document.fonts.ready)
+    await auditScreen(page, info, 'home')
+    await page.getByRole('region', { name: 'This week', exact: true }).getByRole('button', { name: 'View this week', exact: true }).click()
+    await expect(page.locator('.week-day-button')).toHaveCount(7)
+    await auditScreen(page, info, 'plan')
   })
 }
 

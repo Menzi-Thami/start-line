@@ -2,6 +2,7 @@ import { addDays, formatDate, formatDistance, type Units } from '../../lib/forma
 import { daysBetween, progressBetween } from '../../lib/countdown'
 import { prefersMotion } from '../../lib/motion'
 import type { Race } from '../../lib/types'
+import { count } from '../../lib/plural'
 
 interface Props {
   races: Race[]
@@ -38,7 +39,7 @@ export function Hero({ races, today, units }: Props) {
 
       <div className="landing-visual">
         {next && days !== null && (
-          <div className="countdown" role="group" aria-label={`${days === 0 ? 'Race day' : `${days} days to go`}: ${next.name}`} aria-description={`Race date ${formatDate(next.date, 'long')}. Distance ${formatDistance(next.distanceKm, units)}.`}>
+          <div className="countdown" role="group" aria-label={`${days === 0 ? 'Race day' : `${count(days, 'day')} to go`}: ${next.name}`} aria-description={`Race date ${formatDate(next.date, 'long')}. Distance ${formatDistance(next.distanceKm, units)}.`}>
             <div className="countdown-ring">
               <svg viewBox="0 0 220 220" aria-hidden="true">
                 <circle cx="110" cy="110" r="88" className="countdown-track" />

@@ -140,7 +140,7 @@ describe('Recovery as its own state', () => {
   it('keeps the easy-running plan reachable when the earlier recovery is no longer returned', () => {
     show(journeyOf([], { maintenance: maintenance() }), '2026-12-02')
     expect(screen.getByRole('heading', { name: '3 easy runs a week' })).toBeVisible()
-    expect(screen.getByRole('button', { name: 'Stop maintenance' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Stop easy running' })).toBeVisible()
     expect(screen.queryByText('Finding your saved race…')).not.toBeInTheDocument()
   })
 })

@@ -31,7 +31,7 @@ export function StravaWelcome({ onContinue, notice, connecting = false }: Props)
           {connected ? 'Continue to my plan' : "I’ll connect later"}
         </button>
       </div>
-      <p className="field-help">Optional. You can use Taperday without Strava and upload a run from My runs at any time.</p>
+      <p className="field-help">Optional. You can use Taperday without Strava and upload a run from Runs at any time.</p>
     </section>
   )
 }

@@ -13,6 +13,7 @@ import { recordingForToday } from './today-recording'
 import { Runner } from '../shared/Runner'
 import { todayInPlan } from './home-math'
 import { strengthSummary } from '../../lib/strength'
+import { count } from '../../lib/plural'
 
 // "Not now" on the tick prompt lasts for the day it was said, on this device only.
 const dismissedKey = (date: string) => `taperday.tick-prompt.dismissed.${date}`
@@ -67,7 +68,7 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
           <dl className="home-workout-facts">{value.distanceKm > 0 && <div><dt>Distance</dt><dd className="mono">{formatDistance(value.distanceKm, units)}</dd></div>}{pace && <div><dt>Target pace</dt><dd className="mono">{formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}</dd></div>}</dl><p className="field-help">{value.detail}</p></div>
       }) : <><p>{day?.strength.length ? 'Your running takes a break today. Your strength session is below.' : 'Legs up. Rest is when the training turns into fitness.'}</p>{day?.next && <p className="field-help">Next: {day.next.title}, {formatDate(day.next.date)}</p>}</>}
     {session && (recording || own && own.status !== 'Skipped') && <p className="field-help">Planned: {session.title}{session.distanceKm > 0 ? ` · ${formatDistance(session.distanceKm, units)}` : ''}</p>}
-    {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && <p className="field-help">{progress.daysToGo} days to {plan!.race.name}</p>}
+    {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && <p className="field-help">{count(progress.daysToGo, 'day')} to {plan!.race.name}</p>}
     {progress && progress.daysToGo > 0 && progress.daysToGo <= 7 && onOpenRacePrep && <button type="button" className="link-button" onClick={onOpenRacePrep}>Race-day checklist and pacing</button>}
     {tickPrompt && session && coach && <section className="home-tick-prompt" aria-label="Rate today’s run">
       {!own && <p className="home-today-title">You ran today. Nice work.</p>}

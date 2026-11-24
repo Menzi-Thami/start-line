@@ -123,7 +123,7 @@ export function runCspell(segments) {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const segments = collect()
   const problems = []
   for (const s of segments) for (const p of styleProblems(s.text, { typographicApostrophe: s.file.startsWith('client/') })) problems.push(`${s.file}:${s.line} ${p.rule}: ${p.message}`)

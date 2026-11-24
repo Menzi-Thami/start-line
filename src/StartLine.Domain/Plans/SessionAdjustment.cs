@@ -129,12 +129,12 @@ public static class SessionAdjuster
             return IsSteady(session.Type)
                 ? Keep(plan, session, today, km, null, weekKm, $"{session.Title} becomes {Km(km)}, at the same pace.")
                 : Ease(plan, session, today, km, weekKm,
-                    $"A {session.Title.ToLowerInvariant()} doesn't fit into {Km(km)}, so it becomes an easy {Km(km)}. Hard work isn't squeezed into less.");
+                    $"This {session.Title.ToLowerInvariant()} session doesn't fit into {Km(km)}, so it becomes an easy {Km(km)}. Hard work isn't squeezed into less.");
         }
 
         // Longer: only a steady run, a little, outside the taper, with no pain lately and the week still within its own rule.
         if (!IsSteady(session.Type))
-            return No(session, weekKm, $"A {session.Title.ToLowerInvariant()} keeps its distance: its reps and recoveries are built to it. A longer easy day is safer than a longer hard one.");
+            return No(session, weekKm, $"This {session.Title.ToLowerInvariant()} session keeps its distance: its reps and recoveries are built to it. A longer easy day is safer than a longer hard one.");
         if (week.Phase is TrainingPhase.Taper or TrainingPhase.RaceWeek)
             return No(session, weekKm, "You're tapering: runs get shorter now so you're fresh on race day. Longer runs wait for the next build.");
         var from = today.AddDays(-PainLookbackDays);
@@ -187,7 +187,7 @@ public static class SessionAdjuster
         var slowest = plan.Paces[zone].Slowest.SecondsPerKilometre;
         var needs = TimeSpan.FromSeconds(session.DistanceKm * (IsSteady(session.Type) ? slowest : HardSessionSecondsPerKm(plan)));
         if (TimeSpan.FromMinutes(m) >= needs)
-            return Same(session, weekKm, $"{m} minutes is enough for {session.Title.ToLowerInvariant()} as written (about {Minutes(needs)}).");
+            return Same(session, weekKm, $"{m} minutes is enough for this {session.Title.ToLowerInvariant()} session as written (about {Minutes(needs)}).");
 
         var km = Math.Floor(m * 60 / slowest * 4) / 4;
         if (km < RemainingWeek.MinimumRunKm)
@@ -198,7 +198,7 @@ public static class SessionAdjuster
 
         return IsSteady(session.Type)
             ? Keep(plan, session, today, km, null, weekKm, $"{session.Title} becomes {Km(km)}: it fits in {m} minutes at your {ZoneWord(zone)} pace.")
-            : Ease(plan, session, today, km, weekKm, $"A {session.Title.ToLowerInvariant()} needs about {Minutes(needs)}. In {m} minutes, run an easy {Km(km)} instead: hard work isn't squeezed into less time.");
+            : Ease(plan, session, today, km, weekKm, $"This {session.Title.ToLowerInvariant()} session needs about {Minutes(needs)}. In {m} minutes, run an easy {Km(km)} instead: hard work isn't squeezed into less time.");
     }
 
     // Warm-up, the work and the recoveries average out near the slow end of easy pace: a deliberately generous estimate.
@@ -210,7 +210,7 @@ public static class SessionAdjuster
         if (pace is not { } seconds || seconds < FastestPaceSeconds || seconds > SlowestPaceSeconds)
             throw new DomainException("Choose a pace between 2:30 and 15:00 per km.");
         if (!IsSteady(session.Type))
-            return No(session, weekKm, $"A {session.Title.ToLowerInvariant()} keeps its paces: they're what makes it work. The weekly coach updates them when your logged and uploaded runs show you're ready.");
+            return No(session, weekKm, $"This {session.Title.ToLowerInvariant()} session keeps its paces: they're what makes it work. The weekly coach updates them when your logged and uploaded runs show you're ready.");
         var zone = ZoneOf(session.Type);
         var range = plan.Paces[zone];
         var (fastest, slowest) = (range.Fastest.SecondsPerKilometre, range.Slowest.SecondsPerKilometre);

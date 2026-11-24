@@ -11,6 +11,7 @@ import { SessionSteps } from './SessionSteps'
 import { RunWalkChip } from './RunWalkChip'
 import { setsDone, withSessionDone, type DoneUpdate } from '../strength/strength-progress'
 import { sessionKey } from './plan-math'
+import { count } from '../../lib/plural'
 
 /** One planned session, in full: how to run it, its steps, and its check-in. */
 export function SessionItem({ session, pace, units, done, onDoneChange, coach, dayRuns, canCompleteRuns = true, expanded = false }: {
@@ -32,7 +33,7 @@ export function SessionItem({ session, pace, units, done, onDoneChange, coach, d
   const viaStrava = completedViaStrava(session, coach)
   const strength = session.type === 'Strength'
   const zone = !strength && session.zone ? ZONES[session.zone] : undefined
-  const numbers = strength ? [`${session.exercises.length} exercises`] : [
+  const numbers = strength ? [count(session.exercises.length, 'exercise')] : [
     session.distanceKm > 0 ? formatDistance(session.distanceKm, units) : null,
     pace && zone ? `${zone.name} ${formatPaceRange(pace.fastestSecondsPerKm, pace.slowestSecondsPerKm, units)}` : null,
   ].filter(Boolean)

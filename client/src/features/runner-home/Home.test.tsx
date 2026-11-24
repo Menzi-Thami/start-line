@@ -426,6 +426,13 @@ it('keeps race preparation reachable from today without a second focus card', as
   expect(document.querySelectorAll('.home-focus .button-primary')).toHaveLength(1)
 })
 
+it('says "1 day" the day before the race, never "1 days"', () => {
+  renderHome({ ...withPlan, today: '2026-12-12' })
+  const today = screen.getByRole('region', { name: 'Today' })
+  expect(today).toHaveTextContent('1 day to Parkrun PB')
+  expect(today).not.toHaveTextContent('1 days')
+})
+
 it('keeps race week off Home until the last seven days', () => {
   renderHome({ ...withPlan, today: '2026-10-20' })
   expect(screen.queryByText('Race week')).not.toBeInTheDocument()

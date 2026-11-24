@@ -204,7 +204,7 @@ test('concluded training → saved recording → separate recovery → Home/Plan
   }
   await nav.getByRole('button', { name: 'Plan', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your easy-running plan.', exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Stop maintenance', exact: true }).click()
+  await page.getByRole('button', { name: 'Stop easy running', exact: true }).click()
   await page.getByRole('button', { name: 'Stop', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose your next chapter.', exact: true })).toBeVisible()
   await nav.getByRole('button', { name: 'Journey', exact: true }).click()

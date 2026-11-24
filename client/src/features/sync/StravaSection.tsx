@@ -160,7 +160,7 @@ export function StravaSection({ notice, connecting = false, onStatusChange, onOp
       <p className="field-help">
         Taperday reads each run’s time, distance, elevation and heart rate, never where you ran. Strava’s rules allow a copy for seven days at a time, so
         Taperday fetches your runs again while you stay connected. Disconnect, here or in Strava’s settings, and the copies are deleted straight away.
-        Uploaded .fit files are yours and stay until you delete them.
+        Runs you upload are yours and stay until you delete them.
       </p>
       <PoweredByStrava />
     </div>

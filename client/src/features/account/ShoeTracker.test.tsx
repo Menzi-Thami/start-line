@@ -133,6 +133,6 @@ describe('Shoes on a run', () => {
 
   it('points to Account when there are no shoes yet', async () => {
     withAuth(<ShoePicker run={run} />)
-    expect(await screen.findByText('Add your shoes in Account › Shoes to count their kilometres.')).toBeInTheDocument()
+    expect(await screen.findByText('Add your shoes in Account › Profile › More to count their kilometres.')).toBeInTheDocument()
   })
 })

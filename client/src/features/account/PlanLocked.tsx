@@ -1,6 +1,7 @@
 import { formatDate, formatDistance, type Units } from '../../lib/format'
 import type { TrainingPlan } from '../../lib/types'
 import { Runner } from '../shared/Runner'
+import { count } from '../../lib/plural'
 
 interface Props {
   plan: TrainingPlan
@@ -23,7 +24,7 @@ export function PlanLocked({ plan, units, onSignIn, onSignUp, onFinishSignUp }: 
       <p className="plan-eyebrow">Your plan is ready</p>
       <h2 className="plan-title" id="plan-locked-title">{plan.race.name}</h2>
       <p className="plan-locked-facts">
-        {formatDate(plan.race.date, 'long')} · {formatDistance(plan.race.distanceKm, units)} · {plan.weeks.length} weeks
+        {formatDate(plan.race.date, 'long')} · {formatDistance(plan.race.distanceKm, units)} · {count(plan.weeks.length, 'week')}
       </p>
       <p>
         {onFinishSignUp

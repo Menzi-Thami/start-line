@@ -70,7 +70,7 @@ export function FinishLineFilm({ variant, heading, lede, raceName, metrics, prim
   return createPortal(
     <div className={`finish-film is-${variant}`} role="dialog" aria-modal="true" aria-labelledby={titleId} ref={dialog}>
       <div className="finish-film-stage">
-        <button type="button" className="finish-film-close button button-quiet" onClick={onClose} aria-label="Close the Finish Line">Close</button>
+        <button type="button" className="finish-film-close button button-quiet" onClick={onClose} aria-label="Close the finish line">Close</button>
         <p className="finish-film-kicker">Taperday · {variant === 'race' ? 'Race finished' : 'Finish line'}</p>
         <div className="finish-film-course" aria-hidden="true">
           <span className="finish-film-confetti">

@@ -133,8 +133,8 @@ Policies). External ID includes Conditional Access free for the first 50,000 mon
 
 | Policy | Applies to | Does |
 |---|---|---|
-| Taperday: keep runners signed in | All users, except the Global Administrator and Organizational Branding Administrator roles | All resources. Session → Persistent browser session → **Always persistent**. |
-| Taperday: require MFA for admins | The Global Administrator and Organizational Branding Administrator roles, except the emergency access account (section 7) | All resources. Grant → **Require multifactor authentication**. |
+| Taperday: keep runners signed in | All users, except every admin role: Global Administrator, Organizational Branding Administrator and the seven roles of the CLI admin account (section 8) | All resources. Session → Persistent browser session → **Always persistent**. |
+| Taperday: require MFA for admins | Global Administrator, Organizational Branding Administrator and the seven roles of the CLI admin account (section 8), except the emergency access account (section 7) | All resources. Grant → **Require multifactor authentication**. |
 
 Why the first one: the app's own sign-in lasts 24 hours, which Microsoft fixes for single-page apps. After that the app
 renews quietly with Microsoft (`client/src/app/AuthProvider.tsx`), and that only works if Microsoft's session cookie
@@ -173,6 +173,40 @@ A second Global Administrator, so a lost personal account or a broken policy can
 The personal Microsoft account behind your normal admin also owns the Azure subscription that hosts Taperday, in its own
 tenant. Keep that account's recovery phone, alternate email and recovery code current. An extra Owner on the
 subscription, created the same way in that tenant, would cover the hosting side too.
+
+## 8. CLI admin account (scripted changes to the tenant)
+
+The normal admin is a personal Microsoft account added to the tenant as a guest. Microsoft won't sign a personal guest
+account into the Azure CLI for another tenant (AADSTS500208), so Graph scripts and checks can't run as it. A separate
+account, owned by the tenant, does that work.
+
+- **A member account created in the tenant** (`<name>@<subdomain>.onmicrosoft.com`). Its name lives in your password
+  manager, not in this public repo.
+- **Only the roles the work needs, assigned directly:**
+
+  | Role | Used for |
+  |---|---|
+  | Global Reader | Reading any setting for checks and audits |
+  | Application Administrator | App registrations: redirect URIs, scopes, API permissions, consent |
+  | External ID User Flow Administrator | User flows: attached apps, sign-in methods, page layouts |
+  | External ID User Flow Attribute Administrator | Custom sign-up attributes |
+  | External Identity Provider Administrator | Google and any other social sign-in |
+  | User Administrator | Runner account support, such as a full-erasure request (see Privacy below) |
+  | Reports Reader | Sign-in logs, to diagnose AADSTS errors (the free tier keeps about seven days) |
+
+- **Never given:** Global Administrator, Privileged Role Administrator, Conditional Access Administrator, Security
+  Administrator or Authentication Policy Administrator. A leaked CLI sign-in then can't take over the tenant, add
+  roles, or switch off MFA. Those stay with the normal admin and the emergency access account. Branding has its own
+  account.
+- **Conditional Access:** all seven roles are in "Taperday: require MFA for admins" and excluded from "Taperday: keep
+  runners signed in" (section 6). Check both after adding a role.
+- **Signing in:** `az login --tenant <tenant-id> --allow-no-subscriptions --use-device-code`, then sign in as this
+  account in a private window and approve the Authenticator prompt. Graph calls use
+  `az account get-access-token --tenant <tenant-id> --resource-type ms-graph`; never print or store the token.
+- **Changes are proposed first.** A script or assistant using this account reads freely, but describes each change and
+  waits for the owner's approval before making it.
+- Time-limited role activation (Privileged Identity Management) needs Entra ID P2, which is paid, so the roles are
+  permanent and protected by MFA instead.
 
 ## Database
 

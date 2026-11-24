@@ -35,6 +35,35 @@ Forgot password is **not a verified OTP-to-password migration**. See corrected [
 - Password-mode copy preserves the old customer’s actual method instead of promising conversion via Forgot password.
 - Unit regressions cover every change. Original colours, cartoon, motion and plan film are unchanged.
 
+### Completion-run evidence
+
+- Auth/session code commit: `a5bfdc0af2b3ee531eec33e8edb6449a3c8dbef1` (includes staging `0fe4c088`).
+  [Full checks](https://github.com/Menzi-Thami/start-line/actions/runs/45363598056),
+  [secret scan](https://github.com/Menzi-Thami/start-line/actions/runs/45363598103).
+- CI frontend: **1,098 tests in 145 files**, lint/typecheck/build and dependency audit (zero vulnerabilities).
+  Backend, four Playwright shards and connection engine jobs ran; exact final-head results are recorded in the PR description.
+- Latest local auth regression run: **47/47** (AuthProvider, AppAuth, SignInLanding). New browser-only gate suite:
+  **20/20** across desktop Chromium, Android Chromium, desktop Firefox, iPhone WebKit and iPad WebKit. Four tests per
+  profile: signed-out and remembered-account deep links with no private child, session revocation unmount, 12-second
+  initialization recovery and public privacy access. Screens at 320/390/768/1440 in both themes; axe checks on the gate.
+- These browser tests drive the actual production SessionGate with a synthetic context. They do **not** authenticate
+  with Entra, validate token issuance or establish a physical device result. MSAL mechanics are tested separately in unit tests.
+- Safe reviewed screenshots: [signed-out phone dark](auth-completion/auth-browser-signed-out-account-390-dark.png),
+  [renewal phone light](auth-completion/auth-browser-expired-account-390-light.png),
+  [desktop light](auth-completion/auth-browser-signed-out-account-1440-light.png),
+  [WebKit renewal dark](auth-completion/auth-webkit-expired-account-390-dark.png).
+- Local WebKit initially could not start because system libraries were missing. User-owned Debian packages were extracted
+  and linked into Playwright’s bundled library directories; actual WebKit smoke and all eight gate tests then passed.
+  The host dependency preflight cannot see those user-owned libraries, so local runs use `PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=1`;
+  this skips only that preflight, not browser tests/assertions. CI installs its normal system dependencies.
+- Local full frontend attempts were interrupted after CI frontend passed; they are not claimed as completed. No live
+  customer data, real provider mutation, emails, push sends, merges or deployments were performed.
+
+**Assessment: NO-GO for release.** Current Graph assignment, new password-backed signup, identity/data preservation
+through any credential enrolment, live existing-account OTP and all required physical browser/PWA/native-credential
+rows remain blocked. The Azure CLI is ready, but Microsoft login/Graph hosts are denied by the environment; no device code
+could be issued. See the minimum owner-assisted steps below. Original palette, animations and the plan film are retained.
+
 ### Device × mode × account × credential / fallback evidence
 
 Every row must exercise new password-backed, existing OTP-only and returning cached-session accounts, fresh/expired/revoked
@@ -211,7 +240,7 @@ Record each row as `PASS`, `FAIL` or `NOT RUN` with a concise observation and sa
 | E13 | Saved unsynced run, cancel sign-out or account switch | Draft remains; explicit discard clears only after consent | Unit PASS @6667c77 (cancelled sign-out, cancelled sign-in and lost MSAL account all keep drafts); live NOT RUN |
 | E14 | Reconnect after offline, retry saved run | Data syncs exactly once and account ownership remains correct | Unit PASS (existing offline-check-ins suite); live NOT RUN |
 | E15 | iPhone Safari vs installed PWA vs Android vs desktop | Correct redirects and session state across modes; no service-worker old shell | NOT RUN (owner) |
-| E16 | Dark/light, reduced motion, narrow and desktop | Sign-in, error, retry and bottom nav readable, accessible and tap-safe | NOT RUN (covered by #317 visual pass) |
+| E16 | Dark/light, reduced motion, narrow and desktop | Sign-in, error, retry and bottom nav readable, accessible and tap-safe | Browser gate PASS (20 cases, 5 emulated profiles; widths 320/390/768/1440); screenshots above. Physical NOT RUN |
 | E17 | Public privacy/unsubscribe links, signed out | Continue working without sign-in | PASS: live staging @5d7a966, signed out. Privacy policy renders; unsubscribe page renders (not submitted) |
 | E18 | API `/api/v1/me` without token | 401; runner data never returned | PASS: live staging API, 24 Nov. `/api/v1/me` and `/api/v1/me/plans` return 401 with no token and with a junk bearer |
 | E19 | Reload/app return from Strava connection | OAuth callback survives Entra gate; owner and data remain correct | NOT RUN |

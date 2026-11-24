@@ -11,7 +11,7 @@ import { Unsubscribe } from '../features/account/Unsubscribe'
 const AuthProvider = lazy(() => import('./AuthProvider').then((module) => ({ default: module.AuthProvider })))
 
 /** No training UI may mount until the API access token is valid; cached identity alone is insufficient. */
-function SessionGate({ children }: { children: ReactNode }) {
+export function SessionGate({ children }: { children: ReactNode }) {
   const auth = useAuth()
   const [slow, setSlow] = useState(false)
   useEffect(() => {

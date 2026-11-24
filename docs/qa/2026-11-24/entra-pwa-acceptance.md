@@ -34,6 +34,9 @@ Forgot password is **not a verified OTP-to-password migration**. See corrected [
   decoded synthetic body, and rotates only the app-shell cache to v4 to evict old metadata. Accounts/drafts are not cleared.
   A Chromium desktop/phone regression seeds v3, verifies eviction/no code or private URL in cache, and reopens offline.
   Both profiles passed against normal production preview HTML and against a separate gzip-compressed loopback server.
+  The gzip cache test then passed Android Chromium, iPhone/iPad WebKit and Firefox too. Firefox downloads manifests,
+  so the isolated test bootstrap uses a script document instead; no security assertion was changed. Cache coverage is
+  included in the CI connection matrix. These are engine simulations, not physical installed devices.
 - Token requests that finish after sign-out, account change or unmount return no token and cannot reopen private UI.
 - MSAL 5 cross-tab `ACTIVE_ACCOUNT_CHANGED`/`LOGOUT_SUCCESS` events close the previous account’s private UI; a tab
   does not silently adopt another runner. The MSAL subscription is removed on unmount.

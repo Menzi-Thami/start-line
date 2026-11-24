@@ -5,7 +5,7 @@ import base from './playwright.config'
 // Mobile projects emulate browser/device profiles; actual native sharing and delivery need physical devices.
 export default defineConfig({
   ...base,
-  testMatch: ['auth-gate.spec.ts', 'offline-check-ins.spec.ts', 'finish-line.spec.ts', 'race-review.spec.ts', 'training-recovery.spec.ts', 'mobile-usability.spec.ts', 'strava-completion.spec.ts', 'journey-cabinet.spec.ts', 'manual-race.spec.ts', 'account-loading-recovery.spec.ts', 'phone-runs.spec.ts', 'simplicity.spec.ts', 'loading-performance.spec.ts', 'loading-states.spec.ts'],
+  testMatch: ['pwa-auth-cache.spec.ts', 'auth-gate.spec.ts', 'offline-check-ins.spec.ts', 'finish-line.spec.ts', 'race-review.spec.ts', 'training-recovery.spec.ts', 'mobile-usability.spec.ts', 'strava-completion.spec.ts', 'journey-cabinet.spec.ts', 'manual-race.spec.ts', 'account-loading-recovery.spec.ts', 'phone-runs.spec.ts', 'simplicity.spec.ts', 'loading-performance.spec.ts', 'loading-states.spec.ts'],
   projects: [
     { name: 'android-chromium', use: { ...devices['Pixel 7'], browserName: 'chromium' } },
     { name: 'iphone-webkit', use: { ...devices['iPhone 13'], browserName: 'webkit', channel: undefined, launchOptions: {} } },

@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test'
 
 test('PWA shell never retains callback codes or private navigation URLs in cache metadata @phone', async ({ page, context }) => {
   // A disposable context and synthetic code only. No identity provider or Strava is called.
-  await page.goto('/manifest.webmanifest')
+  await page.goto('/sw.js') // A script document keeps the origin available without booting the app; Firefox downloads manifests.
   const seeded = await page.evaluate(async () => {
     const old = await caches.open('taperday-v3')
     const response = await fetch('/strava/callback?code=synthetic-qa-code&state=synthetic-qa-state')

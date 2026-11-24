@@ -24,7 +24,8 @@ const read = (): BeginnerProgress => {
  * Anonymous progress remains on this device; never overwrite account data
  * from stale localStorage before account hydration completes.
  */
-export function CouchTo5K() {
+/** showWeek: bump it to bring the runner back to This week, as tapping Plan does on a race plan. */
+export function CouchTo5K({ showWeek = 0 }: { showWeek?: number } = {}) {
   const { account, getToken } = useAuth()
   const [progress, setProgress] = useState<BeginnerProgress>(read)
   const [progressOwner, setProgressOwner] = useState('anonymous')
@@ -34,6 +35,8 @@ export function CouchTo5K() {
   const [syncAttempt, setSyncAttempt] = useState(0)
   const [stravaSnapshot, setStravaSnapshot] = useState<{ owner: string; runs: readonly BeginnerRecordedRun[] } | null>(null)
   const [activeTab, setActiveTab] = useState<'week' | 'calendar' | 'progress'>('week')
+  const [seenShowWeek, setSeenShowWeek] = useState(showWeek)
+  if (showWeek !== seenShowWeek) { setSeenShowWeek(showWeek); setActiveTab('week') }
   const [evaluationTime] = useState(() => Date.now())
   const saveVersion = useRef(0)
   const lastSaved = useRef('')

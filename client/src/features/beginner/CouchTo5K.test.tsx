@@ -61,3 +61,16 @@ describe('Couch to 5K account journey', () => {
     expect(writes[0]).toMatchObject({ completed: ['0:2:1'] })
   })
 })
+
+describe('Plan tab on Couch to 5K', () => {
+  it('brings the programme back to This week when Plan is tapped again, as on a race plan', async () => {
+    const { rerender } = render(<AuthContext.Provider value={signedIn}><CouchTo5K showWeek={0} /></AuthContext.Provider>)
+    await waitFor(() => expect(screen.getByRole('progressbar', { name: 'Couch to 5K confirmed workouts' })).toHaveAttribute('aria-valuenow', '1'))
+    fireEvent.click(screen.getByRole('button', { name: 'Calendar' }))
+    expect(screen.getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-pressed', 'true')
+
+    rerender(<AuthContext.Provider value={signedIn}><CouchTo5K showWeek={1} /></AuthContext.Provider>)
+    expect(screen.getByRole('button', { name: 'This week' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('region', { name: 'Couch to 5K calendar' })).not.toBeInTheDocument()
+  })
+})

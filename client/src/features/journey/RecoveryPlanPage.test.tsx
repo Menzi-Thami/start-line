@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { chapter, journeyOf, maintenance, PLAN_ID, raceResult, recovery } from './journey-fixtures'
+import { AuthContext, accountsOff } from '../../app/auth-context'
 import { RecoveryPlanPage } from './RecoveryPlanPage'
 import type { Journey } from './types'
 import type { JourneyActions } from './useJourney'
@@ -13,8 +14,8 @@ function actions(overrides: Partial<JourneyActions> = {}): JourneyActions {
     startMaintenance: vi.fn(async () => {}), endMaintenance: vi.fn(async () => {}), ...overrides,
   }
 }
-function show(data: Journey, today: string, act = actions()) {
-  render(<RecoveryPlanPage units="km" today={today} journey={{ state: { kind: 'ready', journey: data, refreshFailed: false }, actions: act }} onNewRace={vi.fn()} onOpenJourney={vi.fn()} />)
+function show(data: Journey, today: string, act = actions(), open = { journey: vi.fn(), races: vi.fn() }) {
+  render(<RecoveryPlanPage units="km" today={today} journey={{ state: { kind: 'ready', journey: data, refreshFailed: false }, actions: act }} onNewRace={vi.fn()} onOpenJourney={open.journey} onOpenRaces={open.races} />)
   const maintaining = data.maintenance?.status === 'Active' && !['Active', 'Paused'].includes(data.recovery?.status ?? '')
   expect(screen.getByRole('heading', { name: maintaining ? 'Your easy-running plan.' : 'Your recovery plan.' })).toBeVisible()
   expect(document.querySelector('.training-story')).not.toBeInTheDocument()
@@ -142,5 +143,20 @@ describe('Recovery as its own state', () => {
     expect(screen.getByRole('heading', { name: '3 easy runs a week' })).toBeVisible()
     expect(screen.getByRole('button', { name: 'Stop easy running' })).toBeVisible()
     expect(screen.queryByText('Finding your saved race…')).not.toBeInTheDocument()
+  })
+})
+
+describe('Recovery without a saved race', () => {
+  it('sends "Review my race" to Races & trophies, where the copy points, and "View my journey" to the journey', async () => {
+    window.history.replaceState(null, '', '/?view=recovery')
+    const open = { journey: vi.fn(), races: vi.fn() }
+    const signedIn = { ...accountsOff, enabled: true, getToken: () => Promise.resolve('token') }
+    render(<AuthContext.Provider value={signedIn}><RecoveryPlanPage units="km" today="2026-11-16" journey={{ state: { kind: 'ready', journey: journeyOf([]), refreshFailed: false }, actions: actions() }} onNewRace={vi.fn()} onOpenJourney={open.journey} onOpenRaces={open.races} /></AuthContext.Provider>)
+    expect(await screen.findByText(/add one you ran outside Taperday under Races & trophies/)).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'Review my race' }))
+    expect(open.races).toHaveBeenCalledOnce()
+    expect(open.journey).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'View my journey' }))
+    expect(open.journey).toHaveBeenCalledOnce()
   })
 })

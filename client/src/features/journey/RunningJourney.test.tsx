@@ -91,7 +91,7 @@ describe('Past plan race recordings', () => {
     function Flow() {
       const [recoveryPage, setRecoveryPage] = useState(false)
       const journey = useJourney(true)
-      return recoveryPage ? <RecoveryPlanPage journey={journey} today="2026-11-14" units="km" onNewRace={vi.fn()} onOpenJourney={vi.fn()} />
+      return recoveryPage ? <RecoveryPlanPage journey={journey} today="2026-11-14" units="km" onNewRace={vi.fn()} onOpenJourney={vi.fn()} onOpenRaces={vi.fn()} />
         : <RunningJourney units="km" today="2026-11-14" onOpenRecovery={() => setRecoveryPage(true)} />
     }
     render(<AuthContext.Provider value={auth}><Flow /></AuthContext.Provider>)

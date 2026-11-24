@@ -176,6 +176,8 @@ export function App() {
     setNavigated(true)
   }
   const [openRun, setOpenRun] = useState<OpenRun | null>(runFromUrl)
+  // Bumped when Plan is tapped on Couch to 5K, which brings it back to This week.
+  const [beginnerWeek, setBeginnerWeek] = useState(0)
   // Strava's answer when the runner comes back from connecting, read once and handled when they're signed in.
   const [stravaCallback] = useState(() => readStravaCallback(window.location))
   const stravaHandled = useRef(false)
@@ -534,8 +536,14 @@ export function App() {
     if (item === 'runs') return go('runs')
     if (item === 'journey') return go('journey')
     if (item === 'account') return go('account')
-    // Couch to 5K is a plan of its own: Plan stays lit on it, and tapping Plan there opens the runner's race plan if they have one.
-    if (view === 'beginner') return ownPlan ? openOwnPlan('week') : undefined
+    // Couch to 5K is a plan of its own: Plan stays lit on it, and tapping Plan there opens the runner's race plan if they
+    // have one, or else brings Couch to 5K back to This week, as it does on a race plan.
+    if (view === 'beginner') {
+      if (ownPlan) return openOwnPlan('week')
+      setBeginnerWeek(n => n + 1)
+      window.scrollTo?.({ top: 0 })
+      return
+    }
     if (!ownPlan && (recovering || maintaining) && !(view === 'build' && plan.kind === 'ready' && plan.plan.race.date >= today && !editing)) return go('recovery')
     const tab = 'week'
     if (view === 'build' && plan.kind === 'ready' && !editing) {
@@ -601,6 +609,10 @@ export function App() {
   const openRecovery = (raceId?: string) => {
     go('recovery')
     if (raceId) window.history.replaceState(null, '', `?view=recovery&race=${encodeURIComponent(raceId)}`)
+  }
+  const openRaces = () => {
+    go('journey')
+    window.history.replaceState(null, '', '?view=journey&section=races')
   }
   const openChapter = (planId?: string) => {
     go('journey')
@@ -1023,14 +1035,14 @@ export function App() {
         {view === 'beginner' && !gated && (state.kind === 'ready' || state.kind === 'signed-out' || state.kind === 'off') && (
           <section aria-label="Your Couch to 5K programme" className="beginner-page">
             <button type="button" className="link-button" onClick={() => go(state.kind === 'ready' ? 'home' : 'build')}>← Back</button>
-            <CouchTo5K />
+            <CouchTo5K showWeek={beginnerWeek} />
           </section>
         )}
 
         {view === 'journey' && state.kind === 'ready' && (
           <JourneyPage key={state.runner.id} units={units} today={today} onNewRace={startFresh} onArchived={currentPlan.refresh} onOpenRecovery={openRecovery} />
         )}
-        {view === 'recovery' && state.kind === 'ready' && <RecoveryPlanPage key={state.runner.id} units={units} today={today} journey={journey} onNewRace={startFresh} onOpenJourney={() => openChapter()} onOpenTraining={ownPlan ? () => openOwnPlan() : undefined} />}
+        {view === 'recovery' && state.kind === 'ready' && <RecoveryPlanPage key={state.runner.id} units={units} today={today} journey={journey} onNewRace={startFresh} onOpenJourney={() => openChapter()} onOpenRaces={openRaces} onOpenTraining={ownPlan ? () => openOwnPlan() : undefined} />}
         {view === 'runs' && state.kind === 'ready' && (
           compact ? (
             openRun ? (

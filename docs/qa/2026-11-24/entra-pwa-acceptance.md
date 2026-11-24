@@ -68,10 +68,22 @@ Forgot password is **not a verified OTP-to-password migration**. See corrected [
 - Local full frontend attempts were interrupted after CI frontend passed; they are not claimed as completed. No live
   customer data, real provider mutation, emails, push sends, merges or deployments were performed.
 
-**Assessment: NO-GO for release.** Current Graph assignment, new password-backed signup, identity/data preservation
-through any credential enrolment, live existing-account OTP and all required physical browser/PWA/native-credential
-rows remain blocked. The Azure CLI is ready, but Microsoft login/Graph hosts are denied by the environment; no device code
-could be issued. See the minimum owner-assisted steps below. Original palette, animations and the plan film are retained.
+**Tenant state, read from Graph with the tenant's CLI admin account (24 Nov, values not recorded):**
+
+- Taperday Web (staging) is attached only to "Taperday sign up and sign in (password)": Email with password plus Google,
+  sign-up allowed, attributes email and display name. Production's web app is attached only to the v2 code flow.
+- The staging sign-in page requests the staging web app's client ID (compared privately).
+- `VITE_AUTH_PASSWORDS=true` is set on the staging GitHub environment only.
+- **Owner observation, staging:** their existing account is still sent an email code. This matches Microsoft's
+  documented behaviour (a flow's sign-in method applies to new customers only) and is not a deployment fault.
+- **Open finding:** right after the switch, Microsoft's hosted page for the password flow twice rendered without the
+  "No account? Create one" link and the Google button, and once stayed on its loading skeleton (desktop and phone
+  widths, built-in browser). Graph shows both enabled. Re-check before E03; if it persists, move the staging app back
+  to the v2 flow (seconds, no data change).
+
+**Assessment: NO-GO for release.** New password-backed signup (E03), identity/data preservation for any credential
+enrolment (E04), live existing-account OTP on the installed PWA and all physical browser/PWA/native-credential rows
+remain blocked on the owner: a disposable staging test inbox and real devices. See the minimum owner-assisted steps below. Original palette, animations and the plan film are retained.
 
 ### Device × mode × account × credential / fallback evidence
 

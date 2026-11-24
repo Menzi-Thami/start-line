@@ -1,15 +1,14 @@
-# Taperday whole-app QA results — fill after actual execution
+# Taperday whole-app QA results — implementation and execution ledger
 
-**Prepared:** 24 November 2026. **Source of truth:** [master QA contract](master-regression-acceptance.md). **All statuses start as NOT RUN; no test has been claimed passed by the creation of this file.**
+**Updated:** 24 November 2026. **Source of truth:** [master QA contract](master-regression-acceptance.md). Results are scoped to the stated evidence level; browser fixtures do not prove external providers or physical devices.
 
-**Tested code SHA:** `8918f89` (code and tests). Later commits on this branch add this ledger, the screen inventory and one unit test; the CI run for the final head is linked in the PR conversation.
-**Base:** `staging` at `5d7a966` (PR #314 merged). Deployed staging was not exercised by this PR.
-**Environment:** GitHub Actions (disposable SQL Server container, local API, production client build, Playwright Chromium + Firefox/WebKit/Android profiles). Locally: targeted unit tests only.
-**Runner fixtures and device profiles (synthetic):** test-auth runners with random subjects; repository JSON fixtures; Playwright emulated devices. No real runner data.
-**CI + secret scan for `8918f89`:** Checks https://github.com/Menzi-Thami/start-line/actions/runs/45342196328 · Copy check https://github.com/Menzi-Thami/start-line/actions/runs/45342196319 · Secret scan https://github.com/Menzi-Thami/start-line/actions/runs/45342196375
-**Physical iPhone owner-assisted validation:** NOT RUN
-**Live Entra validation (PR #315):** NOT RUN in this QA PR
-**Loading/performance visual validation (PR #316):** NOT RUN in this QA PR
+**Tested application code SHA:** `c85415e5bdf19a9d3beb26910242075ad7bb6869`, incorporating staging `0fe4c088374104af519792c4565b5c1cff98e5fa`.
+**Follow-up:** callback fixture uses an absolute module path; reviewed strict image baselines distinguish Debian/Ubuntu font rasterisation. No screenshot tolerance was relaxed. Final test-harness commit/check URLs are recorded in the PR description.
+**Local:** .NET 10.0.302, Node 24.19.0, pinned Playwright 1.65.1; disposable loopback SQL Server, synthetic fixtures only.
+**Executed:** full frontend **1,089/1,089**, 147 files; disposable SQL **438/438**; Application **237/237**; Architecture **11/11**; Domain **1,279/1,279** before two added copy tests; focused Domain **49/49** including those regressions. Format verification passed.
+**Focused browser:** Chromium primary pages + four Plan tabs at 390 light/dark, new-runner goal, Runs 401/403/409/429/500 → retry; WebKit equivalent 390 light/dark, goal and 401/500 recovery. Delayed OAuth callback, C25K Plan return and recovery → Races & trophies also executed after fixes. See completion evidence below.
+**CI at `c85415e`:** frontend/backend/copy/secret scan passed. Browser jobs correctly failed the new fixture and OS baseline mismatches; follow-up fixes are retested, never counted as a green old run. [Checks](https://github.com/Menzi-Thami/start-line/actions/runs/45364946445) · [copy](https://github.com/Menzi-Thami/start-line/actions/runs/45364946448) · [secrets](https://github.com/Menzi-Thami/start-line/actions/runs/45364946572).
+**Staging deployed build:** not exercised in this run; no merge/deploy performed. Live Entra, inbox/push/Strava and all physical-device rows remain unverified.
 
 ## Evidence taxonomy
 
@@ -28,14 +27,14 @@ For each item, record actual status and evidence level plus a reproducible outco
 | ID | Scope shorthand | Status | Evidence level / fixture | Proof / tested SHA / notes |
 |---|---|---|---|---|
 | COPY-01 | Inventory **all rendered static strings** in React JSX, source constants, translated/templated text, ove | PASS | Static | 4,144 copy strings extracted from client/src and src (JSX text, copy attributes, sentences, C# strings incl. email HTML and push text) by tools/copy-check; every line proofread. `8918f89` |
-| COPY-02 | Run a repository spellchecker (add a **pinned, reproducible CI job** if none exists) | PASS | Static + CI | Copy check workflow (cspell 10.4.0 en-GB + reviewed words.txt, house-style rules) runs on every PR and push; 9 self-tests prove it catches US spellings, doubled words, placeholders, "1 runs", straight apostrophes and a planted typo. Green in CI on `8918f89`. |
+| COPY-02 | Run a repository spellchecker (add a **pinned, reproducible CI job** if none exists) | PASS | Static + CI | Pinned cspell/house-style checks: 4,140 copy pieces, 0 spelling/style findings; 9 self-tests. Current CI copy job passed at c85415e. |
 | COPY-03 | Manually review actual **rendered** copy at phone and desktop sizes, not only string literals | NOT RUN | — | Rendered copy at phone/desktop widths not inspected. Needs a browser pass on staging. |
 | COPY-04 | Search for typos, inconsistent capitalization, weird spacing, accidental double punctuation, duplicated  | PASS | Static + CI | Automated rules: 0 problems on `8918f89`. Fixed: 13 straight apostrophes on screens, "authorize" ×2 (53fad58). |
 | COPY-05 | Check singular/plural for 0, 1 and >1 | PASS | Unit | Shared count() helper; fixed "1 days to {race}" (Today), hero countdown, Journey story/share text, trophy card "1 RACE FINISHES", exercise and week counts. Tests: lib/plural.test.ts, Home.test "1 day to Parkrun PB", TrainingStory.test "1 confirmed training run over 1 week". Remaining P3: "The 1 run from Strava" wording. |
 | COPY-06 | Check names with apostrophes/accents/emoji/long strings, race names with slash/hyphen, URLs, empty names | NOT RUN | — | Names with apostrophes/emoji/long strings not exercised in a browser. |
 | COPY-07 | Test 5K/10K/half/marathon/ultra formatting | NOT RUN | — | Static review only: pace is always /km, effort always /10, 5K/10K race labels vs "5 km" measured distance are consistent. Not rendered. |
 | COPY-08 | Test all error messages | NOT RUN | — | Error copy proofread statically (see copy register); 401/403/409/429/500/timeout states not driven. |
-| COPY-09 | Check confirm/cancel labels correspond to their effects | FAIL | Static | D-12 "Undo" removes a saved race result; D-13 "Start recovery plan" only opens the page; D-14 "Continue to my plan" lands a new runner on an empty builder. |
+| COPY-09 | Check confirm/cancel labels correspond to their effects | NOT RUN | Unit + Browser (partial) | D-12–D-15 fixed in c85415e; result removal/cancel, recovery race ID and new-runner continuation tested. Complete every-CTA inventory remains unexecuted. |
 | COPY-10 | Proofread all email templates **in received messages** for subject, preheader, greeting, copy, link labe | BLOCKED | — | Received-message review needs an opted-in test inbox and owner go-ahead; no email sent. Templates proofread statically: fixed "a 18 km long run" (push); email greeting punctuation and "5am" left as P3. |
 | COPY-11 | Proofread PWA install prompts, offline notices, sign-in/continue securely, race search, training plan da | NOT RUN | — | Proofread statically; fixed home screen capitalisation, "My runs" → "Runs", Shoes path. Not rendered. |
 | COPY-12 | Double-check **small-screen overflow** | NOT RUN | — | No screenshots inspected at small widths. |
@@ -44,8 +43,8 @@ For each item, record actual status and evidence level plus a reproducible outco
 | COPY-15 | Add representative assertions for critical labels/CTA terms in component or browser tests | PASS | Unit + CI | Assertions added for plural copy and updated for every changed label (unit and e2e). Full suites on `8918f89`: see CI. |
 | NAV-01 | Installed PWA / Safari / desktop cold opening | NOT RUN | — | — |
 | NAV-02 | Signed-out journey opens clear sign-in without exposing private content, including deep links, plan buil | NOT RUN | Static only | Source: SessionGate mounts App only with a session and account; privacy and unsubscribe stay public. Not driven in a browser here. |
-| NAV-03 | Main nav **Home, Plan, Runs, Journey, Account** (Plan hidden only when appropriate) works on phone botto | NOT RUN | Unit (fix only) | D-10 found statically and fixed in `9b6c031` (CouchTo5K returns to This week; unit test). Rendered bar not driven here; existing e2e covers the race-plan bar. |
-| NAV-04 | Tap every page's primary/secondary buttons, list cards, tabs, navigation links, disclosures, dialogs, em | FAIL | Static | D-10 to D-17 (mismatched destinations, dead control). Full CTA inventory in screen-inventory.md. |
+| NAV-03 | Main nav **Home, Plan, Runs, Journey, Account** (Plan hidden only when appropriate) works on phone botto | PASS | Browser + Unit | Chromium 390 both themes: Home/Plan/Runs/Journey/Account and four Plan tabs. New actual-App C25K Progress → main Plan → This week browser regression passed; physical nav remains a separate gate. |
+| NAV-04 | Tap every page's primary/secondary buttons, list cards, tabs, navigation links, disclosures, dialogs, em | NOT RUN | Browser (partial) | Known D-10–D-17 fixed, including C25K and recovery destination click-through. Full inventory of all dialogs/menus and conditional CTAs is not complete. |
 | NAV-05 | Deep-link to a plan, run, race, day, share link, calendar and email/unsubscribe URL | NOT RUN | Static only | Deep links inventoried (screen-inventory.md); `?view=plan` pushes fall back to build and reach the plan through the landing effect. |
 | NAV-06 | Rapidly switch tabs while async responses are pending | NOT RUN | — | — |
 | NAV-07 | Browser Back/Forward, iOS swipe back, reload after modal, screen orientation change, and leaving/returni | NOT RUN | — | — |
@@ -71,10 +70,10 @@ For each item, record actual status and evidence level plus a reproducible outco
 | BUILD-09 | Existing runner new-plan/replan flows preserve previous saved race history and avoid overwriting account | NOT RUN | — | — |
 | BUILD-10 | Shared plan URLs import/preview consistently without cross-user data access | NOT RUN | — | — |
 | PLAN-01 | Home has one clear next workout or relevant post-race action | NOT RUN | — | — |
-| PLAN-02 | Current-week list, All weeks, Calendar, Strength, Progress tabs (as present) show correct content | NOT RUN | — | — |
+| PLAN-02 | Current-week list, All weeks, Calendar, Strength, Progress tabs (as present) show correct content | PASS | Browser | Actual App: This week, Calendar, Strength, Progress each selected and captured in both themes at 390; main navigation retained. |
 | PLAN-03 | Every day opens the correct details | NOT RUN | — | — |
 | PLAN-04 | Move a run using the expected simple flow or drag-and-drop where provided | NOT RUN | — | — |
-| PLAN-05 | Strength has its **separate Plan tab** (from PR #314), correct sets/reps/exercises and completion state | NOT RUN | — | — |
+| PLAN-05 | Strength has its **separate Plan tab** (from PR #314), correct sets/reps/exercises and completion state | PASS | Unit + Browser | Strength stays a separate Plan tab. Full frontend suite passed; tab and strength content captured in both themes. No strength/prescription code changed. |
 | PLAN-06 | Done/skipped/cut-short/not-done and Strava auto-match statuses represented clearly with accessible label | NOT RUN | — | — |
 | PLAN-07 | Training load, totals, paces, target race date, distances and units agree across Home, Plan, Calendar, R | NOT RUN | — | — |
 | PLAN-08 | Date edge cases | NOT RUN | — | — |
@@ -113,7 +112,7 @@ For each item, record actual status and evidence level plus a reproducible outco
 | LOAD-02 | The running cartoon animation is purposeful and compact on normal page waits, full only when appropriate | NOT RUN | — | — |
 | LOAD-03 | Fast cached success should open immediately | NOT RUN | — | — |
 | LOAD-04 | 401/403/409/429/500, DNS/offline, dropped connection, aborted fetch, stale async response, browser backg | NOT RUN | — | — |
-| LOAD-05 | Error never appears as “no runs/no races/no plans” unless a successful empty response actually arrived | NOT RUN | — | — |
+| LOAD-05 | Error never appears as “no runs/no races/no plans” unless a successful empty response actually arrived | PASS | Browser | Runs 401/403/409/429/500 are actionable errors, never empty history; retry restores recordings. WebKit 401/500 repeated. Other API boundaries retain their unit/SQL coverage. |
 | LOAD-06 | On cancellation or retry, timers/listeners and old fetches stop, state is not overwritten, existing draf | NOT RUN | — | — |
 | LOAD-07 | Measure reproducible boot, app shell, API readiness, initial content, plan fetch, run detail, sync and r | NOT RUN | — | No timings measured; PR #316 owns loading performance. No numbers are claimed. |
 | LOAD-08 | Check reduced motion, memory/CPU usage when backgrounded, low-powered phone, enlarged text, orientation  | NOT RUN | — | — |
@@ -122,14 +121,14 @@ For each item, record actual status and evidence level plus a reproducible outco
 | VIS-03 | Contrast is legible on light/dark, including volt/lime text on white, Comrades/race titles, errors, disa | NOT RUN | — | — |
 | VIS-04 | Every interactive control meets intended ~44px touch area, sane keyboard tab order, visible focus, label | NOT RUN | — | — |
 | VIS-05 | Verify loading/brand cartoon, buttons, icons, PWA startup, font load, transitions and sticky navigation  | NOT RUN | — | — |
-| VIS-06 | Screenshot representative screens and error/empty/loading states, **not just Home** | NOT RUN | — | — |
+| VIS-06 | Screenshot representative screens and error/empty/loading states, **not just Home** | PASS | Browser + visual review | Primary Home, all Plan tabs, Runs, Journey, Account captured. Reviewed phone/desktop images and strict goal-card baselines; inspection exposed D-19 and triggered its actual fix. See completion evidence. |
 | VIS-07 | Test screen-reader basics manually where possible (VoiceOver iOS, NVDA desktop) | BLOCKED | — | VoiceOver/NVDA need a person at the device. |
-| VIS-08 | Browser engine matrix | NOT RUN | — | — |
-| SEC-01 | Every /me, plan, run, check-in, rate, image, Strava, privacy, export/delete endpoint enforces caller own | PASS | API (CI, disposable SQL) | DataIsolationTests: every /me endpoint returns 401 to an anonymous caller; another runner gets 404 for a plan id and its progress, insights, strava-completions, coach routes. Per-resource IDOR for runs, check-ins and shoes relies on existing suites. `8918f89` |
+| VIS-08 | Browser engine matrix | BLOCKED | Browser + physical gap | Automated Chromium/Firefox/WebKit matrix runs in CI and focused local browser checks. Actual iPhone/iPad/Android/macOS/Windows/installed PWA acceptance not performed. |
+| SEC-01 | Every /me, plan, run, check-in, rate, image, Strava, privacy, export/delete endpoint enforces caller own | PASS | API + Architecture | 438 disposable-SQL integration + 11 architecture tests passed. Anonymous /me and foreign-plan access covered by DataIsolationTests; existing run/check-in/shoe ownership suites executed. |
 | SEC-02 | Correct CSP, cookie/token handling, no auth secrets in service-worker cache or logs | NOT RUN | — | — |
 | SEC-03 | Bad upload content type/size, malicious filenames, oversized FIT session, malformed GPX/TCX, request bod | NOT RUN | — | — |
 | SEC-04 | Rate-limit/sync queue/webhook replay, concurrent updates, duplicate job, idempotent save, race catalogue | NOT RUN | — | — |
-| SEC-05 | SQL migration is additive/rollback-safe, no accidental data deletion, no production DB in test suite, no | PASS | Static | No migration in this PR; tests use the disposable-SQL guard (TestDatabaseSafety); no email, push or Strava calls made. |
+| SEC-05 | SQL migration is additive/rollback-safe, no accidental data deletion, no production DB in test suite, no | PASS | Static + API | No new application migrations; isolated local SQL guard retained and actually used. No production database/provider mutation or messages sent. |
 | SEC-06 | App still works with existing saved plan formats, legacy local storage, old service-worker versions, cac | NOT RUN | — | — |
 
 ## Navigation inventory
@@ -142,10 +141,10 @@ The full static inventory of views, tabs, dialogs, CTAs, empty/error/loading sta
 | Bar: Plan on Couch to 5K, no race plan | beginner runner | back to This week | — | NOT RUN (rendered) | D-10 fixed in `9b6c031`, unit test |
 | Plan tabs: This week / Calendar / Strength / Progress | active plan | each tab; Strength separate (PR #314) | — | NOT RUN (rendered) | static `features/plan/PlanView.tsx:100-105`; existing e2e in CI |
 | Recovery "Review my race" | no saved race | Races & trophies (as the copy says) | — | NOT RUN (rendered) | D-11 fixed in `9b6c031`, unit test |
-| Home "Start recovery plan" / JourneyPanel "Start recovery plan" | finished race | starts recovery | — | FAIL (label) | only navigates; JourneyPanel drops race id (D-13) |
-| StravaWelcome "Continue to my plan" | new runner, no plan | their plan | — | FAIL (label) | lands on empty builder (D-14) |
-| Runs › PhoneRunGuide "Open my training plan" | own plan | where "Log a run" is | — | FAIL (copy) | opens week view; Log a run is in day detail (D-15) |
-| `?view=beginner` / `?view=onboarding` during account load | returning runner | loading state | — | FAIL | empty main (D-16), reported to PR #316 |
+| Home / Plan "Explore recovery options" | finished race | recovery options for saved race | 390, light/dark, simulated | PASS (scoped) | D-13 fixed; race-id callback and no-start mutation assertions |
+| StravaWelcome "Choose my training goal" | connected new runner, no plan | builder | component | PASS (scoped) | D-14 fixed; ready linked plan retains Continue to my plan |
+| Runs › PhoneRunGuide "Open my training plan" | own plan | week view, with explicit instruction to open a day | component | PASS (scoped) | D-15 regression checks day instruction and destination callback |
+| `?view=beginner` / `?view=onboarding` during account load | returning runner | loading state | browser profiles | PASS (scoped) | D-16 wait visible then correct destination after response |
 | Signed-out branches inside App (SignUpPitch, PlanLocked "Create a free account", "Sign in to save…") | signed out | — | — | not reachable in production | `SessionGate` mounts App only with an account; informational, reported to PR #315 |
 
 ## Copy/spelling review register
@@ -183,23 +182,26 @@ Static review of source strings. Fixed lines are in `53fad58` and `8918f89`; non
 | Defect ID | Severity | Steps | Expected | Actual | Root cause | Fix commit / linked PR | Retest evidence |
 |---|---|---|---|---|---|---|---|
 | D-01 | P2 | Active plan, today = race date − 1, open Home | "1 day to {race}" | "1 days to {race}" | hard-coded plural (`TodayFocus.tsx`) | `8918f89` | Home.test "says 1 day…" (unit) |
-| D-02 | P2 | Change my plan › Short on time on a hill-repeats day | grammatical sentence | "A hill repeats doesn't fit into…" | "A {title}" with plural titles (`SessionAdjustment.cs`) | `8918f89` | domain tests 110/110 (no text assertion) |
+| D-02 | P2 | Change my plan › Short on time on a hill-repeats day | grammatical sentence | "A hill repeats doesn't fit into…" | "A {title}" with plural titles (`SessionAdjustment.cs`) | `8918f89` | SessionAdjusterTests explicit hill-repeat sentence assertion; focused Domain 49/49 |
 | D-03 | P2 | Monday push for a week with an 18 km long run | "an 18 km long run" | "a 18 km long run" | fixed article (`Reminders.cs`) | `8918f89` | ReminderTests theory (unit) |
-| D-04 | P2 | Ultra plan with thin build | "an ultra" | "a ultra" | fixed article (`TrainingPlanGenerator.Outlook.cs`) | `8918f89` | domain tests pass; no text assertion |
-| D-05 | P2 | Share trophy cabinet with one finish | "1 RACE FINISH" | "1 RACE FINISHES" | hard-coded plural | `8918f89` | static |
-| D-06 | P2 | Account › Connections | matches privacy notice | said uploaded .fit files are kept | stale copy | `8918f89` | static |
+| D-04 | P2 | Ultra plan with thin build | "an ultra" | "a ultra" | fixed article (`TrainingPlanGenerator.Outlook.cs`) | `8918f89` | GoalOutlookTests explicit an-ultra wording assertion; focused Domain 49/49 |
+| D-05 | P2 | Share trophy cabinet with one finish | "1 RACE FINISH" | "1 RACE FINISHES" | hard-coded plural | `8918f89` | TrophyCabinet export footer assertion |
+| D-06 | P2 | Account › Connections | matches privacy notice | said uploaded .fit files are kept | stale copy | `8918f89` | StravaSection privacy-copy assertion |
 | D-07 | P3 | various counts at 1 | singular | plural | no shared helper | `8918f89` | lib/plural.test, TrainingStory.test |
 | D-08 | P3 | screens with contractions | `’` | `'` on 13 lines; "authorize" | mixed sources | `53fad58` | copy check in CI |
 | D-09 | P3 | Easy running, check-in, story, Strava welcome, shoe picker | runner words, right screen names | "maintenance", "cache", "activity association", "My runs", "Account › Shoes" | internal names in copy | `8918f89` | unit tests updated |
 | D-10 | P2 | Couch to 5K runner with no race plan taps Plan | something happens | nothing | `app/App.tsx:538` returns `undefined` | `9b6c031`: back to This week and top of page, as on a race plan (owner chose to fix here) | CouchTo5K.test (unit); App wiring by review; CI e2e |
 | D-11 | P2 | Recovery page, no saved race, tap "Review my race" | Races & trophies | Training chapters | `openChapter()` targets training section | `9b6c031`: opens Races & trophies via `openRaces` | RecoveryPlanPage.test (unit) |
-| D-12 | P3 | Saved race result › Undo | label says what happens | "Undo" begins removing the result | label | open | — |
-| D-13 | P3 | Home or plan "Start recovery plan" | starts recovery | only opens the page; plan version drops race id | label + `App.tsx:1213` | open (PR #316 diff) | — |
-| D-14 | P3 | New runner, StravaWelcome "Continue to my plan" | their plan | empty builder | label | open | — |
-| D-15 | P3 | Runs › phone guide | button goes where the copy points | week view; "Log a run" is in day detail | copy/destination mismatch | open | — |
-| D-16 | P3 | `?view=beginner` or `?view=onboarding` while account loads | loading state | empty main | not in SignInWait list | reported to PR #316 | — |
-| D-17 | P3 | Brand-new runner, no plan, Home | first-run wording | post-training "Ready when you are." / "Choose my next challenge" | JourneyHomeCard fallback | open | — |
+| D-12 | P3 | Saved race result › Undo | label says what happens | "Undo" begins removing the result | label | c85415e | Unit + browser regression |
+| D-13 | P3 | Home or plan "Start recovery plan" | starts recovery | only opens the page; plan version drops race id | label + `App.tsx:1213` | c85415e | Unit + browser regression |
+| D-14 | P3 | New runner, StravaWelcome "Continue to my plan" | their plan | empty builder | label | c85415e | Unit + browser regression |
+| D-15 | P3 | Runs › phone guide | button goes where the copy points | week view; "Log a run" is in day detail | copy/destination mismatch | c85415e | Unit + browser regression |
+| D-16 | P3 | `?view=beginner` or `?view=onboarding` while account loads | loading state | empty main | not in SignInWait list | c85415e | Actual-App loading deep links (beginner/onboarding) passed |
+| D-17 | P3 | Brand-new runner, no plan, Home | first-run wording | post-training "Ready when you are." / "Choose my next challenge" | JourneyHomeCard fallback | c85415e | Unit + browser regression |
 | D-18 | P3 | whole app | one vocabulary | five verbs for recording a run; replan vs rebuild; "sync" | grown over time | owner decision | — |
+
+| D-19 | P2 | Home deep link → Plan | loaded plan only | opening/slow account wait remained above ready training | openSaved did not end initial handoff | c85415e: mark explicit navigation landed | Account component test + Chromium/WebKit journey assert no finding-plan |
+| D-20 | P2 | delayed Strava callback/cancel after Account mounted | visible truthful outcome and refreshed status | notice lost/hidden; stale initial connection status | prop copied into initial state, disclosure initialised once, status read too early | c85415e: derive notice, open on new outcome, read status after callback | component tests + delayed callback browser PASS Chromium/WebKit (synthetic) |
 
 No P0 found. No P1 found in what was examined; that is not a claim that none exist in areas marked NOT RUN or BLOCKED.
 
@@ -220,7 +222,7 @@ Not measured in this PR; PR #316 owns it. No figures are claimed.
 - PR #316 — D-16 (empty main during account load), D-10/D-11/D-13 sit in `App.tsx`, which #316 also changes; flagged there to avoid conflicting edits. "Checking your session…" (`App.tsx:1104`) needs `auth.loading` inside App, which SessionGate should prevent: likely unreachable in production; #316 to confirm on a deployed build. SignInWait's Pause/Resume warm-up was not observed in real use, so no finding either way.
 - PR #314 — Strength is still a separate Plan tab and the auth-first gate is unchanged; no file from #314's gate (`app/AppAuth.tsx`) was edited here.
 
-## Release decision
+## Earlier release decision (historical, superseded below)
 
 **Verdict: NO-GO.**
 
@@ -238,3 +240,44 @@ Live provider / physical PWA checks: **Not run** (owner-assisted, PR #315).
 Owner acceptance: **Pending**.
 
 Why NO-GO: no rendered/visual review at the required widths; live Entra and physical iPhone acceptance not done; open P3 label mismatches (D-12 to D-17). Before production: run a staging click-through (including D-10/D-11) with screenshots at 375/390/768/1440 in both themes, and complete #315's physical sign-in checks.
+
+## Completion-run evidence and current release decision
+
+**NO-GO for release.** Implemented fixes are pushed; this is not a claim that every manual contract row passed.
+Original Taperday colours, runner animation, 17.5-second plan film, typography and Strength separation are preserved.
+
+- D-12: “Remove saved result” opens a clear confirmation; “Keep it” retains the saved result. Regression assertions protect both.
+- D-13: “Explore recovery options” describes navigation, and Plan passes the exact saved race ID to recovery. No recovery mutation on that tap.
+- D-14: connected new runners choose a training goal; a ready linked plan still offers “Continue to my plan”.
+- D-15: manual-run guide explicitly says open a day before using Log a run; destination callback tested.
+- D-16: beginner/onboarding account loads render the existing runner wait; both actual-App deep links tested through completion.
+- D-17: no-history Home offers “Choose my goal”; exported light/dark card snapshots are strictly compared.
+- D-19: removed obsolete account wait above loaded Plan, found by screenshot inspection and protected by component/browser assertions.
+- D-20: delayed callback outcome remains visible; Connections opens for a new outcome and status is fetched after connection completion.
+- Added direct regressions for earlier D-02/D-04 wording and D-05/D-06 export/privacy copy; no v1 generator outputs changed.
+
+**Screen evidence:** [reviewed phone/desktop samples](completion/). All data is synthetic. Full width/theme captures are
+retained as release-regression and connection CI artifacts. The 320px initial inspection found D-19; fresh 390px
+Chromium/WebKit captures show the corrected Plan with no account loader. Light and dark preserve the original palette.
+The new suite sweeps 320/375/390/393/430/768/1024/1440/1920/2560. The original five-scene plan film is untouched.
+
+**Local limits and retests:** initial runs caught outdated label assertions, a too-early unit query, the callback fixture's
+relative script failing after history changed, and strict baseline differences (37 light / 6 dark pixels). The fixture path
+was fixed; both OS images were visually compared side-by-side (same 342×240 geometry/copy/layout), and separate reviewed
+Debian/Ubuntu baselines retain strict comparison with no tolerance change. No tests were removed or weakened. An obsolete
+frontend run was interrupted after known failures were fixed; the subsequent complete 1,089-test run passed.
+
+**Security:** gitleaks 8.30.1 scanned the working tree with redaction: no leaks. Copy check passed. Dependency audit,
+Kestrel upload limits, authorization/ownership, schema consistency and full backend tests run in exact-head CI.
+No production data, real Strava mutations, email/push delivery, tenant edits, merges or deploys were used.
+
+**Unsharded verification:** CI now offers `workflow_dispatch` → `unsharded=true` on the existing Checks workflow, keeping
+all per-scenario timeouts. This executes the complete suite without sharding (larger aggregate budget only). Initial run
+45364957227 correctly failed the fixture/baseline issues; the fixed final run and exact head are recorded in the PR description.
+
+**Outstanding:** live Entra and actual physical-device/PWA/native-credential checks (#315); staging execution of both PRs
+after approved integration; received email, opt-in push and real native sharing; the remaining NOT RUN rows and full
+S0–S15 manual/error/keyboard/screen-reader matrix. D-18 is a deferred vocabulary/product preference; no blanket rewrite
+of the original brand or immutable generator text was made. These gaps prevent GO even if automated CI is green.
+
+Current 104-ID register: **15 PASS · 0 FAIL · 10 BLOCKED · 79 NOT RUN**. PASS is limited to its stated evidence level; partial observations are recorded without upgrading the full row.

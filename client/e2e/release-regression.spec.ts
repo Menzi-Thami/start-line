@@ -1,9 +1,14 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
 import AxeBuilder from './axe'
+import { readFileSync } from 'node:fs'
 import { mockApi } from './perf-api'
 
 // Actual application/screens with disposable synthetic responses; no live identities or providers.
 const fixture = 'http://127.0.0.1:5176/e2e/fixtures/journey.html'
+// Fonts rasterise differently across Linux distributions; both strict baselines are visually reviewed.
+const screenshotPlatform = process.platform === 'linux'
+  ? readFileSync('/etc/os-release', 'utf8').match(/^ID=(.*)$/m)?.[1]?.replaceAll('"', '') ?? 'linux'
+  : process.platform
 test.use({ serviceWorkers: 'block' })
 
 async function capture(page: Page, info: TestInfo, name: string) {
@@ -61,7 +66,7 @@ for (const theme of ['light', 'dark']) {
     await expect(page.getByRole('heading', { name: 'What are you running towards?' })).toBeVisible()
     await capture(page, info, `first-goal-${theme}`)
     // Reviewable visual baseline for the revised first-run card, Chromium desktop only.
-    if (info.project.name === 'desktop') await expect(page.locator('.journey-home')).toHaveScreenshot(`first-goal-${theme}.png`)
+    if (info.project.name === 'desktop') await expect(page.locator('.journey-home')).toHaveScreenshot(`first-goal-${theme}-${screenshotPlatform}.png`)
     await page.getByRole('button', { name: 'Choose my goal', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Which race?' })).toBeVisible()
   })
@@ -105,4 +110,28 @@ test('a delayed Strava return shows the actual outcome and refreshes its connect
   await expect(page.getByRole('button', { name: 'Disconnect Strava', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Connect with Strava', exact: true })).toHaveCount(0)
   await capture(page, info, 'strava-return-confirmed')
+})
+
+test('Plan returns Couch to 5K to This week without a race plan @phone', async ({ page }, info) => {
+  await mockApi(page, { latencyMs: 10 })
+  await page.route('**/api/v1/me/plans', route => route.fulfill({ json: [] }))
+  await page.goto(`${fixture}?view=beginner`)
+  await expect(page.getByRole('heading', { name: 'Couch to 5K', exact: true })).toBeVisible()
+  await page.getByRole('button', { name: 'Progress', exact: true }).click()
+  await expect(page.getByRole('region', { name: 'Couch to 5K progress', exact: true })).toBeVisible()
+  await page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Plan', exact: true }).click()
+  await expect(page.getByRole('checkbox')).toHaveCount(3)
+  await expect(page.getByRole('region', { name: 'Couch to 5K progress', exact: true })).toHaveCount(0)
+  await capture(page, info, 'beginner-plan-return')
+})
+
+test('recovery without a saved race opens the promised Races and trophies destination @phone', async ({ page }, info) => {
+  await mockApi(page, { latencyMs: 10 })
+  await page.route('**/api/v1/me/plans', route => route.fulfill({ json: [] }))
+  await page.goto(`${fixture}?view=recovery`)
+  await page.getByRole('button', { name: 'Review my race', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Races & trophies', exact: true })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { name: 'Trophy cabinet.', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/section=races/)
+  await capture(page, info, 'recovery-race-destination')
 })

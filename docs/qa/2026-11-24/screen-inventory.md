@@ -83,7 +83,7 @@ Move run (dialog; Cancel, Move run/Swap runs, Undo/Done, ×, Escape); day detail
 
 Race week panel (film, training story, result form: I finished / I didn’t finish / I didn’t start / I’ll add it later) → CHAPTER SAVED (View my training chapter, Open recovery plan) → recovery (Start my recovery, check-ins, I feel recovered) → next chapter (Keep running comfortably = easy running, Train for another race = blank builder, I need more recovery, Not ready to choose yet). Home shows "Open easy running" / "Train for another race" while easy running is on.
 
-## Things that look wrong (tracked in the defect ledger)
+## Original findings (all D-10–D-17 fixed; see completion ledger for retests)
 
 | # | Where | What | Ledger |
 |---|---|---|---|
@@ -98,3 +98,5 @@ Race week panel (film, training story, result form: I finished / I didn’t fini
 | 9 | Home | today's run reachable by both "Open run details" and "View run"; "Open today’s workout" and "View this week" both go to This week | noted, keep-simple review |
 | 10 | Plan | three overlapping "ease this week" flows (Week off track, adaptation prompt, weekly review) | noted, owner call |
 | 11 | props never passed: `Hero` `lede`/`onSignIn`, `JourneyPage`/`JourneyPanel` `onNewRace`, `TrainingStory` `onNext`, `PlanView` `progressInBar`/`openTab`/`onTabChange` | dead code, not user-visible | noted |
+
+Completion run: D-10–D-17 and new D-19/D-20 have implementation/regression evidence in [master-qa-results.md](master-qa-results.md). Main navigation and four Plan tabs were driven and captured in actual App browser fixtures. Every conditional CTA is not yet claimed exercised.

@@ -242,3 +242,17 @@ test('leaving a pending plan cannot rewrite the selected destination later @phon
   await expect(page.getByRole('heading', { name: 'Runs', exact: true })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('button', { name: 'Runs', exact: true })).toHaveAttribute('aria-current', 'page')
 })
+
+test('browser Back cancels an edited-plan build before it can save @phone', async ({ page }) => {
+  const state = await prepare(page)
+  state.holdGeneration = true
+  await page.getByRole('button', { name: 'Build my plan', exact: true }).click()
+  await expect.poll(() => state.generated).toBe(1)
+  const cancelled = page.waitForEvent('requestfailed', { predicate: request => new URL(request.url()).pathname === '/api/v1/plans', timeout: 5_000 })
+  await page.goBack()
+  await cancelled
+  await expect(page.getByRole('region', { name: 'Today', exact: true })).toBeVisible()
+  state.releaseGeneration()
+  expect(new URL(page.url()).searchParams.get('view')).toBe('home')
+  expect(state.saves).toHaveLength(0)
+})

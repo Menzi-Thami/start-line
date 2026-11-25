@@ -151,9 +151,16 @@ export function App() {
   const runner = useRunner()
   const today = useToday(runner.state.kind === 'ready' ? runner.state.runner.timeZone : undefined)
   // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
-  const [initial, setInitial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
+  const [initial, setInitial] = useState(() => {
+    const query = new URLSearchParams(window.location.search)
+    const draft = query.has('editingPlan') ? query.get('editDraft') : null
+    return (draft ? fromSearchParams(new URLSearchParams(draft)) : null) ?? fromSearchParams(query)
+  })
   // An interrupted edit restores its answers for review, never an automatic save on reload.
-  const [restoredEdit] = useState(() => initial ? new URLSearchParams(window.location.search).get('editingPlan') : null)
+  const [restoredEdit] = useState(() => {
+    const query = new URLSearchParams(window.location.search)
+    return initial && query.has('editDraft') ? query.get('editingPlan') : null
+  })
   const [view, setView] = useState<View>(viewFromUrl)
   const [preparationRequest, setPreparationRequest] = useState<{ mode: 'long' | 'race'; date: string | null } | null>(() => {
     const params = new URLSearchParams(window.location.search)
@@ -242,8 +249,12 @@ export function App() {
       const value = navigation.get(key)
       if (value) query.set(key, value)
     }
-    const pendingQuery = new URLSearchParams(query)
-    if (beforeShow && editingSavedPlan.current) pendingQuery.set('editingPlan', editingSavedPlan.current)
+    // Canonical plan fields remain the saved version until the write succeeds. The draft is a separate review-only link.
+    const pendingQuery = new URLSearchParams(beforeShow ? window.location.search : query)
+    if (beforeShow && editingSavedPlan.current) {
+      pendingQuery.set('editingPlan', editingSavedPlan.current)
+      pendingQuery.set('editDraft', query.toString())
+    }
     window.history.replaceState(window.history.state, '', `?${pendingQuery}`)
 
     const stored = owner && !beforeShow ? readSnapshot(owner) : null
@@ -700,6 +711,7 @@ export function App() {
       setLanded(true)
       setEditing(false)
       const next = viewFromUrl()
+      if (next !== 'build') inflight.current?.abort()
       setView(next)
       setOpenRun(runFromUrl())
       const linked = next === 'build' ? fromSearchParams(new URLSearchParams(window.location.search)) : null

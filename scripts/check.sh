@@ -26,6 +26,7 @@ dotnet ef migrations has-pending-model-changes --project src/StartLine.Infrastru
 cd client
 step 'Staging integration readiness: synthetic configuration tests'
 node --test ../scripts/staging-integration-readiness.test.mjs
+node --test ../scripts/release-acceptance.test.mjs ../scripts/migration-failure.test.mjs
 step 'Client: install'
 npm ci --silent
 step 'Client: dependency security regressions'

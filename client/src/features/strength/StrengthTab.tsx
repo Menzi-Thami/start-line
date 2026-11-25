@@ -39,6 +39,7 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength, re
       <p className="tab-intro">
         {readOnly ? 'Your saved strength sessions.' : 'Tick each set as you finish it.'}
       </p>
+      {!readOnly && <p className="field-help">Set ticks are saved on this device.</p>}
       {onEditStrength && <button type="button" className="button button-quiet" onClick={onEditStrength}>Change strength days</button>}
       {sessions.length === 0 && (
         <p className="empty">{week?.phase === 'RaceWeek' ? 'No strength in race week: it’s for fresh legs.' : 'No strength this week.'}</p>
@@ -47,15 +48,9 @@ export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength, re
         const progress = setsDone(done, session)
         return (
           <details className="strength-session strength-disclosure" key={session.date}>
-            <summary><span>{formatDate(session.date)} · {session.title}</span><span className="field-help">{count(session.exercises.length, 'exercise')} · {progress.done}/{progress.total} sets done</span></summary>
-            <div className="this-week-head">
-              <h3 id={`strength-${session.date}`}>
-                {formatDate(session.date, 'weekday')} {formatDate(session.date, 'dayMonth')} · {session.title}
-              </h3>
-              <p className="week-meta" aria-live="polite">
-                {progress.done === progress.total ? 'All sets done. Nice work.' : `${progress.done} of ${progress.total} sets done`}
-              </p>
-            </div>
+            <summary><h3 id={`strength-${session.date}`} className="strength-session-title">{formatDate(session.date)} · {session.title}</h3><span className="field-help" aria-live="polite">{count(session.exercises.length, 'exercise')} · {progress.done}/{progress.total} sets done</span></summary>
+            <p className="week-meta" aria-live="polite">{progress.done === progress.total ? 'All sets done. Nice work.' : `${progress.done} of ${progress.total} sets done`}</p>
+            <p className="session-detail">{session.detail}</p>
             <p className="session-why">Why: {session.purpose}</p>
             <fieldset disabled={readOnly} style={{ border: 0, padding: 0, margin: 0 }} aria-label={`Strength sets for ${session.date}`}>
               <ExerciseList session={session} done={done} onDoneChange={onDoneChange} />

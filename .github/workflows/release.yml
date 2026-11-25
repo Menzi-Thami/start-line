@@ -9,6 +9,18 @@ name: 3 - Release to production
 on:
   workflow_dispatch:
     inputs:
+      tested-staging-sha:
+        description: Full staging SHA verified against R01–R18, including real-provider and physical-device checks
+        required: true
+        type: string
+      acceptance-evidence:
+        description: Direct HTTPS link to the completed acceptance page/report (no query parameters or credentials)
+        required: true
+        type: string
+      acceptance-confirmed:
+        description: I verified the release acceptance checks for this exact SHA; no P0 failures or unverified gates remain
+        type: boolean
+        default: false
       skip-staging-check:
         description: Release even if staging hasn't passed its check for this commit
         type: boolean
@@ -38,6 +50,21 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Verify owner acceptance of this staging candidate
+        env:
+          TESTED_SHA: ${{ inputs.tested-staging-sha }}
+          ACCEPTANCE_CONFIRMED: ${{ inputs.acceptance-confirmed }}
+          ACCEPTANCE_EVIDENCE: ${{ inputs.acceptance-evidence }}
+        run: |
+          export CANDIDATE_SHA=$(git rev-parse origin/staging)
+          # Read the guard from the candidate being approved, not an older main checkout.
+          git show "$CANDIDATE_SHA:scripts/release-acceptance.mjs" > "$RUNNER_TEMP/release-acceptance.mjs"
+          node "$RUNNER_TEMP/release-acceptance.mjs"
 
       - name: Staging passed its check for this commit
         if: ${{ !inputs.skip-staging-check }}

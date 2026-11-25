@@ -84,6 +84,9 @@ interface Problem {
 
 /** A read that hasn't answered in this long won't: the free server wakes within a minute. */
 export const READ_TIMEOUT_MS = 60_000
+/** Writes are bounded too, but are never automatically replayed after an uncertain result. */
+export const WRITE_TIMEOUT_MS = 60_000
+export const UPLOAD_TIMEOUT_MS = 180_000
 
 /** Before the one retry of a read that met a sleeping or restarting server. */
 export const RETRY_AFTER_MS = import.meta.env.MODE === 'test' ? 0 : 2_000
@@ -112,11 +115,22 @@ export async function isUp(check: 'live' | 'ready'): Promise<boolean> {
 
 const isRead = (init: RequestInit) => !init.method || init.method === 'GET'
 
-function withTimeout(init: RequestInit): AbortSignal | undefined {
-  if (!isRead(init) || typeof AbortSignal.timeout !== 'function') return init.signal ?? undefined
-  const timeout = AbortSignal.timeout(READ_TIMEOUT_MS)
-  if (!init.signal) return timeout
-  return typeof AbortSignal.any === 'function' ? AbortSignal.any([init.signal, timeout]) : init.signal
+function withTimeout(init: RequestInit): { signal: AbortSignal; dispose: () => void } {
+  const ms = isRead(init) ? READ_TIMEOUT_MS : init.body instanceof FormData ? UPLOAD_TIMEOUT_MS : WRITE_TIMEOUT_MS
+  const controller = new AbortController()
+  // Older Safari has neither timeout() nor any(). Explicit linking keeps its requests bounded as well.
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(ms) : undefined
+  const forward = (signal: AbortSignal) => controller.abort(signal.reason)
+  const sources = [init.signal, timeout].filter((signal): signal is AbortSignal => !!signal)
+  const listeners = sources.map(signal => {
+    const listener = () => forward(signal)
+    if (signal.aborted) listener()
+    else signal.addEventListener('abort', listener, { once: true })
+    return () => signal.removeEventListener('abort', listener)
+  })
+  if (!timeout) timer = setTimeout(() => controller.abort(new DOMException('Request deadline reached', 'TimeoutError')), ms)
+  return { signal: controller.signal, dispose: () => { clearTimeout(timer); listeners.forEach(remove => remove()) } }
 }
 
 async function request<T>(path: string, init: RequestInit = {}, token?: string): Promise<T> {
@@ -132,8 +146,13 @@ async function request<T>(path: string, init: RequestInit = {}, token?: string):
 }
 
 async function attempt<T>(path: string, init: RequestInit, token?: string): Promise<T> {
+  const deadline = withTimeout(init)
+  try { return await readResponse<T>(path, init, token, deadline.signal) }
+  finally { deadline.dispose() }
+}
+
+async function readResponse<T>(path: string, init: RequestInit, token: string | undefined, signal: AbortSignal): Promise<T> {
   let response: Response
-  const signal = withTimeout(init)
   try {
     response = await fetch(`${BASE_URL}${path}`, {
       ...init,
@@ -167,7 +186,9 @@ async function attempt<T>(path: string, init: RequestInit, token?: string): Prom
       if (error instanceof DOMException && ['AbortError', 'TimeoutError'].includes(error.name)) {
         throw new ApiError("We couldn't reach Taperday. Please try again.", 0)
       }
-      throw error
+      throw new ApiError(isRead(init)
+        ? 'Taperday sent an unreadable response. Please try again.'
+        : 'We couldn’t confirm that change. Check your saved data before trying again.', 0, {}, 'invalid_response')
     }
   }
 

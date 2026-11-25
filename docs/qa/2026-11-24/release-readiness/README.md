@@ -15,7 +15,8 @@ physical-device sign-in. No tenant, billing, production or real-runner data was 
 - Keep interrupted edited-plan answers in the existing plan-link format under separate `editingPlan`/`editDraft` fields.
   Canonical plan fields remain the saved version until a successful write. Refresh opens the
   review screen without generating or saving automatically. A retry can update only the matching current plan and race;
-  a changed identity/current plan produces an unsaved preview. The server's existing ownership checks remain authoritative.
+  trusted history state binds the original account, tab and exact draft. Copied/altered links or a changed identity/current
+  plan produce an unsaved preview requiring explicit replacement. The server's ownership checks remain authoritative.
 - Bound API writes to 60 seconds and uploads to 180 seconds, including older Safari without `AbortSignal.timeout/any`.
   Unreadable responses become friendly errors. Writes are never automatically replayed after an uncertain outcome.
 - Keep running actions independent, with at least 48 px height. Strength has one session heading, its actual mobility
@@ -43,7 +44,7 @@ the acceptance target is the current rules-based preview/apply/undo behavior, no
 | EF model vs migrations | No pending model changes |
 | Integration configuration + release guard + actual migration-shell regressions | **15 passed** |
 | Copy checker self-tests / repository copy | **9 passed**, 4,168 text pieces in 286 files, **0 problems** |
-| New Chromium browser journeys | **10 passed**, including the complete real-time runner film, browser Back cancellation and two supported-engine WCAG audits per theme |
+| New Chromium browser journeys | **11 passed**, including the complete real-time runner film, browser Back cancellation, copied-draft boundary and two supported-engine WCAG audits per theme |
 
 The pull request and canonical Page hold the final full GitHub CI and browser-matrix links/results. Those checks must refer
 to the final candidate, rather than borrowing results from an earlier commit. Interrupted runs are not counted as passes.
@@ -72,7 +73,7 @@ explicitly annotated; its functional/layout assertions still run, and no empty a
 | R14 safe adaptation | Existing Domain coaching rules, SQL `CoachTests`/`ReadinessTests`/`SessionAdjustmentTests`, UI preview/apply/undo tests pass. AI-invalid/down is **not applicable** after AI retirement; no AI integration was reintroduced. |
 | R15 navigation/post-race | Existing `release-regression`, `training-recovery`, `finish-line`, `race-review`, `journey-cabinet`; new pending-build tab navigation and browser Back cancellation regressions. Live smoke still required after deployment. |
 | R16 visual/accessibility | Theme screenshots below, 320–1440 px action geometry, raw axe WCAG 2/2.1/2.2 AA audits on supported engines. **Physical screen reader, OS text size and device checks remain open**. |
-| R17 API ownership/cache | All 438 SQL integration tests pass, including cross-runner access, ID/identity handling and replay/idempotency coverage. Browser anonymous/cache tests remain in CI. Tenant security acceptance still required. |
+| R17 API ownership/cache | All 438 SQL integration tests pass, including cross-runner access, ID/identity handling and replay/idempotency coverage. Copied/altered draft links cannot inherit saved-plan edit permission. Browser anonymous/cache tests remain in CI. Tenant security acceptance still required. |
 | R18 release/migration/smoke | Node tests execute the real migration workflow block for success, quota and retry cases; release guard rejects wrong SHA/unconfirmed evidence. **Staging deployment/smoke and approved production smoke/rollback remain blocked, not executed here.** |
 
 ## External blockers and owner handover

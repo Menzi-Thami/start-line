@@ -161,6 +161,11 @@ export function App() {
     const query = new URLSearchParams(window.location.search)
     return initial && query.has('editDraft') ? query.get('editingPlan') : null
   })
+  const [restoredEditOwner] = useState(() => {
+    const proof = window.history.state?.taperdayPlanEdit as { id?: unknown; owner?: unknown; draft?: unknown } | undefined
+    return restoredEdit && proof && proof.id === restoredEdit && typeof proof.owner === 'string'
+      && proof.draft === new URLSearchParams(window.location.search).get('editDraft') ? proof.owner : null
+  })
   const [view, setView] = useState<View>(viewFromUrl)
   const [preparationRequest, setPreparationRequest] = useState<{ mode: 'long' | 'race'; date: string | null } | null>(() => {
     const params = new URLSearchParams(window.location.search)
@@ -212,6 +217,7 @@ export function App() {
   const finishCelebrating = useCallback(() => setCelebrating(null), [])
   const inflight = useRef<AbortController | null>(null)
   const editingSavedPlan = useRef<string | null>(restoredEdit)
+  const editingSavedOwner = useRef<string | null>(restoredEditOwner)
   useEffect(() => () => inflight.current?.abort(), [auth.account?.id, auth.account?.email, auth.account?.name])
 
   // Only sets state once the request settles; callers set the loading state themselves.
@@ -251,11 +257,15 @@ export function App() {
     }
     // Canonical plan fields remain the saved version until the write succeeds. The draft is a separate review-only link.
     const pendingQuery = new URLSearchParams(beforeShow ? window.location.search : query)
-    if (beforeShow && editingSavedPlan.current) {
+    const pendingState = { ...window.history.state }
+    delete pendingState.taperdayPlanEdit
+    if (beforeShow && editingSavedPlan.current && owner) {
       pendingQuery.set('editingPlan', editingSavedPlan.current)
       pendingQuery.set('editDraft', query.toString())
+      // A pasted or altered URL can restore answers, but only this account's original tab can resume its edit.
+      pendingState.taperdayPlanEdit = { id: editingSavedPlan.current, owner, draft: query.toString() }
     }
-    window.history.replaceState(window.history.state, '', `?${pendingQuery}`)
+    window.history.replaceState(pendingState, '', `?${pendingQuery}`)
 
     const stored = owner && !beforeShow ? readSnapshot(owner) : null
     const cached = stored?.current && stored.plan?.id === stored.current.id && samePlan(toRequest(withDate), stored.current.inputs)
@@ -282,7 +292,9 @@ export function App() {
       return result
     }).then((result) => {
         if (controller.signal.aborted) return
-        window.history.replaceState(window.history.state, '', `?${query}`)
+        const settledState = { ...window.history.state }
+        delete settledState.taperdayPlanEdit
+        window.history.replaceState(settledState, '', `?${query}`)
         setPlan({ kind: 'ready', plan: result, inputs: withDate })
         setRevealPlan(true)
         setEditing(false)
@@ -311,7 +323,7 @@ export function App() {
   const buildFromWizard = (inputs: PlanInputs) => {
     if (inflight.current) return
     const own = currentPlan.current
-    if (editing && own && own.id === editingSavedPlan.current && sameRace(toRequest(inputs), own.inputs)) {
+    if (editing && own && owner && editingSavedOwner.current === owner && own.id === editingSavedPlan.current && sameRace(toRequest(inputs), own.inputs)) {
       setFieldErrors({})
       setPlan({ kind: 'loading' })
       fetchPlan(inputs, async (request, signal) => {
@@ -322,6 +334,7 @@ export function App() {
         if (signal.aborted) return
         currentPlan.remember({ id: saved.id, name: saved.name, inputs: request })
         editingSavedPlan.current = null
+        editingSavedOwner.current = null
       }, true)
       return
     }
@@ -332,6 +345,7 @@ export function App() {
 
   const changeAnswers = () => {
     editingSavedPlan.current = savedOnScreen
+    editingSavedOwner.current = owner
     // Remount so the wizard starts from this plan's answers, on its summary screen.
     setBuilderKey((k) => k + 1)
     setEditing(true)
@@ -340,6 +354,7 @@ export function App() {
 
   const backToPlan = () => {
     editingSavedPlan.current = null
+    editingSavedOwner.current = null
     setEditing(false)
     window.scrollTo?.({ top: 0 })
   }

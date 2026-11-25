@@ -177,6 +177,31 @@ test('a restored draft cannot silently replace a different current plan @phone',
   expect(state.saves).toHaveLength(0)
 })
 
+test('a copied draft needs explicit replacement instead of inheriting edit permission @phone', async ({ page }) => {
+  const state = await prepare(page)
+  await page.getByRole('button', { name: 'Change goal', exact: true }).click()
+  await page.getByLabel('Minutes', { exact: true }).press('ArrowUp')
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+  await expect(page.locator('.review')).toContainText('25:30')
+  state.holdGeneration = true
+  await page.getByRole('button', { name: 'Build my plan', exact: true }).click()
+  await expect.poll(() => state.generated).toBe(1)
+  // A new tab or pasted link has the query, but not the original tab's trusted history state.
+  await page.evaluate(() => history.replaceState(null, '', location.href))
+  const loaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/me/plans/perf-plan')
+  await page.reload()
+  await loaded
+  await expect(page.getByRole('button', { name: 'Build my plan', exact: true })).toBeVisible()
+  await expect(page.locator('.review')).toContainText('25:30')
+  state.holdGeneration = false
+  state.releaseGeneration()
+  await page.getByRole('button', { name: 'Build my plan', exact: true }).click()
+  await expect(page.getByRole('tab', { name: 'Calendar', exact: true })).toBeVisible()
+  expect(state.generated).toBe(2)
+  expect(state.saves).toHaveLength(0)
+})
+
 test('a hung generator ends with retained answers and an explicit retry @phone', async ({ page }) => {
   const state = await prepare(page)
   state.holdGeneration = true

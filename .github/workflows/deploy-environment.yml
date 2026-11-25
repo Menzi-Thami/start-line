@@ -88,6 +88,8 @@ jobs:
           VITE_AUTH_CLIENT_ID: ${{ vars.VITE_AUTH_CLIENT_ID }}
           VITE_AUTH_AUTHORITY: ${{ vars.VITE_AUTH_AUTHORITY }}
           VITE_AUTH_SCOPE: ${{ vars.VITE_AUTH_SCOPE }}
+          # Separate opt-in credential check. This does not replace the main app's sign-in client.
+          VITE_AUTH_PASSWORD_CHECK_CLIENT_ID: ${{ vars.VITE_AUTH_PASSWORD_CHECK_CLIENT_ID }}
           # Optional: "true" once Google is in the tenant's user flow (docs/accounts-setup.md). Unset hides the button.
           VITE_AUTH_GOOGLE: ${{ vars.VITE_AUTH_GOOGLE }}
           # Optional: "true" when this environment's web app is on the email-and-password user flow. Only changes wording.

@@ -56,8 +56,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
               clientId: config.clientId,
               authority: config.authority,
               knownAuthorities: [new URL(config.authority).host],
-              redirectUri: window.location.origin,
-              postLogoutRedirectUri: window.location.origin,
+              redirectUri: config.redirectPath ? `${window.location.origin}${config.redirectPath}` : window.location.origin,
+              postLogoutRedirectUri: config.redirectPath ? `${window.location.origin}${config.redirectPath}` : window.location.origin,
             },
             cache: { cacheLocation: 'localStorage' },
           })

@@ -37,7 +37,10 @@ In the external tenant: App registrations → New registration, name **Taperday 
 
 New registration, name **Taperday Web**.
 
-1. Platform: **Single-page application**, redirect URIs `http://localhost:5173` and the website's production URL.
+1. Platform: **Single-page application**, redirect URIs for the production website only (`https://taperday.run`,
+   `https://www.taperday.run` and the Static Web App's own production host). Staging uses its own **Taperday Web
+   (staging)** registration with the staging site's URL and `http://localhost:5173` for local development, so a staging
+   or local build can't send production sign-ins back to itself.
 2. **API permissions** → add *Taperday API* → `Plans.ReadWrite`, plus Microsoft Graph `openid` and
    `offline_access` → grant admin consent, so runners never see a permissions prompt.
 3. Note the web app's **Application (client) ID**.

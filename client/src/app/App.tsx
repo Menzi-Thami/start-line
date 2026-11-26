@@ -30,6 +30,7 @@ import { CheckInLoadState } from '../features/coaching/CheckInLoadState'
 import { OfflineRunDrafts } from '../features/coaching/OfflineRunDrafts'
 import { BuilderForm, type FieldErrors, type Gate, type RacesState } from '../features/builder/BuilderForm'
 import { MOVIE_MS } from '../features/builder/plan-theatre'
+import { withPlanBuildDeadline } from '../features/builder/plan-build'
 import { Hero, RaceTicker } from '../features/home/Hero'
 import { SignInLanding } from '../features/home/SignInLanding'
 import { BrandIntroGate } from '../features/home/BrandIntroGate'
@@ -150,7 +151,21 @@ export function App() {
   const runner = useRunner()
   const today = useToday(runner.state.kind === 'ready' ? runner.state.runner.timeZone : undefined)
   // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
-  const [initial, setInitial] = useState(() => fromSearchParams(new URLSearchParams(window.location.search)))
+  const [initial, setInitial] = useState(() => {
+    const query = new URLSearchParams(window.location.search)
+    const draft = query.has('editingPlan') ? query.get('editDraft') : null
+    return (draft ? fromSearchParams(new URLSearchParams(draft)) : null) ?? fromSearchParams(query)
+  })
+  // An interrupted edit restores its answers for review, never an automatic save on reload.
+  const [restoredEdit] = useState(() => {
+    const query = new URLSearchParams(window.location.search)
+    return initial && query.has('editDraft') ? query.get('editingPlan') : null
+  })
+  const [restoredEditOwner] = useState(() => {
+    const proof = window.history.state?.taperdayPlanEdit as { id?: unknown; owner?: unknown; draft?: unknown } | undefined
+    return restoredEdit && proof && proof.id === restoredEdit && typeof proof.owner === 'string'
+      && proof.draft === new URLSearchParams(window.location.search).get('editDraft') ? proof.owner : null
+  })
   const [view, setView] = useState<View>(viewFromUrl)
   const [preparationRequest, setPreparationRequest] = useState<{ mode: 'long' | 'race'; date: string | null } | null>(() => {
     const params = new URLSearchParams(window.location.search)
@@ -187,12 +202,12 @@ export function App() {
   const [stravaConnecting, setStravaConnecting] = useState(() => stravaCallback !== null && !stravaCallback.error && !!stravaCallback.code)
   const [races, setRaces] = useState<RacesState>({ kind: 'loading' })
   // A shared link starts building straight away, so it opens in the loading state.
-  const [plan, setPlan] = useState<PlanState>(() => (initial ? { kind: 'loading' } : { kind: 'idle' }))
+  const [plan, setPlan] = useState<PlanState>(() => (initial && !restoredEdit ? { kind: 'loading' } : { kind: 'idle' }))
   const [fromCopy, setFromCopy] = useState<{ plan: TrainingPlan } | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [builderKey, setBuilderKey] = useState(0)
   // True while the wizard is open over a plan (or about to produce one). A built plan replaces the wizard.
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(!!restoredEdit)
   // A plan that has just arrived from the API reveals its parts in turn; one opened from the device's copy is simply there.
   const [revealPlan, setRevealPlan] = useState(false)
   const [freshBuild, setFreshBuild] = useState(false)
@@ -201,7 +216,8 @@ export function App() {
   const [celebrating, setCelebrating] = useState<string | null>(null)
   const finishCelebrating = useCallback(() => setCelebrating(null), [])
   const inflight = useRef<AbortController | null>(null)
-  const editingSavedPlan = useRef<string | null>(null)
+  const editingSavedPlan = useRef<string | null>(restoredEdit)
+  const editingSavedOwner = useRef<string | null>(restoredEditOwner)
   useEffect(() => () => inflight.current?.abort(), [auth.account?.id, auth.account?.email, auth.account?.name])
 
   // Only sets state once the request settles; callers set the loading state themselves.
@@ -231,8 +247,6 @@ export function App() {
     inflight.current?.abort()
     const controller = new AbortController()
     inflight.current = controller
-    // The story and network run together: the plan appears only after both finish.
-    const movie = playMovie ? finishBuildMovie(controller.signal) : Promise.resolve()
 
     const withDate = { ...inputs, planFrom: inputs.planFrom ?? localToday() }
     const query = toSearchParams(withDate)
@@ -241,7 +255,17 @@ export function App() {
       const value = navigation.get(key)
       if (value) query.set(key, value)
     }
-    if (!beforeShow) window.history.replaceState(window.history.state, '', `?${query}`)
+    // Canonical plan fields remain the saved version until the write succeeds. The draft is a separate review-only link.
+    const pendingQuery = new URLSearchParams(beforeShow ? window.location.search : query)
+    const pendingState = { ...window.history.state }
+    delete pendingState.taperdayPlanEdit
+    if (beforeShow && editingSavedPlan.current && owner) {
+      pendingQuery.set('editingPlan', editingSavedPlan.current)
+      pendingQuery.set('editDraft', query.toString())
+      // A pasted or altered URL can restore answers, but only this account's original tab can resume its edit.
+      pendingState.taperdayPlanEdit = { id: editingSavedPlan.current, owner, draft: query.toString() }
+    }
+    window.history.replaceState(pendingState, '', `?${pendingQuery}`)
 
     const stored = owner && !beforeShow ? readSnapshot(owner) : null
     const cached = stored?.current && stored.plan?.id === stored.current.id && samePlan(toRequest(withDate), stored.current.inputs)
@@ -256,15 +280,21 @@ export function App() {
     // A reload of the runner's own plan link must retain the cached account identity and offline logging controls.
     // The same holds online: this is the runner's own plan as Home's coach read last left it on this device, so it shows
     // at once and the coach read below brings it up to date in one request. Regenerating it first only added a round trip.
-    if (cached && !playMovie) { queueMicrotask(showCached); return }
+    if (cached && !playMovie) { queueMicrotask(() => { showCached(); if (inflight.current === controller) inflight.current = null }); return }
 
-    api
-      .plan(toRequest(withDate), controller.signal)
-      .then(async (result) => {
+    withPlanBuildDeadline(controller.signal, async signal => {
+      // The original story and real work run together, with one bounded, cancellable handoff.
+      const movie = playMovie ? finishBuildMovie(signal) : Promise.resolve()
+      const result = await api.plan(toRequest(withDate), signal)
+      signal.throwIfAborted()
+      await Promise.all([movie, beforeShow?.(toRequest(withDate), signal)])
+      signal.throwIfAborted()
+      return result
+    }).then((result) => {
         if (controller.signal.aborted) return
-        await Promise.all([movie, beforeShow?.(toRequest(withDate), controller.signal)])
-        if (controller.signal.aborted) return
-        window.history.replaceState(window.history.state, '', `?${query}`)
+        const settledState = { ...window.history.state }
+        delete settledState.taperdayPlanEdit
+        window.history.replaceState(settledState, '', `?${query}`)
         setPlan({ kind: 'ready', plan: result, inputs: withDate })
         setRevealPlan(true)
         setEditing(false)
@@ -281,6 +311,7 @@ export function App() {
         }
         setPlan({ kind: 'error', message: error instanceof Error ? error.message : 'Something went wrong.', inputs: withDate })
       })
+      .finally(() => { if (inflight.current === controller) inflight.current = null })
   }, [owner])
 
   const build = (inputs: PlanInputs, playMovie = false) => {
@@ -290,17 +321,20 @@ export function App() {
   }
 
   const buildFromWizard = (inputs: PlanInputs) => {
+    if (inflight.current) return
     const own = currentPlan.current
-    if (editing && own && own.id === editingSavedPlan.current && sameRace(toRequest(inputs), own.inputs)) {
+    if (editing && own && owner && editingSavedOwner.current === owner && own.id === editingSavedPlan.current && sameRace(toRequest(inputs), own.inputs)) {
       setFieldErrors({})
       setPlan({ kind: 'loading' })
       fetchPlan(inputs, async (request, signal) => {
         const token = await auth.getToken()
+        signal.throwIfAborted()
         if (!token) throw new ApiError('Sign in again to save your updated plan.', 401)
         const saved = await api.me.savePlan(token, request, own.name, true, own.id, signal)
         if (signal.aborted) return
         currentPlan.remember({ id: saved.id, name: saved.name, inputs: request })
         editingSavedPlan.current = null
+        editingSavedOwner.current = null
       }, true)
       return
     }
@@ -311,6 +345,7 @@ export function App() {
 
   const changeAnswers = () => {
     editingSavedPlan.current = savedOnScreen
+    editingSavedOwner.current = owner
     // Remount so the wizard starts from this plan's answers, on its summary screen.
     setBuilderKey((k) => k + 1)
     setEditing(true)
@@ -319,6 +354,7 @@ export function App() {
 
   const backToPlan = () => {
     editingSavedPlan.current = null
+    editingSavedOwner.current = null
     setEditing(false)
     window.scrollTo?.({ top: 0 })
   }
@@ -520,9 +556,9 @@ export function App() {
   }, [plan, ownPlan, fetchPlan])
   // A shared link builds its plan straight away.
   useEffect(() => {
-    if (initial) fetchPlan(initial)
+    if (initial && !restoredEdit) fetchPlan(initial)
     return () => inflight.current?.abort()
-  }, [initial, fetchPlan])
+  }, [initial, restoredEdit, fetchPlan])
 
   // Moving to another page adds a history entry, so the browser's Back button comes back here instead of leaving
   // Taperday. Changes within a page (a plan's link as it's rebuilt) replace the entry.
@@ -573,6 +609,7 @@ export function App() {
   }
 
   const go = (next: View) => {
+    if (next !== 'build') inflight.current?.abort()
     setPreparationRequest(null)
     // Going somewhere on purpose means the app no longer opens the current plan by itself.
     landing.current = true
@@ -689,6 +726,7 @@ export function App() {
       setLanded(true)
       setEditing(false)
       const next = viewFromUrl()
+      if (next !== 'build') inflight.current?.abort()
       setView(next)
       setOpenRun(runFromUrl())
       const linked = next === 'build' ? fromSearchParams(new URLSearchParams(window.location.search)) : null

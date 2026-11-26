@@ -24,3 +24,4 @@
 @media(prefers-reduced-motion:reduce) {
   .plan .training-guide,.wizard .wizard-panel { animation:none!important; }
 }
+.strength-session > summary > .strength-session-title { margin: 0; font: inherit; }

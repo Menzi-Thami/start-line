@@ -154,6 +154,8 @@ jobs:
       - run: npm ci
       - run: node --test ../scripts/staging-integration-readiness.test.mjs
       - run: npm run test:security
+      - name: Release acceptance gate regressions
+        run: node --test ../scripts/release-acceptance.test.mjs ../scripts/migration-failure.test.mjs
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test -- --testTimeout=30000 --maxWorkers=1

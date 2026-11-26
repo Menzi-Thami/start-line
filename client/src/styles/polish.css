@@ -441,7 +441,7 @@ button.home-bar:focus-visible { outline: 2px solid var(--accent); outline-offset
   align-items: center;
   width: fit-content;
   max-width: 100%;
-  min-height: var(--tap);
+  min-height: max(var(--tap), 48px);
   margin-block-start: var(--space-2);
   text-align: left;
 }

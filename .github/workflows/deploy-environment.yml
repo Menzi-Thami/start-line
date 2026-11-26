@@ -143,6 +143,7 @@ jobs:
       # then passed on a rerun). Retrying is safe: migrations that already ran are skipped.
       - name: Migrate database
         run: |
+          set -euo pipefail
           dotnet build src/StartLine.Infrastructure -c Release -v q
           attempt=0
           SECONDS=0
@@ -150,9 +151,11 @@ jobs:
             attempt=$((attempt + 1))
             if dotnet ef database update --no-build --configuration Release \
               --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure \
-              --connection "Server=tcp:${{ vars.SQL_SERVER }},1433;Database=${{ vars.SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True;Connect Timeout=120;"; then
+              --connection "Server=tcp:${{ vars.SQL_SERVER }},1433;Database=${{ vars.SQL_DATABASE }};Authentication=Active Directory Default;Encrypt=True;Connect Timeout=120;" 2>&1 | tee "$RUNNER_TEMP/taperday-migration.log"; then
               exit 0
             fi
+            # An exhausted monthly allowance is not a sleeping database. Fail clearly without changing billing.
+            node scripts/migration-failure.mjs "$RUNNER_TEMP/taperday-migration.log"
             if (( SECONDS >= 480 )); then
               echo "Database migration failed after $attempt attempts over $((SECONDS / 60)) minutes" && exit 1
             fi

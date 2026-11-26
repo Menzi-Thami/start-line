@@ -22,6 +22,9 @@ describe('compact strength workouts', () => {
     const summary = card.querySelector('summary')!
     await user.click(summary)
     expect(card).toHaveAttribute('open')
+    expect(within(card as HTMLElement).getAllByRole('heading', { name: /Strength & mobility/ })).toHaveLength(1)
+    expect(card).toHaveTextContent(planFixture.weeks[0]!.sessions.find(session => session.type === 'Strength')!.detail)
+    expect(screen.getByText('Set ticks are saved on this device.')).toBeVisible()
     const firstSet = within(card as HTMLElement).getByRole('checkbox', { name: /Squat, set 1 of/ })
     await user.click(firstSet)
     expect(firstSet).toBeChecked()

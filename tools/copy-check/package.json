@@ -8,7 +8,7 @@
     "test": "node --test copy-check.test.mjs"
   },
   "devDependencies": {
-    "cspell": "10.4.0",
+    "cspell": "10.5.2",
     "typescript": "5.9.3"
   }
 }

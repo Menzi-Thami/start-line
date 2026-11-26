@@ -1,5 +1,31 @@
 # Taperday whole-app QA results — implementation and execution ledger
 
+## Current completion baseline — 26 November 2026
+
+Continue from the [current handover in the existing contract](master-regression-acceptance.md#current-completion-handover-26-november-2026).
+The scenario register and older execution notes below are historical evidence, not a new live audit. Preserve all
+104 IDs and update applicable rows from actual current results; do not turn an entire provider/device row PASS from CI.
+The recorded 15 PASS / 0 FAIL / 10 BLOCKED / 79 NOT RUN aggregate has not been re-executed by this documentation update.
+
+| Candidate | Verified completed code/checks on its implementation head | Still outstanding |
+|---|---|---|
+| [#326](https://github.com/Menzi-Thami/start-line/pull/326), `7a6792cb02d0c1980920ecaafd320852f79d4496` | [All 13 checks passed](https://github.com/Menzi-Thami/start-line/actions/runs/45554933063): frontend 1,134; backend 1,967 including disposable SQL 438; main Playwright 476 and compatibility 685 passed | Unmerged; deployed integrated journeys, physical-device/provider acceptance and release decision |
+| [#327](https://github.com/Menzi-Thami/start-line/pull/327), `80b3e578291ec6810aecba8f5aeeee0dc2c6ccb5` | [All 13 checks passed](https://github.com/Menzi-Thami/start-line/actions/runs/45578051231): helper 11; frontend 1,133; backend 1,967 including disposable SQL 438; main Playwright 464 and compatibility 661 passed; 30 new browser checks passed locally | Unmerged draft; actual tenant setup, password signup/reset/Google, existing-email-code upgrade and physical-device acceptance |
+
+These are separate implementation heads verified on 25 November; their GitHub state/refs were refreshed on 26 November.
+There is no tested combined candidate or deployed SHA established by these counts. Each baseline discloses two optional
+capture and seven existing engine/CDP test exclusions; the shared Firefox axe limitation is not a raw audit pass.
+
+The owner deferred staging SQL restoration and authorised controlled production testing. Staging was paused by quota
+error 42119 until 1 December; recheck before use. No billing, tenant, customer migration, merge or deployment was done in
+this documentation update. A prior environment's missing Entra access does not establish Claude's access; verify it.
+The PR handovers link completed #318 policy/role verification, so do not recreate that old exclusion-gap fix without a
+current reproduced defect. The old #319 static-copy statement that Forgot password converts an email-code account is
+superseded by the current password guide. Readiness AUTH-01/R01 (account upgrade) is distinct from master AUTH-01 below
+(fresh email-code signup). Record live password, compatibility and upgrade results separately.
+
+## Historical execution record — 24 November 2026
+
 **Updated:** 24 November 2026. **Source of truth:** [master QA contract](master-regression-acceptance.md). Results are scoped to the stated evidence level; browser fixtures do not prove external providers or physical devices.
 
 **Tested application code SHA:** `c85415e5bdf19a9d3beb26910242075ad7bb6869`, incorporating staging `0fe4c088374104af519792c4565b5c1cff98e5fa`.

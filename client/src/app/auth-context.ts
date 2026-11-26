@@ -52,6 +52,8 @@ export interface AuthConfig {
   scope: string
   /** True once Google is an identity provider in the tenant's user flow; shows "Continue with Google". */
   google: boolean
+  /** Separate, registered callback for the opt-in password check; normal sign-in keeps its existing callback. */
+  redirectPath?: '/password-check.html'
 }
 
 /**

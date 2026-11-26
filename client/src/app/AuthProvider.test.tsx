@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { useState } from 'react'
-import { AuthError, EventType, InteractionRequiredAuthError, ServerError, type EventMessage } from '@azure/msal-browser'
+import { AuthError, EventType, InteractionRequiredAuthError, PublicClientApplication, ServerError, type EventMessage } from '@azure/msal-browser'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useAuth, type AuthConfig } from './auth-context'
@@ -83,6 +83,14 @@ beforeEach(() => {
   redirectResult = null
   sessionStorage.clear()
   localStorage.clear()
+})
+
+it('the isolated password check returns to its own registered page', async () => {
+  render(<AuthProvider config={{ ...config(false), redirectPath: '/password-check.html' }}><Buttons /></AuthProvider>)
+  await waitFor(() => expect(screen.getByTestId('who')).not.toHaveTextContent('loading'))
+  expect(PublicClientApplication).toHaveBeenCalledWith(expect.objectContaining({ auth: expect.objectContaining({
+    redirectUri: `${window.location.origin}/password-check.html`, postLogoutRedirectUri: `${window.location.origin}/password-check.html`,
+  }) }))
 })
 
 describe('opening the app after its 24-hour sign-in has run out', () => {

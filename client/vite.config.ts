@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv } from 'vite'
 import { configDefaults } from 'vitest/config'
 
@@ -10,6 +11,10 @@ export default defineConfig(({ mode }) => {
     cacheDir: '.vite',
     plugins: [react(), { name: 'site-url', transformIndexHtml: (html: string) => html.replaceAll('%SITE_URL%', siteUrl) }],
     build: {
+      rolldownOptions: { input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        passwordCheck: fileURLToPath(new URL('./password-check.html', import.meta.url)),
+      } },
       // Small font subsets would otherwise be inlined as data: URIs, which the site's CSP (font-src 'self') blocks.
       assetsInlineLimit: (file) => (/\.woff2?$/.test(file) ? false : undefined),
     },

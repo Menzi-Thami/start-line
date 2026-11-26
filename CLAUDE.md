@@ -1,5 +1,13 @@
 # Taperday
 
+## Current release completion (#327; #326 merged)
+
+Start with the [current completion handover](docs/qa/2026-11-24/master-regression-acceptance.md#current-completion-handover-26-november-2026)
+and update the existing [results ledger](docs/qa/2026-11-24/master-qa-results.md). PR #326 is merged; continue open PR #327
+and verify the integrated staging changes. Preserve completed implementation. The handover separates code/CI evidence
+from outstanding provider, account-upgrade, device and deployment acceptance. Verify your own authorised access and
+existing owner instructions before declaring a step blocked.
+
 ## Post-run rating and adaptive training (PR #295)
 
 No runner-facing AI chat, AI provider or MCP: retired in PR #295. Runners rate a run in two taps
@@ -32,7 +40,7 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
 
 ## Safe testing
 
-Read [docs/testing.md](docs/testing.md) before running tests. **Never test against production or real runner data.** SQL integration tests migrate and reset their database; use disposable local SQL/LocalDB only. The test factory rejects remote hosts and non-test database names. Plan/run changes also require multi-step sequence tests across editing, failed saves, reloads and source availability; record the coverage matrix and gaps, not just a green count. Run the full checks before merging and report limitations honestly.
+Read [docs/testing.md](docs/testing.md) before running tests. **Automated suites must never target production or real runner data.** SQL integration tests migrate and reset their database; use disposable local SQL/LocalDB only. The test factory rejects remote hosts and non-test database names. The owner's separate controlled-production-test authorisation covers only the live checks and dedicated test identities described in the current handover; it does not permit automated SQL tests or QA on real runners. Plan/run changes also require multi-step sequence tests across editing, failed saves, reloads and source availability; record the coverage matrix and gaps, not just a green count. Run the full checks before merging and report limitations honestly.
 
 ## Commands (repo root)
 ```bash

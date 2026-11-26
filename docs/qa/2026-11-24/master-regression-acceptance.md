@@ -4,7 +4,153 @@
 
 **Scope:** React/Vite PWA, .NET API and database, Microsoft Entra External ID, Strava, plans, calendar, strength, coaching/check-ins, adaptive training, race journeys, activities, share stickers, notification/email workflows, every visible UI surface, staging and production release gates.
 
-**Branch:** qa/comprehensive-release-regression-gate → staging. **This is a draft review and implementation PR.** Do not merge it or trigger production without explicit owner authorization.
+## Current completion handover: 26 November 2026
+
+This is the repository entry point for completing the existing work. Continue implementation and actual acceptance;
+do not replace the working app or open another planning PR. The original 104-scenario contract below, the
+[results ledger](master-qa-results.md), and the
+[Release Readiness Page](https://chatgpt.com/space/page_4e0cdceb0e188191b8f7265ba9eb9f8e) describe the same release effort.
+Keep their evidence consistent. If the Page is inaccessible, continue from the repository and record the pending sync.
+
+### Current source and completed work
+
+GitHub refs and PR state were checked on 26 November. PR #326 merged at 13:11:23 UTC while this handover was being
+prepared; staging also advanced with dependency updates. #327 was updated from staging, retaining both password and
+release-readiness browser suites and all helper/release/migration checks. Fetch again before editing; branch refs are
+not deployed-build proof.
+
+| Work | Continue here | Verified implementation baseline |
+|---|---|---|
+| Completed app/release fixes; remaining integrated acceptance | [#326](https://github.com/Menzi-Thami/start-line/pull/326), merged; use current staging | Tested implementation `7a6792cb02d0c1980920ecaafd320852f79d4496`; staging merge `16f013f1c76e67fcd12e2b6a45ebfb9355ed4d0f` |
+| Password setup, provider checks and existing-account upgrade | [#327](https://github.com/Menzi-Thami/start-line/pull/327), `feature/password-sign-in-check` | Tested standalone implementation `80b3e578291ec6810aecba8f5aeeee0dc2c6ccb5`; open draft, now includes current staging; new combined-head CI required |
+| Integration target | `staging` | `9d2059bd0d0c0db948eda444c7218119fc2f6511` |
+| Production source branch | `main` | `8f5370da88f7fa8356793f2fdc6ea5c14a858679`; actual running deployment must still be verified |
+
+Both standalone implementation baselines passed all 13 PR checks. Exact test counts and CI links are in the results
+ledger. Those passes do not cover the new combined candidate/dependencies, live Entra, physical devices or deployment.
+Current staging includes dependency updates #320, #322, #323, #328 and #329. #314–#319, #325 and #326 are merged;
+do not reopen their old branches as current owners. Refresh dependency status rather than assuming #321/#324 remain open.
+
+Preserve #326's bounded build/story/token/save handoff, retained edit drafts and account/history binding, cancellation,
+48 px run actions, Strength instructions, SQL-quota handling and release guard. Preserve #327's read-only-by-default
+helper, unassigned candidate flow, distinct check client, explicit read-only account check and request cancellation.
+The password flag changes wording only. Neither an emailed-code identity upgrade nor a native biometric feature has
+been implemented by the check page. See the
+[#326 evidence/R01–R18 mapping](release-readiness/README.md)
+and [#327 setup guide](https://github.com/Menzi-Thami/start-line/blob/feature/password-sign-in-check/docs/password-sign-in.md).
+
+### Access, approvals and historical findings
+
+- Check Claude's own current authorised Entra, Azure, GitHub settings and browser access. The PR handovers report Entra
+  access for Claude; verify it. The previous implementation environment's missing credentials/network access is not a
+  permanent blocker for another session. Report the actual failing operation/permission if your check fails.
+- Carry forward the owner's existing read-only verification and controlled production-testing authorisation. Staging SQL
+  restoration was deferred. Work autonomously within that scope; do not ask again for an already authorised action.
+  This handover itself grants no additional permission for merges, tenant activation, customer migration, billing or a
+  general production rollout. For an action outside existing approval, prepare the exact target/change and rollback first.
+- Start tenant work with read-only inspection. Do not broaden Graph consent, administrator roles, MFA or Conditional
+  Access to get around a denied operation. The #318 handover links a completed
+  [24 November policy/role check](https://github.com/Menzi-Thami/start-line/pull/318#issuecomment-7129586519).
+  Treat that earlier exclusion-gap finding as closed unless a current check reproduces a defect. Preserve the working
+  policies and verify their effective state before any approved change.
+- The old #319 static-copy claim that Forgot password converts an email-code account is superseded by the current
+  password guide. A flow change affects new registrations; it does not establish an existing-account upgrade.
+- Namespace scenario IDs in evidence: **Readiness AUTH-01 / R01** means the existing-account upgrade. **Master AUTH-01**
+  below means fresh email-code signup. They are different acceptance criteria; passing one cannot close the other.
+
+### Execute the remaining work
+
+1. **Verify the integrated candidate.** Read both complete PR descriptions/comments and the linked guides. #326 is now
+   merged: #327 includes staging `9d2059b` and is the active auth/handover PR. Keep it current, preserving existing edits
+   and commit history. Use separate checkouts for experiments and testing. Put authentication/check-tool fixes on #327;
+   a newly reproduced unrelated app/release defect belongs in a focused follow-up to current staging, not a reopened
+   #326 or another planning PR. Record the exact combined SHA and changed files; do not reuse old local-only integration
+   hashes or individual-PR test results as proof. The Page/older PR notes may lag the merge; refresh their status from
+   actual GitHub/deployment evidence.
+
+2. **Make the test deployment real.** Staging SQL was paused with error 42119 until 1 December 2026 00:00 UTC; recheck its
+   current state. Do not retry quota errors or enable paid usage without the Azure owner's billing decision. The owner
+   chose controlled production testing while staging is unavailable. The normal release workflow still requires the
+   exact staging deploy/CI gates; review [the documented shipping paths](../../how-we-ship.md) rather than disabling guards.
+   Prepare the exact reviewed test build and rollback; establish which promotion actions the existing approval covers.
+   Verify running website/API versions and the intended database before using a dedicated test identity.
+
+3. **Complete the password pilot on #327.** Use Node 22+ and the documented helper in the External ID customer tenant,
+   first without `--create`. Inspect the main SPA/flow binding, providers, attributes/extensions, issuer, callback and
+   API scope. With the applicable existing approval, prepare the unassigned password candidate, a separate check SPA,
+   `https://taperday.run/password-check.html`, the existing delegated API scope and
+   `VITE_AUTH_PASSWORD_CHECK_CLIENT_ID`. Bind only the check app to the candidate; keep ordinary sign-in unchanged.
+   Enable/verify customer password reset without weakening MFA/Conditional Access. Do not retry an uncertain creation
+   blindly or grant administrative Graph permissions to the website/API/deployment identity.
+
+   The check page must exist on the actual test build before its live acceptance can pass. Separate setup-code review,
+   test-deployment approval, provider acceptance and main-flow activation. If the pilot requires promotion of the
+   setup-only PR, present that exact reviewed build with normal sign-in unchanged; do not claim the password rollout
+   complete or silently bypass deployment controls merely to expose the check page.
+
+4. **Perform real provider checks.** In an isolated/private session, use disposable fresh, password-backed and existing
+   email-code test accounts. Verify actual password collection/re-login, wrong password, cancel/back, received-inbox
+   reset, Google where configured, expiry, logout and relaunch. Reproduce and resolve the previous hosted signup error
+   if still present. A redirect or synthetic screenshot is not password proof. New identities without a profile must
+   receive setup-required without silently creating/linking a runner. Compare the same password-backed test runner's
+   identity/history before and after reset. Record existing email-code compatibility separately.
+
+5. **Resolve the existing-account upgrade as engineering work.** Readiness AUTH-01 remains unimplemented. Confirm a
+   Microsoft-supported identity-preserving path, consulting Microsoft support if documentation does not establish one.
+   Demonstrate it on disposable email-code identities before implementing/proposing a customer migration. Preserve
+   Entra `oid`, `Runner.IdentitySubject`, runner ID, saved plans, check-ins, results, offline ownership and Strava links.
+   Do not delete/recreate users, link by matching email, reset real customers or guess a `passwordProfile` write.
+   If no supported upgrade is demonstrated, retain email-code access and report the limitation explicitly; successful
+   fresh password signup does not close this requirement. A proposed supported path still needs implementation,
+   regressions, owner-approved migration scope and actual before/after identity/history evidence.
+
+6. **Complete device and integrated journey acceptance of merged #326 and active #327.** Execute signup/sign-in → first goal → catalogue/custom
+   race → original full runner film → actual saved calendar → edit/changed answers/refresh/retry/Back → Home → Plan's
+   This week/Calendar/Strength/Progress → manual runs/import/authorised sync → analysis/1–10 feedback/save/undo/offline
+   reconnect → race confirmation/Journey → separate recovery → clean Home/next goal → Account/privacy/settings.
+   Cover S0–S15 and the positive, negative, empty, loading, stale-response and cross-user states below. Use disposable
+   accounts for export/delete. Retain elapsed versus official race time, source expiry and duplicate/result confirmation
+   protections. Manual training must work without Strava or heart-rate data. AI was retired in #295; adaptation is the
+   current rules-based preview/apply/decline/undo flow.
+
+   Test actual iPhone Safari and installed PWA, Android browser/installed PWA and desktop fallbacks. Verify cold/warm
+   session recovery, sign-out/private/offline gates, another account on the same device, second-device feedback,
+   password-manager AutoFill, keyboard/screen-reader use, OS text scaling and native PNG/SVG sharing to intended apps.
+   An OS biometric/PIN unlock of AutoFill is different from a Taperday passkey feature. Native biometric/passkey work
+   needs verified provider/account eligibility, enrolment, recovery and approved scope; the check page does not supply it.
+
+   Real Strava, received email and opt-in push require authorised isolated test integrations/recipients. Do not copy
+   production secrets, message real audiences or infer delivery from mocked providers. Entra access does not supply
+   physical devices: arrange owner-assisted checks and keep unperformed rows BLOCKED with a specific next action.
+
+7. **Fix and prove each reproduced defect.** Add meaningful regressions and rerun the failed journey plus the required
+   final-candidate checks. Use [safe testing](../../testing.md): automated SQL suites migrate/reset a disposable local
+   test database, never production. Run `scripts/check.sh`, relevant connection/mobile profiles, helper/configuration/
+   release/migration tests, copy and security checks; execute the contract's unsharded suite. Preserve strict visual
+   assertions, existing deadlines and generator-version/retention guarantees. Disclose the existing optional capture,
+   Firefox axe and Chromium-only CDP exclusions. Report actual command/results and skips, not an inherited green count.
+
+8. **Update the existing evidence and return a release decision.** Keep the 104 original IDs, screen inventory and
+   R01–R18 mapping; update each applicable result only from executed evidence. Preserve prior failures and their retests.
+   Record source/CI/deployed SHAs, time, state, OS/browser, browser versus installed PWA, theme/width, observed outcome,
+   sanitised proof, root cause/fix/retest and any owner-assisted next action. Keep credentials, callback codes/URLs,
+   private runner identifiers and data out of public artifacts. Distinguish automated, real-provider and physical proof.
+   Continue independent work while an access/device/billing action is pending. Return separate app-fix/pilot readiness,
+   password-activation readiness and existing-account-upgrade status, plus overall GO/NO-GO and exact unmet gates.
+   Keep the original branding, colours, typography, full runner animation and bottom navigation. Green CI alone does not
+   authorise merge, main password-flow activation or production rollout. The #326 release guard only becomes active on
+   main after its workflow update reaches main; apply its exact-SHA/evidence/owner gate for any first approved promotion.
+
+### Definition of complete
+
+The relevant implementation exists on the matching PR; the integrated final candidate passes the required checks;
+the corresponding deployed/provider/device criteria were actually executed; original accounts/history and the working
+sign-in remain correct; evidence is updated; remaining limitations and the owner's release decision are explicit.
+Missing permissions/devices must name the actual dependency and owner-assisted action. Another handover, changed copy,
+new-user password signup or emulated iPhone alone does not complete the old-account or physical-device requirements.
+
+The original QA branch `qa/comprehensive-release-regression-gate` and its #315/#316 coordination notes are historical.
+Use the active #327/current-staging ownership above. The acceptance cases below remain in force.
 
 ## 0. How Claude must work: actual QA, fixes and evidence
 
@@ -14,7 +160,7 @@
 4. **Actually perform the journeys** by clicking through primary/secondary navigation. Screenshot each important state and independently proofread all visible UI strings. Find root causes, fix with regression tests, rerun affected journeys and the complete suite, then record failures and fixes. Not just “tests pass”.
 5. Track every issue with: severity P0/P1/P2/P3, scenario ID, steps, expected/actual, environment, screen width, theme, console/network observation, screenshot/trace (with identities removed), root cause, fix commit and retest evidence. Use **PASS / FAIL / BLOCKED / NOT RUN**; only PASS with observed evidence.
 6. Before marking review-ready, provide a **go/no-go release report** with exact head SHA, test command/results, CI URLs, screenshots, copy review, known limitations, outstanding owner-assisted checks, regression risks and recommendation. A reviewer must be able to reproduce every claimed result.
-7. Coordinate without conflicts: **PR #315** owns Entra auth mechanics and physical iPhone login acceptance; **PR #316** owns loading animations/performance. This PR owns cross-cutting acceptance, systematic regression and copy quality. If defect lies in those branches, put precise findings on that PR; avoid rewriting the same component in competing branches. Re-test their final merged staging state.
+7. Coordinate without conflicts using the current ownership above. #315/#316/#326 are merged history; preserve their working fixes and re-test the integrated candidate. Continue auth work on #327 and create a focused follow-up only for a newly reproduced unrelated defect.
 
 ## 1. Absolute release blockers
 

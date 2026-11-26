@@ -153,6 +153,7 @@ jobs:
           cache-dependency-path: client/package-lock.json
       - run: npm ci
       - run: node --test ../scripts/staging-integration-readiness.test.mjs
+      - run: node --test ../scripts/entra-passwords.test.mjs
       - run: npm run test:security
       - name: Release acceptance gate regressions
         run: node --test ../scripts/release-acceptance.test.mjs ../scripts/migration-failure.test.mjs

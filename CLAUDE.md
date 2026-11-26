@@ -1,11 +1,12 @@
 # Taperday
 
-## Current release completion (PRs #326 and #327)
+## Current release completion (#327; #326 merged)
 
 Start with the [current completion handover](docs/qa/2026-11-24/master-regression-acceptance.md#current-completion-handover-26-november-2026)
-and update the existing [results ledger](docs/qa/2026-11-24/master-qa-results.md). Continue the two open PRs; preserve their
-completed implementation. The handover separates code/CI evidence from outstanding provider, account-upgrade, device and
-deployment acceptance. Verify your own authorised access and existing owner instructions before declaring a step blocked.
+and update the existing [results ledger](docs/qa/2026-11-24/master-qa-results.md). PR #326 is merged; continue open PR #327
+and verify the integrated staging changes. Preserve completed implementation. The handover separates code/CI evidence
+from outstanding provider, account-upgrade, device and deployment acceptance. Verify your own authorised access and
+existing owner instructions before declaring a step blocked.
 
 ## Post-run rating and adaptive training (PR #295)
 

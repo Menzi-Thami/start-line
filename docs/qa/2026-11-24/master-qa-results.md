@@ -9,20 +9,30 @@ The recorded 15 PASS / 0 FAIL / 10 BLOCKED / 79 NOT RUN aggregate has not been r
 
 | Candidate | Verified completed code/checks on its implementation head | Still outstanding |
 |---|---|---|
-| [#326](https://github.com/Menzi-Thami/start-line/pull/326), `7a6792cb02d0c1980920ecaafd320852f79d4496` | [All 13 checks passed](https://github.com/Menzi-Thami/start-line/actions/runs/45554933063): frontend 1,134; backend 1,967 including disposable SQL 438; main Playwright 476 and compatibility 685 passed | Unmerged; deployed integrated journeys, physical-device/provider acceptance and release decision |
-| [#327](https://github.com/Menzi-Thami/start-line/pull/327), `80b3e578291ec6810aecba8f5aeeee0dc2c6ccb5` | [All 13 checks passed](https://github.com/Menzi-Thami/start-line/actions/runs/45578051231): helper 11; frontend 1,133; backend 1,967 including disposable SQL 438; main Playwright 464 and compatibility 661 passed; 30 new browser checks passed locally | Unmerged draft; actual tenant setup, password signup/reset/Google, existing-email-code upgrade and physical-device acceptance |
+| [#326](https://github.com/Menzi-Thami/start-line/pull/326), `7a6792cb02d0c1980920ecaafd320852f79d4496` | [All 13 checks passed](https://github.com/Menzi-Thami/start-line/actions/runs/45554933063): frontend 1,134; backend 1,967 including disposable SQL 438; main Playwright 476 and compatibility 685 passed | Merged into staging as `16f013f1c76e67fcd12e2b6a45ebfb9355ed4d0f` on 26 November; deployed integrated journeys, physical-device/provider acceptance and release decision still required |
+| [#327](https://github.com/Menzi-Thami/start-line/pull/327), `80b3e578291ec6810aecba8f5aeeee0dc2c6ccb5` | [All 13 checks passed](https://github.com/Menzi-Thami/start-line/actions/runs/45578051231): helper 11; frontend 1,133; backend 1,967 including disposable SQL 438; main Playwright 464 and compatibility 661 passed; 30 new browser checks passed locally | Open draft, updated from staging `9d2059b`; new combined-head CI, actual tenant setup, password signup/reset/Google, existing-email-code upgrade and physical-device acceptance |
 
 These are separate implementation heads verified on 25 November; their GitHub state/refs were refreshed on 26 November.
-There is no tested combined candidate or deployed SHA established by these counts. Each baseline discloses two optional
+The auth branch now incorporates #326 and the current staging dependency updates. The standalone counts above do not
+establish a pass for its new combined head or a deployed SHA. Each baseline discloses two optional
 capture and seven existing engine/CDP test exclusions; the shared Firefox axe limitation is not a raw audit pass.
 
 The owner deferred staging SQL restoration and authorised controlled production testing. Staging was paused by quota
-error 42119 until 1 December; recheck before use. No billing, tenant, customer migration, merge or deployment was done in
-this documentation update. A prior environment's missing Entra access does not establish Claude's access; verify it.
+error 42119 until 1 December; recheck before use. This handover did not change billing, tenant settings or customer data,
+initiate deployment, or modify staging/main. The auth branch was synchronised with current staging. The #326 merge was
+observed separately at 13:11:23 UTC; current staging is `9d2059b`.
+A prior environment's missing Entra access does not establish Claude's access; verify it.
 The PR handovers link completed #318 policy/role verification, so do not recreate that old exclusion-gap fix without a
 current reproduced defect. The old #319 static-copy statement that Forgot password converts an email-code account is
 superseded by the current password guide. Readiness AUTH-01/R01 (account upgrade) is distinct from master AUTH-01 below
 (fresh email-code signup). Record live password, compatibility and upgrade results separately.
+
+**Handover validation on combined application source `20433d2`:** 26 helper/configuration/release/migration tests passed;
+`bash -n scripts/check.sh` passed. All 104 original contract IDs and original result rows were retained; relative links
+and anchors in the five handover documents were checked. Current copy check: 4,189 pieces in 287 files, 0 style/spelling
+problems. The connection runner lists 712 tests in 19 files, including both password-check and release-readiness suites;
+this is an inventory, not a 712-test execution. Full CI at the new combined PR head and live acceptance still need their
+own results. No new provider, physical-device or deployment pass is claimed by this handover.
 
 ## Historical execution record — 24 November 2026
 

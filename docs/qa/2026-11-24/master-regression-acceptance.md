@@ -14,25 +14,29 @@ Keep their evidence consistent. If the Page is inaccessible, continue from the r
 
 ### Current source and completed work
 
-GitHub refs and PR state were checked on 26 November. Fetch again before editing; branch refs are not deployed-build proof.
+GitHub refs and PR state were checked on 26 November. PR #326 merged at 13:11:23 UTC while this handover was being
+prepared; staging also advanced with dependency updates. #327 was updated from staging, retaining both password and
+release-readiness browser suites and all helper/release/migration checks. Fetch again before editing; branch refs are
+not deployed-build proof.
 
 | Work | Continue here | Verified implementation baseline |
 |---|---|---|
-| App/release fixes and integrated QA | [#326](https://github.com/Menzi-Thami/start-line/pull/326), `fix/release-readiness-acceptance` | `7a6792cb02d0c1980920ecaafd320852f79d4496`; open, ready for code review, unmerged |
-| Password setup, provider checks and existing-account upgrade | [#327](https://github.com/Menzi-Thami/start-line/pull/327), `feature/password-sign-in-check` | `80b3e578291ec6810aecba8f5aeeee0dc2c6ccb5`; open draft, unmerged |
-| Integration target | `staging` | `137deca5e29667f9ccde39c8904e89a2f60ad423` |
+| Completed app/release fixes; remaining integrated acceptance | [#326](https://github.com/Menzi-Thami/start-line/pull/326), merged; use current staging | Tested implementation `7a6792cb02d0c1980920ecaafd320852f79d4496`; staging merge `16f013f1c76e67fcd12e2b6a45ebfb9355ed4d0f` |
+| Password setup, provider checks and existing-account upgrade | [#327](https://github.com/Menzi-Thami/start-line/pull/327), `feature/password-sign-in-check` | Tested standalone implementation `80b3e578291ec6810aecba8f5aeeee0dc2c6ccb5`; open draft, now includes current staging; new combined-head CI required |
+| Integration target | `staging` | `9d2059bd0d0c0db948eda444c7218119fc2f6511` |
 | Production source branch | `main` | `8f5370da88f7fa8356793f2fdc6ea5c14a858679`; actual running deployment must still be verified |
 
-Both implementation baselines passed all 13 PR checks. Exact test counts and CI links are in the results ledger.
-Those passes do not cover a newly combined candidate, live Entra, physical devices or deployment. Dependency PRs
-#320–#324 are separate work. #314–#319 and #325 are merged; do not reopen their old branches as current owners.
+Both standalone implementation baselines passed all 13 PR checks. Exact test counts and CI links are in the results
+ledger. Those passes do not cover the new combined candidate/dependencies, live Entra, physical devices or deployment.
+Current staging includes dependency updates #320, #322, #323, #328 and #329. #314–#319, #325 and #326 are merged;
+do not reopen their old branches as current owners. Refresh dependency status rather than assuming #321/#324 remain open.
 
 Preserve #326's bounded build/story/token/save handoff, retained edit drafts and account/history binding, cancellation,
 48 px run actions, Strength instructions, SQL-quota handling and release guard. Preserve #327's read-only-by-default
 helper, unassigned candidate flow, distinct check client, explicit read-only account check and request cancellation.
 The password flag changes wording only. Neither an emailed-code identity upgrade nor a native biometric feature has
 been implemented by the check page. See the
-[#326 evidence/R01–R18 mapping](https://github.com/Menzi-Thami/start-line/blob/fix/release-readiness-acceptance/docs/qa/2026-11-24/release-readiness/README.md)
+[#326 evidence/R01–R18 mapping](release-readiness/README.md)
 and [#327 setup guide](https://github.com/Menzi-Thami/start-line/blob/feature/password-sign-in-check/docs/password-sign-in.md).
 
 ### Access, approvals and historical findings
@@ -56,10 +60,13 @@ and [#327 setup guide](https://github.com/Menzi-Thami/start-line/blob/feature/pa
 
 ### Execute the remaining work
 
-1. **Prepare an integrated candidate.** Read both complete PR descriptions/comments and the linked guides. Use separate
-   worktrees for changes on #326 and #327, plus a separate checkout for combined testing. Preserve existing edits and
-   commit history. Put general app/release fixes on #326 and authentication/check-tool fixes on #327. Record the exact
-   combined SHA and changed files; do not reuse old local-only integration hashes or individual-PR test results as proof.
+1. **Verify the integrated candidate.** Read both complete PR descriptions/comments and the linked guides. #326 is now
+   merged: #327 includes staging `9d2059b` and is the active auth/handover PR. Keep it current, preserving existing edits
+   and commit history. Use separate checkouts for experiments and testing. Put authentication/check-tool fixes on #327;
+   a newly reproduced unrelated app/release defect belongs in a focused follow-up to current staging, not a reopened
+   #326 or another planning PR. Record the exact combined SHA and changed files; do not reuse old local-only integration
+   hashes or individual-PR test results as proof. The Page/older PR notes may lag the merge; refresh their status from
+   actual GitHub/deployment evidence.
 
 2. **Make the test deployment real.** Staging SQL was paused with error 42119 until 1 December 2026 00:00 UTC; recheck its
    current state. Do not retry quota errors or enable paid usage without the Azure owner's billing decision. The owner
@@ -97,7 +104,7 @@ and [#327 setup guide](https://github.com/Menzi-Thami/start-line/blob/feature/pa
    fresh password signup does not close this requirement. A proposed supported path still needs implementation,
    regressions, owner-approved migration scope and actual before/after identity/history evidence.
 
-6. **Complete device and integrated journey acceptance on #326.** Execute signup/sign-in → first goal → catalogue/custom
+6. **Complete device and integrated journey acceptance of merged #326 and active #327.** Execute signup/sign-in → first goal → catalogue/custom
    race → original full runner film → actual saved calendar → edit/changed answers/refresh/retry/Back → Home → Plan's
    This week/Calendar/Strength/Progress → manual runs/import/authorised sync → analysis/1–10 feedback/save/undo/offline
    reconnect → race confirmation/Journey → separate recovery → clean Home/next goal → Account/privacy/settings.
@@ -143,7 +150,7 @@ Missing permissions/devices must name the actual dependency and owner-assisted a
 new-user password signup or emulated iPhone alone does not complete the old-account or physical-device requirements.
 
 The original QA branch `qa/comprehensive-release-regression-gate` and its #315/#316 coordination notes are historical.
-Use #326/#327 ownership above. The acceptance cases below remain in force.
+Use the active #327/current-staging ownership above. The acceptance cases below remain in force.
 
 ## 0. How Claude must work: actual QA, fixes and evidence
 
@@ -153,7 +160,7 @@ Use #326/#327 ownership above. The acceptance cases below remain in force.
 4. **Actually perform the journeys** by clicking through primary/secondary navigation. Screenshot each important state and independently proofread all visible UI strings. Find root causes, fix with regression tests, rerun affected journeys and the complete suite, then record failures and fixes. Not just “tests pass”.
 5. Track every issue with: severity P0/P1/P2/P3, scenario ID, steps, expected/actual, environment, screen width, theme, console/network observation, screenshot/trace (with identities removed), root cause, fix commit and retest evidence. Use **PASS / FAIL / BLOCKED / NOT RUN**; only PASS with observed evidence.
 6. Before marking review-ready, provide a **go/no-go release report** with exact head SHA, test command/results, CI URLs, screenshots, copy review, known limitations, outstanding owner-assisted checks, regression risks and recommendation. A reviewer must be able to reproduce every claimed result.
-7. Coordinate without conflicts using the current #326/#327 ownership above. #315/#316 are merged history; preserve their working fixes and re-test the integrated candidate. Put findings/fixes on the matching open PR rather than competing branches.
+7. Coordinate without conflicts using the current ownership above. #315/#316/#326 are merged history; preserve their working fixes and re-test the integrated candidate. Continue auth work on #327 and create a focused follow-up only for a newly reproduced unrelated defect.
 
 ## 1. Absolute release blockers
 

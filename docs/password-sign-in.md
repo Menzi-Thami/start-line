@@ -2,7 +2,7 @@
 
 Continue from the [current release completion handover](qa/2026-11-24/master-regression-acceptance.md#current-completion-handover-26-november-2026)
 and update the [existing results ledger](qa/2026-11-24/master-qa-results.md). This guide supplies #327's concrete setup
-steps; the handover maps remaining work to both open PRs and the original acceptance criteria.
+steps; the handover maps remaining work to open #327, merged #326 and the original acceptance criteria.
 
 This implements the isolated password-check and provisioning part of the
 [Release Readiness Page](https://chatgpt.com/space/page_4e0cdceb0e188191b8f7265ba9eb9f8e).

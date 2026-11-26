@@ -25,11 +25,34 @@ public sealed class UpdateAnnouncementTests
         return (client, email);
     }
 
-    private static async Task<AnnouncementRun> Send(OnboardingFactory factory, DateTimeOffset before, AnnouncementBudget? budget = null)
+    private static async Task<AnnouncementRun> Send(OnboardingFactory factory, DateTimeOffset before, AnnouncementBudget? budget = null, string campaign = UpdateEmails.RedesignCampaign)
     {
         using var scope = factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<IUpdateAnnouncements>()
-            .SendDueAsync(UpdateEmails.RedesignCampaign, before, factory.Time.GetUtcNow(), budget ?? Unlimited, CancellationToken.None);
+            .SendDueAsync(campaign, before, factory.Time.GetUtcNow(), budget ?? Unlimited, CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task The_password_notice_reaches_runners_who_turned_updates_off_once_and_without_a_way_out()
+    {
+        using var factory = new OnboardingFactory();
+        var yes = await Runner(factory);
+        var no = await Runner(factory, updates: false);
+        var release = factory.Time.GetUtcNow().AddMinutes(1);
+        factory.Time.Advance(TimeSpan.FromMinutes(2));
+        var later = await Runner(factory, updates: false);
+
+        await Send(factory, release, campaign: UpdateEmails.PasswordSignInCampaign);
+        await Send(factory, release, campaign: UpdateEmails.PasswordSignInCampaign);
+
+        foreach (var runner in new[] { yes, no })
+        {
+            var mail = factory.Mail.To(runner.Email).ShouldHaveSingleItem();
+            mail.Subject.ShouldBe("Taperday now has passwords (and your phone can remember yours)");
+            mail.Unsubscribe.ShouldBeNull();
+        }
+
+        factory.Mail.To(later.Email).ShouldBeEmpty();
     }
 
     [Fact]

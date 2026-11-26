@@ -107,6 +107,8 @@ A mailto unsubscribe lands in the maker's Gmail (via `hello@` forwarding) and ha
 ## Sending a "what's new" announcement
 
 Announcements go only to runners who said yes to **news and updates**, whose account was created before the release.
+A **service notice** about the account itself (listed in `UpdateAnnouncementSender.ServiceCampaigns`, currently only
+`password-sign-in-2026-11`) goes to every runner with an address, updates on or off, and carries no unsubscribe link.
 Each runner gets one at most (`AnnouncementDeliveries` claims it). The announcement shares the daily email budget with
 the weekly recap and onboarding emails (Brevo's free plan: 300 a day), and the recap comes first.
 

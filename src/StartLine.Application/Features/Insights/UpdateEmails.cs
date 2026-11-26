@@ -35,6 +35,7 @@ public static class UpdateEmails
     {
         RedesignCampaign => TaperdayRedesign(to, "Thami", test: true),
         SignInOutageCampaign => SignInOutage(to, "Thami", test: true),
+        PasswordSignInCampaign => PasswordSignIn(to, "Thami", test: true),
         _ => null,
     };
 
@@ -97,6 +98,80 @@ public static class UpdateEmails
         }
 
         return new EmailMessage(to, (test ? "[Test] " : "") + OutageSubject, html, text.ToString(), unsubscribe);
+    }
+
+    private const string PasswordOpening = "Taperday now signs you in with your email and a password, instead of a code sent to your inbox.";
+    private const string PasswordWhy = "Codes meant leaving Taperday, digging through your email and hoping it had arrived. On 13 November a Microsoft outage held them up for hours. A password your phone remembers gets you straight in, every time.";
+
+    private static readonly (string Title, string Detail)[] PasswordSteps =
+    [
+        ("Enter your email as usual", "Use the same email you've always used with Taperday."),
+        ("Tap \"Forgot password?\"", "You don't have a Taperday password yet, so this is how you make one. We'll email you a code one last time."),
+        ("Choose a password and let your phone save it", "iPhone (iCloud Keychain) and Android (Google Password Manager) offer to save it, then fill it in with Face ID, Touch ID or your fingerprint next time."),
+    ];
+
+    private static readonly (string Title, string Detail)[] PasswordGains =
+    [
+        ("Quicker", "No switching to your inbox, no waiting for an email."),
+        ("Works when email doesn't", "Outages and spam filters can't keep you out."),
+        ("Your phone does the remembering", "A saved password fills itself in. You never have to type it again."),
+    ];
+
+    private const string PasswordClosing = "Your plan, your runs and your Strava connection are exactly where you left them. If Taperday signs you out after the change, that's expected: sign in once with your new password and it remembers you again.";
+    private const string PasswordSubject = "Taperday now has passwords (and your phone can remember yours)";
+
+    /// <summary>The November 2026 move from emailed codes to passwords. A service notice: it goes to every runner.</summary>
+    public const string PasswordSignInCampaign = "password-sign-in-2026-11";
+
+    /// <summary>
+    /// Sign-in moved from emailed codes to passwords: why, the one-time "Forgot password?" step, and that nothing is lost.
+    /// It's about getting into the account, so it carries no unsubscribe links and also reaches runners who turned updates off.
+    /// </summary>
+    public static EmailMessage PasswordSignIn(string to, string? name = null, bool test = false)
+    {
+        var greeting = string.IsNullOrWhiteSpace(name) ? "Hi there," : $"Hi {name.Trim()},";
+        var body = new StringBuilder();
+        body.Append(EmailLayout.Paragraph(greeting));
+        body.Append(EmailLayout.Paragraph(PasswordOpening));
+        body.Append(EmailLayout.Paragraph(PasswordWhy));
+        body.Append(EmailLayout.Heading("Set your password once (about a minute)"));
+        foreach (var (title, detail) in PasswordSteps)
+        {
+            body.Append(EmailLayout.Item(title, detail));
+        }
+
+        body.Append(EmailLayout.Heading("Why it's better"));
+        foreach (var (title, detail) in PasswordGains)
+        {
+            body.Append(EmailLayout.Item(title, detail));
+        }
+
+        body.Append(EmailLayout.Paragraph(PasswordClosing));
+
+        var html = EmailLayout.Wrap(
+            preheader: "One quick step: tap \"Forgot password?\" to set yours. Your plan and runs are safe.",
+            kicker: "What's new · Signing in",
+            title: "One password. No more waiting for codes.",
+            body: body.ToString(),
+            buttonText: "Set my password",
+            buttonUrl: EmailLayout.Site + "/?view=home",
+            footer: "You're getting this because it's about signing in to your Taperday account.",
+            unsubscribeUrl: null);
+
+        var text = new StringBuilder("One password. No more waiting for codes.\n\n").Append(greeting).Append("\n\n").Append(PasswordOpening).Append("\n\n").Append(PasswordWhy).Append("\n\nSet your password once (about a minute)\n");
+        foreach (var (title, detail) in PasswordSteps)
+        {
+            text.Append("- ").Append(title).Append(": ").Append(detail).Append('\n');
+        }
+
+        text.Append("\nWhy it's better\n");
+        foreach (var (title, detail) in PasswordGains)
+        {
+            text.Append("- ").Append(title).Append(": ").Append(detail).Append('\n');
+        }
+
+        text.Append('\n').Append(PasswordClosing).Append("\n\nSet my password: https://taperday.run/?view=home\n");
+        return new EmailMessage(to, (test ? "[Test] " : "") + PasswordSubject, html, text.ToString(), null);
     }
 
     private const string RedesignOpening = "We've been doing some training of our own. Taperday is simpler, quicker, and a lot easier on the eyes. Same coach, new kit.";

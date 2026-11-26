@@ -52,9 +52,28 @@ public sealed class UpdateAnnouncementEmailTests
         mail.Unsubscribe.ShouldBe(Links);
     }
 
+    [Fact]
+    public void The_password_email_explains_the_one_time_reset_and_has_no_way_out_because_it_is_about_the_account()
+    {
+        var mail = UpdateEmails.PasswordSignIn("runner@example.test", "Thandi <b>");
+
+        mail.Subject.ShouldBe("Taperday now has passwords (and your phone can remember yours)");
+        mail.Html.ShouldContain("Hi Thandi &lt;b&gt;,");
+        mail.Html.ShouldNotContain("<b>,");
+        foreach (var what in new[] { "Forgot password?", "let your phone save it", "13 November", "Works when email", "exactly where you left them" })
+        {
+            mail.Html.ShouldContain(what);
+            mail.Text.ShouldContain(what);
+        }
+
+        mail.Unsubscribe.ShouldBeNull();
+        mail.Text.ShouldNotContain("Unsubscribe");
+    }
+
     [Theory]
     [InlineData(UpdateEmails.RedesignCampaign, "Fresh legs")]
     [InlineData(UpdateEmails.SignInOutageCampaign, "sign-in code")]
+    [InlineData(UpdateEmails.PasswordSignInCampaign, "passwords")]
     public void Every_campaign_has_a_preview_marked_as_a_test_without_a_way_out(string campaign, string subject)
     {
         var mail = UpdateEmails.Preview(campaign, "maker@example.test").ShouldNotBeNull();

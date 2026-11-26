@@ -58,7 +58,11 @@ internal sealed partial class UpdateAnnouncementSender(
         {
             [UpdateEmails.RedesignCampaign] = (to, name, links) => UpdateEmails.TaperdayRedesign(to, name, unsubscribe: links),
             [UpdateEmails.SignInOutageCampaign] = (to, name, links) => UpdateEmails.SignInOutage(to, name, unsubscribe: links),
+            [UpdateEmails.PasswordSignInCampaign] = (to, name, _) => UpdateEmails.PasswordSignIn(to, name),
         };
+
+    /// <summary>Notices about the account itself: they go to every runner with an address, updates on or off.</summary>
+    internal static readonly IReadOnlySet<string> ServiceCampaigns = new HashSet<string>(StringComparer.Ordinal) { UpdateEmails.PasswordSignInCampaign };
 
     public async Task<AnnouncementRun> SendDueAsync(string campaign, DateTimeOffset accountsCreatedBefore, DateTimeOffset now, AnnouncementBudget budget, CancellationToken cancellationToken)
     {
@@ -75,7 +79,7 @@ internal sealed partial class UpdateAnnouncementSender(
         }
 
         // Oldest accounts first; anyone already sent, mid-send or out of retries is left out.
-        var queue = await Eligible(db.Runners, accountsCreatedBefore)
+        var queue = await Eligible(db.Runners, accountsCreatedBefore, campaign)
             .Where(r => !db.AnnouncementDeliveries.Any(d => d.RunnerId == r.Id && d.Campaign == campaign
                 && (d.Status != AnnouncementDeliveryStatus.Failed || d.Attempts >= AnnouncementDelivery.MaxAttempts)))
             .OrderBy(r => r.CreatedAt)
@@ -113,7 +117,7 @@ internal sealed partial class UpdateAnnouncementSender(
             throw new ArgumentException($"No announcement called '{campaign}'.", nameof(campaign));
         }
 
-        if (!await Eligible(db.Runners, accountsCreatedBefore).AnyAsync(r => r.Id == runnerId, cancellationToken))
+        if (!await Eligible(db.Runners, accountsCreatedBefore, campaign).AnyAsync(r => r.Id == runnerId, cancellationToken))
         {
             return AnnouncementOutcome.NotDue;
         }
@@ -124,7 +128,7 @@ internal sealed partial class UpdateAnnouncementSender(
         }
 
         // Read again, immediately before sending: updates turned off or the account deleted since means no email.
-        var fresh = await Eligible(db.Runners, accountsCreatedBefore).Where(r => r.Id == runnerId).Select(r => new { r.Email, r.DisplayName }).SingleOrDefaultAsync(cancellationToken);
+        var fresh = await Eligible(db.Runners, accountsCreatedBefore, campaign).Where(r => r.Id == runnerId).Select(r => new { r.Email, r.DisplayName }).SingleOrDefaultAsync(cancellationToken);
         if (fresh is null)
         {
             await LetGoAsync(claim, cancellationToken);
@@ -147,10 +151,13 @@ internal sealed partial class UpdateAnnouncementSender(
         return AnnouncementOutcome.Sent;
     }
 
-    // Only runners with an address who said yes to news and updates (never the weekly-recap setting), whose account
-    // predates the announcement.
-    private static IQueryable<Runner> Eligible(IQueryable<Runner> runners, DateTimeOffset accountsCreatedBefore) =>
-        runners.AsNoTracking().Where(r => r.Email != null && r.Email != "" && r.UpdateEmailsOffAt == null && r.CreatedAt < accountsCreatedBefore);
+    // Runners with an address whose account predates the announcement and who said yes to news and updates (never the
+    // weekly-recap setting). A service notice about the account itself skips the updates choice.
+    private static IQueryable<Runner> Eligible(IQueryable<Runner> runners, DateTimeOffset accountsCreatedBefore, string campaign)
+    {
+        var due = runners.AsNoTracking().Where(r => r.Email != null && r.Email != "" && r.CreatedAt < accountsCreatedBefore);
+        return ServiceCampaigns.Contains(campaign) ? due : due.Where(r => r.UpdateEmailsOffAt == null);
+    }
 
     /// <summary>
     /// What's left today: every email Taperday sent (or is mid-send) in the last 24 hours counts against it, and every

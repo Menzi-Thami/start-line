@@ -31,7 +31,7 @@ export function SignInLanding({ onSignIn, onSignUp, onBack, onGoogle, passwords 
           <button type="button" className="button button-primary" onClick={onSignIn}>{onGoogle ? 'Continue with email' : 'Continue to sign in'}</button>
           <button type="button" className="button button-quiet" onClick={onSignUp}>Create an account</button>
         </div>
-        {passwords && <p className="field-help sign-in-stay">Use your usual sign-in method. Existing accounts may still use an emailed code. For password accounts, your device’s password manager can help you sign in.</p>}
+        {passwords && <p className="field-help sign-in-stay">First time with a password? Enter your email, then tap “Forgot password?” to set one. Your phone can save it for next time.</p>}
         {onBack && <button type="button" className="link-button" onClick={onBack}>Back to Taperday</button>}
       </div>
     </section>

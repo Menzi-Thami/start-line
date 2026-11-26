@@ -1,5 +1,9 @@
 # Password sign-in and production checks
 
+Continue from the [current release completion handover](qa/2026-11-24/master-regression-acceptance.md#current-completion-handover-26-november-2026)
+and update the [existing results ledger](qa/2026-11-24/master-qa-results.md). This guide supplies #327's concrete setup
+steps; the handover maps remaining work to both open PRs and the original acceptance criteria.
+
 This implements the isolated password-check and provisioning part of the
 [Release Readiness Page](https://chatgpt.com/space/page_4e0cdceb0e188191b8f7265ba9eb9f8e).
 The owner authorised production testing while staging SQL is paused. Use a dedicated test identity.
@@ -44,8 +48,11 @@ node scripts/entra-passwords.mjs --tenant EXTERNAL_TENANT_GUID --app PRODUCTION_
 ```
 
 The output contains tenant flow metadata; keep it private unless reviewed for sharing. If a creation response is uncertain,
-inspect the tenant before retrying. The current session has no tenant-admin identity or GitHub environment-variable write
-access, so these live steps remain blocked on the administrator.
+inspect the tenant before retrying. The original implementation session had no tenant-admin identity or GitHub
+environment-variable write access. Claude must check its own authorised session; the PR handover reports Entra access.
+Do not inherit the old environment's restriction as a permanent blocker or broaden permissions to bypass an actual denial.
+Use existing owner approval where it covers the concrete change; prepare any uncovered administrator/deployment change
+and rollback for review. Administrative access does not itself authorise main-flow activation or customer migration.
 
 Register a separate **Taperday password check** SPA in that same tenant, with the exact callback
 `https://taperday.run/password-check.html`. Authorise the same delegated production API scope as the main website.
@@ -55,6 +62,12 @@ self-service password reset through Microsoft's documented tenant settings; keep
 Set production's `VITE_AUTH_PASSWORD_CHECK_CLIENT_ID` to the check application's client ID, then deploy the reviewed code
 through an owner-approved production test release. The existing client, authority and scope settings remain as configured.
 `VITE_AUTH_PASSWORDS` changes explanatory copy only; it does not enable password authentication.
+
+Record setup-code review, the actual pilot deployment, provider/device acceptance and activation as separate gates.
+The check page must be present on the real test build; an unmerged branch or local fixture cannot prove production
+authentication. If a setup-only promotion is needed for the pilot, prepare that exact reviewed build and rollback with
+ordinary sign-in unchanged, using the documented shipping path and the owner's existing controlled-test scope. Keep
+the existing-account-upgrade and full-rollout gates open while performing the pilot.
 
 ## Live acceptance
 

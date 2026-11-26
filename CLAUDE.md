@@ -39,7 +39,7 @@ Each trains differently: see `src/StartLine.Domain/Plans/TrainingPlanGenerator.c
 
 ## Safe testing
 
-Read [docs/testing.md](docs/testing.md) before running tests. **Never test against production or real runner data.** SQL integration tests migrate and reset their database; use disposable local SQL/LocalDB only. The test factory rejects remote hosts and non-test database names. Plan/run changes also require multi-step sequence tests across editing, failed saves, reloads and source availability; record the coverage matrix and gaps, not just a green count. Run the full checks before merging and report limitations honestly.
+Read [docs/testing.md](docs/testing.md) before running tests. **Automated suites must never target production or real runner data.** SQL integration tests migrate and reset their database; use disposable local SQL/LocalDB only. The test factory rejects remote hosts and non-test database names. The owner's separate controlled-production-test authorisation covers only the live checks and dedicated test identities described in the current handover; it does not permit automated SQL tests or QA on real runners. Plan/run changes also require multi-step sequence tests across editing, failed saves, reloads and source availability; record the coverage matrix and gaps, not just a green count. Run the full checks before merging and report limitations honestly.
 
 ## Commands (repo root)
 ```bash

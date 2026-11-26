@@ -1,11 +1,16 @@
 # Release Readiness: implementation and QA evidence
 
-Updated 25 November 2026. The [Release Readiness Page](https://chatgpt.com/space/page_4e0cdceb0e188191b8f7265ba9eb9f8e)
+Updated 26 November 2026. Start with the
+[current completion handover in the existing QA contract](../master-regression-acceptance.md#current-completion-handover-26-november-2026)
+and update the [existing results ledger](../master-qa-results.md). The
+[Release Readiness Page](https://chatgpt.com/space/page_4e0cdceb0e188191b8f7265ba9eb9f8e)
 remains the acceptance contract and live status tracker. This file records reproducible repository evidence; it is not a
 second implementation plan. Baseline: staging `137deca5e29667f9ccde39c8904e89a2f60ad423` (PR #325).
 
 **Production decision: HOLD.** The application fixes below do not resolve Azure quota, migrate Entra credentials or prove
-physical-device sign-in. No tenant, billing, production or real-runner data was changed. No merge or deployment was requested.
+physical-device sign-in. The owner authorised controlled production testing and deferred staging SQL restoration;
+this is not general rollout or migration approval. No tenant, billing, production or real-runner data was changed in
+this implementation pass, and neither PR has been merged or deployed by this pass. Check current access and deployment.
 
 ## Implementation
 
@@ -81,7 +86,9 @@ explicitly annotated; its functional/layout assertions still run, and no empty a
 1. **Azure SQL allowance exhausted.** [Staging deployment 45474581558](https://github.com/Menzi-Thami/start-line/actions/runs/45474581558)
    failed with SQL error 42119. The log says the database is paused until **1 December 2026, 00:00 UTC**. Restoring earlier
    requires the Azure owner's explicit decision to continue with additional charges. Retrying deployments cannot fix quota.
-   After restoration, deploy the reviewed candidate and complete staging smoke before any production decision.
+   The owner subsequently deferred restoration and chose controlled production testing. Verify the approved exact test
+   candidate and shipping route as described in the current handover. Normal staging/release gates remain in force;
+   the test authorisation does not permit an automatic general rollout or a billing change.
 2. **Existing-account password migration is not achieved by changing a user flow.** Microsoft states that changing the flow
    affects new users; existing users keep their original method. Current passkey enrollment requires eligible password-backed
    local accounts, MFA and dedicated credential-management implementation. OTP/social enrollment is not currently supported.
@@ -89,9 +96,11 @@ explicitly annotated; its functional/layout assertions still run, and no empty a
    existing application identity and all plan/history/connection keys. Do not merge accounts by email or promise that
    Forgot password converts an OTP-only identity. See [authentication methods](https://learn.microsoft.com/en-us/entra/external-id/customers/concept-authentication-methods-customers)
    and [passkey requirements](https://learn.microsoft.com/en-us/entra/external-id/customers/how-to-sign-in-with-passkey).
-3. **Real-provider and physical-device acceptance remains required.** This workspace has no Microsoft/Azure live-network
-   access, provider credentials or physical devices. The read-only [staging configuration report 45478086720](https://github.com/Menzi-Thami/start-line/actions/runs/45478086720)
-   confirms missing Strava/email/push integration settings and Data Protection key URI. Staging is intentionally isolated;
+3. **Real-provider and physical-device acceptance remains required.** The earlier implementation environment lacked
+   Microsoft/Azure live-network access, provider credentials and physical devices. Claude must verify its own current
+   authorised access; the PR handover reports Entra access, not physical-device availability. The historical read-only
+   [staging configuration report 45478086720](https://github.com/Menzi-Thami/start-line/actions/runs/45478086720)
+   recorded missing Strava/email/push integration settings and Data Protection key URI; recheck before use. Staging is intentionally isolated;
    missing optional providers do not prevent manual training, and production secrets must not be copied into it casually.
    Brevo app email configuration does not establish Entra OTP delivery. Configure isolated providers only if exercising them.
 4. **Guard installation requires care.** A workflow dispatched on main uses main's definition. This PR cannot retroactively

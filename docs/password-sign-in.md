@@ -22,11 +22,13 @@ The check only calls `GET /api/v1/me` on a deliberate tap and shows the authenti
 It cannot create or link a runner, change a password, upload a run or connect Strava. Stalled work is bounded and cancelled
 on account/session changes. No token or credential is displayed.
 
-**Existing OTP-to-password conversion is not implemented or claimed.** Changing the user flow affects new customers;
-existing customers keep their original method. Password reset does not prove that an OTP identity can be converted.
-AUTH-01 stays open until a Microsoft-supported upgrade has been demonstrated on disposable identities while preserving
-the original application runner/history keys. Do not delete/recreate customer objects, link by email, or add an unverified
-`passwordProfile` write to work around this limitation.
+**An email-code account can't be given a password.** Changing the user flow affects new customers; existing customers
+keep their original method (on the password flow, an email-code address still gets a code). Tested on 27 November 2026
+with a disposable email-code account: Graph refuses both adding a password identity and swapping the email-code identity
+for one ("Adding a non-federated user signInType is not permitted if the user only has social/federated identities …
+Please recreate the user"). So existing runners move by getting a new Microsoft account, and their runner row is pointed
+at it. See [Moving existing email-code runners](#moving-existing-email-code-runners). Never link accounts by email in
+the app.
 
 ## Tenant administrator steps
 
@@ -89,6 +91,33 @@ Only after acceptance may the owner assign the main web app to the candidate for
 flow/app IDs first. If signup or Google fails, restore the previous main-app binding. Keep a used password flow available
 to password customers; never delete user objects as rollback. Removing the check client variable and redeploying disables
 the check page. Deleting an unused unassigned candidate is a separate administrator action.
+
+## Moving existing email-code runners
+
+Taperday finds a runner by the Microsoft object ID in the token (`Runners.IdentitySubject`). Plans, runs, check-ins,
+Strava and devices hang off the runner row, so pointing that one column at a new account moves everything.
+
+For each runner, with the tenant admin account:
+
+1. **Free the email on the old account, without deleting it.** Keep a copy of its identities, `mail` and
+   `accountEnabled`. Set its identities to the `userPrincipalName` one only, `mail` to
+   `retired-<old object id>@<tenant>.onmicrosoft.com` and `accountEnabled` to false. `mail` can't be blank, and the old
+   address stays on the old object as a secondary proxy address, which is harmless.
+2. **Create the new account** with the same display name, a long random password nobody keeps,
+   `passwordPolicies: DisablePasswordExpiration`, and two identities for the same email: `emailAddress` (issuer = the
+   tenant domain) and `federated` (issuer `mail`). Don't set `mail`: the old object still holds the address as a proxy, so
+   Graph refuses it ("same value for property proxyAddresses"). The app falls back to the stored email when the token has
+   none. Both sign-in methods keep working on the new account, so it's safe to do before the switch-over.
+3. **Point the runner at it.** Put the pairs, one `old-object-id new-object-id` per line, in the production environment
+   secret `RUNNER_IDENTITY_MOVES`. Run **Actions → Ops - Move runner sign-in** with `check`, then `apply`. All pairs move in
+   one transaction; a pair that doesn't match exactly one runner stops the run and nothing changes. The log never shows
+   an ID.
+4. The runner is signed out once on every device (the old account's sessions end). They sign in with their email, tap
+   **Forgot password?**, and set a password.
+
+**Undo** for a runner: run the workflow with `undo` (moves the same pairs back), delete the new account, and restore the
+old account's saved identities, `mail` and `accountEnabled`. Once everyone has moved and signed in, clear the secret.
+Old accounts can be deleted later; until then they're the way back.
 
 ## Sources
 

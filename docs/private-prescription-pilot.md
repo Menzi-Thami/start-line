@@ -41,3 +41,5 @@ The pilot now has implementation and synthetic automated coverage. It remains de
 The private UI reuses existing disclosures, buttons, tabs, runner waits and both themes. There is no chat, provider integration, adaptive feature enabling or change to the public three-strength-day cap.
 
 Private run adjustments are deliberately not composed with moves: undo upcoming run changes before moving a run, and undo a move before easing/changing that moved run. The existing revision model cannot safely compose those operations without risking a generic or earlier prescription. The API refuses the combination with `private_move_restore_required`; Undo restores the exact private steps. Gym moves/completion stay independent. Eased workouts cap target RPE at the existing easy-effort range, and restoring either end of a run move protects check-ins at both ends.
+
+Private view state is bound to the verified account ID and saved-plan ID. Display names, email addresses and the legacy Home-cache fingerprint are not private ownership keys. Pending gym responses are discarded on account-view cleanup and checked again against that identity before updating App state.

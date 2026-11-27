@@ -148,6 +148,7 @@ export function App() {
   const locationSearch = useSyncExternalStore(subscribeRoute, routeSearch)
   const auth = useAuth()
   const owner = auth.account ? ownerOf(auth.account) : null
+  const privateOwner = auth.account?.id ?? null
   const runner = useRunner()
   const today = useToday(runner.state.kind === 'ready' ? runner.state.runner.timeZone : undefined)
   // The plan link the page was opened with. Starting afresh forgets it, so a blank builder is really blank.
@@ -252,17 +253,17 @@ export function App() {
     const tab = query.get('planTab') ?? 'week'
     window.history.replaceState(null, '', `?view=build&privatePlan=${encodeURIComponent(id)}&planTab=${encodeURIComponent(tab)}`)
     auth.getToken().then(token => {
-      if (!token || !owner || auth.sessionReady === false) throw new Error('Sign in again to open your private prescription.')
+      if (!token || !privateOwner || auth.sessionReady === false) throw new Error('Sign in again to open your private prescription.')
       return api.me.plan(token, id)
     }).then(saved => {
       if (controller.signal.aborted) return
       if (!saved.plan.isPrivate) throw new Error('This private prescription is unavailable. Open your current plan from Home.')
-      setPlan({ kind: 'ready', plan: saved.plan, inputs, privateOwner: owner!, privatePlanId: id })
+      setPlan({ kind: 'ready', plan: saved.plan, inputs, privateOwner: privateOwner!, privatePlanId: id })
       setEditing(false); setRevealPlan(false)
     }).catch(error => {
       if (!controller.signal.aborted) setPlan({ kind: 'error', message: error instanceof Error ? error.message : 'Couldn’t load your private prescription. Reconnect and try again.', inputs, privatePlanId: id })
     }).finally(() => { if (inflight.current === controller) inflight.current = null })
-  }, [auth, owner])
+  }, [auth, privateOwner])
 
   // Like fetchRaces: state changes only when the request settles.
   const fetchPlan = useCallback((inputs: PlanInputs, beforeShow?: (request: ReturnType<typeof toRequest>, signal: AbortSignal) => Promise<void>, playMovie = false) => {
@@ -426,7 +427,7 @@ export function App() {
   const copiedCurrent = copy?.current && copy.plan?.id === copy.current.id && copy.plan.plan.race.date < today ? null : copy?.current
   const ownPlan = currentTraining(currentPlan.current !== undefined ? currentPlan.current : (copiedCurrent ?? undefined), today)
   const savedOnScreen =
-    plan.kind === 'ready' && ownPlan && (plan.plan.isPrivate ? plan.privateOwner === owner && plan.privatePlanId === ownPlan.id && ownPlan.isPrivate : !ownPlan.isPrivate && samePlan(toRequest(plan.inputs), ownPlan.inputs)) ? ownPlan.id : null
+    plan.kind === 'ready' && ownPlan && (plan.plan.isPrivate ? plan.privateOwner === privateOwner && plan.privatePlanId === ownPlan.id && ownPlan.isPrivate : !ownPlan.isPrivate && samePlan(toRequest(plan.inputs), ownPlan.inputs)) ? ownPlan.id : null
   const checkIns = useCheckIns(savedOnScreen)
   // Sessions a held Strava run completes on that plan: computed by the API on each read, never stored.
   const stravaCompletions = useSyncedCompletions(savedOnScreen, completionsKey(checkIns.entries, runs ?? []))
@@ -581,10 +582,10 @@ export function App() {
     const routed = new URLSearchParams(window.location.search).get('privatePlan')
     const id = ownPlan?.isPrivate && plan.kind === 'ready' && plan.plan.isPrivate && plan.privatePlanId !== ownPlan.id ? ownPlan.id : routed
     if (!id || !ownPlan?.isPrivate || ownPlan.id !== id || view !== 'build' || plan.kind === 'loading'
-      || plan.kind === 'error' || plan.kind === 'ready' && plan.plan.isPrivate && plan.privateOwner === owner && plan.privatePlanId === id) return
+      || plan.kind === 'error' || plan.kind === 'ready' && plan.plan.isPrivate && plan.privateOwner === privateOwner && plan.privatePlanId === id) return
     const inputs = fromRequest(ownPlan.inputs)
     if (inputs) fetchPrivatePlan(id, inputs)
-  }, [ownPlan, view, plan, owner, fetchPrivatePlan])
+  }, [ownPlan, view, plan, privateOwner, fetchPrivatePlan])
 
   // A shared link builds its plan straight away.
   useEffect(() => {
@@ -903,7 +904,7 @@ export function App() {
   const planLocked = view === 'build' && plan.kind === 'ready' && !plan.plan.isPrivate && !editing && (state.kind === 'signed-out' || state.kind === 'needs-sign-up')
   // While sign-in is still starting up nobody is known yet: show neither the plan nor the lock until it is.
   const planPending = view === 'build' && plan.kind === 'ready' && !editing && state.kind === 'loading' && !auth.account
-  const showPlan = view === 'build' && plan.kind === 'ready' && (!plan.plan.isPrivate || plan.privateOwner === owner && !!auth.account && auth.sessionReady !== false) && !editing && !planLocked && !planPending
+  const showPlan = view === 'build' && plan.kind === 'ready' && (!plan.plan.isPrivate || plan.privateOwner === privateOwner && !!auth.account && auth.sessionReady !== false) && !editing && !planLocked && !planPending
   // Signed in, on the builder with nothing open: wait to learn whether there's a plan to open instead.
 
   // Signing up comes first: until the runner has an account, the wizard's first screen is the account step.
@@ -1298,7 +1299,7 @@ export function App() {
               <PlanView
                 privateDay={privateDay}
                 preparation={preparationRequest}
-                onPrivatePlanChanged={next => setPlan(current => current.kind === 'ready' && current.privateOwner === owner && current.privatePlanId === savedOnScreen ? { ...current, plan: next } : current)}
+                onPrivatePlanChanged={next => setPlan(current => current.kind === 'ready' && current.privateOwner === privateOwner && current.privatePlanId === savedOnScreen ? { ...current, plan: next } : current)}
                 onEditStrength={plan.plan.isPrivate ? undefined : changeAnswers}
                 onEditPlan={plan.plan.isPrivate ? undefined : changeAnswers}
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}

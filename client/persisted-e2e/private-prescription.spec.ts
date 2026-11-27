@@ -38,3 +38,22 @@ for (const width of [390, 1440]) for (const theme of ['light', 'dark'] as const)
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByText('Synthetic private gym', { exact: true })).toHaveCount(0)
 })
+
+
+test('same-name accounts with different verified IDs cannot see the previous private prescription', async ({ page, request }) => {
+  await page.clock.setFixedTime(new Date('2026-10-08T09:00:00Z'))
+  const active = (await (await request.get('http://127.0.0.1:5142/api/v1/me/plans')).json()).find((p: { status: string }) => p.status === 'Active')
+  expect(active).toBeTruthy()
+  const otherHeaders = { 'X-Test-User': 'synthetic-private-browser-other' }
+  const other = await request.put('http://127.0.0.1:5142/api/v1/me', { headers: otherHeaders, data: {
+    displayName: 'Synthetic private runner', timeZone: 'Etc/UTC', units: 'Kilometres', weeklyEmails: false, acceptPrivacyNotice: true,
+  } })
+  expect(other.ok()).toBe(true)
+  await page.goto(`/e2e/fixtures/private-prescription.html?view=build&privatePlan=${active.id}`)
+  await expect(page.getByText('Synthetic private run', { exact: true }).first()).toBeVisible()
+  await page.setExtraHTTPHeaders(otherHeaders)
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('synthetic-switch-account', { detail: 'synthetic-private-browser-other' })))
+  await expect(page.getByText('Synthetic private run', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Synthetic private gym', { exact: true })).toHaveCount(0)
+  expect((await request.get(`http://127.0.0.1:5142/api/v1/me/plans/${active.id}`, { headers: otherHeaders })).status()).toBe(404)
+})

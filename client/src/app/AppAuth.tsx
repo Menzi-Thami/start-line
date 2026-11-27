@@ -36,6 +36,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
     return <div className="page"><ConnectingAccount />{slow && <section className="empty" role="alert"><p>Sign-in is taking longer than expected.</p><button type="button" className="button" onClick={() => window.location.reload()}>Reload Taperday</button></section>}</div>
   }
   if (auth.sessionReady && auth.account) return <>{children}</>
+  if (setPasswordLink(publicRoute)) return <SetPasswordStart onStart={auth.signIn} />
 
   return <div className="page">
     <header className="masthead"><span className="wordmark"><Wordmark /></span></header>
@@ -50,6 +51,31 @@ export function SessionGate({ children }: { children: ReactNode }) {
         <button type="button" className="button button-quiet" onClick={auth.signOut}>Use another account</button>
       </div></section>
       : <SignInLanding onSignIn={auth.signIn} onSignUp={auth.signUp} onGoogle={auth.signInWithGoogle} />}
+    </main>
+  </div>
+}
+
+/** The "Set my password" link in emails (`/?view=set-password`). */
+const setPasswordLink = (params: URLSearchParams) => params.get('view') === 'set-password'
+
+/**
+ * Microsoft has no direct password-reset address for External ID: reset is the "Forgot password?" link on its sign-in
+ * page. So the email's link goes straight to that page instead of Taperday's welcome screen. The address becomes Home
+ * first, so coming back (signed in, or by pressing Back on Microsoft's page) never starts the redirect again.
+ */
+function SetPasswordStart({ onStart }: { onStart: () => void }) {
+  useEffect(() => {
+    window.history.replaceState(window.history.state, '', '/?view=home')
+    onStart()
+  }, [onStart])
+  return <div className="page">
+    <header className="masthead"><span className="wordmark"><Wordmark /></span></header>
+    <main id="main-content">
+      <section className="sign-in-landing" aria-labelledby="set-password-title"><div className="sign-in-landing-card">
+        <h1 id="set-password-title">Set your password</h1>
+        <p className="sign-in-lede">Taking you to the sign-in page. Enter your email, tap <strong>Next</strong>, then <strong>Forgot password?</strong></p>
+        <button type="button" className="button button-primary" onClick={onStart}>Go to sign-in</button>
+      </div></section>
     </main>
   </div>
 }

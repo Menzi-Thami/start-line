@@ -127,6 +127,9 @@ public static class UpdateEmails
     /// Sign-in moved from emailed codes to passwords: why, the one-time "Forgot password?" step, and that nothing is lost.
     /// It's about getting into the account, so it carries no unsubscribe links and also reaches runners who turned updates off.
     /// </summary>
+    /// <summary>Opens Microsoft's sign-in page straight away, where "Forgot password?" sets a password (AppAuth.tsx).</summary>
+    public const string SetPasswordPath = "/?view=set-password";
+
     public static EmailMessage PasswordSignIn(string to, string? name = null, bool test = false)
     {
         var greeting = string.IsNullOrWhiteSpace(name) ? "Hi there," : $"Hi {name.Trim()},";
@@ -154,7 +157,7 @@ public static class UpdateEmails
             title: "One password. No more waiting for codes.",
             body: body.ToString(),
             buttonText: "Set my password",
-            buttonUrl: EmailLayout.Site + "/?view=home",
+            buttonUrl: EmailLayout.Site + SetPasswordPath,
             footer: "You're getting this because it's about signing in to your Taperday account.",
             unsubscribeUrl: null);
 
@@ -170,7 +173,7 @@ public static class UpdateEmails
             text.Append("- ").Append(title).Append(": ").Append(detail).Append('\n');
         }
 
-        text.Append('\n').Append(PasswordClosing).Append("\n\nSet my password: https://taperday.run/?view=home\n");
+        text.Append('\n').Append(PasswordClosing).Append("\n\nSet my password: ").Append(EmailLayout.Site).Append(SetPasswordPath).Append('\n');
         return new EmailMessage(to, (test ? "[Test] " : "") + PasswordSubject, html, text.ToString(), null);
     }
 

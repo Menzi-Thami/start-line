@@ -68,6 +68,11 @@ public sealed class UpdateAnnouncementEmailTests
 
         mail.Unsubscribe.ShouldBeNull();
         mail.Text.ShouldNotContain("Unsubscribe");
+
+        // The button goes straight to Microsoft's sign-in page, where "Forgot password?" is, not to Taperday's Home.
+        mail.Html.ShouldContain("https://taperday.run/?view=set-password");
+        mail.Text.ShouldContain("Set my password: https://taperday.run/?view=set-password");
+        mail.Html.ShouldNotContain("/?view=home");
     }
 
     [Theory]

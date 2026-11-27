@@ -87,6 +87,24 @@ public class PrivatePrescriptionTests
     }
 
     [Fact]
+    public void Session_text_gives_paces_as_minutes_per_kilometre()
+    {
+        static PrivateStep Leaf(StepKind kind, double? km, double? seconds, double fast, double slow, string? effort = null) =>
+            new(kind, km, seconds, PaceZone.Tempo, fast, slow, effort, 1, []);
+        var session = new PrivateSession(Guid.NewGuid(), Today, SessionType.CruiseIntervals, "Threshold", 7, PaceZone.Tempo,
+        [
+            Leaf(StepKind.WarmUp, 2, null, 375, 415, "easy"),
+            new(StepKind.Repeat, null, null, null, null, null, null, 3, [Leaf(StepKind.Run, null, 360, 300, 315, "controlled"), Leaf(StepKind.Recover, null, 90, 375, 415)]),
+            Leaf(StepKind.CoolDown, 3.576, null, 375, 415),
+        ]);
+
+        var detail = session.ToPlanned().Detail;
+
+        detail.ShouldBe("Target effort 7/10. Warm up 2 km at 6:15–6:55/km (easy); Repeat 3 times: Run 6 min at 5:00–5:15/km (controlled), then Recover 1 min 30 s at 6:15–6:55/km; Cool down 3.576 km at 6:15–6:55/km.");
+        detail.ShouldNotContain("seconds");
+    }
+
+    [Fact]
     public void Public_generator_still_caps_strength_at_three()
     {
         Should.Throw<DomainException>(() => TrainingPlanGenerator.Generate(new(Distance.FromKilometres(10), TimeSpan.FromMinutes(60), new(2026, 11, 7), Today,

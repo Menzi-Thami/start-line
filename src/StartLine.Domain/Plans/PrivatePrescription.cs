@@ -128,9 +128,35 @@ public sealed record PrivateStep(StepKind Kind, double? DistanceKm, double? Dura
 {
     public double Kilometres => Kind == StepKind.Repeat ? Times * Steps.Sum(s => s.Kilometres)
         : DistanceKm ?? DurationSeconds!.Value / ((FastestSecondsPerKm!.Value + SlowestSecondsPerKm!.Value) / 2);
+    /// <summary>Reads like the plan's step list: "Warm up 2 km at 6:15–6:55/km (easy)", "Run 1 min 30 s at …".</summary>
     public string Describe() => Kind == StepKind.Repeat
-        ? string.Create(CultureInfo.InvariantCulture, $"Repeat {Times} times: {string.Join("; ", Steps.Select(s => s.Describe()))}")
-        : string.Create(CultureInfo.InvariantCulture, $"{Kind}: {(DistanceKm is { } km ? $"{km:0.###} km" : $"{DurationSeconds:0.##} s")} at {FastestSecondsPerKm:0.##}–{SlowestSecondsPerKm:0.##} seconds/km{(Effort is null ? "" : $" ({Effort})")}");
+        ? string.Create(CultureInfo.InvariantCulture, $"Repeat {Times} times: {string.Join(", then ", Steps.Select(s => s.Describe()))}")
+        : string.Create(CultureInfo.InvariantCulture, $"{Label(Kind)} {(DistanceKm is { } km ? km.ToString("0.### km", CultureInfo.InvariantCulture) : Duration(DurationSeconds!.Value))} at {Clock(FastestSecondsPerKm!.Value)}–{Clock(SlowestSecondsPerKm!.Value)}/km{(Effort is null ? "" : $" ({Effort})")}");
+
+    private static string Label(StepKind kind) => kind switch
+    {
+        StepKind.WarmUp => "Warm up",
+        StepKind.CoolDown => "Cool down",
+        StepKind.Recover => "Recover",
+        _ => "Run",
+    };
+
+    private static string Clock(double secondsPerKm)
+    {
+        var total = (int)Math.Round(secondsPerKm);
+        return string.Create(CultureInfo.InvariantCulture, $"{total / 60}:{total % 60:00}");
+    }
+
+    private static string Duration(double seconds)
+    {
+        var total = (int)Math.Round(seconds);
+        return (total / 60, total % 60) switch
+        {
+            (0, var s) => string.Create(CultureInfo.InvariantCulture, $"{s} s"),
+            (var m, 0) => string.Create(CultureInfo.InvariantCulture, $"{m} min"),
+            (var m, var s) => string.Create(CultureInfo.InvariantCulture, $"{m} min {s} s"),
+        };
+    }
     public SessionStep ToStep() => new(Kind, DistanceKm, DurationSeconds is { } seconds ? TimeSpan.FromSeconds(seconds) : null, Zone,
         FastestSecondsPerKm is { } fast && SlowestSecondsPerKm is { } slow ? new(Pace.FromSecondsPerKilometre(fast), Pace.FromSecondsPerKilometre(slow)) : null,
         Effort, Times, Kind == StepKind.Repeat ? new SessionSteps(Steps.Select(s => s.ToStep())) : null);

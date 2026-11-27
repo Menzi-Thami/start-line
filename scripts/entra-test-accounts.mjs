@@ -71,7 +71,7 @@ export function randomPassword() {
   return `${randomBytes(18).toString('base64url')}aA1!`
 }
 
-class Graph {
+export class Graph {
   constructor(token) { this.token = token }
   async request(path, method = 'GET', body) {
     const response = await fetch(`${GRAPH}${path}`, { method, redirect: 'error', signal: AbortSignal.timeout(30_000),
@@ -93,7 +93,7 @@ class Graph {
   }
 }
 
-function token(tenant) {
+export function graphToken(tenant) {
   // One fixed command line; its only variable part is the tenant, already checked to be a GUID. A command string (not
   // an argument list) is what lets Windows find az.cmd.
   const ask = scope => execSync(`az account get-access-token ${scope} ${tenant} --resource-type ms-graph --query accessToken --output tsv --only-show-errors`,
@@ -113,7 +113,7 @@ function savePassword(tag, password) {
 async function main() {
   const { positionals: [command], values } = parseArgs({ allowPositionals: true, options: { tenant: { type: 'string' }, tag: { type: 'string' }, inbox: { type: 'string' } } })
   if (!GUID.test(values.tenant ?? '')) throw new Error('Pass --tenant <External ID tenant id>.')
-  const graph = new Graph(token(values.tenant))
+  const graph = new Graph(graphToken(values.tenant))
   const users = await graph.list('/users?$select=id,displayName,identities,accountEnabled,createdDateTime&$top=999')
   const accounts = testAccounts(users)
   const tag = values.tag?.toLowerCase()

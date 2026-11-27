@@ -10,6 +10,7 @@ target production ([testing.md](../testing.md)).
 |---|---|---|
 | Read the tenant (users, apps, user flows, audit and sign-in logs) | Yes, once the CLI admin session exists | [Access](#access) |
 | Create, re-password or remove a test account | Yes | `scripts/entra-test-accounts.mjs` |
+| Tidy up old accounts after runners move (report, then `--apply`) | Yes | `scripts/entra-tidy-moves.mjs`, [password-sign-in.md](../password-sign-in.md#status-27-november-2026) |
 | Sign in to taperday.run as a test account with its password | Yes | [Checking a sign-in](#checking-a-sign-in) |
 | Compare a runner ID before and after a change | Yes | `/password-check.html` → **Check account access** |
 | Open a PR to `staging`, wait for CI, merge it | Yes | [how-we-ship.md](../how-we-ship.md) |

@@ -654,6 +654,8 @@ export function App() {
         ? `?view=${next}`
         : plan.kind === 'ready' && plan.plan.isPrivate
           ? `?view=build&privatePlan=${encodeURIComponent(ownPlan?.id ?? '')}`
+          : plan.kind === 'error' && plan.privatePlanId
+            ? `?view=build&privatePlan=${encodeURIComponent(plan.privatePlanId)}`
           : plan.kind === 'ready' || plan.kind === 'error'
           ? `?${toSearchParams(plan.inputs)}`
           : ''

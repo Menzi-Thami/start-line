@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../../app/auth-context'
 import { api } from '../../lib/api-client'
 import { formatDate } from '../../lib/format'
@@ -8,6 +8,13 @@ export function PrivateGym({ planId, session, today, onChanged, readOnly = false
   planId: string; session: Session; today: string; onChanged: (plan: TrainingPlan) => void; readOnly?: boolean
 }) {
   const auth = useAuth()
+  const activeAuth = useRef<typeof auth | null>(auth)
+  useEffect(() => {
+    const owner = activeAuth
+    owner.current = auth
+    return () => { owner.current = null }
+  }, [auth])
+  const changed = (plan: TrainingPlan) => { if (activeAuth.current === auth) onChanged(plan) }
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [date, setDate] = useState(session.date)
@@ -27,17 +34,17 @@ export function PrivateGym({ planId, session, today, onChanged, readOnly = false
     <p className="field-help">{session.gym} body · {session.gymDone ? 'Completed' : 'Scheduled'}</p>
     {!readOnly && <>
       {session.date <= today && <button type="button" className="button button-quiet" disabled={busy} onClick={() => void work(async token => {
-        onChanged(await api.me.completePrivateGym(token, planId, id, !session.gymDone)); setMessage(session.gymDone ? 'Gym completion removed.' : 'Gym completed. Your run is separate.')
+        changed(await api.me.completePrivateGym(token, planId, id, !session.gymDone)); setMessage(session.gymDone ? 'Gym completion removed.' : 'Gym completed. Your run is separate.')
       })}>{session.gymDone ? 'Undo gym completion' : 'Complete gym'}</button>}
       {session.date >= today && !session.gymDone && <details className="disclosure"><summary>Move gym</summary>
         <label className="field">New gym date<input type="date" min={today} value={date} onChange={event => { setDate(event.target.value); setPreview(null) }} /></label>
         <button type="button" className="button button-quiet" disabled={busy || !date || date === session.date} onClick={() => void work(async token => setPreview(await api.me.movePrivateGym(token, planId, id, date)))}>Preview gym move</button>
         {preview && <><p role="status">Move {session.title} to {formatDate(date)}? Running stays as prescribed.</p><button type="button" className="button" disabled={busy} onClick={() => void work(async token => {
-          const result = await api.me.movePrivateGym(token, planId, id, date, preview.token); onChanged(result.proposed); setPreview(null)
+          const result = await api.me.movePrivateGym(token, planId, id, date, preview.token); changed(result.proposed); setPreview(null)
         })}>Apply gym move</button></>}
         <button type="button" className="button button-quiet" disabled={busy} onClick={() => void work(async token => {
           const undo = await api.me.movePrivateGym(token, planId, id, null)
-          const result = await api.me.movePrivateGym(token, planId, id, null, undo.token); onChanged(result.proposed); setPreview(null)
+          const result = await api.me.movePrivateGym(token, planId, id, null, undo.token); changed(result.proposed); setPreview(null)
         })}>Restore prescribed gym date</button>
       </details>}
     </>}

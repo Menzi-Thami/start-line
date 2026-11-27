@@ -1,8 +1,10 @@
+using System.Data.Common;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
 using StartLine.Domain.Plans;
@@ -97,6 +99,8 @@ public class PrivatePrescriptionTests
         var preview = await Preview(owner); var id = await Active(owner, preview);
         (await other.PostAsJsonAsync(Url(Imports + "/preview"), Payload())).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await Activate(other, preview)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        var anotherEnabledOwner = await Runner(factory);
+        (await Activate(anotherEnabledOwner, preview)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         foreach (var path in new[] { $"{Plans}/{id}", $"{Plans}/{id}/check-ins", $"{Plans}/{id}/progress", $"{Plans}/{id}/insights", $"{Plans}/{id}/strava-completions", $"{Imports}/plans/{id}/calendar.ics" })
             (await other.GetAsync(Url(path))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
         (await other.DeleteAsync(Url($"{Plans}/{id}"))).StatusCode.ShouldBe(HttpStatusCode.NotFound);
@@ -270,6 +274,42 @@ public class PrivatePrescriptionTests
         (await client.PostAsJsonAsync(Url($"{Plans}/{id}/life-happens/preview"), new { situation = "ShortOnTime", date = "2026-10-10", minutes = 20 })).StatusCode.ShouldBe(HttpStatusCode.Conflict);
         var restored = await Json(await client.PostAsJsonAsync(Url($"{Plans}/{id}/adjustments/restore"), new { dates = new[] { "2026-10-10" } }));
         restored.GetProperty("plan").GetRawText().ShouldBe(preview.GetProperty("plan").GetRawText());
+    }
+
+    [Fact]
+    public async Task Storage_failure_during_activation_rolls_back_archive_and_can_retry_the_same_preview()
+    {
+        await using var factory = new FailingActivationFactory(); var client = await Runner(factory);
+        var original = (await Json(await client.PostAsJsonAsync(Url(Plans), new { plan = Payload()["baseline"] }))).GetProperty("id").GetGuid();
+        var preview = await Preview(client);
+        factory.Failure.FailNextPlanInsert = true;
+        (await Activate(client, preview)).StatusCode.ShouldBe(HttpStatusCode.InternalServerError);
+        (await Json(await client.GetAsync(Url(Plans)))).EnumerateArray().Single(p => p.GetProperty("status").GetString() == "Active")
+            .GetProperty("id").GetGuid().ShouldBe(original);
+        var imported = await Active(client, preview); imported.ShouldNotBe(original);
+        (await Json(await client.GetAsync(Url($"{Plans}/{original}")))).GetProperty("status").GetString().ShouldBe("Archived");
+    }
+
+    private sealed class FailingActivationFactory : StartLineApiFactory
+    {
+        public InsertFailure Failure { get; } = new();
+        protected override void ConfigureServices(IServiceCollection services) =>
+            services.AddDbContext<StartLineDbContext>(options => options.AddInterceptors(Failure));
+    }
+
+    private sealed class InsertFailure : DbCommandInterceptor
+    {
+        public bool FailNextPlanInsert { get; set; }
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(DbCommand command, CommandEventData eventData,
+            InterceptionResult<DbDataReader> result, CancellationToken cancellationToken = default)
+        {
+            if (FailNextPlanInsert && command.CommandText.Contains("INSERT INTO [SavedPlans]", StringComparison.Ordinal))
+            {
+                FailNextPlanInsert = false;
+                throw new InvalidOperationException("Synthetic activation insert failure.");
+            }
+            return ValueTask.FromResult(result);
+        }
     }
 
 }

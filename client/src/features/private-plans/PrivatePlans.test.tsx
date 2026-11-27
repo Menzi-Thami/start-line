@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import { AuthContext, accountsOff } from '../../app/auth-context'
@@ -63,4 +63,16 @@ it('private plans have no share link or calendar subscription and keep their exp
   expect(screen.queryByRole('button', { name: 'Share link' })).not.toBeInTheDocument()
   expect(screen.queryByRole('link', { name: /Google Calendar/ })).not.toBeInTheDocument()
   expect(screen.getByText('Download a calendar file')).toBeInTheDocument()
+})
+
+it('ignores a gym response after its account view has unmounted', async () => {
+  let resolve!: (value: typeof planFixture) => void
+  vi.spyOn(api.me, 'completePrivateGym').mockReturnValue(new Promise(done => { resolve = done }))
+  const onChanged = vi.fn()
+  const session = { ...planFixture.weeks[0]!.sessions[0]!, type: 'Strength' as const, prescriptionId: 'gym-id', gym: 'Upper' as const }
+  const view = render(<PrivateGym planId="plan-id" session={session} today={session.date} onChanged={onChanged} />, { wrapper })
+  await userEvent.click(screen.getByRole('button', { name: 'Complete gym' }))
+  view.unmount()
+  await act(async () => resolve({ ...planFixture, isPrivate: true }))
+  expect(onChanged).not.toHaveBeenCalled()
 })

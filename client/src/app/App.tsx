@@ -1298,7 +1298,7 @@ export function App() {
               <PlanView
                 privateDay={privateDay}
                 preparation={preparationRequest}
-                onPrivatePlanChanged={next => setPlan(current => current.kind === 'ready' ? { ...current, plan: next } : current)}
+                onPrivatePlanChanged={next => setPlan(current => current.kind === 'ready' && current.privateOwner === owner && current.privatePlanId === savedOnScreen ? { ...current, plan: next } : current)}
                 onEditStrength={plan.plan.isPrivate ? undefined : changeAnswers}
                 onEditPlan={plan.plan.isPrivate ? undefined : changeAnswers}
                 key={`${plan.plan.race.name}|${plan.plan.race.date}|${plan.plan.startDate}`}

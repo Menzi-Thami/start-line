@@ -1,12 +1,11 @@
 # Taperday
 
-## Current release completion (#327; #326 merged)
+## Sign-in and testing without the owner
 
-Start with the [current completion handover](docs/qa/2026-11-24/master-regression-acceptance.md#current-completion-handover-26-november-2026)
-and update the existing [results ledger](docs/qa/2026-11-24/master-qa-results.md). PR #326 is merged; continue open PR #327
-and verify the integrated staging changes. Preserve completed implementation. The handover separates code/CI evidence
-from outstanding provider, account-upgrade, device and deployment acceptance. Verify your own authorised access and
-existing owner instructions before declaring a step blocked.
+Since 27 November 2026 every runner signs in with email and password ([docs/password-sign-in.md](docs/password-sign-in.md)).
+To check sign-in or a runner journey on taperday.run, follow [docs/qa/test-accounts.md](docs/qa/test-accounts.md): what
+you can do alone, the standing test accounts, `scripts/entra-test-accounts.mjs`, and the few steps that need the owner.
+Never use a real runner's account. Older release history: [completion handover](docs/qa/2026-11-24/master-regression-acceptance.md#current-completion-handover-26-november-2026).
 
 ## Post-run rating and adaptive training (PR #295)
 

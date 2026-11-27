@@ -1,5 +1,26 @@
 # Password sign-in and production checks
 
+## Status (27 November 2026)
+
+**Live.** Taperday Web and Taperday Web (staging) use "Taperday sign up and sign in (password)" (email and password,
+plus Google). Every email-code runner was moved to a new account with the same email, and their runner row re-pointed
+([Moving existing email-code runners](#moving-existing-email-code-runners)). The owner's own account was checked on the
+web and the iPhone app: password sign-in, own plan, still signed in after a relaunch. The password notice email has
+gone out. Test accounts and how to check things: [qa/test-accounts.md](qa/test-accounts.md).
+
+**Undo** (while the old accounts still exist): run **Ops - Move runner sign-in** with `undo`, give each old account back
+its email-code identity, `mail` and `accountEnabled: true`, delete the new accounts, and move both web apps back to
+"Taperday sign up and sign in v2".
+
+**Tidy-up, once every moved runner has signed in** (check the sign-in log, not the lagging "last sign-in" field):
+1. Clear the production secret `RUNNER_IDENTITY_MOVES`.
+2. Delete the disabled old accounts (soft delete; restorable for 30 days).
+3. Delete the "Taperday sign up and sign in v2" flow last; until then it's part of the undo.
+
+Keep the test accounts; they're how the next change gets checked.
+
+## History
+
 Continue from the [current release completion handover](qa/2026-11-24/master-regression-acceptance.md#current-completion-handover-26-november-2026)
 and update the [existing results ledger](qa/2026-11-24/master-qa-results.md). This guide supplies #327's concrete setup
 steps; the handover maps remaining work to open #327, merged #326 and the original acceptance criteria.

@@ -12,10 +12,20 @@ gone out. Test accounts and how to check things: [qa/test-accounts.md](qa/test-a
 its email-code identity, `mail` and `accountEnabled: true`, delete the new accounts, and move both web apps back to
 "Taperday sign up and sign in v2".
 
-**Tidy-up, once every moved runner has signed in** (check the sign-in log, not the lagging "last sign-in" field):
+**Tidy-up, one runner at a time.** Nothing is broken for a runner who hasn't signed in yet: their new account works
+whenever they come back. Their old, disabled account is only the way back, so it goes once they've signed in:
+
+```bash
+node scripts/entra-tidy-moves.mjs --tenant <tenant-id>           # report: who has signed in, who we're waiting for
+node scripts/entra-tidy-moves.mjs --tenant <tenant-id> --apply   # remove old accounts whose runner has signed in
+```
+
+It's safe to run any time and as often as you like. It pairs each old account with the one enabled account that signs
+in with the same email, and removes the old one only once that new account has a successful sign-in. It reads both the
+sign-in log (immediate, kept 7 days) and Microsoft's "last sign-in" field (lags by hours). Anything it can't pair
+cleanly is left alone and reported. Removal is a soft delete, restorable for 30 days. When it reports nothing left:
 1. Clear the production secret `RUNNER_IDENTITY_MOVES`.
-2. Delete the disabled old accounts (soft delete; restorable for 30 days).
-3. Delete the "Taperday sign up and sign in v2" flow last; until then it's part of the undo.
+2. Delete the "Taperday sign up and sign in v2" flow in the portal (the CLI account can't change user flows).
 
 Keep the test accounts; they're how the next change gets checked.
 

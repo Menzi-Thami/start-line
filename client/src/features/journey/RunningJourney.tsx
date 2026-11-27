@@ -207,7 +207,7 @@ export function RunningJourney({ units, today, onArchived, onOpenRecovery }: { u
                     {(recovery || recoveryWelcome(opened.chapter.raceResult?.outcome) && !isLiveRecovery(state.journey.recovery)) && <button type="button" className="button" onClick={() => openRecovery(opened.chapter.raceResult?.id)}>{recovery ? 'Open recovery plan' : 'Plan recovery from this race'}</button>}
                     {opened.chapter.detailsUnavailable
                       ? <p role="status">The original race date and distance weren’t saved with this older plan. Its training story cannot be rebuilt from the current catalogue.</p>
-                      : <TrainingStory story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />}
+                      : <TrainingStory allowSharing={!opened.chapter.isPrivate} story={storyFromChapter(opened.chapter)} units={units} raceResult={opened.chapter.raceResult} />}
                   </div>
                 )}
               </li>

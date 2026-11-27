@@ -70,3 +70,5 @@ Apply only through the normal approved deployment pipeline. Disable entitlement 
 Staging deployment requires merging #332; the handover requires approval for that merge/deploy. Real owner activation requires separate approval and the private payload. No staging/production changes are performed by these instructions.
 
 Private run adjustments are deliberately not composed with moves: undo upcoming run changes before moving a run, and undo a move before easing/changing that moved run. The existing revision model cannot safely compose those operations without risking a generic or earlier prescription. The API refuses the combination with `private_move_restore_required`; Undo restores the exact private steps. Gym moves/completion stay independent. Eased workouts cap target RPE at the existing easy-effort range, and restoring either end of a run move protects check-ins at both ends.
+
+Training-story card sharing is disabled for private current and archived chapters because a tick-only story can contain prescribed distance or schedule totals. Actual recorded-run stickers remain available. The owner can still view the private story and export their account data.

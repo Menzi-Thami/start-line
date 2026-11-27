@@ -46,4 +46,10 @@ describe('Training story sharing', () => {
     expect(doc.documentElement.textContent).toContain('A <race> & "friends"')
     expect(doc.documentElement.textContent).toContain('4:40:12')
   })
+  it('never offers a share card containing a private prescription or its planned totals', () => {
+    render(<TrainingStory story={storyFromChapter(chapter())} units="km" allowSharing={false} />)
+    expect(screen.queryByRole('button', { name: 'Share my story' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save story card' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Share your training story' })).not.toBeInTheDocument()
+  })
 })

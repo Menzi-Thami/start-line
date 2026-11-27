@@ -79,7 +79,8 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
                 [.. achievements.Where(a => a.SavedPlanId == b.Saved.Id).OrderBy(a => a.Kind).Select(AchievementDto.From)],
                 b.Saved.Inputs.GoalTime,
                 withWeeks ? [.. b.Recap.WeekBreakdown.Select(w => new ChapterWeekDto(w.WeekStart, w.ScheduledRuns, w.ConfirmedRuns, w.RecordedKm))] : null,
-                Version: JourneyVersion.Of(b.Saved.Version));
+                Version: JourneyVersion.Of(b.Saved.Version))
+            { IsPrivate = b.Saved.Prescription is not null };
         }).ToDictionary(c => c.PlanId);
         // Do not invent a schedule, counts or a new award when a legacy race's details were never retained.
         var unavailableIds = plans.Where(p => !chapters.ContainsKey(p.Id)).Select(p => p.Id).ToList();
@@ -94,7 +95,7 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
                 new TrainingRecapDto(0, 0, 0, 0, 0, 0, 0, 0, null, 0, null, null, null, false, false, false, 0),
                 result is null ? null : RaceResultDto.From(result, saved.Inputs.GoalTime),
                 [.. retainedAwards.Where(a => a.SavedPlanId == saved.Id).Select(AchievementDto.From)], saved.Inputs.GoalTime,
-                null, DetailsUnavailable: true, Version: JourneyVersion.Of(saved.Version));
+                null, DetailsUnavailable: true, Version: JourneyVersion.Of(saved.Version)) { IsPrivate = saved.Prescription is not null };
         })];
     }
 

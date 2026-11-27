@@ -5387,6 +5387,7 @@ export interface components {
             /** @default false */
             detailsUnavailable: boolean;
             version?: null | string;
+            isPrivate?: boolean;
         };
         PlannedVsActualDto: {
             planName: string;

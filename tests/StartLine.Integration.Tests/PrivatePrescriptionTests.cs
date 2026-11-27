@@ -88,6 +88,8 @@ public class PrivatePrescriptionTests
         var entries = await Json(await client.GetAsync(Url($"{Plans}/{id}/check-ins"))); entries.GetArrayLength().ShouldBe(1);
         var reopened = (await Json(await client.GetAsync(Url($"{Plans}/{id}")))).GetProperty("plan");
         reopened.GetProperty("weeks")[0].GetProperty("sessions").EnumerateArray().Single(s => s.GetProperty("type").GetString() == "Strength" && s.GetProperty("date").GetString() == "2026-10-08").GetProperty("gymDone").GetBoolean().ShouldBeTrue();
+        var journey = await Json(await client.GetAsync(Url("/api/v1/me/journey")));
+        journey.GetProperty("chapters").EnumerateArray().Single(c => c.GetProperty("planId").GetGuid() == id).GetProperty("isPrivate").GetBoolean().ShouldBeTrue();
         var export = await Json(await client.GetAsync(Url("/api/v1/me/export")));
         export.GetRawText().ShouldContain("prescription"); export.GetRawText().ShouldNotContain(preview.GetProperty("token").GetString()!);
     }
@@ -237,6 +239,8 @@ public class PrivatePrescriptionTests
         repeated.GetProperty("isCurrent").GetBoolean().ShouldBeFalse();
         var archived = await Json(await client.GetAsync(Url($"{Plans}/{id}")));
         archived.GetProperty("status").GetString().ShouldBe("Archived"); archived.GetProperty("plan").GetRawText().ShouldBe(plan.GetRawText());
+        var chapter = await Json(await client.GetAsync(Url($"/api/v1/me/journey/plans/{id}")));
+        chapter.GetProperty("isPrivate").GetBoolean().ShouldBeTrue();
         await Json(await client.PostAsync(Url($"{Plans}/{id}/restore"), null));
         (await Json(await client.GetAsync(Url($"{Plans}/{id}")))).GetProperty("plan").GetRawText().ShouldBe(plan.GetRawText());
         (await client.DeleteAsync(Url("/api/v1/me"))).StatusCode.ShouldBe(HttpStatusCode.NoContent);

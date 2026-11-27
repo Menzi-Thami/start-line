@@ -12,6 +12,7 @@ interface Props {
   raceResult?: RaceResult | null
   onReplay?: (trigger: HTMLElement) => void
   onNext?: () => void
+  allowSharing?: boolean
   nextLabel?: string
 }
 
@@ -19,7 +20,7 @@ interface Props {
  * A finish-line editorial recap, not a spreadsheet. Measured, planned and runner-confirmed
  * figures remain visibly distinct. The same trusted figures go into the downloadable share card.
  */
-export function TrainingStory({ story, units, raceResult, onReplay, onNext, nextLabel = 'Plan my next challenge' }: Props) {
+export function TrainingStory({ allowSharing = true, story, units, raceResult, onReplay, onNext, nextLabel = 'Plan my next challenge' }: Props) {
   const titleId = useId()
   const [notice, setNotice] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
@@ -50,13 +51,14 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
   const needsFile = typeof navigator.share === 'function'
   const cardKey = JSON.stringify({ card, fileName })
   useEffect(() => {
-    if (!needsFile) return
+    if (!needsFile || !allowSharing) return
     let current = true
     prepareCard(card, fileName).then(file => { if (current) setPrepared({ key: cardKey, file }) })
       .catch(() => { if (current) setPrepared({ key: cardKey, file: null }) })
     return () => { current = false }
-  }, [card, cardKey, fileName, needsFile])
+  }, [card, cardKey, fileName, needsFile, allowSharing])
   const download = async () => {
+    if (!allowSharing) return
     try {
       const kind = await downloadCard(card, fileName)
       setNotice(kind === 'png' ? 'Card saved as a picture.' : 'Card saved as an SVG picture.')
@@ -65,6 +67,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
     }
   }
   const share = async () => {
+    if (!allowSharing) return
     if (sharing || (needsFile && prepared?.key !== cardKey)) return
     setSharing(true)
     try {
@@ -148,7 +151,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
           </ol>
         </figure>
       )}
-      <section className="training-story-share" aria-label="Share your training story">
+      {allowSharing && <section className="training-story-share" aria-label="Share your training story">
         <div>
           <p className="plan-kicker">YOUR STORY. YOUR FINISH LINE.</p>
           <h4>A finish worth sharing.</h4>
@@ -158,7 +161,7 @@ export function TrainingStory({ story, units, raceResult, onReplay, onNext, next
           <button type="button" className="button button-primary" disabled={sharing || (needsFile && prepared?.key !== cardKey)} onClick={() => void share()}>Share my story</button>
           <button type="button" className="button" onClick={() => void download()}>Save story card</button>
         </div>
-      </section>
+      </section>}
       {story.source === 'device' && (
         <p className="field-help">This story comes from this device only. Sign in to keep it, with your race results, on every device.</p>
       )}

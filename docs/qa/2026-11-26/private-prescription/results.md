@@ -1,40 +1,39 @@
 # Private prescription verification ledger
 
-PR #332, branch `feat/private-prescription-pilot`, base `staging`. Synthetic data only. Local Linux, .NET 10.0.302, Node 24; disposable loopback SQL Server 2022. No real Entra, Strava, runner data, staging deployment, physical-device claim or real plan activation.
+PR #332, branch `feat/private-prescription-pilot`, base `staging`. Synthetic data only. Local Linux, .NET 10.0.302, Node 24 and disposable loopback SQL Server 2022. No real Entra, Strava, runner data, staging deployment, physical-device claim or real plan activation.
 
-## Evidence recorded so far
+## Local evidence
 
-- Focused domain: 7 passed, including generator strength cap, rest/Saturday race/Sunday long run, explicit step totals, repeat recovery and nonfinite/invalid rejection.
-- Real SQL API: full integration suite 450 passed, including the initial 11 private prescription cases covering activation concurrency, ownership, archive/restore, deletion, high-fatigue easing/undo and real Kestrel request limits.
-- Authenticated persisted browser: 5 passed at 390 and 1440 widths, light and dark. Test-only Kestrel host + actual API + SQL, synthetic header authentication, no API route mocks. Import → review/consent → activate → private Plan/Strength → independent gym completion → API persistence assertion → reload → no private schedule in browser storage → sign-out. An additional same-name/different-verified-ID account switch proves that the previous prescription disappears and the other account receives 404. This does not establish Microsoft sign-in or physical-phone behavior.
-- Focused private SQL API suite: 13 passed; two further security scenarios passed (another enabled owner and an injected insert failure with transactional rollback/retry), including exact fractional step/pace preservation, receipt retries after replacement, stored expired-preview export, safe move/easing refusal and undo.
-- Full client suite: 151 files / 1148 tests passed. Lint, TypeScript, production build and audit passed (zero vulnerabilities). Final auth/private UI regressions: 48 passed, including a pending gym response after unmount/account change.
-- Copy check: 4309 pieces in 293 files, zero style/spelling findings. Initial copy failures used “unlogged”; replaced with plain wording.
-- Focused client: 5 passed (entitlement UI, explicit consent/error recovery, independent gym endpoint, storage exclusion, private sharing controls).
-- Full backend run through `scripts/check.sh`: Domain 1288, Application 239, Architecture 11 and SQL Integration 450 passed, zero skips. Strict Release build: zero warnings/errors. Migration/model consistency passed. An earlier dispatcher composition failure was corrected by registering the new infrastructure abstraction in the test composition root.
-- Screenshots: `gym-390-light.png`, `gym-390-dark.png`, `gym-1440-light.png`, `gym-1440-dark.png`. Real locally persisted synthetic plan, Chromium viewport emulation. No provider credentials or private runner data.
+- Full backend checkpoint: Domain 1288, Application 239, Architecture 11 and SQL Integration 453 passed (1991 total), zero skips. Strict Release build: zero warnings/errors. Migration/model consistency passed. Public generator snapshots remain unchanged.
+- Private SQL coverage: 14 tests, including owner/default-denied access, another entitled owner, strict invalid import rejection, consent/token/expiry/stale version, concurrent activation, idempotency after replacement, archive/restore/deletion, exact fractional steps and pace, independent gym completion/movement, high-RPE easing/undo and refusal of unsafe composition. An injected storage failure proves archive rollback and retry of the same reviewed import. Real Kestrel separately verifies the request limit.
+- Full client checkpoint: 151 files / 1149 tests passed, plus lint, TypeScript, production build and dependency audit (zero vulnerabilities). The final journey-sharing and private UI checks passed 25 tests; current/archived private chapter flags also passed two SQL API regressions. Auth/private UI regressions previously passed 48 tests, including a late gym response after unmount/account change.
+- Persisted browser: real Kestrel/API/SQL, synthetic header authentication, no API route mocks. Four phone/desktop and light/dark journeys cover import → review/consent → activate → private Plan/Strength → independent gym completion → persisted API assertion → reload → browser-storage exclusion → sign-out. A fifth scenario independently activates its own plan, switches between accounts with the same name but different verified IDs, verifies the old prescription disappears and receives 404 from the other account. Each scenario owns a separate synthetic account and retains production rate limits.
+- Copy check: 4309 pieces in 293 files, zero style/spelling findings.
+- Screenshots: `gym-390-light.png`, `gym-390-dark.png`, `gym-1440-light.png`, `gym-1440-dark.png`. Locally persisted synthetic plan, Chromium viewport emulation. No provider credentials or private runner data.
 
-## Required final gates
+## Commands and final gates
 
-This ledger records local results at commit creation. The exact pushed SHA, completed GitHub CI run links and subsequent results are recorded in the PR Conversation. Live checks: https://github.com/Menzi-Thami/start-line/pull/332/checks. Do not interpret pending gates as passed.
+The local full-script run began at the verified-account-identity checkpoint; subsequent navigation, private story sharing and isolated-browser-account changes receive focused checks and the complete exact-head CI run. Final pushed SHA, completed CI links and full-script outcome are recorded in the PR Conversation: https://github.com/Menzi-Thami/start-line/pull/332. Do not interpret pending gates as passed.
 
-| Gate | Status |
+| Gate / command | Status at this commit |
 |---|---|
-| `scripts/check.sh` (format, strict build, .NET tests, model consistency, client lint/typecheck/unit/build/audit, existing Playwright and persisted private browser suite) | Running |
-| Gitleaks 8.30.1 directory and staged-diff scans | PASS — zero findings, redacted reports |
-| Exact pushed head GitHub Checks and Secret scan | Pending push |
-| Deployed staging with synthetic enabled test account | NOT RUN — #332 staging merge/deploy requires approval |
-| Actual Microsoft authentication, physical iPhone/Android/PWA and offline account changes | NOT VERIFIED by these local browser tests |
-| Private owner activation | NOT RUN — separate approval and private payload required |
+| `scripts/check.sh` (format, strict build, .NET tests, migration consistency, client lint/typecheck/unit/build/audit, 488 existing Playwright cases and persisted private browser suite) | Running; backend/client stages passed |
+| `npx playwright test --config playwright.private.config.ts --reporter=line` with disposable local SQL | PASS — all 5 scenarios, 1.5 minutes |
+| `npx vitest run src/features/journey/TrainingStory.test.tsx src/features/journey/JourneyPanel.test.tsx src/features/journey/RunningJourney.test.tsx src/features/private-plans/PrivatePlans.test.tsx` | PASS — 25 tests |
+| Targeted current/archived private chapter SQL API regressions | PASS — 2 tests |
+| `npm --prefix tools/copy-check run check` | PASS |
+| Gitleaks 8.30.1 directory, staged-diff and branch scans | Zero findings at the preceding checkpoint; repeated for final source |
+| Exact pushed head GitHub Checks, Copy check and Secret scan | Pending final push |
+| Deployed staging with synthetic enabled test account | NOT RUN — handover requires staging merge/deploy approval |
+| Actual Microsoft authentication, physical iPhone/Android/PWA and offline account changes | NOT VERIFIED by local browser tests |
+| Real-owner activation | NOT RUN — separate approval and private payload required |
 
-## Deliberate supported boundaries
+## Boundaries and resolved findings
 
-Private generic replan/weekly regeneration/exact pace-distance editing do not silently replace prescribed steps; they report why unsupported and point to reviewed easing/replacement. Schedule-bearing push and public calendar subscriptions are suppressed; authenticated exports remain available. Weekly email omits the private schedule. No adaptive feature flag or AI/provider path was enabled. These boundaries must be retained during staging acceptance.
+Generic replan, weekly regeneration and exact pace/distance editing explain unsupported private changes instead of replacing the prescription. Existing reviewed safe easing and moves remain available, with protected past/logged/race sessions and exact undo. Schedule-bearing push, public calendar subscriptions and private training-story share cards are suppressed; weekly email omits the schedule. Authenticated owner exports and actual recorded-run stickers remain available. No unfinished adaptive flag or AI/provider path was enabled.
 
-The first GitHub run exposed copy spelling and formatting of the new test host after it was added to the solution; both were corrected. The first local client run collected the separate Playwright spec as a Vitest file: explicit test-directory separation corrected discovery, and the persisted suite remains mandatory in backend CI and `scripts/check.sh`. No acceptance case was disabled. Private fractional DTO mapping and auth cache clearing were rechecked with focused regressions after the full-suite run.
+Private rendering uses the verified account ID independently of the legacy convenience-cache fingerprint. Account changes clear the private route/view; late gym responses require both the same owner and plan ID. The owner can read current/archived training stories, but cards containing prescribed counts/distance cannot be shared.
 
-Late private gym responses are discarded after account view cleanup, and App checks both owner and plan ID before accepting the result. The real SQL failure-injection test verifies that a failed insert rolls back the archive and the same reviewed import can be retried. Another entitled runner also receives 404 for an owner’s activation token.
+Initial check failures were corrected: dispatcher test registration, test-host formatting, plain copy wording, separate Vitest/Playwright discovery and per-scenario browser identities. CI traces showed 429 responses when rapid browser scenarios reused one account; separate accounts remove that coupling without weakening production limits. No acceptance case was disabled.
 
-Local verification uses the existing CI unsharded budget of 45 minutes for the 488-case browser suite; the script previously inherited the 20-minute shard budget. The earlier attempt was deliberately stopped and the complete script restarted against the finished source. Individual test timeouts and all acceptance cases remain unchanged.
-
-Private rendering uses the verified account ID, independently of the existing convenience-cache fingerprint. Two accounts with the same display name and no email were exercised against the persisted API/UI; the second account could neither retain the first prescription on screen nor read it through the API.
+The local script uses the existing CI unsharded budget of 45 minutes for the 488-case browser suite; it previously inherited the 20-minute shard budget. An earlier attempt was deliberately stopped before restarting the complete script. Individual test timeouts remain unchanged.

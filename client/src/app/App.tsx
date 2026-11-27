@@ -580,12 +580,25 @@ export function App() {
   }, [plan, ownPlan, fetchPlan])
   useEffect(() => {
     const routed = new URLSearchParams(window.location.search).get('privatePlan')
-    const id = ownPlan?.isPrivate && plan.kind === 'ready' && plan.plan.isPrivate && plan.privatePlanId !== ownPlan.id ? ownPlan.id : routed
+    const changedAccount = plan.kind === 'ready' && plan.plan.isPrivate && plan.privateOwner !== privateOwner
+    const noCurrentPrivate = routed && loadedPlan !== undefined && !loadedPlan?.isPrivate
+    if (changedAccount || routed && noCurrentPrivate) {
+      inflight.current?.abort()
+      queueMicrotask(() => {
+        setPlan(current => current === plan ? { kind: 'idle' } : current)
+        setPrivateDay(null)
+        setEditing(false)
+        setView(auth.account ? 'home' : 'build')
+        window.history.replaceState(null, '', auth.account ? '?view=home' : window.location.pathname)
+      })
+      return
+    }
+    const id = routed && ownPlan?.isPrivate ? ownPlan.id : routed
     if (!id || !ownPlan?.isPrivate || ownPlan.id !== id || view !== 'build' || plan.kind === 'loading'
       || plan.kind === 'error' || plan.kind === 'ready' && plan.plan.isPrivate && plan.privateOwner === privateOwner && plan.privatePlanId === id) return
     const inputs = fromRequest(ownPlan.inputs)
     if (inputs) fetchPrivatePlan(id, inputs)
-  }, [ownPlan, view, plan, privateOwner, fetchPrivatePlan])
+  }, [ownPlan, loadedPlan, view, plan, privateOwner, auth.account, fetchPrivatePlan])
 
   // A shared link builds its plan straight away.
   useEffect(() => {

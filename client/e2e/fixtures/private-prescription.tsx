@@ -5,7 +5,7 @@ import { App } from '../../src/app/App'
 import { AuthContext, accountsOff, type Auth } from '../../src/app/auth-context'
 
 export function PersistedApp() {
-  const [subject, setSubject] = useState('synthetic-private-browser-owner')
+  const [subject, setSubject] = useState(() => (window as Window & { syntheticPrivateSubject?: string }).syntheticPrivateSubject ?? 'synthetic-private-browser-owner')
   useEffect(() => {
     const switchAccount = (event: Event) => {
       const wanted = (event as CustomEvent<string>).detail

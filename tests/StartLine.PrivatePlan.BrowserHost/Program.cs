@@ -8,20 +8,29 @@ using StartLine.Integration.Tests;
 
 // Test-only executable: real Kestrel/API/SQL, synthetic test authentication. Never deployed with the API.
 await using var factory = new PrivateBrowserFactory();
-using var client = factory.CreateClient().As("synthetic-private-browser-owner");
-(await client.PutAsJsonAsync(new Uri("/api/v1/me", UriKind.Relative), new
+using var client = factory.CreateClient();
+// Each scenario owns its own account, state and rate-limit bucket.
+string[] subjects = ["synthetic-private-browser-owner", "synthetic-private-browser-390-light", "synthetic-private-browser-390-dark",
+    "synthetic-private-browser-1440-light", "synthetic-private-browser-1440-dark"];
+foreach (var subject in subjects)
 {
-    displayName = "Synthetic private runner",
-    timeZone = "Etc/UTC",
-    units = "Kilometres",
-    weeklyEmails = false,
-    acceptPrivacyNotice = true,
-})).EnsureSuccessStatusCode();
+    client.As(subject);
+    (await client.PutAsJsonAsync(new Uri("/api/v1/me", UriKind.Relative), new
+    {
+        displayName = "Synthetic private runner",
+        timeZone = "Etc/UTC",
+        units = "Kilometres",
+        weeklyEmails = false,
+        acceptPrivacyNotice = true,
+    })).EnsureSuccessStatusCode();
+}
 await using (var scope = factory.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
-    var runner = await db.Runners.SingleAsync(r => r.IdentitySubject == "synthetic-private-browser-owner");
-    runner.SetPrivatePrescriptionsEnabled(true);
+    foreach (var runner in await db.Runners.Where(r => subjects.Contains(r.IdentitySubject)).ToListAsync())
+    {
+        runner.SetPrivatePrescriptionsEnabled(true);
+    }
     await db.SaveChangesAsync();
 }
 Console.WriteLine("Synthetic persisted browser host ready on loopback port 5142.");

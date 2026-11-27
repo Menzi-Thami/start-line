@@ -103,7 +103,7 @@ public sealed class SavedPlan
             || date < Inputs.StartOn || date >= today.AddDays(14) || GymCompletions.Any(c => c.SessionId == sessionId)
             || Prescription!.Sessions.Where(s => s.Id != sessionId && s.Type == SessionType.Strength)
                 .Any(s => (GymMoves.SingleOrDefault(m => m.SessionId == s.Id)?.Date ?? s.Date) == date))
-            throw new DomainException("Move only an unlogged gym session within the next two weeks, before the race, to a day without gym.");
+            throw new DomainException("Move only a gym session that has not been logged, within the next two weeks, before the race, to a day without gym.");
         GymMoves = [.. GymMoves.Where(m => m.SessionId != sessionId), .. date == session.Date ? Array.Empty<PrivateGymMove>() : [new PrivateGymMove(sessionId, date!.Value)]];
     }
 

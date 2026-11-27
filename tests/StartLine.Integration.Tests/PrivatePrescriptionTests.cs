@@ -135,6 +135,8 @@ public class PrivatePrescriptionTests
         (await Activate(client, preview)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
         var fresh = await Preview(client); factory.Time.Advance(TimeSpan.FromMinutes(31));
         (await Activate(client, fresh)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        var export = await Json(await client.GetAsync(Url("/api/v1/me/export")));
+        export.GetProperty("privateImports").EnumerateArray().Any(i => i.GetProperty("id").GetGuid() == fresh.GetProperty("importId").GetGuid()).ShouldBeTrue();
         (await Json(await client.GetAsync(Url(Plans)))).EnumerateArray().Single(p => p.GetProperty("status").GetString() == "Active").GetProperty("id").GetGuid().ShouldBe(id);
     }
 
@@ -197,7 +199,9 @@ public class PrivatePrescriptionTests
     public async Task Two_hard_ratings_can_ease_future_runs_and_undo_restores_exact_steps_without_rewriting_logged_sessions()
     {
         await using var factory = new StartLineApiFactory(); var client = await Runner(factory);
-        var preview = await Preview(client); var id = await Active(client, preview);
+        var payload = Payload();
+        payload["prescription"]!["sessions"]!.AsArray().Single(s => s!["type"]!.GetValue<string>() == "LongRun" && s["date"]!.GetValue<string>() == "2026-10-18")!["targetRpe"] = 7;
+        var preview = await Preview(client, payload); var id = await Active(client, preview);
         factory.Time.Advance(TimeSpan.FromDays(7));
         foreach (var date in new[] { "2026-10-13", "2026-10-15" })
             await Json(await client.PutAsJsonAsync(Url($"{Plans}/{id}/check-ins/{date}/Easy"), new { status = "Done", effort = 10 }));
@@ -207,6 +211,9 @@ public class PrivatePrescriptionTests
         var accepted = await Json(await client.PostAsJsonAsync(Url($"{Plans}/{id}/remaining-week/apply"), new { token = easing.GetProperty("token").GetString(), reported = true }));
         var reopened = (await Json(await client.GetAsync(Url($"{Plans}/{id}")))).GetProperty("plan");
         reopened.GetRawText().ShouldBe(accepted.GetProperty("proposed").GetRawText());
+        reopened.GetProperty("weeks").EnumerateArray().SelectMany(w => w.GetProperty("sessions").EnumerateArray())
+            .Single(s => s.GetProperty("date").GetString() == "2026-10-18" && s.GetProperty("type").GetString() == "Easy")
+            .GetProperty("targetRpe").GetInt32().ShouldBeLessThanOrEqualTo(4);
         (await client.PostAsJsonAsync(Url($"{Plans}/{id}/adjustments/restore"), new { dates = new[] { "2026-10-15" } })).StatusCode.ShouldBe(HttpStatusCode.Conflict);
         var restored = await Json(await client.PostAsJsonAsync(Url($"{Plans}/{id}/adjustments/restore"), new { dates = new[] { "2026-10-18" } }));
         restored.GetProperty("plan").GetRawText().ShouldBe(before.GetRawText());
@@ -221,6 +228,9 @@ public class PrivatePrescriptionTests
         var plan = (await Json(await client.GetAsync(Url($"{Plans}/{id}")))).GetProperty("plan");
         var payload = Payload(); payload["baseline"]!["raceName"] = "Synthetic other race";
         await Json(await client.PostAsJsonAsync(Url(Plans), new { plan = payload["baseline"], replaceCurrent = true }));
+        var repeated = await Json(await Activate(client, preview));
+        repeated.GetProperty("planId").GetGuid().ShouldBe(id);
+        repeated.GetProperty("isCurrent").GetBoolean().ShouldBeFalse();
         var archived = await Json(await client.GetAsync(Url($"{Plans}/{id}")));
         archived.GetProperty("status").GetString().ShouldBe("Archived"); archived.GetProperty("plan").GetRawText().ShouldBe(plan.GetRawText());
         await Json(await client.PostAsync(Url($"{Plans}/{id}/restore"), null));
@@ -230,6 +240,36 @@ public class PrivatePrescriptionTests
         await using var scope = factory.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<StartLineDbContext>();
         (await db.PrivatePlanImports.AnyAsync(i => i.Id == preview.GetProperty("importId").GetGuid())).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Private_step_and_pace_precision_is_retained_across_preview_storage_and_read()
+    {
+        await using var factory = new StartLineApiFactory(); var client = await Runner(factory); var payload = Payload();
+        var session = payload["prescription"]!["sessions"]!.AsArray().First(s => s!["type"]!.GetValue<string>() == "Easy")!;
+        session["steps"]![0]!["distanceKm"] = 6.125;
+        session["steps"]![0]!["fastestSecondsPerKm"] = 360.25;
+        payload["prescription"]!["paces"]![0]!["fastestSecondsPerKm"] = 360.25;
+        var preview = await Preview(client, payload); var id = await Active(client, preview);
+        var plan = (await Json(await client.GetAsync(Url($"{Plans}/{id}")))).GetProperty("plan");
+        plan.GetRawText().ShouldBe(preview.GetProperty("plan").GetRawText());
+        var run = plan.GetProperty("weeks")[0].GetProperty("sessions").EnumerateArray().Single(s => s.GetProperty("type").GetString() == "Easy");
+        run.GetProperty("steps")[0].GetProperty("distanceKm").GetDouble().ShouldBe(6.125);
+        run.GetProperty("steps")[0].GetProperty("fastestSecondsPerKm").GetDouble().ShouldBe(360.25);
+        plan.GetProperty("paces")[0].GetProperty("fastestSecondsPerKm").GetDouble().ShouldBe(360.25);
+    }
+
+    [Fact]
+    public async Task Private_run_moves_require_undo_before_another_adjustment_instead_of_dropping_an_eased_prescription()
+    {
+        await using var factory = new StartLineApiFactory(); var client = await Runner(factory); var preview = await Preview(client); var id = await Active(client, preview);
+        var change = new { situation = "MoveRun", date = "2026-10-11", moveTo = "2026-10-10" };
+        var move = await Json(await client.PostAsJsonAsync(Url($"{Plans}/{id}/life-happens/preview"), change));
+        await Json(await client.PostAsJsonAsync(Url($"{Plans}/{id}/life-happens/apply"), new { change, token = move.GetProperty("token").GetString() }));
+        (await client.GetAsync(Url($"{Plans}/{id}/remaining-week/proposal"))).StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await client.PostAsJsonAsync(Url($"{Plans}/{id}/life-happens/preview"), new { situation = "ShortOnTime", date = "2026-10-10", minutes = 20 })).StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        var restored = await Json(await client.PostAsJsonAsync(Url($"{Plans}/{id}/adjustments/restore"), new { dates = new[] { "2026-10-10" } }));
+        restored.GetProperty("plan").GetRawText().ShouldBe(preview.GetProperty("plan").GetRawText());
     }
 
 }

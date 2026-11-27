@@ -43,10 +43,10 @@ export function PrivateImport() {
     const mine = ++sequence.current
     setBusy(true); setMessage(null)
     try {
-      await api.me.activatePrivateImport(await token(), preview.importId, preview.token)
+      const saved = await api.me.activatePrivateImport(await token(), preview.importId, preview.token)
       if (mine !== sequence.current) return
       setPreview(null); setConsent(false)
-      setMessage('Your private prescription is current. Open Plan to see your schedule.')
+      setMessage(saved.isCurrent ? 'Your private prescription is current. Open Plan to see your schedule.' : 'This import was already saved. Your current plan has since changed; open Home to review it.')
       window.dispatchEvent(new Event(JOURNEY_CHANGED))
     } catch (error) { if (mine === sequence.current) setMessage(error instanceof Error ? error.message : 'Couldn’t activate. Check your current plan before retrying.') }
     finally { if (mine === sequence.current) setBusy(false) }

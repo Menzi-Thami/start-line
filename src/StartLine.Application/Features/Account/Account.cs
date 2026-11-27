@@ -311,7 +311,7 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
                 await db.AiUsage.AsNoTracking().Where(u => u.RunnerId == runner.Id).OrderBy(u => u.Day)
                     .Select(u => new AiUsageExportDto(u.Day, u.Calls, u.InputTokens, u.OutputTokens)).ToListAsync(cancellationToken))) with
         {
-            PrivateImports = await db.PrivatePlanImports.AsNoTracking().Where(i => i.RunnerId == runner.Id && i.ExpiresAt > time.GetUtcNow())
+            PrivateImports = await db.PrivatePlanImports.AsNoTracking().Where(i => i.RunnerId == runner.Id)
             .Select(i => new PrivateImportExportDto(i.Id, i.Name, i.Inputs, i.Prescription, i.ExpiresAt, i.ActivatedPlanId)).ToListAsync(cancellationToken)
         };
     }

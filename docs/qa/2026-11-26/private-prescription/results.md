@@ -5,15 +5,18 @@ PR #332, branch `feat/private-prescription-pilot`, base `staging`. Synthetic dat
 ## Evidence recorded so far
 
 - Focused domain: 7 passed, including generator strength cap, rest/Saturday race/Sunday long run, explicit step totals, repeat recovery and nonfinite/invalid rejection.
-- Real SQL API: full integration suite 450 passed, including 11 private prescription cases covering activation concurrency, ownership, archive/restore, deletion, high-fatigue easing/undo and real Kestrel request limits.
+- Real SQL API: full integration suite 450 passed, including the initial 11 private prescription cases covering activation concurrency, ownership, archive/restore, deletion, high-fatigue easing/undo and real Kestrel request limits.
 - Authenticated persisted browser: 4 passed at 390 and 1440 widths, light and dark. Test-only Kestrel host + actual API + SQL, synthetic header authentication, no API route mocks. Import → review/consent → activate → private Plan/Strength → independent gym completion → API persistence assertion → reload → no private schedule in browser storage → sign-out. This does not establish Microsoft sign-in or physical-phone behavior.
+- Final focused private SQL API suite: 13 passed, including exact fractional step/pace preservation, receipt retries after replacement, stored expired-preview export, safe move/easing refusal and undo.
+- Full client suite: 151 files / 1148 tests passed. Lint, TypeScript, production build and audit passed (zero vulnerabilities). Final auth/private UI regressions: 47 passed.
+- Copy check: 4309 pieces in 293 files, zero style/spelling findings. Initial copy failures used “unlogged”; replaced with plain wording.
 - Focused client: 5 passed (entitlement UI, explicit consent/error recovery, independent gym endpoint, storage exclusion, private sharing controls).
 - Full backend run through `scripts/check.sh`: Domain 1288, Application 239, Architecture 11 and SQL Integration 450 passed, zero skips. Strict Release build: zero warnings/errors. Migration/model consistency passed. An earlier dispatcher composition failure was corrected by registering the new infrastructure abstraction in the test composition root.
 - Screenshots: `gym-390-light.png`, `gym-390-dark.png`, `gym-1440-light.png`, `gym-1440-dark.png`. Real locally persisted synthetic plan, Chromium viewport emulation. No provider credentials or private runner data.
 
 ## Required final gates
 
-Final commands/results, exact commit SHA and CI links will be recorded here after checks finish. Do not interpret this initial ledger as a complete acceptance claim.
+This ledger records local results at commit creation. The exact pushed SHA, completed GitHub CI run links and subsequent results are recorded in the PR Conversation. Live checks: https://github.com/Menzi-Thami/start-line/pull/332/checks. Do not interpret pending gates as passed.
 
 | Gate | Status |
 |---|---|
@@ -27,3 +30,5 @@ Final commands/results, exact commit SHA and CI links will be recorded here afte
 ## Deliberate supported boundaries
 
 Private generic replan/weekly regeneration/exact pace-distance editing do not silently replace prescribed steps; they report why unsupported and point to reviewed easing/replacement. Schedule-bearing push and public calendar subscriptions are suppressed; authenticated exports remain available. Weekly email omits the private schedule. No adaptive feature flag or AI/provider path was enabled. These boundaries must be retained during staging acceptance.
+
+The first GitHub run exposed copy spelling and formatting of the new test host after it was added to the solution; both were corrected. The first local client run collected the separate Playwright spec as a Vitest file: explicit test-directory separation corrected discovery, and the persisted suite remains mandatory in backend CI and `scripts/check.sh`. No acceptance case was disabled. Private fractional DTO mapping and auth cache clearing were rechecked with focused regressions after the full-suite run.

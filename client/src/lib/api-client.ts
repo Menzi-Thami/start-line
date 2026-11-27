@@ -245,7 +245,7 @@ export const api = {
   me: {
     privateAccess: (token: string) => request<{ enabled: boolean }>('/api/v1/me/private-prescriptions/access', {}, token),
     previewPrivateImport: (token: string, payload: unknown) => request<{ importId: string; token: string; expiresAt: string; replacesCurrent: boolean; plan: TrainingPlan }>('/api/v1/me/private-prescriptions/preview', { method: 'POST', body: JSON.stringify(payload) }, token),
-    activatePrivateImport: (token: string, id: string, previewToken: string) => request<{ planId: string }>(`/api/v1/me/private-prescriptions/${id}/activate`, { method: 'POST', body: JSON.stringify({ token: previewToken, consentToReplace: true }) }, token),
+    activatePrivateImport: (token: string, id: string, previewToken: string) => request<{ planId: string; isCurrent: boolean }>(`/api/v1/me/private-prescriptions/${id}/activate`, { method: 'POST', body: JSON.stringify({ token: previewToken, consentToReplace: true }) }, token),
     completePrivateGym: (token: string, planId: string, id: string, done: boolean) => request<TrainingPlan>(`/api/v1/me/private-prescriptions/plans/${planId}/gym/${id}`, { method: 'PUT', body: JSON.stringify({ done }) }, token),
     movePrivateGym: (token: string, planId: string, id: string, target: string | null, previewToken?: string) => request<{ token: string; proposed: TrainingPlan }>(`/api/v1/me/private-prescriptions/plans/${planId}/gym/${id}/move`, { method: 'POST', body: JSON.stringify({ target, token: previewToken }) }, token),
 

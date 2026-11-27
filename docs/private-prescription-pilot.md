@@ -28,7 +28,7 @@ The pilot now has implementation and synthetic automated coverage. It remains de
 | `JourneyReader`, race history start date, race result bounds | Same resolver, including archived prescriptions; the prescription is stored intact, not reconstructed from public answers. |
 | `ReminderRunner`, `NotificationDeliverer`, `AdditionalNotifications`, weekly recaps and coaching tips | Saved-plan overload at schedule reads. Schedule-bearing push is suppressed for private plans; weekly emails omit the private schedule. No private workouts travel through a third-party notification transport. |
 | Personal calendar token feed | Returns 404 for a current private plan. Authenticated private ICS and owner-side calendar/workout file export resolve the private schedule. Subscription links are hidden. |
-| Account export/deletion | Export includes prescribed steps, gym movements/completions and unexpired imports, never raw preview tokens. Runner deletion cascades to prescriptions/imports. |
+| Account export/deletion | Export includes prescribed steps, gym movements/completions and all stored imports, never raw preview tokens. Runner deletion cascades to prescriptions/imports. |
 | Home, Plan, day, calendar, Strength, pace guide, Progress | Authenticated saved-plan DTO; private Plan never calls the anonymous generator. No share link, generic edit/save or private Home snapshot. Existing actual-run stickers carry actual measurements, not prescribed titles or steps. |
 
 ### Precedence and identity
@@ -39,3 +39,5 @@ The pilot now has implementation and synthetic automated coverage. It remains de
 4. Weekly generic coaching/replan cannot override private steps. Exact distance/pace editing is explicitly unsupported. Remaining-week easing, travel/illness reductions and safe future run moves use the existing deterministic rules; they never increase a private plan after a single easy session. Logged days and race remain protected. Gym completion is persisted independently of run check-ins; it never enters running mileage/coaching evidence.
 
 The private UI reuses existing disclosures, buttons, tabs, runner waits and both themes. There is no chat, provider integration, adaptive feature enabling or change to the public three-strength-day cap.
+
+Private run adjustments are deliberately not composed with moves: undo upcoming run changes before moving a run, and undo a move before easing/changing that moved run. The existing revision model cannot safely compose those operations without risking a generic or earlier prescription. The API refuses the combination with `private_move_restore_required`; Undo restores the exact private steps. Gym moves/completion stay independent. Eased workouts cap target RPE at the existing easy-effort range, and restoring either end of a run move protects check-ins at both ends.

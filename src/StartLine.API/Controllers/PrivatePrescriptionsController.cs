@@ -51,7 +51,8 @@ public sealed class PrivatePrescriptionsController(IDispatcher dispatcher, TimeP
     public async Task<IActionResult> Activate(Guid id, [FromBody] ActivatePrivateImportRequest request, CancellationToken cancellationToken)
     {
         var planId = await dispatcher.Send(new ActivatePrivateImportCommand(id, request.Token, request.ConsentToReplace), cancellationToken);
-        return Ok(new { planId });
+        var saved = await dispatcher.Send(new GetMyPlanQuery(planId), cancellationToken);
+        return Ok(new { planId, isCurrent = saved.Status == StartLine.Domain.Plans.SavedPlanStatus.Active });
     }
 
     [HttpPut("plans/{planId:guid}/gym/{sessionId:guid}")]

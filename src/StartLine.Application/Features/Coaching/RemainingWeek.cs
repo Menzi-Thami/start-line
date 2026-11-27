@@ -26,6 +26,8 @@ internal sealed class ReviewRemainingWeekHandler(IApplicationDbContext db, Curre
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         if (saved.Status != SavedPlanStatus.Active) throw new ConflictException("plan_archived", "Only your current plan can be adjusted.");
         var today = CoachCalls.LocalToday(runner, time);
+        if (saved.Prescription is not null && saved.Adjustments.Any(r => r.MovedFrom is not null && r.Date >= today))
+            throw new ConflictException("private_move_restore_required", "Restore moved runs before easing the remaining week. Your private prescription stays unchanged.");
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
         var original = builder.BuildPlan(saved, calls, paceDate: today, original: true);
         var plan = Domain.Plans.RemainingWeek.Apply(original, saved.Adjustments);

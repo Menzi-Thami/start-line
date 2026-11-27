@@ -34,6 +34,10 @@ internal sealed class LifeHappensHandler(IApplicationDbContext db, CurrentRunner
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         if (saved.Status != SavedPlanStatus.Active) throw new ConflictException("plan_archived", "Only your current plan can change.");
         var today = CoachCalls.LocalToday(runner, time);
+        if (saved.Prescription is not null && saved.Adjustments.Any(r => r.Date >= today)
+            && (saved.Adjustments.Any(r => r.MovedFrom is not null && r.Date >= today)
+                || request.Change.Situation is LifeSituation.MoveRun or LifeSituation.MoveLongRun or LifeSituation.SwapRuns))
+            throw new ConflictException("private_move_restore_required", "Restore upcoming run changes before moving or changing moved runs. Combining these adjustments is not supported for private prescriptions.");
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
         var plan = Domain.Plans.RemainingWeek.Apply(builder.BuildPlan(saved, calls, paceDate: today, original: true), saved.Adjustments);
         var from = today.AddDays(-7);
@@ -88,8 +92,10 @@ internal sealed class RestoreSessionsHandler(IApplicationDbContext db, CurrentRu
         var saved = await OwnPlan.FindAsync(db, current, request.Id, cancellationToken);
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         var today = CoachCalls.LocalToday(runner, time);
-        if (saved.Prescription is not null && await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id && request.Dates.Contains(c.Date), cancellationToken))
-            throw new ConflictException("private_logged_session", "Logged sessions keep their prescription. Restore only upcoming, unlogged sessions.");
+        var restoredDates = request.Dates.Concat(saved.Adjustments.Where(r => r.MovedFrom is { } source && (request.Dates.Contains(source) || request.Dates.Contains(r.Date)))
+            .SelectMany(r => new[] { r.Date, r.MovedFrom!.Value })).Distinct().ToList();
+        if (saved.Prescription is not null && await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id && restoredDates.Contains(c.Date), cancellationToken))
+            throw new ConflictException("private_logged_session", "Logged sessions keep their prescription. Restore only upcoming sessions that have not been logged.");
         db.SavedPlans.Attach(saved);
         saved.RestoreOriginal(request.Dates, today);
         await db.SaveChangesAsync(cancellationToken);

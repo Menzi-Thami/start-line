@@ -11,7 +11,11 @@ await using var factory = new PrivateBrowserFactory();
 using var client = factory.CreateClient().As("synthetic-private-browser-owner");
 (await client.PutAsJsonAsync(new Uri("/api/v1/me", UriKind.Relative), new
 {
-    displayName = "Synthetic private runner", timeZone = "Etc/UTC", units = "Kilometres", weeklyEmails = false, acceptPrivacyNotice = true,
+    displayName = "Synthetic private runner",
+    timeZone = "Etc/UTC",
+    units = "Kilometres",
+    weeklyEmails = false,
+    acceptPrivacyNotice = true,
 })).EnsureSuccessStatusCode();
 await using (var scope = factory.Services.CreateAsyncScope())
 {

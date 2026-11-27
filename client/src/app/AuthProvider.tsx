@@ -92,6 +92,8 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       setSessionReady(false)
       setInfo(null)
       clearSnapshot()
+      clearCheckInCopies()
+      activateCheckInOwner(null)
       forgetHomePlan()
     })
     // True while the page is on its way to Microsoft for a quiet renewal: stay loading rather than flash signed out.

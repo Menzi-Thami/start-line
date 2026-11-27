@@ -147,7 +147,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         </>)}
 
         {group('data', 'Data & privacy', <>
-          <PrivateImport key={runner.id} />
+          {open.data && <PrivateImport key={runner.id} />}
           <RunDataPanel units={runner.units === 'Miles' ? 'mi' : 'km'} />
           <div className="section">
             <h3>Your data</h3>

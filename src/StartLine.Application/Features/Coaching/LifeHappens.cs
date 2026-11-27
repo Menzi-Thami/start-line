@@ -29,17 +29,25 @@ internal sealed class LifeHappensHandler(IApplicationDbContext db, CurrentRunner
     {
         ArgumentNullException.ThrowIfNull(request.Change);
         var saved = await OwnPlan.FindAsync(db, current, request.Id, cancellationToken);
+        if (saved.Prescription is not null && request.Change.Situation == LifeSituation.MissedRun)
+            throw new ConflictException("private_catchup_unsupported", "Private prescriptions do not make up missed runs. Let it go, or preview an easier remaining week.");
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         if (saved.Status != SavedPlanStatus.Active) throw new ConflictException("plan_archived", "Only your current plan can change.");
         var today = CoachCalls.LocalToday(runner, time);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var query = SavedPlanMapping.ToQuery(saved);
-        var plan = Domain.Plans.RemainingWeek.Apply(builder.BuildPlan(query, calls, paceDate: today), saved.Adjustments);
+        var plan = Domain.Plans.RemainingWeek.Apply(builder.BuildPlan(saved, calls, paceDate: today, original: true), saved.Adjustments);
         var from = today.AddDays(-7);
         var entries = await db.SessionCheckIns.AsNoTracking()
             .Where(c => c.SavedPlanId == saved.Id && c.Date >= from && c.Date < today.AddDays(Domain.Plans.LifeHappens.HorizonDays))
             .OrderBy(c => c.Id).ToListAsync(cancellationToken);
         var proposal = Domain.Plans.LifeHappens.Propose(plan, today, request.Change, entries, saved.Adjustments);
+        if (saved.Prescription is not null)
+        {
+            var candidate = Domain.Plans.RemainingWeek.Apply(plan, proposal.Changes);
+            var hard = candidate.Weeks.SelectMany(w => w.Sessions).Where(s => Domain.Plans.LifeHappens.IsHard(s.Type)).OrderBy(s => s.Date).ToList();
+            if (hard.Zip(hard.Skip(1)).Any(pair => pair.Second.Date.DayNumber - pair.First.Date.DayNumber <= 1))
+                throw new ConflictException("private_hard_days", "This move would stack hard days. Choose a day with easy running or rest on either side.");
+        }
         var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
         {
             today,
@@ -61,7 +69,7 @@ internal sealed class LifeHappensHandler(IApplicationDbContext db, CurrentRunner
 
         // The preview shows the plan as it would be; nothing is saved until it's applied.
         var proposed = request.AcceptToken is null ? SavedPlan.MergeAdjustments(saved.Adjustments, proposal.Changes) : saved.Adjustments;
-        return new(token, proposal.Changes, proposal.MoveTargets, builder.Build(query, calls, proposed, today));
+        return new(token, proposal.Changes, proposal.MoveTargets, builder.Build(saved, calls, proposed, today));
     }
 }
 
@@ -80,12 +88,14 @@ internal sealed class RestoreSessionsHandler(IApplicationDbContext db, CurrentRu
         var saved = await OwnPlan.FindAsync(db, current, request.Id, cancellationToken);
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         var today = CoachCalls.LocalToday(runner, time);
+        if (saved.Prescription is not null && await db.SessionCheckIns.AnyAsync(c => c.SavedPlanId == saved.Id && request.Dates.Contains(c.Date), cancellationToken))
+            throw new ConflictException("private_logged_session", "Logged sessions keep their prescription. Restore only upcoming, unlogged sessions.");
         db.SavedPlans.Attach(saved);
         saved.RestoreOriginal(request.Dates, today);
         await db.SaveChangesAsync(cancellationToken);
         var query = SavedPlanMapping.ToQuery(saved);
         var calls = await coach.CallsAsync(saved, runner, cancellationToken);
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls, saved.Adjustments, today), saved.Status,
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(saved, calls, saved.Adjustments, today), saved.Status,
             [.. calls.Select(CoachNoteDto.From)]);
     }
 }

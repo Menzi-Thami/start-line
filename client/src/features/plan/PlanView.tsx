@@ -62,6 +62,8 @@ interface Props {
   /** From the runner's account profile; signed out or from a link, kilometres. */
   units: Units
   shareUrl: string
+  privateDay?: string | null
+  onPrivatePlanChanged?: (plan: TrainingPlan) => void
   today: string
   /** Extra actions beside Share, such as saving the plan to an account or deleting it. */
   toolbarExtra?: ReactNode
@@ -126,7 +128,7 @@ function weekToShow(plan: TrainingPlan, today: string, currentWeek: number | nul
   return today < first.startDate ? { week: first, when: 'soon' } : { week: last, when: 'past' }
 }
 
-export function PlanView({ plan, preparation, reveal = false, openTab, onBack, units, shareUrl, today, toolbarExtra, onReplan, calendar, runs, onOpenRun, bests, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, journeyPlanId, onNewRace, onOpenJourney, onOpenRecovery, onSignIn, onLoadActivity }: Props) {
+export function PlanView({ privateDay, onPrivatePlanChanged, plan, preparation, reveal = false, openTab, onBack, units, shareUrl, today, toolbarExtra, onReplan, calendar, runs, onOpenRun, bests, coach, coachNotes, onInjuryReplan, onUseGoal, onEditStrength, onEditPlan, progressInBar = false, canCompleteRuns = true, onTabChange, journeyPlanId, onNewRace, onOpenJourney, onOpenRecovery, onSignIn, onLoadActivity }: Props) {
   const journey = useJourney(!!journeyPlanId)
   const journeyData = journey.state.kind === 'ready' ? journey.state.journey : null
   const completedRace = !!chapterFor(journeyData, journeyPlanId)?.raceResult
@@ -154,7 +156,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const [tabsFade, setTabsFade] = useState<TabFade>('none')
   const touchStart = useRef<{ x: number; y: number } | null>(null)
   const planKey = `${plan.race.name}|${plan.race.date}|${plan.startDate}`
-  const [done, setDone] = useState(() => loadDone(planKey))
+  const [done, setDone] = useState(() => plan.isPrivate ? new Set<string>() : loadDone(planKey))
   const daySummaryId = useId()
   const [selectedDay, setSelectedDay] = useState<{ planKey: string; date: string; tab: TabId; trigger?: HTMLButtonElement } | null>(() => readDayRoute() ? { planKey, date: readDayRoute()!, tab: readPlanTab() } : null)
   const selectedDate = selectedDay?.planKey === planKey ? selectedDay.date : null
@@ -162,11 +164,12 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     trigger.focus({ preventScroll: true })
     setSelectedDay({ planKey, date, tab, trigger })
   }
-  const [detailDate, setDetailDate] = useState<string | null>(() => readDayRoute() ?? longRunDay)
+  const [detailDate, setDetailDate] = useState<string | null>(() => plan.isPrivate ? privateDay ?? null : readDayRoute() ?? longRunDay)
   const returnPosition = useRef(0)
   const previousDetail = useRef(detailDate)
   const openDay = (date: string) => {
     returnPosition.current = window.scrollY
+    if (plan.isPrivate) { setDetailDate(date); window.scrollTo?.({ top: 0 }); return }
     const url = new URL(window.location.href)
     url.searchParams.set('planTab', tab)
     if (shown) url.searchParams.set('planWeek', String(shown.week.number))
@@ -232,6 +235,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
   const progress = planProgress(plan, today)
   const entries = coach?.entries ?? plan.weeks.flatMap((w) => w.sessions).flatMap((s) => { const c = coach?.get(s); return c ? [c] : [] })
   const effectiveDone = new Set(done)
+  for (const session of plan.weeks.flatMap(w => w.sessions)) if (session.gymDone) effectiveDone.add(sessionKey(session))
   for (const entry of entries.filter((c) => !c.isAdditional)) {
     const key = sessionKey({ date: entry.date, type: entry.sessionType })
     if (entry.status === 'Skipped') effectiveDone.delete(key)
@@ -311,7 +315,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
     if (trainingEnded) return
     setDone((current) => {
       const next = update(current)
-      saveDone(planKey, next)
+      if (!plan.isPrivate) saveDone(planKey, next)
       return next
     })
   }
@@ -320,6 +324,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
 
   const copyLink = async () => {
     closeMenu()
+    if (plan.isPrivate) return
     try {
       await navigator.clipboard.writeText(shareUrl)
       setCopied('copied')
@@ -590,7 +595,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
             <p className="week-meta">{shown?.week ? `Week ${shown.week.number} of ${plan.weeks.length}` : 'Your strength programme'}</p>
           </div>
           <p className="tab-intro">Strength has its own space. Your running sessions and run analysis stay under This week and Calendar.</p>
-          <StrengthTab readOnly={trainingEnded} plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={trainingEnded ? undefined : onEditStrength} />
+          <StrengthTab planId={journeyPlanId} today={today} onPlanChanged={onPrivatePlanChanged} readOnly={trainingEnded} plan={plan} week={shown?.week} done={effectiveDone} onDoneChange={updateDone} onEditStrength={trainingEnded ? undefined : onEditStrength} />
         </div>
 
         <div {...panel('progress')}>
@@ -629,11 +634,11 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
         {!trainingEnded && <ChangePlan plan={plan} today={today} units={units} life={coach?.adjustments?.life} week={coach?.adjustments} onReplan={onReplan} onUseGoal={onUseGoal} />}
         {/* Everything to take the plan elsewhere, in one row. */}
         <div className="plan-actions plan-tools-row" ref={toolsRowRef} role="group" aria-label="Plan tools">
-          <button type="button" className="button button-quiet" onClick={() => void copyLink()}>Share link</button>
+          {!plan.isPrivate && <button type="button" className="button button-quiet" onClick={() => void copyLink()}>Share link</button>}
           <details className="menu">
             <summary className="button button-quiet">Add to calendar</summary>
             <div className="menu-panel">
-              {calendar && (
+              {!plan.isPrivate && calendar && (
                 <>
                   <a className="menu-item" href={calendar.apple} onClick={closeMenu}>
                     Apple Calendar <span className="menu-note">iPhone, iPad, Mac</span>
@@ -649,7 +654,7 @@ export function PlanView({ plan, preparation, reveal = false, openTab, onBack, u
               <button type="button" className="menu-item" onClick={downloadCalendar}>
                 Download a calendar file <span className="menu-note">.ics, one-off</span>
               </button>
-              {calendar && <p className="menu-help">{calendar.personal ? 'Your calendar stays in step with your plan, even when it changes.' : 'Subscribing keeps your calendar in step with your plan.'}</p>}
+              {!plan.isPrivate && calendar && <p className="menu-help">{calendar.personal ? 'Your calendar stays in step with your plan, even when it changes.' : 'Subscribing keeps your calendar in step with your plan.'}</p>}
             </div>
           </details>
           <WorkoutExport plan={plan} today={today} />

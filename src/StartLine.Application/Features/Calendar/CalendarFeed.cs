@@ -103,7 +103,8 @@ internal sealed class GetCalendarFeedHandler(IApplicationDbContext db, PlanBuild
             return new CalendarFeedDto(null, runner.Units);
         }
 
+        if (saved.Prescription is not null) throw new NotFoundException("Calendar", "link");
         var calls = await coach.CallsAsync(saved, runner, cancellationToken);
-        return new CalendarFeedDto(builder.Build(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), runner.Units);
+        return new CalendarFeedDto(builder.Build(saved, calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), runner.Units);
     }
 }

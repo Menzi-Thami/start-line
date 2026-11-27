@@ -327,13 +327,13 @@ internal sealed partial class WeeklyRecapSender(
         string? race = null;
         int? daysToRace = null;
         TrainingTrendsResult? trends = null;
-        if (saved is not null)
+        if (saved is not null && saved.Prescription is null)
         {
             try
             {
                 var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
                 var monday = week.AddDays(7);
-                var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, monday);
+                var plan = builder.BuildPlan(saved, calls, saved.Adjustments, monday);
                 var sessions = plan.Weeks.SelectMany(w => w.Sessions).ToList();
                 var lastWeek = sessions.Where(s => s.Date >= week && s.Date <= end && SessionCheckIn.IsCheckable(s.Type) && s.Type != SessionType.Race).ToList();
                 if (lastWeek.Count > 0)

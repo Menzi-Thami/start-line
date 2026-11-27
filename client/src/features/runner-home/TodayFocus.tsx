@@ -85,7 +85,7 @@ export function TodayFocus({ plan, failed, today, units, runs, coach, onOpenPlan
   {strength.map(value => <section key={`${value.date}|${value.type}`} className="panel home-card home-strength" aria-label="Strength today">
     <p className="plan-kicker">Strength today{day?.runs.length ? ' · after your run' : ''}</p>
     <h2 className="home-strength-title">{value.title}</h2>
-    <p className="field-help">{strengthSummary(value)}</p>
+    <p className="field-help">{strengthSummary(value)}{value.gymDone ? ' · Completed' : ''}</p>
     <button type="button" className="button button-quiet" onClick={() => onOpenDay ? onOpenDay(today) : onOpenPlan()}>Open strength workout</button>
   </section>)}
   </>

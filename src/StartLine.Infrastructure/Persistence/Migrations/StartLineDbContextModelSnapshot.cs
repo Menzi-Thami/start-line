@@ -932,6 +932,57 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.ToTable("TickPrompts", (string)null);
                 });
 
+            modelBuilder.Entity("StartLine.Domain.Plans.PrivatePlanImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ActivatedPlanId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ExpectedActiveId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ExpectedActiveVersion")
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Inputs")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Prescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly>("ReviewedOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("RunnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunnerId", "ExpiresAt");
+
+                    b.ToTable("PrivatePlanImports", (string)null);
+                });
+
             modelBuilder.Entity("StartLine.Domain.Plans.SavedPlan", b =>
                 {
                     b.Property<Guid>("Id")
@@ -946,10 +997,25 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("GymCompletions")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("N'[]'");
+
+                    b.Property<string>("GymMoves")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("nvarchar(max)")
+                        .HasDefaultValueSql("N'[]'");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Prescription")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("RunnerId")
                         .HasColumnType("uniqueidentifier");
@@ -1238,6 +1304,9 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("nvarchar(32)");
+
+                    b.Property<bool>("PrivatePrescriptionsEnabled")
+                        .HasColumnType("bit");
 
                     b.Property<string>("TimeZone")
                         .IsRequired()
@@ -1757,6 +1826,15 @@ namespace StartLine.Infrastructure.Persistence.Migrations
                     b.HasOne("StartLine.Domain.Plans.SavedPlan", null)
                         .WithMany()
                         .HasForeignKey("SavedPlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("StartLine.Domain.Plans.PrivatePlanImport", b =>
+                {
+                    b.HasOne("StartLine.Domain.Runners.Runner", null)
+                        .WithMany()
+                        .HasForeignKey("RunnerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -66,6 +66,7 @@ public static class DependencyInjection
             o.UseSqlServer(database.ConnectionString, sql => sql.EnableRetryOnFailure());
             o.AddInterceptors(sp.GetRequiredService<AuditTimestampsInterceptor>(), sp.GetRequiredService<ReminderScheduleInterceptor>());
         });
+        services.AddScoped<StartLine.Application.Features.PrivatePlans.IPrivatePlanActivation, PrivatePlanActivation>();
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<StartLineDbContext>());
         services.AddHealthChecks().AddDbContextCheck<StartLineDbContext>("database", tags: ["ready"]);
 

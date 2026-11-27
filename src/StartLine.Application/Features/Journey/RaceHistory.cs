@@ -119,7 +119,7 @@ internal sealed class SaveRaceMemoryHandler(IApplicationDbContext db, CurrentRun
         {
             // Retained legacy results can still be corrected when the source catalogue has gone.
             var start = plan is null ? new DateOnly(1900, 1, 1) : plan.Inputs.HasRaceSnapshot
-                ? builder.BuildPlan(MyPlans.SavedPlanMapping.ToQuery(plan), paceDate: today).StartDate : plan.Inputs.PlanFrom;
+                ? builder.BuildPlan(plan, paceDate: today).StartDate : plan.Inputs.PlanFrom;
             result.Change(answers, start, today);
         }
         result.Identify(r.EventName, r.EventDistanceKm, r.Major, r.TimeKind);

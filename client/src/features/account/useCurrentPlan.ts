@@ -11,6 +11,7 @@ export interface CurrentPlan {
   id: string
   name: string
   inputs: GeneratePlanRequest
+  isPrivate?: boolean
   raceDate?: string
 }
 
@@ -48,7 +49,7 @@ async function fetchCurrent(getToken: () => Promise<string | null>, today: strin
   onActive?.(active.id)
   const plan = await api.me.plan(token, active.id)
   if (plan.status !== 'Active' || plan.plan.race.date < today) return null
-  return { id: plan.id, name: plan.name, inputs: plan.inputs, raceDate: plan.plan.race.date }
+  return { id: plan.id, name: plan.name, inputs: plan.inputs, isPrivate: plan.plan.isPrivate, raceDate: plan.plan.race.date }
 }
 
 /**

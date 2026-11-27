@@ -23,6 +23,7 @@ export const ratingWasDismissed = (plan: TrainingPlan, session: Pick<Session, 'd
   read()?.keys.includes(ratingKey(plan, session)) ?? false
 
 export const dismissRating = (plan: TrainingPlan, session: Pick<Session, 'date' | 'type'>) => {
+  if (plan.isPrivate) return
   const stored = read() ?? { owner: null, keys: [] }
   const key = ratingKey(plan, session)
   if (stored.keys.includes(key)) return

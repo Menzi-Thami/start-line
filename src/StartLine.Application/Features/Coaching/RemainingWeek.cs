@@ -27,8 +27,7 @@ internal sealed class ReviewRemainingWeekHandler(IApplicationDbContext db, Curre
         if (saved.Status != SavedPlanStatus.Active) throw new ConflictException("plan_archived", "Only your current plan can be adjusted.");
         var today = CoachCalls.LocalToday(runner, time);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var query = SavedPlanMapping.ToQuery(saved);
-        var original = builder.BuildPlan(query, calls, paceDate: today);
+        var original = builder.BuildPlan(saved, calls, paceDate: today, original: true);
         var plan = Domain.Plans.RemainingWeek.Apply(original, saved.Adjustments);
         var week = original.Weeks.FirstOrDefault(w => w.StartDate <= today && today < w.StartDate.AddDays(7));
         var from = week?.StartDate ?? today;
@@ -59,6 +58,6 @@ internal sealed class ReviewRemainingWeekHandler(IApplicationDbContext db, Curre
             ? "Ease the remaining runs without adding days or making up kilometres. Rest replaces running if you reported pain that changed your running or have already covered the week's distance."
             : week?.Phase == TrainingPhase.RaceWeek ? "Race week stays as written. Do not make up missed sessions; choose rest if unwell or in pain."
             : "No further changes suggested. Log any missing runs first. Replan from here can rebuild future weeks after a longer break.";
-        return new(token, summary, changes, builder.Build(query, calls, saved.Adjustments, today));
+        return new(token, summary, changes, builder.Build(saved, calls, saved.Adjustments, today));
     }
 }

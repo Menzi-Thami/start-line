@@ -2622,6 +2622,151 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/plans/{id}/session-adjustment/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SessionAdjustmentRequest"];
+                    "text/json": components["schemas"]["SessionAdjustmentRequest"];
+                    "application/*+json": components["schemas"]["SessionAdjustmentRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SessionAdjustmentDto"];
+                        "application/json": components["schemas"]["SessionAdjustmentDto"];
+                        "text/json": components["schemas"]["SessionAdjustmentDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/plans/{id}/session-adjustment/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ApplySessionAdjustmentRequest"];
+                    "text/json": components["schemas"]["ApplySessionAdjustmentRequest"];
+                    "application/*+json": components["schemas"]["ApplySessionAdjustmentRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["SessionAdjustmentDto"];
+                        "application/json": components["schemas"]["SessionAdjustmentDto"];
+                        "text/json": components["schemas"]["SessionAdjustmentDto"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ValidationProblemDetails"];
+                        "application/json": components["schemas"]["ValidationProblemDetails"];
+                        "text/json": components["schemas"]["ValidationProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/plans/{id}/remaining-week/proposal": {
         parameters: {
             query?: never;
@@ -2631,7 +2776,9 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    reported?: boolean;
+                };
                 header?: never;
                 path: {
                     id: string;
@@ -2681,9 +2828,9 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["ApplyCoachingRequest"];
-                    "text/json": components["schemas"]["ApplyCoachingRequest"];
-                    "application/*+json": components["schemas"]["ApplyCoachingRequest"];
+                    "application/json": components["schemas"]["ApplyRemainingWeekRequest"];
+                    "text/json": components["schemas"]["ApplyRemainingWeekRequest"];
+                    "application/*+json": components["schemas"]["ApplyRemainingWeekRequest"];
                 };
             };
             responses: {
@@ -2696,6 +2843,17 @@ export interface paths {
                         "text/plain": components["schemas"]["RemainingWeekProposalDto"];
                         "application/json": components["schemas"]["RemainingWeekProposalDto"];
                         "text/json": components["schemas"]["RemainingWeekProposalDto"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
                     };
                 };
             };
@@ -4036,6 +4194,250 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/private-prescriptions/access": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/private-prescriptions/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["JsonElement"];
+                    "text/json": components["schemas"]["JsonElement"];
+                    "application/*+json": components["schemas"]["JsonElement"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PrivateImportPreviewDto"];
+                        "application/json": components["schemas"]["PrivateImportPreviewDto"];
+                        "text/json": components["schemas"]["PrivateImportPreviewDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/private-prescriptions/{id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ActivatePrivateImportRequest"];
+                    "text/json": components["schemas"]["ActivatePrivateImportRequest"];
+                    "application/*+json": components["schemas"]["ActivatePrivateImportRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/private-prescriptions/plans/{planId}/gym/{sessionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                    sessionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CompletePrivateGymRequest"];
+                    "text/json": components["schemas"]["CompletePrivateGymRequest"];
+                    "application/*+json": components["schemas"]["CompletePrivateGymRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["TrainingPlanDto"];
+                        "application/json": components["schemas"]["TrainingPlanDto"];
+                        "text/json": components["schemas"]["TrainingPlanDto"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/private-prescriptions/plans/{planId}/gym/{sessionId}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    planId: string;
+                    sessionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MovePrivateGymRequest"];
+                    "text/json": components["schemas"]["MovePrivateGymRequest"];
+                    "application/*+json": components["schemas"]["MovePrivateGymRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["PrivateGymMoveDto"];
+                        "application/json": components["schemas"]["PrivateGymMoveDto"];
+                        "text/json": components["schemas"]["PrivateGymMoveDto"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/me/private-prescriptions/plans/{id}/calendar.ics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/races": {
         parameters: {
             query?: never;
@@ -4307,6 +4709,8 @@ export interface components {
             coachingDecisions?: null | components["schemas"]["CoachingDecisionExportDto"][];
             readiness?: null | components["schemas"]["ReadinessDto"][];
             journey?: null | components["schemas"]["JourneyExportDto"];
+            aiCoach?: null | components["schemas"]["AiCoachExportDto"];
+            privateImports?: null | components["schemas"]["PrivateImportExportDto"][];
         };
         AchievementDto: {
             /** Format: uuid */
@@ -4323,6 +4727,10 @@ export interface components {
         };
         /** @enum {unknown} */
         AchievementKind: "TrainingComplete" | "RaceFinished";
+        ActivatePrivateImportRequest: {
+            token: string;
+            consentToReplace: boolean;
+        };
         ActivityDto: {
             /** Format: uuid */
             id: string;
@@ -4387,12 +4795,57 @@ export interface components {
             /** Format: int32 */
             added: number;
         };
+        AdjustedSessionDto: {
+            /** Format: date */
+            date: string;
+            type: components["schemas"]["SessionType"];
+            title: string;
+            /** Format: double */
+            distanceKm: number;
+            zone: null | components["schemas"]["PaceZone"];
+            /** Format: double */
+            fastestSecondsPerKm: null | number;
+            /** Format: double */
+            slowestSecondsPerKm: null | number;
+            /** Format: int32 */
+            estimatedMinutes: number;
+            steps: components["schemas"]["SessionStepDto"][];
+        };
+        /** @enum {unknown} */
+        AdjustmentKind: "Duration" | "Distance" | "Pace";
+        /** @enum {unknown} */
+        AdjustmentOutcome: "Proposed" | "NoChangeNeeded" | "NotRecommended";
+        AiCoachExportDto: {
+            consent: boolean;
+            /** Format: date-time */
+            consentChangedAt: null | string;
+            usage: components["schemas"]["AiUsageExportDto"][];
+        };
+        AiUsageExportDto: {
+            /** Format: date */
+            day: string;
+            /** Format: int32 */
+            calls: number;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+        };
         ApplyCoachingRequest: {
             token: string;
             recovery?: components["schemas"]["RecoveryReadiness"];
         };
         ApplyLifeChangeRequest: {
             change: components["schemas"]["LifeChange"];
+            token: string;
+        };
+        ApplyRemainingWeekRequest: {
+            token: string;
+            /** @default false */
+            reported: boolean;
+        };
+        ApplySessionAdjustmentRequest: {
+            request: components["schemas"]["SessionAdjustmentRequest"];
             token: string;
         };
         ArchiveChapterRequest: {
@@ -4543,6 +4996,7 @@ export interface components {
             canApply: boolean;
             proposed: components["schemas"]["SavedPlanDto"];
             review?: null | components["schemas"]["WeeklyReviewDto"];
+            unsupportedReason?: null | string;
         };
         CoachNoteDto: {
             /** Format: date */
@@ -4564,6 +5018,11 @@ export interface components {
         CoachReason: "FewCheckIns" | "RanAsPlanned" | "FeltHarderThanPlanned" | "MissedVolume" | "HighHeartRateDrift" | "Niggles" | "Pain" | "FeltEasierThanPlanned" | "FasterThanPlanned" | "StrugglingTwice" | "ThrivingTwice" | "JustReplanned" | "BuildingConsistency" | "RecoveryFatigue" | "RecoveryIllness" | "RecoveryWeek" | "OneDemandAtATime";
         /** @enum {unknown} */
         CoachVerdict: "NotEnoughToGoOn" | "OnTrack" | "Struggling" | "Hurting" | "Thriving";
+        CompletePrivateGymRequest: {
+            done: boolean;
+            /** Format: int32 */
+            effort?: null | number;
+        };
         ConnectionExportDto: {
             provider: components["schemas"]["SyncProvider"];
             externalAthleteId: string;
@@ -4670,6 +5129,8 @@ export interface components {
         };
         /** @enum {unknown} */
         GoalVerdict: "NotAssessed" | "AheadOfGoal" | "OnTrack" | "Stretch" | "AtRisk";
+        /** @enum {unknown} */
+        GymClass: "Upper" | "Lower";
         HalvesDto: {
             /** Format: double */
             firstHalfPaceSecondsPerKm: number;
@@ -4721,6 +5182,7 @@ export interface components {
         };
         /** @enum {unknown} */
         JourneyLifecycle: "Active" | "TrainingComplete" | "RacePending" | "RaceCompleted" | "RaceNotCompleted" | "Recovering" | "Recovered" | "Archived" | "Concluded";
+        JsonElement: unknown;
         /** @enum {unknown} */
         JudgedPart: "WholeRun" | "WorkBlock" | "FastestRep" | "None";
         LifeChange: {
@@ -4832,6 +5294,11 @@ export interface components {
             /** Format: int32 */
             withoutSplits: number;
             heartRateConsent: boolean;
+        };
+        MovePrivateGymRequest: {
+            /** Format: date */
+            target: null | string;
+            token?: null | string;
         };
         /** @enum {unknown} */
         NextStep: "BuildAsPlanned" | "HoldVolume" | "EaseOff" | "LogMore";
@@ -4956,6 +5423,13 @@ export interface components {
             /** Format: date */
             nextDate: null | string;
         };
+        PlanReplan: {
+            /** Format: date */
+            from: string;
+            setback: components["schemas"]["Setback"];
+            /** Format: double */
+            recentWeeklyKm?: null | number;
+        };
         PlanWarningDto: {
             code: string;
             message: string;
@@ -4983,6 +5457,97 @@ export interface components {
         };
         /** @enum {unknown} */
         PrescriptionMeasure: "Distance" | "Duration";
+        PrivateGymCompletion: {
+            /** Format: uuid */
+            sessionId: string;
+            /** Format: date */
+            date: string;
+            /** Format: int32 */
+            effort: null | number;
+            /** Format: date-time */
+            recordedAt: string;
+        };
+        PrivateGymMove: {
+            /** Format: uuid */
+            sessionId: string;
+            /** Format: date */
+            date: string;
+        };
+        PrivateGymMoveDto: {
+            token: string;
+            proposed: components["schemas"]["TrainingPlanDto"];
+        };
+        PrivateImportExportDto: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            inputs: components["schemas"]["SavedPlanInputs"];
+            prescription: components["schemas"]["PrivatePrescription"];
+            /** Format: date-time */
+            expiresAt: string;
+            /** Format: uuid */
+            activatedPlanId: null | string;
+        };
+        PrivateImportPreviewDto: {
+            /** Format: uuid */
+            importId: string;
+            token: string;
+            /** Format: date-time */
+            expiresAt: string;
+            replacesCurrent: boolean;
+            plan: components["schemas"]["TrainingPlanDto"];
+        };
+        PrivatePace: {
+            zone: components["schemas"]["PaceZone"];
+            /** Format: double */
+            fastestSecondsPerKm: number;
+            /** Format: double */
+            slowestSecondsPerKm: number;
+        };
+        PrivatePrescription: {
+            /** Format: int32 */
+            schemaVersion: number;
+            sessions: components["schemas"]["PrivateSession"][];
+            paces: components["schemas"]["PrivatePace"][];
+        };
+        PrivateSession: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            date: string;
+            type: components["schemas"]["SessionType"];
+            title: string;
+            /** Format: int32 */
+            targetRpe: number;
+            zone: null | components["schemas"]["PaceZone"];
+            steps: components["schemas"]["PrivateStep"][];
+            notes?: null | string;
+            gym?: null | components["schemas"]["GymClass"];
+            /** Format: int32 */
+            durationMinutes?: null | number;
+            /** @default false */
+            reducedLoad: boolean;
+            /** Format: double */
+            distanceKm?: number;
+        };
+        PrivateStep: {
+            kind: components["schemas"]["StepKind"];
+            /** Format: double */
+            distanceKm: null | number;
+            /** Format: double */
+            durationSeconds: null | number;
+            zone: null | components["schemas"]["PaceZone"];
+            /** Format: double */
+            fastestSecondsPerKm: null | number;
+            /** Format: double */
+            slowestSecondsPerKm: null | number;
+            effort: null | string;
+            /** Format: int32 */
+            times: number;
+            steps: components["schemas"]["PrivateStep"][];
+            /** Format: double */
+            kilometres?: number;
+        };
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
@@ -5384,6 +5949,46 @@ export interface components {
             createdAt: string;
             inputs: components["schemas"]["GeneratePlanQuery"];
             adjustments?: null | components["schemas"]["SessionRevision"][];
+            prescription?: null | components["schemas"]["PrivatePrescription"];
+            gymCompletions?: null | components["schemas"]["PrivateGymCompletion"][];
+            gymMoves?: null | components["schemas"]["PrivateGymMove"][];
+        };
+        SavedPlanInputs: {
+            raceSlug: null | string;
+            raceName: null | string;
+            /** Format: double */
+            distanceKm: null | number;
+            /** Format: date */
+            raceDate: null | string;
+            goalTime: string;
+            runDays: components["schemas"]["DayOfWeek"][];
+            longRunDay: components["schemas"]["DayOfWeek"];
+            /** Format: double */
+            currentWeeklyKm: null | number;
+            experience: components["schemas"]["Experience"];
+            strengthDays: components["schemas"]["DayOfWeek"][];
+            /** Format: date */
+            planFrom: string;
+            /** Format: date */
+            replanFrom?: null | string;
+            setback?: null | components["schemas"]["Setback"];
+            /** Format: double */
+            recentWeeklyKm?: null | number;
+            /**
+             * Format: int32
+             * @default 1
+             */
+            generatorVersion: number;
+            /** Format: date */
+            startOn?: null | string;
+            runWalk?: null | components["schemas"]["RunWalkMode"];
+            /** Format: double */
+            recentResultKm?: null | number;
+            recentResultTime?: null | string;
+            /** Format: date */
+            recentResultDate?: null | string;
+            hasRaceSnapshot?: boolean;
+            replan?: components["schemas"]["PlanReplan"];
         };
         /** @enum {unknown} */
         SavedPlanStatus: "Active" | "Archived" | "Concluded";
@@ -5481,6 +6086,32 @@ export interface components {
             /** Format: double */
             share: null | number;
         };
+        SessionAdjustmentDto: {
+            token: null | string;
+            outcome: components["schemas"]["AdjustmentOutcome"];
+            reason: string;
+            before: components["schemas"]["AdjustedSessionDto"];
+            after: null | components["schemas"]["AdjustedSessionDto"];
+            becomesRest: boolean;
+            /** Format: double */
+            weekKmBefore: number;
+            /** Format: double */
+            weekKmAfter: number;
+            /** Format: double */
+            safeLimitKm: null | number;
+            request: components["schemas"]["SessionAdjustmentRequest"];
+        };
+        SessionAdjustmentRequest: {
+            /** Format: date */
+            date: string;
+            kind: components["schemas"]["AdjustmentKind"];
+            /** Format: int32 */
+            minutes?: null | number;
+            /** Format: double */
+            km?: null | number;
+            /** Format: int32 */
+            paceSecondsPerKm?: null | number;
+        };
         SessionDto: {
             /** Format: date */
             date: string;
@@ -5494,6 +6125,12 @@ export interface components {
             exercises: components["schemas"]["StrengthExerciseDto"][];
             steps: components["schemas"]["SessionStepDto"][];
             runWalk?: null | components["schemas"]["RunWalkDto"];
+            /** Format: uuid */
+            prescriptionId?: null | string;
+            /** Format: int32 */
+            targetRpe?: null | number;
+            gym?: null | components["schemas"]["GymClass"];
+            gymDone?: boolean;
         };
         SessionRevision: {
             /** Format: date */
@@ -5512,6 +6149,7 @@ export interface components {
             easySlowestSecondsPerKm?: null | number;
             /** Format: date */
             movedFrom?: null | string;
+            type?: null | components["schemas"]["SessionType"];
         };
         SessionStepDto: {
             kind: components["schemas"]["StepKind"];
@@ -5782,6 +6420,7 @@ export interface components {
             suggestedGoal?: null | string;
             outlook?: null | components["schemas"]["GoalOutlookDto"];
             adjustments?: null | components["schemas"]["SessionRevision"][];
+            isPrivate?: boolean;
         };
         TrainingRecapDto: {
             /** Format: int32 */

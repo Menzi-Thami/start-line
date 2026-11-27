@@ -1,3 +1,4 @@
+import { PrivateImport } from '../private-plans/PrivateImport'
 import { RunDataPanel } from '../activities/RunDataPanel'
 import './account-layout.css'
 import { useState, type ReactNode } from 'react'
@@ -146,6 +147,7 @@ export function AccountPage({ runner, onSaved, onDeleted, onOpenRuns, stravaNoti
         </>)}
 
         {group('data', 'Data & privacy', <>
+          <PrivateImport key={runner.id} />
           <RunDataPanel units={runner.units === 'Miles' ? 'mi' : 'km'} />
           <div className="section">
             <h3>Your data</h3>

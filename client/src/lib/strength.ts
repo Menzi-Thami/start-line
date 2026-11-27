@@ -10,7 +10,8 @@ export function strengthMinutes(session: Pick<Session, 'detail'>): number | null
 }
 
 /** "6 exercises · about 30 min": what a strength session asks for, in one line. */
-export function strengthSummary(session: Pick<Session, 'detail' | 'exercises'>): string {
+export function strengthSummary(session: Pick<Session, 'detail' | 'exercises' | 'gym'>): string {
+  if (session.gym) return session.detail
   const count = session.exercises.length
   const minutes = strengthMinutes(session)
   return `${count} ${count === 1 ? 'exercise' : 'exercises'}${minutes ? ` · about ${minutes} min` : ''}`

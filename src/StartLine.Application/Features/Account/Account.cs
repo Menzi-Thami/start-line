@@ -211,7 +211,9 @@ public sealed record AccountExportDto(
     IReadOnlyList<CoachingDecisionExportDto>? CoachingDecisions = null,
     IReadOnlyList<ReadinessDto>? Readiness = null,
     Journey.JourneyExportDto? Journey = null,
-    AiCoachExportDto? AiCoach = null);
+    AiCoachExportDto? AiCoach = null, IReadOnlyList<PrivateImportExportDto>? PrivateImports = null);
+
+public sealed record PrivateImportExportDto(Guid Id, string Name, SavedPlanInputs Inputs, PrivatePrescription Prescription, DateTimeOffset ExpiresAt, Guid? ActivatedPlanId);
 
 /// <summary>The runner's AI coach agreement and daily usage counts. Taperday keeps no questions or answers, so there are none to export.</summary>
 public sealed record AiCoachExportDto(bool Consent, DateTimeOffset? ConsentChangedAt, IReadOnlyList<AiUsageExportDto> Usage);
@@ -307,7 +309,11 @@ internal sealed class ExportAccountHandler(IApplicationDbContext db, CurrentRunn
             await JourneyAsync(runner, plans, cancellationToken),
             new AiCoachExportDto(runner.AiCoachConsent, runner.AiCoachConsentChangedAt,
                 await db.AiUsage.AsNoTracking().Where(u => u.RunnerId == runner.Id).OrderBy(u => u.Day)
-                    .Select(u => new AiUsageExportDto(u.Day, u.Calls, u.InputTokens, u.OutputTokens)).ToListAsync(cancellationToken)));
+                    .Select(u => new AiUsageExportDto(u.Day, u.Calls, u.InputTokens, u.OutputTokens)).ToListAsync(cancellationToken))) with
+        {
+            PrivateImports = await db.PrivatePlanImports.AsNoTracking().Where(i => i.RunnerId == runner.Id && i.ExpiresAt > time.GetUtcNow())
+            .Select(i => new PrivateImportExportDto(i.Id, i.Name, i.Inputs, i.Prescription, i.ExpiresAt, i.ActivatedPlanId)).ToListAsync(cancellationToken)
+        };
     }
 
     private async Task<Journey.JourneyExportDto> JourneyAsync(Runner runner, List<SavedPlan> plans, CancellationToken cancellationToken)

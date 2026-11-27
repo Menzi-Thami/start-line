@@ -62,7 +62,7 @@ internal sealed class JourneyReader(IApplicationDbContext db, PlanBuilder builde
                 continue;
             }
 
-            var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), [.. calls[saved.Id]], saved.Adjustments, today);
+            var plan = builder.BuildPlan(saved, [.. calls[saved.Id]], saved.Adjustments, today);
             built.Add((saved, plan, TrainingRecap.Evaluate(plan.StartDate, plan.RaceDate, plan.Weeks, checkIns[saved.Id], uploads, today)));
         }
 

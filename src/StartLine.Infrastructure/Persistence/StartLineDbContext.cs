@@ -18,6 +18,8 @@ public sealed class StartLineDbContext(DbContextOptions<StartLineDbContext> opti
 
     public DbSet<SavedPlan> SavedPlans => Set<SavedPlan>();
 
+    public DbSet<PrivatePlanImport> PrivatePlanImports => Set<PrivatePlanImport>();
+
     public DbSet<Activity> Activities => Set<Activity>();
 
     public DbSet<ProviderConnection> ProviderConnections => Set<ProviderConnection>();

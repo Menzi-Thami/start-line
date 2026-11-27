@@ -89,6 +89,10 @@ export function saveSnapshot(owner: string, part: Omit<HomeSnapshot, 'savedAt'>,
     ...(part.runs ? { runs: freshRuns(part.runs, now) } : {}),
     savedAt: now.toISOString(),
   }
+  if (snapshot.current?.isPrivate || snapshot.plan?.plan.isPrivate) {
+    delete snapshot.current
+    delete snapshot.plan
+  }
   try {
     window.localStorage.setItem(KEY, JSON.stringify({ v: VERSION, owner, snapshot } satisfies Stored))
   } catch {

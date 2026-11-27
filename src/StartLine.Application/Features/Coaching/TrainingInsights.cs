@@ -51,7 +51,7 @@ internal sealed class GetTrainingInsightsHandler(IApplicationDbContext db, Curre
         try
         {
             var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-            sessions = [.. builder.BuildPlan(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, today).Weeks.SelectMany(w => w.Sessions)];
+            sessions = [.. builder.BuildPlan(saved, calls, saved.Adjustments, today).Weeks.SelectMany(w => w.Sessions)];
         }
         catch (Exception e) when (e is NotFoundException or DomainException)
         {

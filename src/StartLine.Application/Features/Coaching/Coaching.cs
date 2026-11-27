@@ -77,7 +77,7 @@ internal sealed class CoachMyPlanHandler(IApplicationDbContext db, CurrentRunner
 
         var query = SavedPlanMapping.ToQuery(saved);
         var calls = await coach.CallsAsync(saved, runner, cancellationToken);
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), saved.Status,
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(saved, calls, saved.Adjustments, CoachCalls.LocalToday(runner, time)), saved.Status,
             [.. calls.Select(CoachNoteDto.From)]);
     }
 }
@@ -93,12 +93,12 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
         ArgumentNullException.ThrowIfNull(saved);
         ArgumentNullException.ThrowIfNull(runner);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        if (!preview || saved.Status != SavedPlanStatus.Active)
+        if (!preview || saved.Prescription is not null || saved.Status != SavedPlanStatus.Active)
         {
             return calls;
         }
 
-        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, CoachCalls.LocalToday(runner, time));
+        var plan = builder.BuildPlan(saved, calls, saved.Adjustments, CoachCalls.LocalToday(runner, time));
         var call = await DecideThisWeekAsync(saved, runner, plan, calls, recovery, cancellationToken);
         return call is null ? calls : [.. calls, call];
     }
@@ -191,7 +191,7 @@ internal sealed class PlanCoach(IApplicationDbContext db, PlanBuilder builder, T
 public sealed record WeeklyReviewDto(DateOnly ReviewedWeek, DateOnly TargetWeek, int RunsPlanned, int RunsCompleted, int Skipped,
     int MissingCheckIns, int Substitutions, double PlannedKm, double ReportedKm, int UnknownDistances, RecoveryReadiness Recovery,
     bool RecoveryFromCheckIn = false);
-public sealed record CoachingProposalDto(string Token, bool HasChanges, bool CanApply, SavedPlanDto Proposed, WeeklyReviewDto? Review = null);
+public sealed record CoachingProposalDto(string Token, bool HasChanges, bool CanApply, SavedPlanDto Proposed, WeeklyReviewDto? Review = null, string? UnsupportedReason = null);
 
 public sealed record ReviewCoachingCommand(Guid Id, string? AcceptToken = null, RecoveryReadiness Recovery = RecoveryReadiness.NotReported, bool Decline = false) : IRequest<CoachingProposalDto>;
 
@@ -212,8 +212,8 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
         var query = SavedPlanMapping.ToQuery(saved);
         var targetDay = today.DayOfWeek == DayOfWeek.Sunday ? today.AddDays(1) : today;
         var targetWeek = targetDay.AddDays(-((int)targetDay.DayOfWeek + 6) % 7);
-        var plan = builder.Build(query, proposed, saved.Adjustments, targetWeek);
-        var original = builder.Build(query, existing, saved.Adjustments, targetWeek);
+        var plan = builder.Build(saved, proposed, saved.Adjustments, targetWeek);
+        var original = builder.Build(saved, existing, saved.Adjustments, targetWeek);
         var from = targetWeek.AddDays(-7);
         var answers = await db.SessionCheckIns.AsNoTracking().Where(c => c.SavedPlanId == saved.Id && c.Date >= from && c.Date < targetWeek).OrderBy(c => c.Id).ToListAsync(cancellationToken);
         var uploads = await db.Activities.AsNoTracking().Where(a => a.RunnerId == runner.Id && a.Source == ActivitySource.Upload && a.LocalDate >= from && a.LocalDate < targetWeek).OrderBy(a => a.Id).ToListAsync(cancellationToken);
@@ -262,9 +262,10 @@ internal sealed class ReviewCoachingHandler(IApplicationDbContext db, CurrentRun
 
             await coach.AcceptAsync(saved.Id, pending, changed, recovery, cancellationToken);
             // The apply response is the current view, while the preview shows the target week’s zones.
-            dto = dto with { Plan = builder.Build(query, proposed, saved.Adjustments, today) };
+            dto = dto with { Plan = builder.Build(saved, proposed, saved.Adjustments, today) };
         }
 
-        return new(token, changed, canApply, dto, review);
+        return new(token, changed, canApply, dto, review, saved.Prescription is null ? null :
+            "Weekly regeneration is unavailable for private prescriptions. Rate your runs and preview Ease the rest of this week for a safe reduction, or import a reviewed replacement.");
     }
 }

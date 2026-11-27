@@ -1,3 +1,4 @@
+import { PrivateGym } from '../private-plans/PrivateGym'
 import { formatDate } from '../../lib/format'
 import type { PlanWeek, TrainingPlan } from '../../lib/types'
 import { ExerciseLibrary, ExerciseList } from './ExerciseList'
@@ -12,13 +13,22 @@ interface Props {
   onDoneChange: (update: DoneUpdate) => void
   onEditStrength?: () => void
   readOnly?: boolean
+  planId?: string | null
+  today?: string
+  onPlanChanged?: (plan: TrainingPlan) => void
 }
 
 /**
  * The plan's strength work for the week: each session's exercises with a demo, sets and reps, and a tick per set.
  * Without strength days it shows every move, so the runner can see what they'd be adding.
  */
-export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength, readOnly = false }: Props) {
+export function StrengthTab({ plan, week, done, onDoneChange, onEditStrength, readOnly = false, planId, today, onPlanChanged }: Props) {
+  if (plan.isPrivate) return <>
+    <p className="tab-intro">Your private gym sessions. Completion is kept separately from running.</p>
+    {week?.sessions.filter(s => s.type === 'Strength').map(session => planId && today && onPlanChanged
+      ? <PrivateGym key={`${session.prescriptionId}|${session.date}`} planId={planId} session={session} today={today} onChanged={onPlanChanged} readOnly={readOnly} />
+      : <article key={session.prescriptionId} className="strength-session"><h3>{formatDate(session.date)} · {session.title}</h3><p>{session.detail}</p></article>)}
+  </>
   const hasStrength = plan.weeks.some((w) => w.sessions.some((s) => s.exercises.length > 0))
   const sessions = week?.sessions.filter((s) => s.exercises.length > 0) ?? []
 

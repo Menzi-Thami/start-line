@@ -72,6 +72,9 @@ internal sealed class SavedPlanConfiguration : IEntityTypeConfiguration<SavedPla
         builder.Property(p => p.Name).HasMaxLength(SavedPlan.MaxNameLength).IsRequired();
         builder.Property(p => p.Status).HasConversion<string>().HasMaxLength(16);
         builder.Property(p => p.Version).IsRowVersion();
+        PrivatePlanJson.Property(builder.Property(p => p.Prescription));
+        PrivatePlanJson.Property(builder.Property(p => p.GymCompletions).HasDefaultValueSql("N'[]'"));
+        PrivatePlanJson.Property(builder.Property(p => p.GymMoves).HasDefaultValueSql("N'[]'"));
         builder.Property(p => p.Adjustments).HasConversion(
             changes => JsonSerializer.Serialize(changes, (JsonSerializerOptions?)null),
             json => JsonSerializer.Deserialize<IReadOnlyList<SessionRevision>>(json, (JsonSerializerOptions?)null)!)
@@ -618,5 +621,33 @@ internal sealed class MaintenancePlanConfiguration : IEntityTypeConfiguration<St
         // One easy-running plan going at a time; the runner going takes theirs.
         builder.HasIndex(m => m.RunnerId).IsUnique().HasFilter("[Status] = 'Active'").HasDatabaseName("IX_MaintenancePlans_OneActivePerRunner");
         builder.HasOne<Runner>().WithMany().HasForeignKey(m => m.RunnerId).OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal static class PrivatePlanJson
+{
+    public static void Property<T>(PropertyBuilder<T> property) => property.HasColumnType("nvarchar(max)").HasConversion(
+        value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+        json => JsonSerializer.Deserialize<T>(json, (JsonSerializerOptions?)null)!)
+        .Metadata.SetValueComparer(new ValueComparer<T>(
+            (a, b) => JsonSerializer.Serialize(a, (JsonSerializerOptions?)null) == JsonSerializer.Serialize(b, (JsonSerializerOptions?)null),
+            value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null).GetHashCode(),
+            value => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value, (JsonSerializerOptions?)null), (JsonSerializerOptions?)null)!));
+}
+
+internal sealed class PrivatePlanImportConfiguration : IEntityTypeConfiguration<PrivatePlanImport>
+{
+    public void Configure(EntityTypeBuilder<PrivatePlanImport> builder)
+    {
+        builder.ToTable("PrivatePlanImports");
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id).ValueGeneratedNever();
+        builder.Property(p => p.Name).HasMaxLength(SavedPlan.MaxNameLength);
+        builder.Property(p => p.TokenHash).HasMaxLength(64).IsUnicode(false);
+        builder.Property(p => p.ExpectedActiveVersion).HasMaxLength(64).IsUnicode(false);
+        PrivatePlanJson.Property(builder.Property(p => p.Inputs));
+        PrivatePlanJson.Property(builder.Property(p => p.Prescription));
+        builder.HasIndex(p => new { p.RunnerId, p.ExpiresAt });
+        builder.HasOne<Runner>().WithMany().HasForeignKey(p => p.RunnerId).OnDelete(DeleteBehavior.Cascade);
     }
 }

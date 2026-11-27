@@ -42,7 +42,7 @@ internal static class PlanCalendar
                 var description = $"{session.Detail}{exercises}\n\nWhy: {session.Purpose}\n\nWeek {week.Number} of {plan.Weeks.Count} for {plan.Race.Name}.";
 
                 lines.Add("BEGIN:VEVENT");
-                lines.Add($"UID:{Compact(session.Date)}-{index}-{session.Type}@taperday.run");
+                lines.Add(session.PrescriptionId is { } privateId ? $"UID:{privateId:D}@taperday.run" : $"UID:{Compact(session.Date)}-{index}-{session.Type}@taperday.run");
                 lines.Add($"DTSTAMP:{stamp}");
                 lines.Add($"DTSTART;VALUE=DATE:{Compact(session.Date)}");
                 lines.Add($"DTEND;VALUE=DATE:{Compact(session.Date.AddDays(1))}");

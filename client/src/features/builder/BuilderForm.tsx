@@ -13,6 +13,7 @@ import { goalProblem } from './goal-limits'
 import { suggestedGoals } from './goal-suggestions'
 import { emptyRecent, recentDraft, recentInputs, type RecentDraft } from './recent-result'
 import { useQuestionFrame } from './useQuestionFrame'
+import { StepRail, type RailStep } from './StepRail'
 import './builder-navigation.css'
 
 export type RacesState = { kind: 'loading' } | { kind: 'ready'; races: Race[] } | { kind: 'error'; message: string }
@@ -65,6 +66,27 @@ const STEPS = [
   { title: 'When can you run?', hint: 'Choose the days that work for you.', fields: ['runDays', 'longRunDay', 'startOn'] },
   { title: 'Check and build', hint: 'Review your choices before building.', fields: ['currentKm', 'strength'] },
 ] as const satisfies readonly { title: string; hint: string; fields: readonly Field[] }[]
+
+/** The rail's markers, one per question; a sign-up screen in front adds its own. */
+const RAIL: readonly RailStep[] = [
+  { label: 'Race', icon: 'race' },
+  { label: 'Goal', icon: 'goal' },
+  { label: 'Days', icon: 'days' },
+  { label: 'Review', icon: 'finish' },
+]
+const GATE_RAIL: RailStep = { label: 'Sign up', icon: 'account' }
+
+/** The race being trained for, kept in view on Goal and Days. */
+function PinnedRace({ name, date, km, units, today }: { name: string; date: string; km: number | null; units: Units; today: string }) {
+  const [day, month] = formatDate(date, 'dayMonth').split(' ')
+  const weeks = Math.max(0, Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / (7 * 86_400_000)))
+  return (
+    <div className="builder-pinned-race" aria-label="Your race">
+      <span className="builder-pinned-date" aria-hidden="true"><b>{day}</b><small>{month}</small></span>
+      <span><strong>{name}</strong>{km ? `${formatDistance(km, units)} · ` : ''}{weeks === 1 ? '1 week to go' : `${weeks} weeks to go`}</span>
+    </div>
+  )
+}
 
 const LAST_STEP = STEPS.length - 1
 const MORE_FIELDS: readonly Field[] = ['currentKm', 'strength']
@@ -452,11 +474,11 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
       {position === 0 && intro}
       {creatingPlan && step === 0 && !gate && <section className="panel" aria-label="Start running with Couch to 5K"><h2>Brand new to running?</h2><p>Try our gentle nine-week Couch to 5K run/walk programme before choosing a race goal.</p><button type="button" className="button button-quiet" onClick={() => onOpenBeginner?.()} disabled={!onOpenBeginner}>Open Couch to 5K</button></section>}
 
-      {/* One progress marker. Back and Review's Change links move between steps. */}
+      {/* The rail shows the way; "Step N of M" (here on a gate, in the action bar on a question) is the one spoken marker.
+          Back, done markers and Review's Change links move between steps. */}
       <div className="wizard-progress">
-        <p className="wizard-count">
-          Step {position + 1} of {totalSteps}
-        </p>
+        <StepRail steps={offset ? [GATE_RAIL, ...RAIL] : RAIL} current={position} onPick={(i) => goTo(i - offset)} canPick={(i) => !gate && i >= offset} />
+        {gate && <p className="wizard-count">Step {position + 1} of {totalSteps}</p>}
         {onCancel && !gate && (
           <button type="button" className="link-button wizard-cancel" onClick={onCancel}>
             Back to your plan
@@ -480,7 +502,10 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
                 {current.title}
               </h2>
               <p className="wizard-hint">{current.hint}</p>
-    
+              {(step === 1 || step === 2) && raceDate && (
+                <PinnedRace name={chosenRace?.name ?? (draft.otherName.trim() || 'Your race')} date={raceDate} km={targetKm} units={units} today={today} />
+              )}
+
               {stepErrors.length > 0 && (
                 <div className="form-errors" role="alert">
                   <h3>{stepErrors.length === 1 ? 'One thing to fix' : 'A few things to fix'}</h3>
@@ -737,6 +762,7 @@ export function BuilderForm({ races, onRetryRaces, initial, units, busy, serverE
               ) : (
                 <span />
               )}
+              <p className="wizard-count">Step {position + 1} of {totalSteps}</p>
               <button type="submit" className="button button-primary" disabled={busy} aria-busy={busy}
                 onClick={(event) => { if (event.detail > 1) event.preventDefault() }}>
                 {step === 0 && !draft.race ? 'Choose a race' : step < LAST_STEP ? 'Continue' : busy ? 'Building your plan…' : 'Build my plan'}

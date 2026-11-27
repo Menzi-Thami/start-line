@@ -47,7 +47,8 @@ npm audit --audit-level=high
 if [ "$quick" = false ]; then
   step 'End to end (Playwright, Chromium)'
   npx playwright install chromium >/dev/null
-  npx playwright test --reporter=line
+  # Match the existing unsharded release CI budget; individual test timeouts stay unchanged.
+  npx playwright test --global-timeout=2700000 --reporter=line
   step 'Private prescription: authenticated API, SQL and UI'
   npx playwright test --config playwright.private.config.ts --reporter=line
 fi

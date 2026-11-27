@@ -1,0 +1,166 @@
+/* The plan builder's progress rail (StepRail.tsx). Frame tokens only, so Daylight and Night Run both work. */
+.step-rail {
+  --rail-step: 3.5rem;
+  --rail-dot: 2rem;
+  --rail-runner: 2.25rem;
+  position: relative;
+  width: 100%;
+  max-width: 34rem;
+  margin-top: var(--space-4);
+  padding-top: var(--rail-runner);
+}
+
+.step-rail-track {
+  position: absolute;
+  left: calc(var(--rail-step) / 2);
+  right: calc(var(--rail-step) / 2);
+  top: calc(var(--rail-runner) + var(--rail-dot) / 2 - 1.5px);
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line-strong);
+}
+
+.step-rail-fill {
+  display: block;
+  height: 100%;
+  width: calc(100% * var(--rail-at));
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 700ms var(--ease-glide);
+}
+
+.step-rail-runner {
+  position: absolute;
+  top: 0;
+  left: calc(var(--rail-step) / 2 + (100% - var(--rail-step)) * var(--rail-at));
+  transform: translateX(-50%);
+  transition: left 700ms var(--ease-glide);
+  pointer-events: none;
+}
+
+.step-rail-runner.is-back { transform: translateX(-50%) scaleX(-1); }
+.step-rail-runner:not(.is-moving) .runner-sprint .limb { animation: none; }
+
+.step-rail-steps {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-rail-step {
+  width: var(--rail-step);
+  display: flex;
+  justify-content: center;
+}
+
+.step-rail-step,
+.step-rail-button {
+  flex-direction: column;
+  align-items: center;
+  gap: .35rem;
+}
+
+.step-rail-button {
+  display: flex;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.step-rail-button:focus-visible { outline: none; }
+.step-rail-button:focus-visible .step-rail-dot { box-shadow: var(--focus); }
+
+.step-rail-dot {
+  width: var(--rail-dot);
+  height: var(--rail-dot);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: var(--surface-sunk);
+  color: var(--muted);
+  transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
+}
+
+.step-rail-step.is-done .step-rail-dot { background: var(--accent); color: var(--on-accent); }
+.step-rail-step.is-now .step-rail-dot { background: var(--paper); color: var(--ink); border-color: var(--ink); }
+.step-rail-button:hover .step-rail-dot { background: var(--accent-strong); }
+
+.step-rail-label {
+  font-size: .72rem;
+  font-weight: 650;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.step-rail-step.is-now .step-rail-label { color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .step-rail-fill, .step-rail-runner, .step-rail-dot { transition: none; }
+}
+
+@media print {
+  .step-rail-runner { display: none; }
+}
+
+/* The race being trained for stays in view on Goal and Days. */
+.builder-pinned-race {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  padding: .55rem .8rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.builder-pinned-race strong { display: block; color: var(--ink); font-weight: 650; }
+
+.builder-pinned-date {
+  flex: 0 0 auto;
+  width: 2.4rem;
+  padding: .3rem 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  text-align: center;
+  line-height: 1.05;
+}
+
+.builder-pinned-date b { display: block; font-size: 1rem; }
+.builder-pinned-date small { font-size: .62rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+
+/* One action bar: Back, where you are, Continue. */
+.plan-builder-flow .wizard-nav .wizard-count {
+  flex: 0 0 auto;
+  margin: 0;
+  text-align: center;
+}
+
+.plan-builder-flow .wizard-nav > :first-child { flex: 0 0 auto; }
+
+@media (max-width: 767px) {
+  .plan-builder-flow .wizard-nav { flex-wrap: nowrap; }
+}
+
+/* Goal suggestions: three tiles, each name, time and pace on its own line. */
+.goal-suggestion-row > .goal-suggestion.chip-button {
+  display: grid;
+  grid-auto-flow: row;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  white-space: normal;
+}
+
+.goal-suggestion-row > .goal-suggestion > * { display: block; }

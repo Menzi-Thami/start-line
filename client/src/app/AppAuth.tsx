@@ -56,7 +56,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
 }
 
 /** The "Set my password" link in emails (`/?view=set-password`). */
-export const setPasswordLink = (params: URLSearchParams) => params.get('view') === 'set-password'
+const setPasswordLink = (params: URLSearchParams) => params.get('view') === 'set-password'
 
 /**
  * Microsoft has no direct password-reset address for External ID: reset is the "Forgot password?" link on its sign-in

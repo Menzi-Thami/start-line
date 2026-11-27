@@ -59,7 +59,7 @@ describe('authentication-first app entry', () => {
     expect(await screen.findByRole('region', { name: 'configured-account' })).toHaveTextContent('Your running')
   })
 
-  it('sends the email's set-password link straight to Microsoft's sign-in, once, and leaves Home in the address bar', async () => {
+  it("sends the email's set-password link straight to Microsoft's sign-in, once, and leaves Home in the address bar", async () => {
     window.history.replaceState(null, '', '/?view=set-password')
     render(<AppAuth config={{ clientId: 'signed-out', authority: 'https://example.test', scope: 'plans', google: false }}><p>Private training</p></AppAuth>)
     expect(await screen.findByRole('heading', { name: 'Set your password' })).toBeInTheDocument()

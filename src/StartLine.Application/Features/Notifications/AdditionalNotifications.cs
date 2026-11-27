@@ -39,8 +39,7 @@ internal sealed partial class NotificationReview(IApplicationDbContext db, PlanC
         var pending = proposed.LastOrDefault(p => !existing.Any(e => e.WeekStart == p.WeekStart));
         if (pending is null) return null;
         var today = CoachCalls.LocalToday(runner, time);
-        var query = SavedPlanMapping.ToQuery(saved);
-        var original = builder.BuildPlan(query, existing, saved.Adjustments, pending.WeekStart);
+        var original = builder.BuildPlan(saved, existing, saved.Adjustments, pending.WeekStart);
         if (today.DayOfWeek == DayOfWeek.Sunday)
         {
             var from = pending.WeekStart.AddDays(-7);
@@ -54,7 +53,7 @@ internal sealed partial class NotificationReview(IApplicationDbContext db, PlanC
             }
         }
 
-        return JsonSerializer.Serialize(original) == JsonSerializer.Serialize(builder.BuildPlan(query, proposed, saved.Adjustments, pending.WeekStart))
+        return JsonSerializer.Serialize(original) == JsonSerializer.Serialize(builder.BuildPlan(saved, proposed, saved.Adjustments, pending.WeekStart))
             ? null : pending.WeekStart;
     }
 }
@@ -84,9 +83,9 @@ internal sealed class AdditionalNotifications(IApplicationDbContext db, Notifica
             }
 
             var saved = plans.SingleOrDefault(p => p.RunnerId == runner.Id);
-            if (saved is null) continue;
+            if (saved is null || saved.Prescription is not null) continue;
             TrainingPlan plan;
-            try { plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), await CoachCalls.ForAsync(db, saved.Id, cancellationToken), saved.Adjustments); }
+            try { plan = builder.BuildPlan(saved, await CoachCalls.ForAsync(db, saved.Id, cancellationToken), saved.Adjustments); }
             catch (Exception e) when (e is NotFoundException or Domain.Common.DomainException) { continue; }
 
             // The evening before a new plan's first run, every device that allows notifications hears about it, once.

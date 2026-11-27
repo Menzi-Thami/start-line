@@ -162,7 +162,7 @@ internal sealed class ActivityImporter(IApplicationDbContext db, IActivityFileRe
 
             if (!builtPlans.TryGetValue(plan.Id, out var built))
             {
-                built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan), await CoachCalls.ForAsync(db, plan.Id, cancellationToken), plan.Adjustments, date);
+                built = builder.BuildPlan(plan, await CoachCalls.ForAsync(db, plan.Id, cancellationToken), plan.Adjustments, date);
                 builtPlans[plan.Id] = built;
             }
 

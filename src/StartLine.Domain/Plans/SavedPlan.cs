@@ -71,6 +71,42 @@ public sealed class SavedPlan
 
     public SavedPlanStatus Status { get; private set; }
 
+    public PrivatePrescription? Prescription { get; private set; }
+
+    public IReadOnlyList<PrivateGymCompletion> GymCompletions { get; private set; } = [];
+
+    public IReadOnlyList<PrivateGymMove> GymMoves { get; private set; } = [];
+
+    public static SavedPlan CreatePrivate(Guid runnerId, string name, SavedPlanInputs inputs, PrivatePrescription prescription)
+    {
+        var plan = Create(runnerId, name, inputs);
+        plan.Prescription = prescription;
+        return plan;
+    }
+
+    public void CompleteGym(Guid sessionId, int? effort, bool done, DateOnly today, DateTimeOffset now)
+    {
+        var session = Prescription?.Sessions.SingleOrDefault(s => s.Id == sessionId && s.Type == SessionType.Strength);
+        var date = GymMoves.SingleOrDefault(m => m.SessionId == sessionId)?.Date ?? session?.Date;
+        if (session is null || date > today || Status == SavedPlanStatus.Archived || effort is < 1 or > 10)
+            throw new DomainException("Choose a gym session whose day has come, with optional effort from 1 to 10.");
+        if (done && GymCompletions.SingleOrDefault(c => c.SessionId == sessionId) is { } existing && existing.Effort == effort) return;
+        GymCompletions = [.. GymCompletions.Where(c => c.SessionId != sessionId), .. done ? new[] { new PrivateGymCompletion(sessionId, date!.Value, effort, now) } : []];
+    }
+
+    public void MoveGym(Guid sessionId, DateOnly? target, DateOnly today)
+    {
+        var session = Prescription?.Sessions.SingleOrDefault(s => s.Id == sessionId && s.Type == SessionType.Strength);
+        var from = GymMoves.SingleOrDefault(m => m.SessionId == sessionId)?.Date ?? session?.Date;
+        var date = target ?? session?.Date;
+        if (session is null || Status != SavedPlanStatus.Active || from < today || date < today || date >= Inputs.RaceDate
+            || date < Inputs.StartOn || date >= today.AddDays(14) || GymCompletions.Any(c => c.SessionId == sessionId)
+            || Prescription!.Sessions.Where(s => s.Id != sessionId && s.Type == SessionType.Strength)
+                .Any(s => (GymMoves.SingleOrDefault(m => m.SessionId == s.Id)?.Date ?? s.Date) == date))
+            throw new DomainException("Move only a gym session that has not been logged, within the next two weeks, before the race, to a day without gym.");
+        GymMoves = [.. GymMoves.Where(m => m.SessionId != sessionId), .. date == session.Date ? Array.Empty<PrivateGymMove>() : [new PrivateGymMove(sessionId, date!.Value)]];
+    }
+
     public IReadOnlyList<SessionRevision> Adjustments { get; private set; } = [];
 
     public DateTimeOffset CreatedAt { get; private set; }
@@ -108,6 +144,8 @@ public sealed class SavedPlan
             throw new DomainException("Only the current plan can be changed. Make a past plan current first.");
         }
 
+        if (Prescription is not null)
+            throw new DomainException("A private prescription cannot be regenerated. Import and review a replacement to change its running schedule.");
         Inputs = inputs;
     }
 

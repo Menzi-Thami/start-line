@@ -45,6 +45,11 @@ public sealed class Runner
 
     public bool WeeklyEmails { get; private set; }
 
+    /// <summary>Administrator-controlled pilot entitlement. Never accepted from profile requests.</summary>
+    public bool PrivatePrescriptionsEnabled { get; private set; }
+
+    public void SetPrivatePrescriptionsEnabled(bool enabled) => PrivatePrescriptionsEnabled = enabled;
+
     /// <summary>
     /// When the runner stopped Taperday's news and update emails (what's new in the app), or null while they still get
     /// them. On unless they say no: they're about the service they signed up for, and every one carries an unsubscribe

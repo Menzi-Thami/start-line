@@ -157,6 +157,7 @@ async function readResponse<T>(path: string, init: RequestInit, token: string | 
     response = await fetch(`${BASE_URL}${path}`, {
       ...init,
       signal,
+      ...(token ? { cache: 'no-store' as RequestCache } : {}),
       headers: {
         Accept: 'application/json',
         // A FormData body sets its own multipart Content-Type, boundary included.
@@ -242,6 +243,12 @@ export const api = {
 
   // Signed-in calls take the access token explicitly, so this module never holds sign-in state.
   me: {
+    privateAccess: (token: string) => request<{ enabled: boolean }>('/api/v1/me/private-prescriptions/access', {}, token),
+    previewPrivateImport: (token: string, payload: unknown) => request<{ importId: string; token: string; expiresAt: string; replacesCurrent: boolean; plan: TrainingPlan }>('/api/v1/me/private-prescriptions/preview', { method: 'POST', body: JSON.stringify(payload) }, token),
+    activatePrivateImport: (token: string, id: string, previewToken: string) => request<{ planId: string; isCurrent: boolean }>(`/api/v1/me/private-prescriptions/${id}/activate`, { method: 'POST', body: JSON.stringify({ token: previewToken, consentToReplace: true }) }, token),
+    completePrivateGym: (token: string, planId: string, id: string, done: boolean) => request<TrainingPlan>(`/api/v1/me/private-prescriptions/plans/${planId}/gym/${id}`, { method: 'PUT', body: JSON.stringify({ done }) }, token),
+    movePrivateGym: (token: string, planId: string, id: string, target: string | null, previewToken?: string) => request<{ token: string; proposed: TrainingPlan }>(`/api/v1/me/private-prescriptions/plans/${planId}/gym/${id}/move`, { method: 'POST', body: JSON.stringify({ target, token: previewToken }) }, token),
+
     get: (token: string, signal?: AbortSignal) => request<Runner>('/api/v1/me', { signal }, token),
     save: (token: string, body: SaveProfileRequest) =>
       request<Runner>('/api/v1/me', { method: 'PUT', body: JSON.stringify(body) }, token),

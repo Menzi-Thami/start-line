@@ -25,6 +25,8 @@ public interface IApplicationDbContext
 
     DbSet<SavedPlan> SavedPlans { get; }
 
+    DbSet<PrivatePlanImport> PrivatePlanImports { get; }
+
     DbSet<Activity> Activities { get; }
 
     DbSet<ProviderConnection> ProviderConnections { get; }

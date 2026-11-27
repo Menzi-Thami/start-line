@@ -139,6 +139,27 @@ jobs:
           dotnet tool restore
           dotnet ef migrations has-pending-model-changes --project src/StartLine.Infrastructure --startup-project src/StartLine.Infrastructure --no-build --configuration Release
 
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: client/.nvmrc
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - name: Private prescription persisted browser journeys
+        working-directory: client
+        run: |
+          npm ci --silent
+          npx playwright install --with-deps chromium
+          npx playwright test --config playwright.private.config.ts
+      - name: Keep synthetic private prescription browser evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: private-prescription-browser
+          path: |
+            client/test-results/
+            docs/qa/2026-11-26/private-prescription/*.png
+          if-no-files-found: ignore
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

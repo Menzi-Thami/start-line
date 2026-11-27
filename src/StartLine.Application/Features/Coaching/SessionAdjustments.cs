@@ -67,12 +67,13 @@ internal sealed class SessionAdjustments(IApplicationDbContext db, CurrentRunner
         if (!Enum.IsDefined(request.Kind))
             throw new ValidationException(new Dictionary<string, string[]> { ["kind"] = ["Choose a time, a distance or a pace."] });
         var saved = await OwnPlan.FindAsync(db, current, planId, cancellationToken);
+        if (saved.Prescription is not null)
+            throw new ConflictException("private_adjustment_unsupported", "Exact distance and pace editing is unavailable for private prescriptions. Preview an easier remaining week, or import a reviewed replacement.");
         var runner = await current.FindAsync(cancellationToken) ?? throw new NotFoundException("Runner", "me");
         if (saved.Status != SavedPlanStatus.Active) throw new ConflictException("plan_archived", "Only your current plan can change.");
         var today = CoachCalls.LocalToday(runner, time);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var query = SavedPlanMapping.ToQuery(saved);
-        var written = builder.BuildPlan(query, calls, paceDate: today);
+        var written = builder.BuildPlan(saved, calls, paceDate: today, original: true);
         var plan = RemainingWeek.Apply(written, saved.Adjustments);
         var from = today.AddDays(-SessionAdjuster.PainLookbackDays);
         var entries = await db.SessionCheckIns.AsNoTracking()

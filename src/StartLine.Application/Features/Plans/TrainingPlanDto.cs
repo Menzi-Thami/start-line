@@ -16,6 +16,9 @@ public sealed record TrainingPlanDto(
     TimeSpan? SuggestedGoal = null,
     GoalOutlookDto? Outlook = null, IReadOnlyList<SessionRevision>? Adjustments = null)
 {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsPrivate { get; init; }
+
     public static TrainingPlanDto From(TrainingPlan plan, RaceSummaryDto race, GoalOutlook? outlook = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -95,7 +98,17 @@ public sealed record SessionDto(
     PaceZone? Zone,
     IReadOnlyList<StrengthExerciseDto> Exercises,
     IReadOnlyList<SessionStepDto> Steps,
-    RunWalkDto? RunWalk = null);
+    RunWalkDto? RunWalk = null)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public Guid? PrescriptionId { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public int? TargetRpe { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public GymClass? Gym { get; init; }
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool GymDone { get; init; }
+}
 
 /// <summary>Run/walk from the start: run for <c>RunSeconds</c>, walk for <c>WalkSeconds</c>, and repeat. Null when the session is run throughout.</summary>
 public sealed record RunWalkDto(int RunSeconds, int WalkSeconds);

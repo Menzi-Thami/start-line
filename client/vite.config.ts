@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
       // Forked workers time out starting on slow Windows machines; threads start reliably everywhere.
       pool: 'threads',
       // Playwright's end-to-end specs run in a real browser, not here.
-      exclude: [...configDefaults.exclude, 'e2e/**'],
+      exclude: [...configDefaults.exclude, 'e2e/**', 'persisted-e2e/**'],
       globals: true,
       setupFiles: ['./src/test/setup.ts'],
       css: false,

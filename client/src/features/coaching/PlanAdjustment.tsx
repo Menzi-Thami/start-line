@@ -119,9 +119,9 @@ export function PlanAdjustment({ current, units, actions }: { current: TrainingP
             </div>
           )}
           <p>
-            {proposal.hasChanges
+            {proposal.unsupportedReason ?? (proposal.hasChanges
               ? 'This is a preview. Your plan has not changed.'
-              : 'Your plan stays as it is. To rebuild future weeks, use Change my plan.'}
+              : 'Your plan stays as it is. To rebuild future weeks, use Change my plan.')}
           </p>
           {proposal.canApply && proposal.proposed.coaching?.at(-1) && <CoachNote note={proposal.proposed.coaching.at(-1)!} preview />}
           {proposal.hasChanges && (

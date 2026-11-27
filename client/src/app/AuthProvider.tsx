@@ -1,5 +1,6 @@
 import { CacheLookupPolicy, EventType, InteractionRequiredAuthError, PublicClientApplication, type AccountInfo } from '@azure/msal-browser'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { forgetHomePlan } from '../features/runner-home/home-data'
 import { clearSnapshot } from '../lib/home-snapshot'
 import { activateCheckInOwner, clearCheckInCopies, pendingDraftCount } from '../features/coaching/check-in-storage'
 import { activateRatingOwner, clearRatingDismissals } from '../features/coaching/rating-dismissal'
@@ -91,6 +92,9 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
       setSessionReady(false)
       setInfo(null)
       clearSnapshot()
+      clearCheckInCopies()
+      activateCheckInOwner(null)
+      forgetHomePlan()
     })
     // True while the page is on its way to Microsoft for a quiet renewal: stay loading rather than flash signed out.
     let leaving = false
@@ -244,6 +248,7 @@ export function AuthProvider({ config, children }: { config: AuthConfig | null; 
         currentAccount.current = null
         setSessionReady(false)
         clearSnapshot()
+        forgetHomePlan()
         clearCheckInCopies()
         clearRatingDismissals()
         void (async () => {

@@ -10,6 +10,11 @@ internal sealed class SecurityHeadersMiddleware(RequestDelegate next)
         headers["X-Frame-Options"] = "DENY";
         headers.ContentSecurityPolicy = "default-src 'none'; frame-ancestors 'none'";
         headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+        if (context.Request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries) is ["api", _, "me", ..])
+        {
+            headers.CacheControl = "no-store";
+            headers.Pragma = "no-cache";
+        }
         return next(context);
     }
 }

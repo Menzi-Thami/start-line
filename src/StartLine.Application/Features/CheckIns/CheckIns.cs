@@ -67,7 +67,7 @@ internal static class PlanSessions
         IApplicationDbContext db, PlanBuilder builder, SavedPlan plan, DateOnly date, SessionType type, CancellationToken cancellationToken)
     {
         var calls = await CoachCalls.ForAsync(db, plan.Id, cancellationToken);
-        var sessions = builder.BuildPlan(SavedPlanMapping.ToQuery(plan), calls, plan.Adjustments, date).Weeks.SelectMany(w => w.Sessions);
+        var sessions = builder.BuildPlan(plan, calls, plan.Adjustments, date).Weeks.SelectMany(w => w.Sessions);
         return sessions.FirstOrDefault(s => s.Date == date && s.Type == type)
             ?? throw new DomainException("That run isn't in your plan on that day. Your plan may have changed: reload it and try again.");
     }
@@ -164,7 +164,7 @@ internal sealed class SaveCheckInHandler(IApplicationDbContext db, CurrentRunner
 
             if (checkIn is null)
             {
-                var built = builder.BuildPlan(SavedPlanMapping.ToQuery(plan));
+                var built = builder.BuildPlan(plan);
                 if (request.Date < built.StartDate || request.Date > built.RaceDate)
                     throw new DomainException("Choose a day within this plan for your additional run.");
             }

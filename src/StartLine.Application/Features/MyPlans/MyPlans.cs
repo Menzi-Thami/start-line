@@ -20,12 +20,12 @@ public sealed record SavedPlanDto(
     Guid Id, string Name, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, TrainingPlanDto Plan, SavedPlanStatus Status,
     IReadOnlyList<CoachNoteDto>? Coaching = null);
 
-public sealed record SavedPlanExportDto(Guid Id, string Name, SavedPlanStatus Status, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, IReadOnlyList<SessionRevision>? Adjustments = null)
+public sealed record SavedPlanExportDto(Guid Id, string Name, SavedPlanStatus Status, DateTimeOffset CreatedAt, GeneratePlanQuery Inputs, IReadOnlyList<SessionRevision>? Adjustments = null, PrivatePrescription? Prescription = null, IReadOnlyList<PrivateGymCompletion>? GymCompletions = null, IReadOnlyList<PrivateGymMove>? GymMoves = null)
 {
     public static SavedPlanExportDto From(SavedPlan plan)
     {
         ArgumentNullException.ThrowIfNull(plan);
-        return new(plan.Id, plan.Name, plan.Status, plan.CreatedAt, SavedPlanMapping.ToQuery(plan.Inputs), plan.Adjustments);
+        return new(plan.Id, plan.Name, plan.Status, plan.CreatedAt, SavedPlanMapping.ToQuery(plan.Inputs), plan.Adjustments, plan.Prescription, plan.GymCompletions, plan.GymMoves);
     }
 }
 
@@ -61,12 +61,12 @@ internal static class SavedPlanMapping
     {
         var query = ToQuery(plan.Inputs);
         // An archived chapter must not move when an organiser changes the live calendar later.
-        return plan.Status != SavedPlanStatus.Active && plan.Inputs.HasRaceSnapshot ? query with { RaceSlug = null } : query;
+        return (plan.Prescription is not null || plan.Status != SavedPlanStatus.Active) && plan.Inputs.HasRaceSnapshot ? query with { RaceSlug = null } : query;
     }
 
     public static void FreezeRace(SavedPlan plan, IRaceCatalogue catalogue)
     {
-        if (plan.Status == SavedPlanStatus.Active && plan.Inputs.RaceSlug is { } slug && catalogue.FindBySlug(slug) is { } race)
+        if (plan.Prescription is null && plan.Status == SavedPlanStatus.Active && plan.Inputs.RaceSlug is { } slug && catalogue.FindBySlug(slug) is { } race)
             plan.Update(plan.Inputs with { RaceName = race.Name, RaceDate = race.Date, DistanceKm = race.Distance.Kilometres });
     }
 }
@@ -111,11 +111,14 @@ internal sealed class SavePlanHandler(IApplicationDbContext db, CurrentRunner cu
             throw new ConflictException("plan_active", $"Your current plan is {active.Name}. Replace it to make this your plan.");
         }
 
+        if (active is not null && active.Prescription is not null && active.IsForSameRace(inputs))
+            throw new ConflictException("private_prescription", "Import and review a replacement to change a private prescription.");
+
         if (active is not null && active.IsForSameRace(inputs))
         {
             // Freeze the runner's original prescription before changing the schedule. Actual answers and links stay intact.
             var calls = await CoachCalls.ForAsync(db, active.Id, cancellationToken);
-            var previous = builder.BuildPlan(SavedPlanMapping.ToQuery(active), calls, active.Adjustments)
+            var previous = builder.BuildPlan(active, calls, active.Adjustments)
                 .Weeks.SelectMany(w => w.Sessions).ToDictionary(s => (s.Date, s.Type));
             var history = await db.SessionCheckIns.Where(c => c.SavedPlanId == active.Id && !c.IsAdditional && c.PrescribedKm == null)
                 .ToListAsync(cancellationToken);
@@ -199,7 +202,7 @@ internal sealed class GetMyPlanHandler(IApplicationDbContext db, CurrentRunner c
 
         var query = SavedPlanMapping.ToQuery(saved);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(query, calls, saved.Adjustments, CoachCalls.LocalToday(runner!, time)), saved.Status, [.. calls.Select(CoachNoteDto.From)]);
+        return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, builder.Build(saved, calls, saved.Adjustments, CoachCalls.LocalToday(runner!, time)), saved.Status, [.. calls.Select(CoachNoteDto.From)]);
     }
 }
 
@@ -280,7 +283,7 @@ internal sealed class ReplanMyPlanHandler(IApplicationDbContext db, CurrentRunne
         // Build first: a replan that can't be generated (the race too close, say) must never be saved.
         var query = SavedPlanMapping.ToQuery(saved);
         var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-        var plan = builder.Build(query, calls, saved.Adjustments);
+        var plan = builder.Build(saved, calls, saved.Adjustments);
         await db.SaveChangesAsync(cancellationToken);
         return new SavedPlanDto(saved.Id, saved.Name, saved.CreatedAt, query, plan, saved.Status, [.. calls.Select(CoachNoteDto.From)]);
     }

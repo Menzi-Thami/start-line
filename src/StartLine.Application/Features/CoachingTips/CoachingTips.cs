@@ -245,7 +245,7 @@ internal sealed partial class CoachingTipSender(
             try
             {
                 var calls = await CoachCalls.ForAsync(db, saved.Id, cancellationToken);
-                var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, thursday);
+                var plan = builder.BuildPlan(saved, calls, saved.Adjustments, thursday);
                 race = plan.RaceDate;
                 // Sessions from before the plan was made were never the runner's to run.
                 var made = DateOnly.FromDateTime(saved.CreatedAt.UtcDateTime);

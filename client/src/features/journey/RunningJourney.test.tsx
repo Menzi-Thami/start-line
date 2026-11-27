@@ -24,6 +24,17 @@ const result = raceResult({ planId: past.planId, finishTime: '04:40:12', raceDat
 afterEach(() => vi.restoreAllMocks())
 
 describe('Past plan race recordings', () => {
+  it('keeps an archived private chapter readable without offering a training-story share card', async () => {
+    const privateChapter = { ...past, isPrivate: true }
+    vi.spyOn(api.me.journey, 'get').mockResolvedValue(journeyOf([privateChapter]))
+    vi.spyOn(api.me.journey, 'chapter').mockResolvedValue(privateChapter)
+    vi.spyOn(api.me, 'activities').mockResolvedValue([])
+    show()
+    await userEvent.click(await screen.findByRole('button', { name: 'View chapter' }))
+    expect(await screen.findByRole('heading', { name: 'Past marathon', level: 3 })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Share your training story' })).not.toBeInTheDocument()
+  })
+
   it('keeps a legacy chapter visible and explains missing details without presenting invented training or a result form', async () => {
     const unavailable = chapter({ ...past, detailsUnavailable: true, raceDate: null, distanceKm: null, achievements: [],
       training: { ...past.training, scheduledRuns: 0, confirmedRuns: 0, recordedKm: null } })

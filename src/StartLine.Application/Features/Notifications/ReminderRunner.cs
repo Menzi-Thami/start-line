@@ -63,6 +63,7 @@ internal sealed partial class ReminderRunner(
             var runner = runners.GetValueOrDefault(runnerDevices.Key);
             var zone = TimeProviderExtensions.ZoneOf(runner?.TimeZone ?? "");
             var saved = plans.SingleOrDefault(p => p.RunnerId == runnerDevices.Key);
+            if (saved?.Prescription is not null) continue;
             var plan = PlanAsWritten(saved);
             ReminderFacts? facts = null;
             foreach (var device in runnerDevices)
@@ -105,7 +106,7 @@ internal sealed partial class ReminderRunner(
         if (settings.IncludeRunData)
         {
             var calls = await coach.CallsAsync(saved, runner, cancellationToken);
-            plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), calls, saved.Adjustments, day);
+            plan = builder.BuildPlan(saved, calls, saved.Adjustments, day);
             coachSays = calls.FirstOrDefault(c => c.WeekStart == day) is { } call ? CoachWords.Of(call) : null;
         }
 
@@ -145,7 +146,7 @@ internal sealed partial class ReminderRunner(
 
         try
         {
-            return builder.BuildPlan(SavedPlanMapping.ToQuery(saved), adjustments: saved.Adjustments);
+            return builder.BuildPlan(saved, adjustments: saved.Adjustments);
         }
         catch (Exception e) when (e is NotFoundException or DomainException)
         {

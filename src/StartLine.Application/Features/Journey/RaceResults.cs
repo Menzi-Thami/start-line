@@ -52,7 +52,7 @@ internal sealed class SaveRaceResultHandler(IApplicationDbContext db, CurrentRun
         }
 
         var today = CoachCalls.LocalToday(runner, time);
-        var plan = builder.BuildPlan(SavedPlanMapping.ToQuery(saved), paceDate: today);
+        var plan = builder.BuildPlan(saved, paceDate: today);
         var answers = new RaceResultAnswers(r.Outcome, r.RaceDate ?? plan.RaceDate, r.FinishTime, r.DistanceKm, r.ActivityId, r.Note);
 
         var timeKind = r.TimeKind ?? (result is not null && result.FinishTime == answers.FinishTime ? result.TimeKind : RaceTimeKind.Unspecified);

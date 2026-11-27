@@ -42,7 +42,7 @@ export function buildIcs(plan: TrainingPlan, units: Units, now: Date = new Date(
 
       lines.push(
         'BEGIN:VEVENT',
-        `UID:${compactDate(session.date)}-${index}-${session.type.toLowerCase()}@taperday.run`,
+        session.prescriptionId ? `UID:${session.prescriptionId}@taperday.run` : `UID:${compactDate(session.date)}-${index}-${session.type.toLowerCase()}@taperday.run`,
         `DTSTAMP:${stamp(now)}`,
         `DTSTART;VALUE=DATE:${compactDate(session.date)}`,
         `DTEND;VALUE=DATE:${compactDate(addDays(session.date, 1))}`,

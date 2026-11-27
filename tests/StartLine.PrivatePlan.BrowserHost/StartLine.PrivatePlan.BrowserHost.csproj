@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
+  <ItemGroup><ProjectReference Include="../StartLine.Integration.Tests/StartLine.Integration.Tests.csproj" /></ItemGroup>
+</Project>

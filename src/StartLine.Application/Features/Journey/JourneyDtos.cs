@@ -24,7 +24,11 @@ public sealed record PlanChapterDto(
     TimeSpan GoalTime,
     IReadOnlyList<ChapterWeekDto>? Weeks,
     bool DetailsUnavailable = false,
-    string? Version = null);
+    string? Version = null)
+{
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public bool IsPrivate { get; init; }
+}
 
 /// <summary>
 /// The plan's training, truthfully. Only the runner's own "Done" confirms a run. <c>RecordedKm</c> is the runner's own

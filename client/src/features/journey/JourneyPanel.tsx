@@ -106,7 +106,7 @@ export function JourneyPanel({ plan, today, units, planId, journey, local, runs,
 
   const raceStage = stage === 'race-day' || stage === 'race-result-needed' || stage === 'race-recorded'
   const training = <TrainingStory
-    story={story} units={units} raceResult={result}
+    story={story} units={units} raceResult={result} allowSharing={!plan.isPrivate}
     onReplay={earned ? (trigger) => setFilm({ kind: 'training', award: trainingAward, trigger }) : undefined}
   />
 

@@ -13,6 +13,7 @@ using StartLine.Application.Features.Insights;
 using StartLine.Application.Features.Notifications;
 using StartLine.Application.Features.Plans;
 using StartLine.Application.Features.Predictions;
+using StartLine.Application.Features.PrivatePlans;
 using StartLine.Application.Features.Races;
 using StartLine.Application.Features.Sync;
 
@@ -29,6 +30,7 @@ public sealed class DispatcherPipelineTests
             .AddSingleton<TimeProvider>(new FakeTimeProvider(TestRaces.Now))
             .AddSingleton(TestRaces.Catalogue())
             .AddSingleton(Substitute.For<IRaceStore>())
+            .AddScoped(_ => Substitute.For<IPrivatePlanActivation>())
             .AddSingleton(Substitute.For<IActivityFileReader>())
             .AddSingleton(Substitute.For<IStravaApi>())
             .AddSingleton(Substitute.For<IStravaSettings>())
